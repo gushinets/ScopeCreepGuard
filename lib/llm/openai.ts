@@ -74,10 +74,15 @@ export async function analyzeWithOpenAI(input: {
   try {
     return parseAnalysisResult(parsed)
   } catch (error) {
+    const keys =
+      parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? Object.keys(parsed)
+        : []
     console.error(
       JSON.stringify({
         event: 'openai_analysis_shape_invalid',
         message: error instanceof Error ? error.message : 'invalid_analysis_result',
+        keys,
       }),
     )
     throw new Error('openai_request_failed')

@@ -23,8 +23,14 @@ export const ANALYSIS_JSON_SCHEMA = {
       minimum: 0,
       maximum: 100,
     },
-    summary: { type: 'string' },
-    reasoning: { type: 'string' },
+    summary: {
+      type: 'string',
+      description: 'Non-empty. One-sentence verdict in the output language.',
+    },
+    reasoning: {
+      type: 'string',
+      description: 'Non-empty. Explain the verdict from the provided scope only.',
+    },
     citations: { type: 'array', items: { type: 'string' } },
     suggestion: { type: 'string' },
     replies: {
@@ -32,9 +38,9 @@ export const ANALYSIS_JSON_SCHEMA = {
       additionalProperties: false,
       required: ['warm', 'neutral', 'firm'],
       properties: {
-        warm: { type: 'string' },
-        neutral: { type: 'string' },
-        firm: { type: 'string' },
+        warm: { type: 'string', description: 'Non-empty client reply.' },
+        neutral: { type: 'string', description: 'Non-empty client reply.' },
+        firm: { type: 'string', description: 'Non-empty client reply.' },
       },
     },
     changeOrder: {
@@ -42,10 +48,25 @@ export const ANALYSIS_JSON_SCHEMA = {
       additionalProperties: false,
       required: ['description', 'timelineImpact', 'additionalCost', 'note'],
       properties: {
-        description: { type: 'string' },
-        timelineImpact: { type: 'string' },
-        additionalCost: { type: 'string' },
-        note: { type: 'string' },
+        description: {
+          type: 'string',
+          description:
+            'Non-empty in every verdict. For in_scope, name the included work.',
+        },
+        timelineImpact: {
+          type: 'string',
+          description:
+            'Non-empty in every verdict. For in_scope, say none / no extra time.',
+        },
+        additionalCost: {
+          type: 'string',
+          description:
+            'Non-empty in every verdict. For in_scope, use included / $0 style text.',
+        },
+        note: {
+          type: 'string',
+          description: 'Non-empty draft disclaimer, not legal advice.',
+        },
       },
     },
   },
