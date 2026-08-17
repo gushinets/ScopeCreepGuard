@@ -21,7 +21,12 @@ export function parseAnalysisResult(value: unknown): AnalysisResult {
   if (typeof raw.verdict !== 'string' || !VERDICTS.has(raw.verdict as Verdict)) {
     throw new Error('invalid_analysis_result')
   }
-  if (typeof raw.confidence !== 'number' || !Number.isFinite(raw.confidence)) {
+  if (
+    typeof raw.confidence !== 'number' ||
+    !Number.isFinite(raw.confidence) ||
+    raw.confidence < 0 ||
+    raw.confidence > 100
+  ) {
     throw new Error('invalid_analysis_result')
   }
   if (!isNonEmptyString(raw.summary) || !isNonEmptyString(raw.reasoning)) {

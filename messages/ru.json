@@ -181,6 +181,8 @@
     "saveProjectFailed": "Не удалось сохранить проект.",
     "analysisUnavailable": "Анализ недоступен. Задайте OPENAI_API_KEY и попробуйте снова.",
     "analysisFailed": "Не удалось выполнить анализ scope. Попробуйте снова.",
+    "analysisInputTooLarge": "Объем работ и запрос вместе слишком велики для анализа.",
+    "analysisRateLimited": "Слишком много запросов на анализ. Подождите немного и попробуйте снова.",
     "scopeFileTooLarge": "Файл больше 5 МБ.",
     "scopeFileUnsupported": "Используйте файл .txt, .md или .pdf.",
     "scopeFileEmpty": "Не удалось извлечь текст из этого файла."

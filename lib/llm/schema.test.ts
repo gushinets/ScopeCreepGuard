@@ -41,6 +41,20 @@ describe('parseAnalysisResult', () => {
     ).toThrow('invalid_analysis_result')
   })
 
+  it('accepts confidence at 0 and 100', () => {
+    expect(parseAnalysisResult({ ...valid, confidence: 0 }).confidence).toBe(0)
+    expect(parseAnalysisResult({ ...valid, confidence: 100 }).confidence).toBe(100)
+  })
+
+  it('rejects out-of-range confidence', () => {
+    expect(() => parseAnalysisResult({ ...valid, confidence: -5 })).toThrow(
+      'invalid_analysis_result',
+    )
+    expect(() => parseAnalysisResult({ ...valid, confidence: 500 })).toThrow(
+      'invalid_analysis_result',
+    )
+  })
+
   it('rejects non-object', () => {
     expect(() => parseAnalysisResult(null)).toThrow('invalid_analysis_result')
   })

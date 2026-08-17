@@ -23,6 +23,8 @@ export const ERROR_CODES = {
   saveProjectFailed: 'errors.saveProjectFailed',
   analysisUnavailable: 'errors.analysisUnavailable',
   analysisFailed: 'errors.analysisFailed',
+  analysisInputTooLarge: 'errors.analysisInputTooLarge',
+  analysisRateLimited: 'errors.analysisRateLimited',
   scopeFileTooLarge: 'errors.scopeFileTooLarge',
   scopeFileUnsupported: 'errors.scopeFileUnsupported',
   scopeFileEmpty: 'errors.scopeFileEmpty',

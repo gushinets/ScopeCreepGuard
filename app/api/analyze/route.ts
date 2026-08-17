@@ -4,7 +4,10 @@ import { jsonError, readJsonObject } from '@/lib/api/json'
 import { getCurrentUser } from '@/lib/auth/current-user'
 import { parseAnalyzeBody } from '@/lib/llm/analyze-request'
 import { analyzeWithOpenAI } from '@/lib/llm/openai'
+import { allowAnalyze } from '@/lib/llm/rate-limit'
 import { loadProjectForUser } from '@/lib/projects/data'
+
+const ANALYSIS_INPUT_MAX_CHARS = 100_000
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()
@@ -21,6 +24,20 @@ export async function POST(request: Request) {
 
   if (project.scope.trim().length === 0) {
     return jsonError(ERROR_CODES.scopeRequired, 400)
+  }
+
+  if (!allowAnalyze(user.id, Date.now())) {
+    console.error(
+      JSON.stringify({
+        event: 'analyze_rate_limited',
+        userId: user.id,
+      }),
+    )
+    return jsonError(ERROR_CODES.analysisRateLimited, 429)
+  }
+
+  if (project.scope.length + parsed.request.length > ANALYSIS_INPUT_MAX_CHARS) {
+    return jsonError(ERROR_CODES.analysisInputTooLarge, 400)
   }
 
   try {
