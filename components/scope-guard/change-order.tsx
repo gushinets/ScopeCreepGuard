@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { CheckCheck, Copy, Download, FileText } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import type { AnalysisResult, ChangeOrderDraft } from '@/lib/types'
 
@@ -44,6 +45,7 @@ export function ChangeOrder({
   result: AnalysisResult
   projectName: string
 }) {
+  const t = useTranslations('changeOrder')
   const [draft, setDraft] = useState<ChangeOrderDraft>(result.changeOrder)
   const [copied, setCopied] = useState(false)
   const [downloaded, setDownloaded] = useState(false)
@@ -54,15 +56,15 @@ export function ChangeOrder({
 
   function asText() {
     return [
-      `CHANGE ORDER (DRAFT) — ${projectName}`,
+      `${t('draftTitle')} — ${projectName}`,
       '',
-      `Additional work:\n${draft.description}`,
+      `${t('additionalWork')}:\n${draft.description}`,
       '',
-      `Timeline impact:\n${draft.timelineImpact}`,
+      `${t('timelineImpact')}:\n${draft.timelineImpact}`,
       '',
-      `Additional cost:\n${draft.additionalCost}`,
+      `${t('additionalCost')}:\n${draft.additionalCost}`,
       '',
-      `Note:\n${draft.note}`,
+      `${t('note')}:\n${draft.note}`,
     ].join('\n')
   }
 
@@ -106,14 +108,14 @@ export function ChangeOrder({
           id="change-order-heading"
           className="text-sm font-semibold text-foreground"
         >
-          Change order draft
+          {t('heading')}
         </h3>
       </div>
 
       <div className="mt-3 grid gap-3">
         <Field
           id="co-description"
-          label="Description of additional work"
+          label={t('descriptionLabel')}
           value={draft.description}
           onChange={(v) => set('description', v)}
           rows={3}
@@ -121,20 +123,20 @@ export function ChangeOrder({
         <div className="grid gap-3 sm:grid-cols-2">
           <Field
             id="co-timeline"
-            label="Impact on timeline"
+            label={t('timelineLabel')}
             value={draft.timelineImpact}
             onChange={(v) => set('timelineImpact', v)}
           />
           <Field
             id="co-cost"
-            label="Additional cost"
+            label={t('costLabel')}
             value={draft.additionalCost}
             onChange={(v) => set('additionalCost', v)}
           />
         </div>
         <Field
           id="co-note"
-          label="Note"
+          label={t('noteLabel')}
           value={draft.note}
           onChange={(v) => set('note', v)}
         />
@@ -145,12 +147,12 @@ export function ChangeOrder({
           {copied ? (
             <>
               <CheckCheck aria-hidden="true" />
-              Copied
+              {t('copied')}
             </>
           ) : (
             <>
               <Copy aria-hidden="true" />
-              Copy
+              {t('copy')}
             </>
           )}
         </Button>
@@ -158,20 +160,19 @@ export function ChangeOrder({
           {downloaded ? (
             <>
               <CheckCheck aria-hidden="true" />
-              Downloaded
+              {t('downloaded')}
             </>
           ) : (
             <>
               <Download aria-hidden="true" />
-              Download draft
+              {t('download')}
             </>
           )}
         </Button>
       </div>
 
       <p className="mt-3 rounded-md bg-muted px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-        This document is a draft to help you start the conversation — it is not
-        legal advice. Review and adapt it before sending.
+        {t('legalNotice')}
       </p>
     </section>
   )

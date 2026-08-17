@@ -1,11 +1,13 @@
 'use client'
 
 import { Clock } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
+import { localeToDateLocale, type Locale } from '@/i18n/config'
 import { VerdictChip } from './verdict'
 import { useStore } from './store'
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
+function formatDate(iso: string, locale: Locale) {
+  return new Date(iso).toLocaleDateString(localeToDateLocale(locale), {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -14,11 +16,13 @@ function formatDate(iso: string) {
 
 export function HistoryView() {
   const { selectedProject } = useStore()
+  const locale = useLocale()
+  const t = useTranslations()
 
   if (!selectedProject) {
     return (
       <div className="mx-auto max-w-2xl text-center text-sm text-muted-foreground">
-        Select a project to see its check history.
+        {t('history.selectProject')}
       </div>
     )
   }
@@ -27,10 +31,13 @@ export function HistoryView() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h2 className="text-xl font-semibold text-foreground">History</h2>
+      <h2 className="text-xl font-semibold text-foreground">
+        {t('history.title')}
+      </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Previous checks for{' '}
-        <span className="font-medium text-foreground">{selectedProject.name}</span>.
+        {t('history.previousChecks', {
+          projectName: selectedProject.name,
+        })}
       </p>
 
       {history.length === 0 ? (
@@ -39,10 +46,10 @@ export function HistoryView() {
             <Clock className="size-6 text-muted-foreground" aria-hidden="true" />
           </span>
           <h3 className="mt-4 text-base font-semibold text-foreground">
-            No checks yet
+            {t('history.emptyTitle')}
           </h3>
           <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground text-pretty">
-            Once you check a client request for this project, it&apos;ll show up here.
+            {t('history.emptyDescription')}
           </p>
         </div>
       ) : (
@@ -54,7 +61,7 @@ export function HistoryView() {
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs text-muted-foreground">
-                  {formatDate(h.date)}
+                  {formatDate(h.date, locale)}
                 </span>
                 <VerdictChip verdict={h.verdict} />
               </div>

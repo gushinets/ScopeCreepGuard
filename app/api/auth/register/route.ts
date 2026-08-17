@@ -1,6 +1,7 @@
 import { hash } from 'bcryptjs'
 import { eq } from 'drizzle-orm'
 import { NextResponse, type NextRequest } from 'next/server'
+import { ERROR_CODES } from '@/lib/api/errors'
 import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { jsonError, readJsonObject } from '@/lib/api/json'
@@ -13,7 +14,7 @@ import { parseCredentials } from '@/lib/auth/validation'
 
 export async function POST(request: NextRequest) {
   const body = await readJsonObject(request)
-  if (!body) return jsonError('Request body must be a JSON object.', 400)
+  if (!body) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
 
   const parsed = parseCredentials({
     email: body.email,
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     .limit(1)
 
   if (existingUser) {
-    return jsonError('A user with this email already exists.', 409)
+    return jsonError(ERROR_CODES.duplicateEmail, 409)
   }
 
   const { credentials } = parsed

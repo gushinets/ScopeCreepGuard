@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { NextResponse, type NextRequest } from 'next/server'
+import { ERROR_CODES } from '@/lib/api/errors'
 import { jsonError, readJsonObject } from '@/lib/api/json'
 import { getCurrentUser } from '@/lib/auth/current-user'
 import { db } from '@/lib/db'
@@ -13,14 +14,14 @@ interface HistoryRouteContext {
 
 export async function POST(request: NextRequest, { params }: HistoryRouteContext) {
   const user = await getCurrentUser()
-  if (!user) return jsonError('Authentication is required.', 401)
+  if (!user) return jsonError(ERROR_CODES.authRequired, 401)
 
   const { id } = await params
   const isOwner = await userOwnsProject(id, user.id)
-  if (!isOwner) return jsonError('Project not found.', 404)
+  if (!isOwner) return jsonError(ERROR_CODES.projectNotFound, 404)
 
   const body = await readJsonObject(request)
-  if (!body) return jsonError('Request body must be a JSON object.', 400)
+  if (!body) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
 
   const parsed = parseHistoryInput(body)
   if (!parsed.ok) return jsonError(parsed.error, 400)

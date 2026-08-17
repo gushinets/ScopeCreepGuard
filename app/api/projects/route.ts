@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { ERROR_CODES } from '@/lib/api/errors'
 import { jsonError, readJsonObject } from '@/lib/api/json'
 import { getCurrentUser } from '@/lib/auth/current-user'
 import { db } from '@/lib/db'
@@ -21,7 +22,7 @@ function serializeCreatedProject(row: typeof projects.$inferSelect): Project {
 
 export async function GET() {
   const user = await getCurrentUser()
-  if (!user) return jsonError('Authentication is required.', 401)
+  if (!user) return jsonError(ERROR_CODES.authRequired, 401)
 
   const userProjects = await loadProjectsForUser(user.id)
   return NextResponse.json({ projects: userProjects })
@@ -29,10 +30,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser()
-  if (!user) return jsonError('Authentication is required.', 401)
+  if (!user) return jsonError(ERROR_CODES.authRequired, 401)
 
   const body = await readJsonObject(request)
-  if (!body) return jsonError('Request body must be a JSON object.', 400)
+  if (!body) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
 
   const parsed = parseProjectInput(body)
   if (!parsed.ok) return jsonError(parsed.error, 400)

@@ -2,9 +2,12 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
+import { LanguageSwitcher } from '@/components/i18n/language-switcher'
 import { Button } from '@/components/ui/button'
+import { ERROR_CODES, assertErrorCode, type ErrorCode } from '@/lib/api/errors'
 
 type AuthMode = 'login' | 'register'
 
@@ -13,9 +16,10 @@ interface AuthFormProps {
 }
 
 async function readErrorMessage(response: Response) {
+  let body: unknown
+
   try {
-    const body = await response.json()
-    if (body && typeof body.error === 'string') return body.error
+    body = await response.json()
   } catch (error) {
     console.error(
       JSON.stringify({
@@ -24,22 +28,34 @@ async function readErrorMessage(response: Response) {
         message: error instanceof Error ? error.message : 'Unknown JSON parse error',
       }),
     )
+    return ERROR_CODES.requestFailed
   }
-  return 'The request failed. Please try again.'
+
+  if (
+    body &&
+    typeof body === 'object' &&
+    !Array.isArray(body) &&
+    typeof (body as Record<string, unknown>).error === 'string'
+  ) {
+    return assertErrorCode((body as Record<string, string>).error)
+  }
+
+  return ERROR_CODES.requestFailed
 }
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter()
+  const t = useTranslations()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState<ErrorCode | ''>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isRegister = mode === 'register'
-  const title = isRegister ? 'Create your workspace' : 'Welcome back'
+  const title = isRegister ? t('auth.registerTitle') : t('auth.loginTitle')
   const description = isRegister
-    ? 'Start with a private account so every scope check belongs only to you.'
-    : 'Sign in to your protected Scope Creep Guard workspace.'
+    ? t('auth.registerDescription')
+    : t('auth.loginDescription')
   const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login'
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -47,31 +63,25 @@ export function AuthForm({ mode }: AuthFormProps) {
     setError('')
 
     if (!email.trim()) {
-      setError('Email is required.')
+      setError(ERROR_CODES.emailRequired)
       return
     }
     if (!password) {
-      setError('Password is required.')
+      setError(ERROR_CODES.passwordRequired)
       return
     }
 
     setIsSubmitting(true)
+
+    let response: Response
     try {
-      const response = await fetch(endpoint, {
+      response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
       })
-
-      if (!response.ok) {
-        setError(await readErrorMessage(response))
-        return
-      }
-
-      router.replace('/')
-      router.refresh()
     } catch (error) {
       console.error(
         JSON.stringify({
@@ -80,10 +90,19 @@ export function AuthForm({ mode }: AuthFormProps) {
           message: error instanceof Error ? error.message : 'Unknown auth error',
         }),
       )
-      setError('Unable to reach the auth service. Please try again.')
+      setError(ERROR_CODES.authServiceUnavailable)
+      return
     } finally {
       setIsSubmitting(false)
     }
+
+    if (!response.ok) {
+      setError(await readErrorMessage(response))
+      return
+    }
+
+    router.replace('/')
+    router.refresh()
   }
 
   return (
@@ -93,16 +112,18 @@ export function AuthForm({ mode }: AuthFormProps) {
 
       <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_26rem]">
         <section className="max-w-2xl">
+          <div className="mb-6 flex justify-start">
+            <LanguageSwitcher />
+          </div>
           <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-card/70 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">
             <ShieldCheck className="size-4 text-foreground" aria-hidden="true" />
-            Scope Creep Guard
+            {t('brand.name')}
           </span>
           <h1 className="mt-6 text-4xl font-semibold tracking-tight text-foreground text-balance sm:text-6xl">
-            Keep client scope private, then check requests with confidence.
+            {t('auth.heroTitle')}
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground text-pretty">
-            Email/password auth keeps every project, scope, and check history tied
-            to the person who created it.
+            {t('auth.heroDescription')}
           </p>
         </section>
 
@@ -120,7 +141,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 htmlFor="auth-email"
                 className="mb-1.5 block text-sm font-medium text-foreground"
               >
-                Email
+                {t('auth.emailLabel')}
               </label>
               <div className="relative">
                 <Mail
@@ -134,7 +155,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   className="w-full rounded-lg border border-input bg-background py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-                  placeholder="you@example.com"
+                  placeholder={t('auth.emailPlaceholder')}
                 />
               </div>
             </div>
@@ -144,7 +165,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 htmlFor="auth-password"
                 className="mb-1.5 block text-sm font-medium text-foreground"
               >
-                Password
+                {t('auth.passwordLabel')}
               </label>
               <div className="relative">
                 <LockKeyhole
@@ -158,35 +179,37 @@ export function AuthForm({ mode }: AuthFormProps) {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   className="w-full rounded-lg border border-input bg-background py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-                  placeholder="At least 8 characters"
+                  placeholder={t('auth.passwordPlaceholder')}
                 />
               </div>
             </div>
 
             {error && (
               <p className="rounded-lg bg-outscope-soft px-3 py-2 text-sm text-outscope-text">
-                {error}
+                {t(error)}
               </p>
             )}
 
             <Button type="submit" className="h-10 w-full" disabled={isSubmitting}>
               {isSubmitting
                 ? isRegister
-                  ? 'Creating account...'
-                  : 'Signing in...'
+                  ? t('auth.creatingAccount')
+                  : t('auth.signingIn')
                 : isRegister
-                  ? 'Create account'
-                  : 'Sign in'}
+                  ? t('auth.createAccount')
+                  : t('auth.signIn')}
             </Button>
           </form>
 
           <p className="mt-5 text-center text-sm text-muted-foreground">
-            {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
+            {isRegister
+              ? t('auth.alreadyHaveAccount')
+              : t('auth.dontHaveAccount')}{' '}
             <Link
               href={isRegister ? '/login' : '/register'}
               className="font-medium text-foreground underline-offset-4 hover:underline"
             >
-              {isRegister ? 'Sign in' : 'Create one'}
+              {isRegister ? t('auth.signIn') : t('auth.createOne')}
             </Link>
           </p>
         </section>

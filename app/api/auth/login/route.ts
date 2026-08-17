@@ -1,6 +1,7 @@
 import { compare } from 'bcryptjs'
 import { eq } from 'drizzle-orm'
 import { NextResponse, type NextRequest } from 'next/server'
+import { ERROR_CODES } from '@/lib/api/errors'
 import { jsonError, readJsonObject } from '@/lib/api/json'
 import {
   SESSION_COOKIE_NAME,
@@ -13,7 +14,7 @@ import { users } from '@/lib/db/schema'
 
 export async function POST(request: NextRequest) {
   const body = await readJsonObject(request)
-  if (!body) return jsonError('Request body must be a JSON object.', 400)
+  if (!body) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
 
   const parsed = parseCredentials({
     email: body.email,
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     .limit(1)
 
   if (!userWithPassword) {
-    return jsonError('Invalid email or password.', 401)
+    return jsonError(ERROR_CODES.invalidCredentials, 401)
   }
 
   const isPasswordValid = await compare(
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
   )
 
   if (!isPasswordValid) {
-    return jsonError('Invalid email or password.', 401)
+    return jsonError(ERROR_CODES.invalidCredentials, 401)
   }
 
   const user = {

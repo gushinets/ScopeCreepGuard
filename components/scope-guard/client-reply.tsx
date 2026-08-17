@@ -2,17 +2,19 @@
 
 import { useRef, useState } from 'react'
 import { CheckCheck, Copy, RotateCcw } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { AnalysisResult, Tone } from '@/lib/types'
 
-const TONES: { value: Tone; label: string }[] = [
-  { value: 'warm', label: 'Warm' },
-  { value: 'neutral', label: 'Neutral' },
-  { value: 'firm', label: 'Firm' },
-]
+const TONES: Tone[] = ['warm', 'neutral', 'firm']
+
+function toneLabelKey(tone: Tone) {
+  return `reply.${tone}` as const
+}
 
 export function ClientReply({ result }: { result: AnalysisResult }) {
+  const t = useTranslations()
   const [tone, setTone] = useState<Tone>('neutral')
   const [text, setText] = useState(result.replies.neutral)
   const [copied, setCopied] = useState(false)
@@ -23,9 +25,7 @@ export function ClientReply({ result }: { result: AnalysisResult }) {
     setTone(next)
     const edited = text !== lastGenerated.current
     if (edited) {
-      const ok = window.confirm(
-        'Switching tone will replace your edits to this reply. Continue?',
-      )
+      const ok = window.confirm(t('reply.confirmReplace'))
       if (!ok) return
     }
     setText(result.replies[next])
@@ -59,36 +59,36 @@ export function ClientReply({ result }: { result: AnalysisResult }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 id="reply-heading" className="text-sm font-semibold text-foreground">
-          Suggested reply to client
+          {t('reply.heading')}
         </h3>
 
         <div
           role="radiogroup"
-          aria-label="Reply tone"
+          aria-label={t('reply.toneAria')}
           className="inline-flex rounded-lg border border-border bg-muted p-0.5"
         >
-          {TONES.map((t) => (
+          {TONES.map((toneOption) => (
             <button
-              key={t.value}
+              key={toneOption}
               type="button"
               role="radio"
-              aria-checked={tone === t.value}
-              onClick={() => applyTone(t.value)}
+              aria-checked={tone === toneOption}
+              onClick={() => applyTone(toneOption)}
               className={cn(
                 'rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                tone === t.value
+                tone === toneOption
                   ? 'bg-card text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              {t.label}
+              {t(toneLabelKey(toneOption))}
             </button>
           ))}
         </div>
       </div>
 
       <label htmlFor="reply-text" className="sr-only">
-        Editable reply to client
+        {t('reply.editableLabel')}
       </label>
       <textarea
         id="reply-text"
@@ -108,21 +108,21 @@ export function ClientReply({ result }: { result: AnalysisResult }) {
           {copied ? (
             <>
               <CheckCheck className="text-inscope-foreground" aria-hidden="true" />
-              Copied
+              {t('reply.copied')}
             </>
           ) : (
             <>
               <Copy aria-hidden="true" />
-              Copy reply
+              {t('reply.copy')}
             </>
           )}
         </Button>
         <Button type="button" variant="outline" onClick={regenerate} className="h-9">
           <RotateCcw aria-hidden="true" />
-          Regenerate
+          {t('reply.regenerate')}
         </Button>
         <p className="ml-auto text-xs text-muted-foreground">
-          You send it yourself — nothing is sent automatically.
+          {t('reply.sendYourself')}
         </p>
       </div>
 
@@ -132,7 +132,7 @@ export function ClientReply({ result }: { result: AnalysisResult }) {
           role="status"
         >
           <CheckCheck className="size-3.5" aria-hidden="true" />
-          Reply copied to clipboard.
+          {t('reply.copiedStatus')}
         </p>
       )}
     </section>
