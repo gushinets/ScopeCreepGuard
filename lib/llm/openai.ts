@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import type { Locale } from '@/i18n/config'
 import type { Industry } from '@/lib/types'
 import { ANALYSIS_JSON_SCHEMA } from './analysis-json-schema'
 import { buildAnalysisMessages } from './prompt'
@@ -8,6 +9,7 @@ export async function analyzeWithOpenAI(input: {
   scope: string
   request: string
   industry: Industry
+  locale: Locale
 }) {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey || apiKey.trim().length === 0) {

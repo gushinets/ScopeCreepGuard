@@ -17,6 +17,10 @@ function exampleLabelKey(key: (typeof EXAMPLE_REQUESTS)[number]['key']) {
   return `examples.${key}` as const
 }
 
+function exampleTextKey(key: (typeof EXAMPLE_REQUESTS)[number]['key']) {
+  return `examples.${key}Text` as const
+}
+
 export function RequestPanel() {
   const {
     projects,
@@ -164,7 +168,7 @@ export function RequestPanel() {
               <button
                 key={ex.key}
                 type="button"
-                onClick={() => loadExample(ex.text)}
+                onClick={() => loadExample(t(exampleTextKey(ex.key)))}
                 className="rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {t(exampleLabelKey(ex.key))}

@@ -148,8 +148,11 @@
   },
   "examples": {
     "in": "In scope",
+    "inText": "On the Home page, could you fix the typo in the hero headline and adjust the accent color to a slightly darker blue? This would be part of our revision round.",
     "borderline": "Borderline",
-    "out": "Out of scope"
+    "borderlineText": "Could you add a small newsletter sign-up section to the bottom of the Home page? It is a new element, but it sits on a page that is already in scope.",
+    "out": "Out of scope",
+    "outText": "Can you also add 3 more pages, prepare mobile versions of all the pages, and do a second round of revisions after we review?"
   },
   "workspace": {
     "loadingTitle": "Loading workspace...",
