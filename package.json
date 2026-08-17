@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test": "vitest run",
     "db:up": "docker compose up -d",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -22,6 +23,7 @@
     "jose": "^6.2.8",
     "lucide-react": "^1.16.0",
     "next": "16.3.0",
+    "next-intl": "^4.13.6",
     "postgres": "^3.4.9",
     "react": "^19",
     "react-dom": "^19",
@@ -40,7 +42,8 @@
     "eslint-config-next": "^16.3.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.3.3",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "vitest": "^4.1.10"
   },
   "pnpm": {
     "overrides": {
