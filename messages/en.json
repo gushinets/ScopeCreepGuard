@@ -147,8 +147,7 @@
   "examples": {
     "in": "In scope",
     "borderline": "Borderline",
-    "out": "Out of scope",
-    "error": "Connection error"
+    "out": "Out of scope"
   },
   "workspace": {
     "loadingTitle": "Loading workspace...",

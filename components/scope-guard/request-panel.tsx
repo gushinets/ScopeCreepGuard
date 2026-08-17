@@ -2,10 +2,20 @@
 
 import { useState } from 'react'
 import { ChevronDown, FolderPlus, ShieldCheck } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { EXAMPLE_REQUESTS } from '@/lib/mock-data'
+import type { Industry } from '@/lib/types'
 import { useStore } from './store'
+
+function industryLabelKey(industry: Industry) {
+  return `industry.${industry}` as const
+}
+
+function exampleLabelKey(key: (typeof EXAMPLE_REQUESTS)[number]['key']) {
+  return `examples.${key}` as const
+}
 
 export function RequestPanel() {
   const {
@@ -20,6 +30,7 @@ export function RequestPanel() {
     setView,
     loadExample,
   } = useStore()
+  const t = useTranslations()
 
   const [scopeOpen, setScopeOpen] = useState(false)
 
@@ -30,10 +41,10 @@ export function RequestPanel() {
           <FolderPlus className="size-6 text-muted-foreground" aria-hidden="true" />
         </span>
         <h3 className="mt-4 text-base font-semibold text-foreground">
-          No project selected
+          {t('check.noProjectTitle')}
         </h3>
         <p className="mt-1.5 text-sm text-muted-foreground text-pretty">
-          Create a project and save its scope to start checking client requests.
+          {t('check.noProjectDescription')}
         </p>
         <Button
           type="button"
@@ -41,7 +52,7 @@ export function RequestPanel() {
           onClick={() => setView('new_project')}
         >
           <FolderPlus aria-hidden="true" />
-          New project
+          {t('projects.newProject')}
         </Button>
       </div>
     )
@@ -59,7 +70,7 @@ export function RequestPanel() {
           htmlFor="project-select"
           className="mb-1.5 block text-xs font-medium text-muted-foreground"
         >
-          Project
+          {t('check.projectLabel')}
         </label>
         <div className="relative">
           <select
@@ -92,9 +103,9 @@ export function RequestPanel() {
         >
           <span className="flex items-center gap-2 text-sm font-medium text-foreground">
             <ShieldCheck className="size-4 text-muted-foreground" aria-hidden="true" />
-            Agreed scope
+            {t('check.agreedScope')}
             <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
-              {selectedProject.industry}
+              {t(industryLabelKey(selectedProject.industry))}
             </span>
           </span>
           <ChevronDown
@@ -109,11 +120,10 @@ export function RequestPanel() {
         {!hasScope ? (
           <div className="border-t border-border px-3.5 py-3">
             <p className="text-sm text-borderline-text">
-              This project has no saved scope yet.
+              {t('check.noScopeTitle')}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Add the deliverables and exclusions from your contract or SOW so
-              requests can be compared against them.
+              {t('check.noScopeDescription')}
             </p>
           </div>
         ) : (
@@ -144,18 +154,20 @@ export function RequestPanel() {
             htmlFor="request-input"
             className="text-xs font-medium text-muted-foreground"
           >
-            New client request
+            {t('check.requestLabel')}
           </label>
           <div className="flex flex-wrap items-center gap-1">
-            <span className="mr-1 text-[11px] text-muted-foreground">Try:</span>
+            <span className="mr-1 text-[11px] text-muted-foreground">
+              {t('check.tryLabel')}
+            </span>
             {EXAMPLE_REQUESTS.map((ex) => (
               <button
                 key={ex.key}
                 type="button"
-                onClick={() => loadExample(ex.text, ex.key === 'error')}
+                onClick={() => loadExample(ex.text)}
                 className="rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {ex.label}
+                {t(exampleLabelKey(ex.key))}
               </button>
             ))}
           </div>
@@ -165,12 +177,15 @@ export function RequestPanel() {
           value={requestText}
           onChange={(e) => setRequestText(e.target.value)}
           rows={6}
-          placeholder="Paste the message or request your client just sent…"
+          placeholder={t('check.requestPlaceholder')}
           className="w-full resize-y rounded-lg border border-input bg-background p-3 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
         />
       </div>
 
       <div className="flex flex-col gap-2">
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          {t('check.openaiNotice')}
+        </p>
         <Button
           type="button"
           onClick={runCheck}
@@ -178,11 +193,11 @@ export function RequestPanel() {
           className="h-11 w-full text-sm"
         >
           <ShieldCheck aria-hidden="true" />
-          {busy ? 'Checking…' : 'Check scope'}
+          {busy ? t('check.checking') : t('check.checkScope')}
         </Button>
         {requestEmpty && (
           <p className="text-xs text-muted-foreground">
-            Paste a client request above to run a check.
+            {t('check.requestRequiredHint')}
           </p>
         )}
       </div>

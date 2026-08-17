@@ -5,17 +5,15 @@ import {
   createContext,
   useContext,
   useEffect,
-  useRef,
   useState,
   type ReactNode,
 } from 'react'
-import { analyzeRequest, AnalysisError } from '@/lib/analyze'
+import { ERROR_CODES, assertErrorCode, type ErrorCode } from '@/lib/api/errors'
 import type {
   AnalysisResult,
   HistoryEntry,
   Industry,
   Project,
-  Verdict,
 } from '@/lib/types'
 
 export type View = 'check' | 'projects' | 'new_project' | 'history'
@@ -49,13 +47,13 @@ interface StoreValue {
   status: AnalysisStatus
   result: AnalysisResult | null
   isLoadingProjects: boolean
-  projectError: string
+  projectError: ErrorCode | ''
 
   setView: (v: View) => void
   selectProject: (id: string) => void
   createProject: (input: NewProjectInput) => Promise<void>
   setRequestText: (t: string) => void
-  loadExample: (text: string, forceError: boolean) => void
+  loadExample: (text: string) => void
   runCheck: () => void
   reset: () => void
   logout: () => Promise<void>
@@ -79,7 +77,7 @@ interface MeResponse {
 
 class ApiError extends Error {
   constructor(
-    message: string,
+    message: ErrorCode,
     readonly status: number,
   ) {
     super(message)
@@ -93,9 +91,10 @@ function todayISO() {
 }
 
 async function readApiError(response: Response) {
+  let body: unknown
+
   try {
-    const body = await response.json()
-    if (body && typeof body.error === 'string') return body.error
+    body = await response.json()
   } catch (error) {
     console.error(
       JSON.stringify({
@@ -104,8 +103,19 @@ async function readApiError(response: Response) {
         message: error instanceof Error ? error.message : 'Unknown JSON parse error',
       }),
     )
+    return ERROR_CODES.requestFailed
   }
-  return 'The request failed.'
+
+  if (
+    body &&
+    typeof body === 'object' &&
+    !Array.isArray(body) &&
+    typeof (body as Record<string, unknown>).error === 'string'
+  ) {
+    return assertErrorCode((body as Record<string, string>).error)
+  }
+
+  return ERROR_CODES.requestFailed
 }
 
 async function readApiSuccess<T>(response: Response): Promise<T> {
@@ -124,7 +134,19 @@ async function readApiSuccess<T>(response: Response): Promise<T> {
 }
 
 async function apiFetch<T>(input: RequestInfo | URL, init?: RequestInit) {
-  const response = await fetch(input, init)
+  let response: Response
+
+  try {
+    response = await fetch(input, init)
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: 'api_request_failed',
+        message: error instanceof Error ? error.message : 'Unknown request error',
+      }),
+    )
+    throw new ApiError(ERROR_CODES.requestFailed, 0)
+  }
 
   if (!response.ok) {
     throw new ApiError(await readApiError(response), response.status)
@@ -143,10 +165,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AnalysisStatus>('idle')
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [isLoadingProjects, setIsLoadingProjects] = useState(true)
-  const [projectError, setProjectError] = useState('')
-
-  const forceErrorRef = useRef(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [projectError, setProjectError] = useState<ErrorCode | ''>('')
 
   const selectedProject =
     projects.find((p) => p.id === selectedProjectId) ?? null
@@ -184,7 +203,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
 
         if (isActive) {
-          setProjectError('Unable to load your workspace. Please refresh the page.')
+          setProjectError(ERROR_CODES.workspaceLoadFailed)
         }
       } finally {
         if (isActive) setIsLoadingProjects(false)
@@ -195,7 +214,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     return () => {
       isActive = false
-      if (timerRef.current) clearTimeout(timerRef.current)
     }
   }, [router])
 
@@ -204,7 +222,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRequestText('')
     setResult(null)
     setStatus('idle')
-    forceErrorRef.current = false
   }
 
   async function createProject(input: NewProjectInput) {
@@ -224,9 +241,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setView('check')
   }
 
-  function loadExample(text: string, forceError: boolean) {
+  function loadExample(text: string) {
     setRequestText(text)
-    forceErrorRef.current = forceError
     setResult(null)
     setStatus('idle')
   }
@@ -260,21 +276,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     applyHistory(projectId, data.entry)
   }
 
-  async function runAnalysis(project: Project, request: string, shouldError: boolean) {
+  async function runAnalysis(project: Project, request: string) {
     try {
-      const analysis = analyzeRequest(project.scope, request, {
-        forceError: shouldError,
-      })
+      const data = await apiFetch<{ result: AnalysisResult }>(
+        '/api/analyze',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: project.id, request }),
+        },
+      )
 
-      const entry = {
+      const analysis = data.result
+      await persistHistory(project.id, {
         date: todayISO(),
         request,
-        verdict: analysis.verdict as Verdict,
+        verdict: analysis.verdict,
         summary: analysis.summary,
-      }
-
-      await persistHistory(project.id, entry)
-      forceErrorRef.current = false
+      })
       setResult(analysis)
       setStatus('result')
     } catch (error) {
@@ -282,18 +301,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         JSON.stringify({
           event: 'scope_check_failed',
           projectId: project.id,
-          isAnalysisError: error instanceof AnalysisError,
           message: error instanceof Error ? error.message : 'Unknown scope check error',
           status: error instanceof ApiError ? error.status : null,
         }),
       )
-
       if (error instanceof ApiError && error.status === 401) {
         router.replace('/login')
         return
       }
-
-      forceErrorRef.current = false
       setStatus('error')
     }
   }
@@ -315,14 +330,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    if (timerRef.current) clearTimeout(timerRef.current)
     setStatus('loading')
     setResult(null)
-
-    const shouldError = forceErrorRef.current
-    timerRef.current = setTimeout(() => {
-      void runAnalysis(project, request, shouldError)
-    }, 1500)
+    void runAnalysis(project, request)
   }
 
   function reset() {
