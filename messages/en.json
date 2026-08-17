@@ -61,6 +61,8 @@
     "scopeLabel": "Agreed scope",
     "scopePlaceholder": "Paste the deliverables, revision rounds, and exclusions here…",
     "scopeTip": "Tip: paste directly from your contract, proposal, or SOW. Include both what's delivered and what's excluded for the sharpest verdicts.",
+    "uploadScope": "Upload scope file",
+    "uploadHint": "Accepts .txt, .md, or .pdf up to 5 MB. Text is copied into the field below; the file is not stored.",
     "saving": "Saving...",
     "save": "Save project",
     "cancel": "Cancel"
