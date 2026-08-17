@@ -56,3 +56,9 @@ Complete. LLM scope analysis and scope file upload verified with automated check
 - `pnpm exec tsc --noEmit` passed after LLM analyze and scope upload changes.
 - `pnpm build` passed after LLM analyze and scope upload changes.
 - Live OpenAI analyze smoke skipped: `.env.local` has `DATABASE_URL` and `AUTH_SECRET` but no `OPENAI_API_KEY`.
+- `pnpm db:up` passed; Postgres container healthy; `pnpm db:migrate` passed.
+- Analyze API HTTP smoke (PowerShell `Invoke-WebRequest`, dev server on `localhost:3000`, no `OPENAI_API_KEY`):
+  - `POST /api/analyze` without session cookie → `401` `{"error":"errors.authRequired"}`.
+  - Register user, create project with non-empty scope, `POST /api/analyze` with `{ projectId, request }` → `503` `{"error":"errors.analysisUnavailable"}` (not a keyword verdict body).
+  - Second user `POST /api/analyze` with first user's `projectId` → `404` `{"error":"errors.projectNotFound"}`.
+- `pnpm test` passed after analyze smoke (2 files, 10 tests).

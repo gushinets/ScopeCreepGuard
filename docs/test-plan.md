@@ -58,7 +58,7 @@ The feature is ready when Russian is the default first-load language, EN/RU swit
 
 ## Critical Paths
 
-- Upload `.txt` / `.pdf` into New Project; reject files larger than 5 MiB and extensions such as `.docx`.
+- Upload `.txt` / `.md` / `.pdf` into New Project; reject files larger than 5 MiB and extensions such as `.docx`.
 - Check scope with a valid `OPENAI_API_KEY` → verdict, client replies, change order, and history entry.
 - Missing `OPENAI_API_KEY` → `errors.analysisUnavailable` / error UI (no keyword verdict).
 - User B cannot analyze User A's project id (`404`).
