@@ -46,6 +46,16 @@ describe('parseAnalysisResult', () => {
     expect(parseAnalysisResult({ ...valid, confidence: 100 }).confidence).toBe(100)
   })
 
+  it('keeps percent-scale confidence as an integer 0-100', () => {
+    expect(parseAnalysisResult({ ...valid, confidence: 88 }).confidence).toBe(88)
+    expect(parseAnalysisResult({ ...valid, confidence: 87.6 }).confidence).toBe(88)
+  })
+
+  it('converts 0-1 fraction confidence into a percent', () => {
+    expect(parseAnalysisResult({ ...valid, confidence: 0.95 }).confidence).toBe(95)
+    expect(parseAnalysisResult({ ...valid, confidence: 0.5 }).confidence).toBe(50)
+  })
+
   it('rejects out-of-range confidence', () => {
     expect(() => parseAnalysisResult({ ...valid, confidence: -5 })).toThrow(
       'invalid_analysis_result',

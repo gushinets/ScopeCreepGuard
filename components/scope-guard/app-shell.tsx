@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { LogOut, ShieldCheck } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { LanguageSwitcher } from '@/components/i18n/language-switcher'
 import { cn } from '@/lib/utils'
 import { StoreProvider, useStore, type View } from './store'
 import { ScopeCheckView } from './scope-check-view'
@@ -9,14 +11,15 @@ import { ProjectsView } from './projects-view'
 import { NewProjectView } from './new-project-view'
 import { HistoryView } from './history-view'
 
-const NAV: { id: View; label: string }[] = [
-  { id: 'check', label: 'Scope check' },
-  { id: 'projects', label: 'Projects' },
-  { id: 'history', label: 'History' },
+const NAV: { id: View; labelKey: 'check' | 'projects' | 'history' }[] = [
+  { id: 'check', labelKey: 'check' },
+  { id: 'projects', labelKey: 'projects' },
+  { id: 'history', labelKey: 'history' },
 ]
 
 function Header() {
   const { view, setView, user, logout } = useStore()
+  const t = useTranslations()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const activeNav: View = view === 'new_project' ? 'projects' : view
 
@@ -44,14 +47,14 @@ function Header() {
           </span>
           <div className="leading-tight">
             <p className="text-sm font-semibold text-foreground">
-              Scope Creep Guard
+              {t('brand.name')}
             </p>
-            <p className="text-xs text-muted-foreground">Prototype</p>
+            <p className="text-xs text-muted-foreground">{t('brand.prototype')}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <nav aria-label="Primary" className="flex items-center gap-1">
+          <nav aria-label={t('nav.primary')} className="flex items-center gap-1">
             {NAV.map((item) => (
               <button
                 key={item.id}
@@ -65,12 +68,14 @@ function Header() {
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                 )}
               >
-                {item.label}
+                {t(`nav.${item.labelKey}`)}
               </button>
             ))}
           </nav>
 
           <div className="hidden h-6 w-px bg-border sm:block" />
+
+          <LanguageSwitcher />
 
           <div className="hidden max-w-44 truncate text-xs text-muted-foreground md:block">
             {user?.email}
@@ -83,7 +88,7 @@ function Header() {
           >
             <LogOut className="size-4" aria-hidden="true" />
             <span className="hidden sm:inline">
-              {isLoggingOut ? 'Logging out...' : 'Logout'}
+              {isLoggingOut ? t('nav.loggingOut') : t('nav.logout')}
             </span>
           </button>
         </div>
@@ -94,14 +99,17 @@ function Header() {
 
 function Body() {
   const { view, isLoadingProjects, projectError } = useStore()
+  const t = useTranslations()
 
   if (isLoadingProjects) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <div className="rounded-xl border border-border bg-card/50 p-10 text-center">
-          <p className="text-sm font-medium text-foreground">Loading workspace...</p>
+          <p className="text-sm font-medium text-foreground">
+            {t('workspace.loadingTitle')}
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Fetching your private projects and history.
+            {t('workspace.loadingDescription')}
           </p>
         </div>
       </main>
@@ -112,7 +120,9 @@ function Body() {
     return (
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <div className="rounded-xl border border-outscope-border bg-outscope-soft p-10 text-center">
-          <p className="text-sm font-medium text-outscope-text">{projectError}</p>
+          <p className="text-sm font-medium text-outscope-text">
+            {t(projectError)}
+          </p>
         </div>
       </main>
     )
@@ -129,6 +139,8 @@ function Body() {
 }
 
 export function AppShell() {
+  const t = useTranslations()
+
   return (
     <StoreProvider>
       <div className="min-h-screen bg-background text-foreground">
@@ -136,9 +148,7 @@ export function AppShell() {
         <Body />
         <footer className="mx-auto max-w-6xl px-4 pb-10 sm:px-6">
           <p className="border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-            Scope Creep Guard stores projects and history in your authenticated
-            workspace. Client requests are not analyzed by a real AI or sent
-            anywhere. Verdicts are AI-assisted suggestions, not legal advice.
+            {t('workspace.footer')}
           </p>
         </footer>
       </div>

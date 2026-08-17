@@ -18,7 +18,8 @@ Rules:
 - Fill changeOrder for out_of_scope and borderline; for in_scope set cost to included / $0 style text.
 - changeOrder.note must say this is a draft, not legal advice.
 - Never invent scope clauses that are not in the provided scope.
-- suggestion may be empty string when not needed.`
+- suggestion may be empty string when not needed.
+- confidence is an integer from 0 to 100 meaning percent certainty (100 = fully certain). Never use a 0-1 fraction.`
 
   const user = `PROJECT SCOPE:
 ${input.scope}

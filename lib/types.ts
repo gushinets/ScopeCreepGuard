@@ -13,6 +13,7 @@ export interface ChangeOrderDraft {
 
 export interface AnalysisResult {
   verdict: Verdict
+  /** Integer 0-100, percent certainty. */
   confidence: number
   summary: string
   reasoning: string
@@ -38,10 +39,4 @@ export interface Project {
   scope: string
   lastChecked?: string
   history: HistoryEntry[]
-}
-
-export const VERDICT_LABELS: Record<Verdict, string> = {
-  in_scope: 'In scope',
-  borderline: 'Borderline',
-  out_of_scope: 'Out of scope',
 }

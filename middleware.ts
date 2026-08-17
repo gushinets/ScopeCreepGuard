@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { ERROR_CODES } from '@/lib/api/errors'
 import { SESSION_COOKIE_NAME, verifySessionToken } from '@/lib/auth/session'
 
 const PUBLIC_PAGE_PATHS = new Set(['/login', '/register'])
@@ -24,8 +25,9 @@ export async function middleware(request: NextRequest) {
   const sessionUser = token ? await verifySessionToken(token) : null
   const isPublicPage = PUBLIC_PAGE_PATHS.has(pathname)
   const isAuthApi = pathname.startsWith('/api/auth/')
+  const isLocaleApi = pathname === '/api/locale'
 
-  if (isAuthApi) {
+  if (isAuthApi || isLocaleApi) {
     return NextResponse.next()
   }
 
@@ -35,7 +37,7 @@ export async function middleware(request: NextRequest) {
 
   if (!sessionUser && pathname.startsWith('/api/')) {
     return NextResponse.json(
-      { error: 'Authentication is required.' },
+      { error: ERROR_CODES.authRequired },
       { status: 401 },
     )
   }

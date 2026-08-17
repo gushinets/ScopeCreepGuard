@@ -16,7 +16,13 @@ export const ANALYSIS_JSON_SCHEMA = {
       type: 'string',
       enum: ['in_scope', 'borderline', 'out_of_scope'],
     },
-    confidence: { type: 'number' },
+    confidence: {
+      type: 'number',
+      description:
+        'Certainty as a percentage from 0 to 100, not a 0-1 fraction.',
+      minimum: 0,
+      maximum: 100,
+    },
     summary: { type: 'string' },
     reasoning: { type: 'string' },
     citations: { type: 'array', items: { type: 'string' } },

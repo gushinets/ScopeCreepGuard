@@ -1,23 +1,28 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale, getTranslations } from 'next-intl/server'
 import './globals.css'
 
 const geistSans = Geist({
-  subsets: ['latin'],
+  subsets: ['latin', 'cyrillic'],
   variable: '--font-geist-sans',
 })
 
 const geistMono = Geist_Mono({
-  subsets: ['latin'],
+  subsets: ['latin', 'cyrillic'],
   variable: '--font-geist-mono',
 })
 
-export const metadata: Metadata = {
-  title: 'Scope Creep Guard',
-  description:
-    'Check whether a new client request fits your agreed project scope, and reply with confidence.',
-  generator: 'v0.app',
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('meta')
+
+  return {
+    title: t('title'),
+    description: t('description'),
+    generator: 'v0.app',
+  }
 }
 
 export const viewport: Viewport = {
@@ -25,19 +30,23 @@ export const viewport: Viewport = {
   themeColor: '#ffffff',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = await getLocale()
+
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`light ${geistSans.variable} ${geistMono.variable} bg-background`}
     >
       <body className="font-sans antialiased">
-        {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        <NextIntlClientProvider>
+          {children}
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+        </NextIntlClientProvider>
       </body>
     </html>
   )

@@ -1,6 +1,7 @@
 import { CircleCheck, CircleX, TriangleAlert } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
-import { VERDICT_LABELS, type Verdict } from '@/lib/types'
+import type { Verdict } from '@/lib/types'
 
 export const verdictIcon: Record<Verdict, typeof CircleCheck> = {
   in_scope: CircleCheck,
@@ -14,6 +15,10 @@ const chipStyles: Record<Verdict, string> = {
   out_of_scope: 'bg-outscope-soft text-outscope-text border-outscope-border',
 }
 
+function verdictLabelKey(verdict: Verdict) {
+  return `verdict.${verdict}` as const
+}
+
 /** Small inline pill used in lists and history. */
 export function VerdictChip({
   verdict,
@@ -23,6 +28,8 @@ export function VerdictChip({
   className?: string
 }) {
   const Icon = verdictIcon[verdict]
+  const t = useTranslations()
+
   return (
     <span
       className={cn(
@@ -32,7 +39,7 @@ export function VerdictChip({
       )}
     >
       <Icon className="size-3.5" aria-hidden="true" />
-      {VERDICT_LABELS[verdict]}
+      {t(verdictLabelKey(verdict))}
     </span>
   )
 }
@@ -66,6 +73,8 @@ export function VerdictBanner({
   summary: string
 }) {
   const Icon = verdictIcon[verdict]
+  const t = useTranslations()
+
   return (
     <div
       className={cn('rounded-lg border p-4', bannerStyles[verdict])}
@@ -83,7 +92,7 @@ export function VerdictBanner({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h3 className={cn('text-lg font-semibold', textStyles[verdict])}>
-              {VERDICT_LABELS[verdict]}
+              {t(verdictLabelKey(verdict))}
             </h3>
             <ConfidenceMeter verdict={verdict} confidence={confidence} />
           </div>
@@ -103,6 +112,7 @@ function ConfidenceMeter({
   verdict: Verdict
   confidence: number
 }) {
+  const t = useTranslations('result')
   const barColor: Record<Verdict, string> = {
     in_scope: 'bg-inscope',
     borderline: 'bg-borderline',
@@ -110,17 +120,17 @@ function ConfidenceMeter({
   }
   return (
     <span className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
-      <span className="hidden sm:inline">Confidence</span>
+      <span className="hidden sm:inline">{t('confidence')}</span>
       <span
         className="h-1.5 w-16 overflow-hidden rounded-full bg-border"
         aria-hidden="true"
       >
         <span
           className={cn('block h-full rounded-full', barColor[verdict])}
-          style={{ width: `${confidence}%` }}
+          style={{ width: `${Math.round(confidence)}%` }}
         />
       </span>
-      <span className="tabular-nums">{confidence}%</span>
+      <span className="tabular-nums">{Math.round(confidence)}%</span>
     </span>
   )
 }

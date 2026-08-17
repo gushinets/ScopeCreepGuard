@@ -11,6 +11,19 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string')
 }
 
+function parseConfidencePercent(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+    throw new Error('invalid_analysis_result')
+  }
+
+  const percent = value > 0 && value <= 1 ? value * 100 : value
+  if (percent > 100) {
+    throw new Error('invalid_analysis_result')
+  }
+
+  return Math.round(percent)
+}
+
 export function parseAnalysisResult(value: unknown): AnalysisResult {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('invalid_analysis_result')
@@ -21,14 +34,7 @@ export function parseAnalysisResult(value: unknown): AnalysisResult {
   if (typeof raw.verdict !== 'string' || !VERDICTS.has(raw.verdict as Verdict)) {
     throw new Error('invalid_analysis_result')
   }
-  if (
-    typeof raw.confidence !== 'number' ||
-    !Number.isFinite(raw.confidence) ||
-    raw.confidence < 0 ||
-    raw.confidence > 100
-  ) {
-    throw new Error('invalid_analysis_result')
-  }
+  const confidence = parseConfidencePercent(raw.confidence)
   if (!isNonEmptyString(raw.summary) || !isNonEmptyString(raw.reasoning)) {
     throw new Error('invalid_analysis_result')
   }
@@ -66,7 +72,7 @@ export function parseAnalysisResult(value: unknown): AnalysisResult {
 
   const result: AnalysisResult = {
     verdict: raw.verdict as Verdict,
-    confidence: raw.confidence,
+    confidence,
     summary: raw.summary.trim(),
     reasoning: raw.reasoning.trim(),
     citations: raw.citations,

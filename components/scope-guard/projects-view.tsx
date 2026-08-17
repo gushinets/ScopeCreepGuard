@@ -1,34 +1,44 @@
 'use client'
 
 import { ArrowRight, FolderPlus, Plus } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
+import { localeToDateLocale, type Locale } from '@/i18n/config'
+import type { Industry } from '@/lib/types'
 import { useStore } from './store'
 
-function formatDate(iso?: string) {
-  if (!iso) return 'Not checked yet'
+function formatDate(iso: string, locale: Locale) {
   const d = new Date(iso)
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString(localeToDateLocale(locale), {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   })
 }
 
+function industryLabelKey(industry: Industry) {
+  return `industry.${industry}` as const
+}
+
 export function ProjectsView() {
   const { projects, selectProject, setView } = useStore()
+  const locale = useLocale()
+  const t = useTranslations()
 
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Projects</h2>
+          <h2 className="text-xl font-semibold text-foreground">
+            {t('projects.title')}
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Each project holds one agreed scope you check requests against.
+            {t('projects.description')}
           </p>
         </div>
         <Button type="button" className="h-9" onClick={() => setView('new_project')}>
           <Plus aria-hidden="true" />
-          New project
+          {t('projects.newProject')}
         </Button>
       </div>
 
@@ -38,11 +48,10 @@ export function ProjectsView() {
             <FolderPlus className="size-6 text-muted-foreground" aria-hidden="true" />
           </span>
           <h3 className="mt-4 text-base font-semibold text-foreground">
-            No projects yet
+            {t('projects.emptyTitle')}
           </h3>
           <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground text-pretty">
-            Create your first project and paste in its scope. You&apos;ll then be able
-            to check whether new client requests are covered.
+            {t('projects.emptyDescription')}
           </p>
           <Button
             type="button"
@@ -50,7 +59,7 @@ export function ProjectsView() {
             onClick={() => setView('new_project')}
           >
             <Plus aria-hidden="true" />
-            Create your first project
+            {t('projects.createFirst')}
           </Button>
         </div>
       ) : (
@@ -71,7 +80,12 @@ export function ProjectsView() {
                   </p>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
                     {p.client ? `${p.client} · ` : ''}
-                    {p.industry} · Last checked {formatDate(p.lastChecked)}
+                    {t(industryLabelKey(p.industry))} ·{' '}
+                    {p.lastChecked
+                      ? t('projects.lastChecked', {
+                          date: formatDate(p.lastChecked, locale),
+                        })
+                      : t('projects.notCheckedYet')}
                   </p>
                 </div>
                 <ArrowRight

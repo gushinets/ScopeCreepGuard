@@ -1,3 +1,4 @@
+import { ERROR_CODES, type ErrorCode } from '@/lib/api/errors'
 import type { HistoryEntry, Industry, Verdict } from '@/lib/types'
 
 const INDUSTRIES: Industry[] = ['Development', 'Design', 'Marketing']
@@ -13,24 +14,24 @@ export interface ProjectInput {
 
 export type ProjectInputResult =
   | { ok: true; project: ProjectInput }
-  | { ok: false; error: string }
+  | { ok: false; error: ErrorCode }
 
 export type HistoryInputResult =
   | { ok: true; entry: Omit<HistoryEntry, 'id'> }
-  | { ok: false; error: string }
+  | { ok: false; error: ErrorCode }
 
 export function parseProjectInput(body: Record<string, unknown>): ProjectInputResult {
   if (typeof body.name !== 'string' || body.name.trim().length === 0) {
-    return { ok: false, error: 'Project name is required.' }
+    return { ok: false, error: ERROR_CODES.projectNameRequired }
   }
   if (typeof body.scope !== 'string') {
-    return { ok: false, error: 'Scope is required.' }
+    return { ok: false, error: ERROR_CODES.scopeRequired }
   }
   if (typeof body.industry !== 'string' || !INDUSTRIES.includes(body.industry as Industry)) {
-    return { ok: false, error: 'Industry is invalid.' }
+    return { ok: false, error: ERROR_CODES.industryInvalid }
   }
   if (body.client !== undefined && body.client !== null && typeof body.client !== 'string') {
-    return { ok: false, error: 'Client must be a string.' }
+    return { ok: false, error: ERROR_CODES.clientInvalid }
   }
 
   const client = typeof body.client === 'string' ? body.client.trim() : ''
@@ -48,16 +49,16 @@ export function parseProjectInput(body: Record<string, unknown>): ProjectInputRe
 
 export function parseHistoryInput(body: Record<string, unknown>): HistoryInputResult {
   if (typeof body.date !== 'string' || !ISO_DATE_PATTERN.test(body.date)) {
-    return { ok: false, error: 'History date is invalid.' }
+    return { ok: false, error: ERROR_CODES.historyDateInvalid }
   }
   if (typeof body.request !== 'string' || body.request.trim().length === 0) {
-    return { ok: false, error: 'Request is required.' }
+    return { ok: false, error: ERROR_CODES.requestRequired }
   }
   if (typeof body.verdict !== 'string' || !VERDICTS.includes(body.verdict as Verdict)) {
-    return { ok: false, error: 'Verdict is invalid.' }
+    return { ok: false, error: ERROR_CODES.verdictInvalid }
   }
   if (typeof body.summary !== 'string' || body.summary.trim().length === 0) {
-    return { ok: false, error: 'Summary is required.' }
+    return { ok: false, error: ERROR_CODES.summaryRequired }
   }
 
   return {
