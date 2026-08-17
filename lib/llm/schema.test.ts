@@ -31,6 +31,10 @@ describe('parseAnalysisResult', () => {
     expect(parseAnalysisResult(rest).suggestion).toBeUndefined()
   })
 
+  it('omits empty string suggestion', () => {
+    expect(parseAnalysisResult({ ...valid, suggestion: '' }).suggestion).toBeUndefined()
+  })
+
   it('rejects invalid verdict', () => {
     expect(() =>
       parseAnalysisResult({ ...valid, verdict: 'maybe' }),
