@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Complete. LLM scope analysis and scope file upload verified with automated checks; live OpenAI smoke skipped because `OPENAI_API_KEY` is not set in `.env.local`.
+Implemented. LLM scope analysis and scope file upload pass automated checks (unit tests, lint, tsc, build, analyze API 401/503/404 smoke). Live OpenAI happy-path smoke and manual upload/UI checks remain pending because `OPENAI_API_KEY` is not set in `.env.local`.
 
 ## Done
 
@@ -26,7 +26,9 @@ Complete. LLM scope analysis and scope file upload verified with automated check
 
 ## Next
 
-- None for this feature.
+- Live OpenAI analyze with `OPENAI_API_KEY`: verdict, replies, change order, and history persistence.
+- Manual scope upload: accept `.txt`, `.md`, and `.pdf`; reject files over 5 MiB and `.docx`.
+- Confirm OpenAI informational notice on the request panel and updated footer copy (no longer claims requests are not analyzed by a real AI).
 
 ## Decisions
 
