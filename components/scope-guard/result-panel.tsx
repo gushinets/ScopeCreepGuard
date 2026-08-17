@@ -9,6 +9,7 @@ import {
   ShieldQuestion,
   TriangleAlert,
 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { VerdictBanner } from './verdict'
 import { ClientReply } from './client-reply'
@@ -37,6 +38,8 @@ function PanelFrame({ children }: { children: React.ReactNode }) {
 }
 
 function EmptyState() {
+  const t = useTranslations()
+
   return (
     <PanelFrame>
       <div className="m-auto max-w-sm text-center">
@@ -47,12 +50,14 @@ function EmptyState() {
           />
         </span>
         <h3 className="mt-4 text-base font-semibold text-foreground">
-          Ready when you are
+          {t('result.emptyTitle')}
         </h3>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground text-pretty">
-          Paste the client&apos;s new request on the left and run{' '}
-          <span className="font-medium text-foreground">Check scope</span>. You&apos;ll
-          get a verdict, the reasoning behind it, and a ready-to-edit reply.
+          {t('result.emptyBeforeAction')}{' '}
+          <span className="font-medium text-foreground">
+            {t('check.checkScope')}
+          </span>
+          . {t('result.emptyAfterAction')}
         </p>
       </div>
     </PanelFrame>
@@ -60,6 +65,8 @@ function EmptyState() {
 }
 
 function LoadingState() {
+  const t = useTranslations()
+
   return (
     <PanelFrame>
       <div className="m-auto flex max-w-sm flex-col items-center text-center">
@@ -68,7 +75,7 @@ function LoadingState() {
           aria-hidden="true"
         />
         <p className="mt-4 text-sm font-medium text-foreground" role="status">
-          Comparing the request against your scope…
+          {t('result.loading')}
         </p>
         <div className="mt-4 w-full space-y-2" aria-hidden="true">
           <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
@@ -81,6 +88,9 @@ function LoadingState() {
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const t = useTranslations()
+  const { analysisError } = useStore()
+
   return (
     <PanelFrame>
       <div className="m-auto max-w-sm text-center">
@@ -91,14 +101,13 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
           />
         </span>
         <h3 className="mt-4 text-base font-semibold text-foreground">
-          Analysis didn&apos;t complete
+          {t('result.errorTitle')}
         </h3>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground text-pretty">
-          Something went wrong while checking this request. Your scope and the
-          request text are still saved — just try again.
+          {analysisError ? t(analysisError) : t('result.errorDescription')}
         </p>
         <Button type="button" onClick={onRetry} className="mt-4 h-9">
-          Try again
+          {t('result.tryAgain')}
         </Button>
       </div>
     </PanelFrame>
@@ -106,6 +115,8 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 function ShortScopeState() {
+  const t = useTranslations()
+
   return (
     <PanelFrame>
       <div className="m-auto max-w-sm text-center">
@@ -113,12 +124,10 @@ function ShortScopeState() {
           <Info className="size-6 text-borderline-text" aria-hidden="true" />
         </span>
         <h3 className="mt-4 text-base font-semibold text-foreground">
-          Your scope is too short to judge
+          {t('result.shortScopeTitle')}
         </h3>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground text-pretty">
-          There isn&apos;t enough detail in the saved scope to compare this request
-          reliably. Add the deliverables, revision rounds, and exclusions from your
-          contract, proposal, or SOW, then check again.
+          {t('result.shortScopeDescription')}
         </p>
       </div>
     </PanelFrame>
@@ -127,6 +136,7 @@ function ShortScopeState() {
 
 function ResultState() {
   const { result, selectedProject } = useStore()
+  const t = useTranslations()
   const [showChangeOrder, setShowChangeOrder] = useState(
     result?.verdict === 'out_of_scope',
   )
@@ -149,7 +159,7 @@ function ResultState() {
         className="rounded-lg border border-border bg-card p-4"
       >
         <h3 id="why-heading" className="text-sm font-semibold text-foreground">
-          Why this verdict
+          {t('result.whyHeading')}
         </h3>
         <p className="mt-1.5 text-sm leading-relaxed text-foreground/80 text-pretty">
           {result.reasoning}
@@ -158,7 +168,7 @@ function ResultState() {
         {result.citations.length > 0 && (
           <div className="mt-3">
             <p className="text-xs font-medium text-muted-foreground">
-              From your saved scope
+              {t('result.fromScope')}
             </p>
             <ul className="mt-1.5 space-y-1.5">
               {result.citations.map((c, i) => (
@@ -188,8 +198,7 @@ function ResultState() {
       {/* Verify warning */}
       <p className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-xs leading-relaxed text-muted-foreground">
         <Info className="size-3.5 shrink-0" aria-hidden="true" />
-        This is an AI-assisted assessment, not a legal or final decision. Review it
-        before you reply to your client.
+        {t('result.verifyWarning')}
       </p>
 
       <ClientReply result={result} />
@@ -204,7 +213,7 @@ function ResultState() {
           onClick={() => setShowChangeOrder(true)}
         >
           <TriangleAlert aria-hidden="true" />
-          Draft a change order anyway
+          {t('result.draftChangeOrderAnyway')}
         </Button>
       )}
     </div>

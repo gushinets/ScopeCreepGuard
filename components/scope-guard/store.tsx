@@ -46,6 +46,7 @@ interface StoreValue {
   requestText: string
   status: AnalysisStatus
   result: AnalysisResult | null
+  analysisError: ErrorCode | ''
   isLoadingProjects: boolean
   projectError: ErrorCode | ''
 
@@ -164,6 +165,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [requestText, setRequestText] = useState('')
   const [status, setStatus] = useState<AnalysisStatus>('idle')
   const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [analysisError, setAnalysisError] = useState<ErrorCode | ''>('')
   const [isLoadingProjects, setIsLoadingProjects] = useState(true)
   const [projectError, setProjectError] = useState<ErrorCode | ''>('')
 
@@ -221,6 +223,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSelectedProjectId(id)
     setRequestText('')
     setResult(null)
+    setAnalysisError('')
     setStatus('idle')
   }
 
@@ -237,6 +240,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSelectedProjectId(data.project.id)
     setRequestText('')
     setResult(null)
+    setAnalysisError('')
     setStatus('idle')
     setView('check')
   }
@@ -244,6 +248,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   function loadExample(text: string) {
     setRequestText(text)
     setResult(null)
+    setAnalysisError('')
     setStatus('idle')
   }
 
@@ -309,6 +314,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         router.replace('/login')
         return
       }
+      setAnalysisError(
+        error instanceof ApiError
+          ? (error.message as ErrorCode)
+          : ERROR_CODES.requestFailed,
+      )
       setStatus('error')
     }
   }
@@ -332,11 +342,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     setStatus('loading')
     setResult(null)
+    setAnalysisError('')
     void runAnalysis(project, request)
   }
 
   function reset() {
     setResult(null)
+    setAnalysisError('')
     setStatus('idle')
   }
 
@@ -356,6 +368,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     requestText,
     status,
     result,
+    analysisError,
     isLoadingProjects,
     projectError,
     setView,

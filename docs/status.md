@@ -2,12 +2,12 @@
 
 ## Current Phase
 
-Implemented with one environment blocker. `OPENAI_API_KEY` is set in `.env.local`, automated gates pass, scope upload helpers and OpenAI notice/footer copy are verified, but live `POST /api/analyze` returns `502 errors.analysisFailed` because OpenAI rejects requests from this region (`403 Country, region, or territory not supported` in server logs). Happy-path verdict/replies/change-order smoke is blocked until analyze succeeds from a supported network or proxy.
+Implemented with one environment blocker. `OPENAI_API_KEY` is set in `.env.local`, automated gates pass, scope upload helpers and OpenAI notice/footer copy are verified, but live `POST /api/analyze` returns `502 errors.analysisFailed` because OpenAI rejects requests from this region (`403 Country, region, or territory not supported` in server logs). Happy-path verdict/replies/change-order smoke is blocked until analyze succeeds from a supported region.
 
 ## Done
 
-- LLM scope analysis via `POST /api/analyze` with OpenAI `gpt-4o-mini`, structured `AnalysisResult` validation, and no keyword fallback.
-- Scope file upload on New Project for `.txt`, `.md`, and `.pdf` (5 MiB max, client text extraction; text-only storage in Postgres).
+- LLM scope analysis wired: `POST /api/analyze` with OpenAI `gpt-4o-mini`, structured `AnalysisResult` validation, and no keyword fallback. Live happy-path `200 { result }` is **not** verified — OpenAI returns `403 Country, region, or territory not supported` from this region (`502 errors.analysisFailed` in smoke).
+- Scope file upload on New Project for `.txt`, `.md`, and `.pdf` (5 MiB max, client text extraction; text-only storage in Postgres). Vitest covers `.txt`/`.md` accept and reject paths; `.pdf` browser upload not E2E-verified; Node/pdfjs manual extract failed (`DOMMatrix is not defined`).
 - OpenAI informational notice on the request panel; footer no longer claims requests are not analyzed by a real AI.
 - Stable API error keys `errors.analysisUnavailable` and `errors.analysisFailed` with EN/RU client translation.
 - Plan confirmed: email/password auth, local Postgres, per-user data isolation.
@@ -20,15 +20,14 @@ Implemented with one environment blocker. `OPENAI_API_KEY` is set in `.env.local
 - Live Docker smoke completed after daemon became available.
 - English/Russian UI switching added with `next-intl`, Russian default locale, locale cookie switching, localized chrome, and stable API error keys.
 - Live smoke with `OPENAI_API_KEY` present: register → project (Acme scope) → analyze attempted; history POST blocked when analyze fails; authenticated workspace HTML includes OpenAI copy and no “not analyzed by a real AI” disclaimer; `request-panel.tsx` renders `t('check.openaiNotice')`.
-- Scope file reader: Vitest covers `.txt`/`.md` accept and `.docx`/oversized/empty reject; tiny PDF manual extract in Node failed (`DOMMatrix is not defined` — pdfjs Node limitation; browser path not exercised in this session).
 
 ## In Progress
 
-- None.
+- Environment blocker: live OpenAI analyze from this region returns `502 errors.analysisFailed` (`403` in server logs). Happy-path verdict/replies/change-order smoke and history POST after analyze remain blocked.
 
 ## Next
 
-- Retry live OpenAI analyze from a supported region or via an allowed proxy/VPN so `POST /api/analyze` returns `200 { result }` with verdict, replies, and change order; then POST history and mark this slice complete.
+- Retry live OpenAI analyze from a supported region so `POST /api/analyze` returns `200 { result }` with verdict, replies, and change order; then POST history and mark this slice complete.
 - Optional: manual browser upload of `.txt` and `.pdf` on New Project UI once analyze path is unblocked.
 
 ## Decisions
