@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+import { getLocale } from 'next-intl/server'
+import { isLocale } from '@/i18n/config'
 import { ERROR_CODES } from '@/lib/api/errors'
 import { jsonError, readJsonObject } from '@/lib/api/json'
 import { getCurrentUser } from '@/lib/auth/current-user'
@@ -40,11 +42,24 @@ export async function POST(request: Request) {
     return jsonError(ERROR_CODES.analysisInputTooLarge, 400)
   }
 
+  const locale = await getLocale()
+  if (!isLocale(locale)) {
+    console.error(
+      JSON.stringify({
+        event: 'analyze_locale_invalid',
+        userId: user.id,
+        locale,
+      }),
+    )
+    throw new Error(`Invalid locale: ${locale}`)
+  }
+
   try {
     const result = await analyzeWithOpenAI({
       scope: project.scope,
       request: parsed.request,
       industry: project.industry,
+      locale,
     })
     return NextResponse.json({ result })
   } catch (error) {

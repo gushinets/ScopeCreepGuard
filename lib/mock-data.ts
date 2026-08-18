@@ -32,20 +32,8 @@ Excluded:
 Term: rolling monthly. Billed at the start of each month.`
 
 /** Preset client requests reviewers can load to see each verdict. */
-export const EXAMPLE_REQUESTS: {
-  key: 'in' | 'borderline' | 'out'
-  text: string
-}[] = [
-  {
-    key: 'in',
-    text: 'On the Home page, could you fix the typo in the hero headline and adjust the accent color to a slightly darker blue? This would be part of our revision round.',
-  },
-  {
-    key: 'borderline',
-    text: 'Could you add a small newsletter sign-up section to the bottom of the Home page? It is a new element, but it sits on a page that is already in scope.',
-  },
-  {
-    key: 'out',
-    text: 'Can you also add 3 more pages, prepare mobile versions of all the pages, and do a second round of revisions after we review?',
-  },
-]
+export const EXAMPLE_REQUESTS = [
+  { key: 'in' },
+  { key: 'borderline' },
+  { key: 'out' },
+] as const

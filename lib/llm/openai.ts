@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import type { Locale } from '@/i18n/config'
 import type { Industry } from '@/lib/types'
 import { ANALYSIS_JSON_SCHEMA } from './analysis-json-schema'
 import { buildAnalysisMessages } from './prompt'
@@ -8,6 +9,7 @@ export async function analyzeWithOpenAI(input: {
   scope: string
   request: string
   industry: Industry
+  locale: Locale
 }) {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey || apiKey.trim().length === 0) {
@@ -72,10 +74,15 @@ export async function analyzeWithOpenAI(input: {
   try {
     return parseAnalysisResult(parsed)
   } catch (error) {
+    const keys =
+      parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? Object.keys(parsed)
+        : []
     console.error(
       JSON.stringify({
         event: 'openai_analysis_shape_invalid',
         message: error instanceof Error ? error.message : 'invalid_analysis_result',
+        keys,
       }),
     )
     throw new Error('openai_request_failed')

@@ -77,4 +77,19 @@ describe('parseAnalysisResult', () => {
       }),
     ).toThrow('invalid_analysis_result')
   })
+
+  it('rejects empty changeOrder fields with a field-specific error', () => {
+    expect(() =>
+      parseAnalysisResult({
+        ...valid,
+        changeOrder: { ...valid.changeOrder, description: '' },
+      }),
+    ).toThrow('invalid_analysis_result:changeOrder.description')
+    expect(() =>
+      parseAnalysisResult({
+        ...valid,
+        changeOrder: { ...valid.changeOrder, timelineImpact: '   ' },
+      }),
+    ).toThrow('invalid_analysis_result:changeOrder.timelineImpact')
+  })
 })
