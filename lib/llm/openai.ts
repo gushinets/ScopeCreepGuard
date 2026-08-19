@@ -82,7 +82,7 @@ export async function analyzeWithOpenAI(input: {
     throw new Error('openai_api_key_missing')
   }
 
-  const client = new OpenAI({ apiKey })
+  const client = new OpenAI({ apiKey, maxRetries: 0 })
   const [system, user] = buildAnalysisMessages(input)
 
   let response: OpenAI.Responses.Response
