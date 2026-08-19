@@ -15,16 +15,16 @@ function isStringArray(value: unknown): value is string[] {
 }
 
 function parseConfidencePercent(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+  if (
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    !Number.isInteger(value) ||
+    value < 0 ||
+    value > 100
+  ) {
     invalid('confidence')
   }
-
-  const percent = value > 0 && value <= 1 ? value * 100 : value
-  if (percent > 100) {
-    invalid('confidence')
-  }
-
-  return Math.round(percent)
+  return value
 }
 
 function requireNonEmpty(value: unknown, reason: string): string {

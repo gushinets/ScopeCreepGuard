@@ -145,6 +145,18 @@ describe('analyzeWithOpenAI', () => {
     )
   })
 
+  it('rejects non-integer confidence in otherwise valid model output', async () => {
+    createMock.mockResolvedValue({
+      status: 'completed',
+      output_text: JSON.stringify({ ...validResult, confidence: 0.5 }),
+      incomplete_details: null,
+    })
+
+    await expect(analyzeWithOpenAI(analysisInput)).rejects.toThrow(
+      'openai_analysis_shape_invalid',
+    )
+  })
+
   it('rejects a missing API key before creating a request', async () => {
     delete process.env.OPENAI_API_KEY
 
