@@ -60,9 +60,13 @@ The feature is ready when Russian is the default first-load language, EN/RU swit
 
 - Upload `.txt` / `.md` / `.pdf` into New Project; reject files larger than 5 MiB and extensions such as `.docx`.
 - Check scope with a valid `OPENAI_API_KEY` → verdict, client replies, change order, and history entry.
+- Check scope uses `gpt-5.4-nano` with reasoning; result still includes verdict, three replies, Change Order, and history.
 - Missing `OPENAI_API_KEY` → `errors.analysisUnavailable` / error UI (no keyword verdict).
 - User B cannot analyze User A's project id (`404`).
 - OpenAI notice is visible on the request panel; footer no longer claims requests are not analyzed by a real AI.
+- Prompt regression: `pnpm exec vitest run lib/llm/prompt.test.ts` (new labels present; old few-shots absent).
+- Incomplete model responses surface `errors.analysisFailed` (no fabricated verdict).
+- Unusable model output (invalid JSON or shape failure) surfaces `errors.analysisInvalid` (no fabricated verdict).
 
 ## Commands
 
