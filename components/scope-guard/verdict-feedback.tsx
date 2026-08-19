@@ -68,8 +68,11 @@ export function VerdictFeedback() {
 
   async function onAccuracyClick(next: EvaluationAccuracy) {
     if (isSaving) return
+    const isReclickWrong = next === 'wrong' && accuracy === 'wrong'
     setAccuracy(next)
-    setExpectedVerdict(null)
+    if (!isReclickWrong) {
+      setExpectedVerdict(null)
+    }
     setIsSaved(false)
     if (next === 'wrong') return
     await save(next, null)
@@ -169,7 +172,7 @@ export function VerdictFeedback() {
                   name="expected-verdict"
                   value={value}
                   checked={expectedVerdict === value}
-                  onChange={() => {
+                  onClick={() => {
                     void onExpectedChange(value)
                   }}
                 />
