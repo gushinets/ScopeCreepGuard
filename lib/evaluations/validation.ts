@@ -114,6 +114,9 @@ export function resolveHumanVerdict(
   if (parsed.accuracy === 'correct') {
     return { ok: true, humanVerdict: aiVerdict }
   }
+  if (parsed.accuracy !== 'wrong') {
+    return { ok: false, error: ERROR_CODES.evaluationLabelInvalid }
+  }
   if (parsed.humanVerdict === aiVerdict) {
     return { ok: false, error: ERROR_CODES.evaluationLabelInvalid }
   }

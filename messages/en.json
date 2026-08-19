@@ -189,6 +189,9 @@
     "analysisRateLimited": "Too many analysis requests. Please wait a moment and try again.",
     "scopeFileTooLarge": "File is larger than 5 MB.",
     "scopeFileUnsupported": "Use a .txt, .md, or .pdf file.",
-    "scopeFileEmpty": "Could not extract text from this file."
+    "scopeFileEmpty": "Could not extract text from this file.",
+    "evaluationReasoningRequired": "Model reasoning is required.",
+    "evaluationLabelInvalid": "That verdict label is invalid.",
+    "evaluationHistoryNotFound": "That scope check was not found."
   }
 }
