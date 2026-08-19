@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { VerdictBanner } from './verdict'
 import { ClientReply } from './client-reply'
 import { ChangeOrder } from './change-order'
+import { VerdictFeedback } from './verdict-feedback'
 import { useStore } from './store'
 
 export function ResultPanel() {
@@ -135,7 +136,7 @@ function ShortScopeState() {
 }
 
 function ResultState() {
-  const { result, selectedProject } = useStore()
+  const { result, selectedProject, currentHistoryEntryId } = useStore()
   const t = useTranslations()
   const [showChangeOrder, setShowChangeOrder] = useState(
     result?.verdict === 'out_of_scope',
@@ -194,6 +195,8 @@ function ResultState() {
           </div>
         )}
       </section>
+
+      <VerdictFeedback key={currentHistoryEntryId ?? 'unlabeled'} />
 
       {/* Verify warning */}
       <p className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-xs leading-relaxed text-muted-foreground">
