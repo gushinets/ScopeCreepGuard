@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import type { Locale } from '@/i18n/config'
+import { ERROR_CODES, type ErrorCode } from '@/lib/api/errors'
 import type { Industry } from '@/lib/types'
 import { ANALYSIS_JSON_SCHEMA } from './analysis-json-schema'
 import { buildAnalysisMessages } from './prompt'
@@ -35,6 +36,21 @@ export function openaiUsageFields(usage: OpenAIAnalysisResponse['usage']) {
     outputTokens: usage.output_tokens,
     reasoningTokens: usage.output_tokens_details.reasoning_tokens,
   }
+}
+
+export function analyzeFailureResponse(
+  message: string,
+): { error: ErrorCode; status: number } {
+  if (message === 'openai_api_key_missing') {
+    return { error: ERROR_CODES.analysisUnavailable, status: 503 }
+  }
+  if (
+    message === 'openai_json_parse_failed' ||
+    message === 'openai_analysis_shape_invalid'
+  ) {
+    return { error: ERROR_CODES.analysisInvalid, status: 502 }
+  }
+  return { error: ERROR_CODES.analysisFailed, status: 502 }
 }
 
 export function requireCompletedOutputText(
@@ -116,15 +132,14 @@ export async function analyzeWithOpenAI(input: {
   let parsed: unknown
   try {
     parsed = JSON.parse(content)
-  } catch (error) {
+  } catch {
     console.error(
       JSON.stringify({
         event: 'openai_json_parse_failed',
-        message: error instanceof Error ? error.message : 'Unknown JSON parse error',
         ...openaiUsageFields(response.usage),
       }),
     )
-    throw new Error('openai_request_failed')
+    throw new Error('openai_json_parse_failed')
   }
 
   try {
@@ -137,11 +152,17 @@ export async function analyzeWithOpenAI(input: {
     console.error(
       JSON.stringify({
         event: 'openai_analysis_shape_invalid',
-        message: error instanceof Error ? error.message : 'invalid_analysis_result',
+        reason: error instanceof Error ? error.message : 'unknown',
         keys,
         ...openaiUsageFields(response.usage),
       }),
     )
-    throw new Error('openai_request_failed')
+    if (
+      error instanceof Error &&
+      error.message.startsWith('invalid_analysis_result')
+    ) {
+      throw new Error('openai_analysis_shape_invalid')
+    }
+    throw error
   }
 }
