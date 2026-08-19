@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Check-scope classification uses `gpt-5.4-nano` via the OpenAI Responses API with `reasoning.effort = medium` and the evidence-based IN_SCOPE / OUT_OF_SCOPE / BORDERLINE prompt (PROJECT TYPE, AGREED PROJECT SCOPE, NEW CLIENT REQUEST labels). Prior live happy-path smoke (2026-08-17, VPN) returned `200` with verdict, replies, change order, and history; that run predates this model/prompt slice.
+Check-scope classification uses `gpt-5.4-nano` via the OpenAI Responses API with `reasoning.effort = medium` and the evidence-based IN_SCOPE / OUT_OF_SCOPE / BORDERLINE prompt (PROJECT TYPE, AGREED PROJECT SCOPE, NEW CLIENT REQUEST labels). Verdict labeling (Correct / Wrong / Debatable) and JSONL export are available on the Check-scope result panel and History. Prior live happy-path smoke (2026-08-17, VPN) returned `200` with verdict, replies, change order, and history; that run predates this model/prompt slice.
 
 ## Done
 
@@ -20,6 +20,7 @@ Check-scope classification uses `gpt-5.4-nano` via the OpenAI Responses API with
 - Live Docker smoke completed after daemon became available.
 - English/Russian UI switching added with `next-intl`, Russian default locale, locale cookie switching, localized chrome, and stable API error keys.
 - Live smoke with `OPENAI_API_KEY` present: register → project (Acme scope) → analyze; authenticated workspace HTML includes OpenAI copy and no “not analyzed by a real AI” disclaimer; `request-panel.tsx` renders `t('check.openaiNotice')`.
+- Signed-in users can mark Check-scope verdicts Correct / Wrong / Debatable, upsert `evaluation_cases` snapshots, and download only their JSONL (`scope`, `request`, `ai_verdict`, `human_verdict`, `ai_reasoning`, `project_type`).
 
 ## In Progress
 
@@ -38,6 +39,7 @@ Check-scope classification uses `gpt-5.4-nano` via the OpenAI Responses API with
 - Internationalization keeps existing URLs unchanged and stores language in a `locale` cookie.
 - Russian is the default locale for first visits with no cookie.
 - User-entered content and generated analysis/history copy stay as stored.
+- Evaluation rows are per-user; Debatable stores `human_verdict` null; unlabeled checks are not inserted into `evaluation_cases`.
 
 ## Validation Log
 

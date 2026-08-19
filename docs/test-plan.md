@@ -79,3 +79,27 @@ The feature is ready when Russian is the default first-load language, EN/RU swit
 ## Release Gate
 
 The feature is ready when scope checks use OpenAI only (no keyword fallback), uploads enforce size and format rules, ownership isolation holds on `/api/analyze`, and missing-key failures show the correct localized error instead of a fabricated verdict.
+
+# Verdict Evaluation Dataset Test Plan
+
+## Critical Paths
+
+- After Check scope, the result panel shows Was this verdict correct? with Correct / Wrong / Debatable.
+- Correct and Debatable save immediately; Wrong asks What should it have been? then saves.
+- Change allows a new label; the same history id upserts one row.
+- History Download evaluation JSONL downloads `scope-creep-evaluations.jsonl` for the signed-in user (all their projects).
+- JSONL keys are exactly scope, request, ai_verdict, human_verdict, ai_reasoning, project_type; Debatable has human_verdict null.
+- User B cannot POST User A's historyEntryId (`404 errors.evaluationHistoryNotFound`).
+- Unauthenticated POST /api/evaluations and GET /api/evaluations/export return `401`.
+
+## Commands
+
+- `pnpm test`
+- `pnpm lint`
+- `pnpm exec tsc --noEmit`
+- `pnpm build`
+- `pnpm db:migrate`
+
+## Release Gate
+
+The feature is ready when a labeled Check scope produces a snapshot row, JSONL matches the locked contract, and evaluation data is isolated by `user_id`.
