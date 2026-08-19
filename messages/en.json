@@ -72,7 +72,9 @@
     "selectProject": "Select a project to see its check history.",
     "previousChecks": "Previous checks for {projectName}.",
     "emptyTitle": "No checks yet",
-    "emptyDescription": "Once you check a client request for this project, it'll show up here."
+    "emptyDescription": "Once you check a client request for this project, it'll show up here.",
+    "downloadEvaluations": "Download evaluation JSONL",
+    "downloadingEvaluations": "Downloading..."
   },
   "check": {
     "noProjectTitle": "No project selected",
@@ -104,6 +106,15 @@
     "verifyWarning": "This is an AI-assisted assessment, not a legal or final decision. Review it before you reply to your client.",
     "draftChangeOrderAnyway": "Draft a change order anyway",
     "confidence": "Confidence"
+  },
+  "feedback": {
+    "heading": "Was this verdict correct?",
+    "correct": "Correct",
+    "wrong": "Wrong",
+    "debatable": "Debatable",
+    "expectedHeading": "What should it have been?",
+    "saved": "Saved",
+    "change": "Change"
   },
   "reply": {
     "heading": "Suggested reply to client",
