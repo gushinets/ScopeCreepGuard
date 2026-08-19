@@ -90,6 +90,14 @@ describe('openaiUsageFields', () => {
   })
 })
 
+describe('ANALYSIS_JSON_SCHEMA', () => {
+  it('requires confidence as an integer percent 0-100', () => {
+    expect(ANALYSIS_JSON_SCHEMA.properties.confidence.type).toBe('integer')
+    expect(ANALYSIS_JSON_SCHEMA.properties.confidence.minimum).toBe(0)
+    expect(ANALYSIS_JSON_SCHEMA.properties.confidence.maximum).toBe(100)
+  })
+})
+
 describe('analyzeWithOpenAI', () => {
   it('sends the required Responses API request and returns a valid analysis', async () => {
     createMock.mockResolvedValue({
