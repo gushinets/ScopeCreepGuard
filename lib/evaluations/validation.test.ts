@@ -130,6 +130,45 @@ describe('parseEvaluationInput', () => {
     })
   })
 
+  it('rejects missing aiReasoning', () => {
+    const parsed = parseEvaluationInput({
+      historyEntryId,
+      accuracy: 'correct',
+    })
+    expect(parsed).toEqual({
+      ok: false,
+      error: ERROR_CODES.evaluationReasoningRequired,
+      status: 400,
+    })
+  })
+
+  it('rejects non-string aiReasoning', () => {
+    const parsed = parseEvaluationInput({
+      historyEntryId,
+      accuracy: 'correct',
+      aiReasoning: 42,
+    })
+    expect(parsed).toEqual({
+      ok: false,
+      error: ERROR_CODES.evaluationReasoningRequired,
+      status: 400,
+    })
+  })
+
+  it('rejects invalid humanVerdict on wrong', () => {
+    const parsed = parseEvaluationInput({
+      historyEntryId,
+      accuracy: 'wrong',
+      humanVerdict: 'maybe',
+      aiReasoning: reasoning,
+    })
+    expect(parsed).toEqual({
+      ok: false,
+      error: ERROR_CODES.evaluationLabelInvalid,
+      status: 400,
+    })
+  })
+
   it('rejects invalid historyEntryId as not found', () => {
     const parsed = parseEvaluationInput({
       historyEntryId: 'not-a-uuid',

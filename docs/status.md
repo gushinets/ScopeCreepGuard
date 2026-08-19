@@ -71,3 +71,9 @@ Check-scope classification uses `gpt-5.4-nano` via the OpenAI Responses API with
 - `pnpm test` passed after live smoke attempt (2 files, 10 tests).
 - Tiny PDF `readScopeFile` manual check in Vitest/jsdom: failed `errors.scopeFileEmpty` after `scope_pdf_extract_failed` / `DOMMatrix is not defined`.
 - Live OpenAI analyze smoke with VPN (2026-08-17): register `201`, create project `201`, `POST /api/analyze` → `200`, `verdict=out_of_scope`, replies + change order present, history `201`. Direct `GET https://api.openai.com/v1/models` → `200`.
+- `pnpm exec vitest run lib/evaluations/validation.test.ts lib/evaluations/export.test.ts` passed (2 files, 23 tests) after review-fix hardening.
+- `pnpm exec tsc --noEmit` passed after review-fix hardening.
+- `pnpm lint` passed after review-fix hardening (2 pre-existing unused-var warnings in LLM test files).
+- Evaluations API HTTP smoke (curl, dev server on `localhost:3000`, no session cookie, 2026-08-19):
+  - `POST /api/evaluations` → `401` `{"error":"errors.authRequired"}`.
+  - `GET /api/evaluations/export` → `401` `{"error":"errors.authRequired"}`.

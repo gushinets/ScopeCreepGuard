@@ -172,8 +172,13 @@ export function VerdictFeedback() {
                   name="expected-verdict"
                   value={value}
                   checked={expectedVerdict === value}
-                  onClick={() => {
+                  onChange={() => {
                     void onExpectedChange(value)
+                  }}
+                  onClick={() => {
+                    if (saveError && expectedVerdict === value) {
+                      void onExpectedChange(value)
+                    }
                   }}
                 />
                 {t(`verdict.${value}`)}

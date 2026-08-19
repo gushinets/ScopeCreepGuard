@@ -450,13 +450,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       throw new ApiError(ERROR_CODES.requestFailed, response.status)
     }
 
-    const blob = await response.blob()
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'scope-creep-evaluations.jsonl'
-    link.click()
-    URL.revokeObjectURL(url)
+    try {
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'scope-creep-evaluations.jsonl'
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: 'evaluation_export_blob_failed',
+          message: error instanceof Error ? error.message : 'Unknown blob error',
+        }),
+      )
+      throw new ApiError(ERROR_CODES.requestFailed, response.status)
+    }
   }
 
   const value: StoreValue = {

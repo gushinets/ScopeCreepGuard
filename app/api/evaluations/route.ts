@@ -15,23 +15,34 @@ export async function POST(request: Request) {
   const parsed = parseEvaluationInput(body)
   if (!parsed.ok) return jsonError(parsed.error, parsed.status)
 
-  const owned = await loadHistoryForUser(parsed.label.historyEntryId, user.id)
-  if (!owned) return jsonError(ERROR_CODES.evaluationHistoryNotFound, 404)
+  try {
+    const owned = await loadHistoryForUser(parsed.label.historyEntryId, user.id)
+    if (!owned) return jsonError(ERROR_CODES.evaluationHistoryNotFound, 404)
 
-  const resolved = resolveHumanVerdict(parsed.label, owned.history.verdict)
-  if (!resolved.ok) return jsonError(resolved.error, 400)
+    const resolved = resolveHumanVerdict(parsed.label, owned.history.verdict)
+    if (!resolved.ok) return jsonError(resolved.error, 400)
 
-  const evaluation = await upsertEvaluationCase({
-    userId: user.id,
-    historyEntryId: owned.history.id,
-    scope: owned.project.scope,
-    request: owned.history.request,
-    aiVerdict: owned.history.verdict,
-    humanVerdict: resolved.humanVerdict,
-    aiReasoning: parsed.label.aiReasoning,
-    accuracy: parsed.label.accuracy,
-    industry: owned.project.industry,
-  })
+    const evaluation = await upsertEvaluationCase({
+      userId: user.id,
+      historyEntryId: owned.history.id,
+      scope: owned.project.scope,
+      request: owned.history.request,
+      aiVerdict: owned.history.verdict,
+      humanVerdict: resolved.humanVerdict,
+      aiReasoning: parsed.label.aiReasoning,
+      accuracy: parsed.label.accuracy,
+      industry: owned.project.industry,
+    })
 
-  return NextResponse.json({ evaluation }, { status: 200 })
+    return NextResponse.json({ evaluation }, { status: 200 })
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: 'evaluation_route_failed',
+        userId: user.id,
+        message: error instanceof Error ? error.message : 'unknown',
+      }),
+    )
+    throw error
+  }
 }

@@ -61,6 +61,26 @@ describe('serializeEvaluationJsonl', () => {
     expect(serializeEvaluationJsonl([])).toBe('')
   })
 
+  it('writes two compact objects with a trailing newline', () => {
+    const first = toEvaluationJsonlRecord({
+      ...baseRow,
+      humanVerdict: null,
+    })
+    const second = toEvaluationJsonlRecord({
+      ...baseRow,
+      request: 'Add a blog section.',
+      aiVerdict: 'in_scope',
+      humanVerdict: 'in_scope',
+      industry: 'Marketing',
+    })
+    const body = serializeEvaluationJsonl([first, second])
+    const lines = body.split('\n')
+    expect(lines).toHaveLength(3)
+    expect(lines[2]).toBe('')
+    expect(JSON.parse(lines[0]!).request).toBe('Add 3 extra pages.')
+    expect(JSON.parse(lines[1]!).request).toBe('Add a blog section.')
+  })
+
   it('writes one compact object per line with a trailing newline', () => {
     const record = toEvaluationJsonlRecord({
       ...baseRow,
