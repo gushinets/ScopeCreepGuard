@@ -72,7 +72,9 @@
     "selectProject": "Выберите проект, чтобы посмотреть историю проверок.",
     "previousChecks": "Предыдущие проверки для {projectName}.",
     "emptyTitle": "Проверок пока нет",
-    "emptyDescription": "Когда вы проверите запрос клиента для этого проекта, он появится здесь."
+    "emptyDescription": "Когда вы проверите запрос клиента для этого проекта, он появится здесь.",
+    "downloadEvaluations": "Скачать evaluation JSONL",
+    "downloadingEvaluations": "Скачивание..."
   },
   "check": {
     "noProjectTitle": "Проект не выбран",
@@ -104,6 +106,15 @@
     "verifyWarning": "Это AI-подсказка, а не юридическое или окончательное решение. Проверьте ее перед ответом клиенту.",
     "draftChangeOrderAnyway": "Все равно подготовить заявку на изменение",
     "confidence": "Уверенность"
+  },
+  "feedback": {
+    "heading": "Этот вердикт верный?",
+    "correct": "Верно",
+    "wrong": "Неверно",
+    "debatable": "Спорно",
+    "expectedHeading": "Каким он должен был быть?",
+    "saved": "Сохранено",
+    "change": "Изменить"
   },
   "reply": {
     "heading": "Предложенный ответ клиенту",
@@ -189,6 +200,9 @@
     "analysisRateLimited": "Слишком много запросов на анализ. Подождите немного и попробуйте снова.",
     "scopeFileTooLarge": "Файл больше 5 МБ.",
     "scopeFileUnsupported": "Используйте файл .txt, .md или .pdf.",
-    "scopeFileEmpty": "Не удалось извлечь текст из этого файла."
+    "scopeFileEmpty": "Не удалось извлечь текст из этого файла.",
+    "evaluationReasoningRequired": "Нужен reasoning модели.",
+    "evaluationLabelInvalid": "Некорректная оценка вердикта.",
+    "evaluationHistoryNotFound": "Запись проверки не найдена."
   }
 }

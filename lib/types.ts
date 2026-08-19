@@ -2,6 +2,8 @@ export type Industry = 'Development' | 'Design' | 'Marketing'
 
 export type Verdict = 'in_scope' | 'borderline' | 'out_of_scope'
 
+export type EvaluationAccuracy = 'correct' | 'wrong' | 'debatable'
+
 export type Tone = 'warm' | 'neutral' | 'firm'
 
 export interface ChangeOrderDraft {

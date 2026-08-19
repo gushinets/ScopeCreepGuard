@@ -162,3 +162,29 @@ Validation:
 - `pnpm test`
 - `pnpm lint`
 - `pnpm exec tsc --noEmit`
+
+# Verdict Evaluation Dataset
+
+## Goal
+
+Collect human labels on AI verdicts for an internal evaluation JSONL dataset.
+
+## Milestones
+
+### 1. Label + persist
+
+- Result-panel Correct / Wrong / Debatable (Wrong asks for the expected verdict).
+- Postgres `evaluation_cases` snapshot upserted on `history_entry_id`.
+
+### 2. Export
+
+- `GET /api/evaluations/export` JSONL for the current user only.
+
+Definition of done: a user can label a fresh verdict, change the label, and download only their cases in the six-field JSONL contract; User B cannot read User A's cases.
+
+Validation:
+
+- `pnpm test`
+- `pnpm lint`
+- `pnpm exec tsc --noEmit`
+- `pnpm db:migrate`

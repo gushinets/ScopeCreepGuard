@@ -11,9 +11,11 @@ import {
 import { ERROR_CODES, assertErrorCode, type ErrorCode } from '@/lib/api/errors'
 import type {
   AnalysisResult,
+  EvaluationAccuracy,
   HistoryEntry,
   Industry,
   Project,
+  Verdict,
 } from '@/lib/types'
 
 export type View = 'check' | 'projects' | 'new_project' | 'history'
@@ -46,6 +48,7 @@ interface StoreValue {
   requestText: string
   status: AnalysisStatus
   result: AnalysisResult | null
+  currentHistoryEntryId: string | null
   analysisError: ErrorCode | ''
   isLoadingProjects: boolean
   projectError: ErrorCode | ''
@@ -58,6 +61,11 @@ interface StoreValue {
   runCheck: () => void
   reset: () => void
   logout: () => Promise<void>
+  submitEvaluation: (input: {
+    accuracy: EvaluationAccuracy
+    humanVerdict?: Verdict
+  }) => Promise<void>
+  downloadEvaluationsExport: () => Promise<void>
 }
 
 interface ProjectsResponse {
@@ -165,6 +173,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [requestText, setRequestText] = useState('')
   const [status, setStatus] = useState<AnalysisStatus>('idle')
   const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [currentHistoryEntryId, setCurrentHistoryEntryId] = useState<string | null>(
+    null,
+  )
   const [analysisError, setAnalysisError] = useState<ErrorCode | ''>('')
   const [isLoadingProjects, setIsLoadingProjects] = useState(true)
   const [projectError, setProjectError] = useState<ErrorCode | ''>('')
@@ -223,6 +234,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSelectedProjectId(id)
     setRequestText('')
     setResult(null)
+    setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
   }
@@ -240,6 +252,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSelectedProjectId(data.project.id)
     setRequestText('')
     setResult(null)
+    setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
     setView('check')
@@ -248,6 +261,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   function loadExample(text: string) {
     setRequestText(text)
     setResult(null)
+    setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
   }
@@ -279,6 +293,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     )
 
     applyHistory(projectId, data.entry)
+    return data.entry
   }
 
   async function runAnalysis(project: Project, request: string) {
@@ -293,12 +308,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       )
 
       const analysis = data.result
-      await persistHistory(project.id, {
+      const historyEntry = await persistHistory(project.id, {
         date: todayISO(),
         request,
         verdict: analysis.verdict,
         summary: analysis.summary,
       })
+      setCurrentHistoryEntryId(historyEntry.id)
       setResult(analysis)
       setStatus('result')
     } catch (error) {
@@ -342,12 +358,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     setStatus('loading')
     setResult(null)
+    setCurrentHistoryEntryId(null)
     setAnalysisError('')
     void runAnalysis(project, request)
   }
 
   function reset() {
     setResult(null)
+    setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
   }
@@ -359,6 +377,98 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     router.replace('/login')
   }
 
+  async function submitEvaluation(input: {
+    accuracy: EvaluationAccuracy
+    humanVerdict?: Verdict
+  }) {
+    if (!currentHistoryEntryId) {
+      throw new Error('currentHistoryEntryId is required')
+    }
+    if (!result) {
+      throw new Error('result is required')
+    }
+    if (input.accuracy === 'wrong' && !input.humanVerdict) {
+      throw new Error('humanVerdict is required')
+    }
+
+    const body: Record<string, unknown> = {
+      historyEntryId: currentHistoryEntryId,
+      accuracy: input.accuracy,
+      aiReasoning: result.reasoning,
+    }
+    if (input.accuracy === 'wrong') {
+      body.humanVerdict = input.humanVerdict
+    }
+
+    try {
+      await apiFetch<{ evaluation: { id: string } }>('/api/evaluations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: 'evaluation_submit_failed',
+          message: error instanceof Error ? error.message : 'Unknown evaluation error',
+          status: error instanceof ApiError ? error.status : null,
+        }),
+      )
+      if (error instanceof ApiError && error.status === 401) {
+        router.replace('/login')
+      }
+      throw error
+    }
+  }
+
+  async function downloadEvaluationsExport() {
+    let response: Response
+    try {
+      response = await fetch('/api/evaluations/export')
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: 'evaluation_export_request_failed',
+          message: error instanceof Error ? error.message : 'Unknown export error',
+        }),
+      )
+      throw new ApiError(ERROR_CODES.requestFailed, 0)
+    }
+
+    if (response.status === 401) {
+      router.replace('/login')
+      throw new ApiError(ERROR_CODES.authRequired, 401)
+    }
+
+    if (!response.ok) {
+      console.error(
+        JSON.stringify({
+          event: 'evaluation_export_http_failed',
+          status: response.status,
+        }),
+      )
+      throw new ApiError(ERROR_CODES.requestFailed, response.status)
+    }
+
+    try {
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'scope-creep-evaluations.jsonl'
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: 'evaluation_export_blob_failed',
+          message: error instanceof Error ? error.message : 'Unknown blob error',
+        }),
+      )
+      throw new ApiError(ERROR_CODES.requestFailed, response.status)
+    }
+  }
+
   const value: StoreValue = {
     user,
     projects,
@@ -368,6 +478,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     requestText,
     status,
     result,
+    currentHistoryEntryId,
     analysisError,
     isLoadingProjects,
     projectError,
@@ -379,6 +490,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     runCheck,
     reset,
     logout,
+    submitEvaluation,
+    downloadEvaluationsExport,
   }
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
