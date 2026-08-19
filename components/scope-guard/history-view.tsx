@@ -1,7 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { Clock } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
+import { Button } from '@/components/ui/button'
+import { assertErrorCode, type ErrorCode } from '@/lib/api/errors'
 import { localeToDateLocale, type Locale } from '@/i18n/config'
 import { VerdictChip } from './verdict'
 import { useStore } from './store'
@@ -15,9 +18,11 @@ function formatDate(iso: string, locale: Locale) {
 }
 
 export function HistoryView() {
-  const { selectedProject } = useStore()
+  const { selectedProject, downloadEvaluationsExport } = useStore()
   const locale = useLocale()
   const t = useTranslations()
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<ErrorCode | ''>('')
 
   if (!selectedProject) {
     return (
@@ -29,16 +34,59 @@ export function HistoryView() {
 
   const { history } = selectedProject
 
+  async function onDownload() {
+    setIsDownloading(true)
+    setDownloadError('')
+    try {
+      await downloadEvaluationsExport()
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: 'evaluation_download_failed',
+          message: error instanceof Error ? error.message : 'Unknown download error',
+        }),
+      )
+      if (!(error instanceof Error)) {
+        throw new Error('Unknown download error')
+      }
+      setDownloadError(assertErrorCode(error.message))
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
-      <h2 className="text-xl font-semibold text-foreground">
-        {t('history.title')}
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t('history.previousChecks', {
-          projectName: selectedProject.name,
-        })}
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">
+            {t('history.title')}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('history.previousChecks', {
+              projectName: selectedProject.name,
+            })}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-9"
+          disabled={isDownloading}
+          onClick={() => {
+            void onDownload()
+          }}
+        >
+          {isDownloading
+            ? t('history.downloadingEvaluations')
+            : t('history.downloadEvaluations')}
+        </Button>
+      </div>
+      {downloadError ? (
+        <p className="mt-3 text-sm text-outscope-text" role="alert">
+          {t(downloadError)}
+        </p>
+      ) : null}
 
       {history.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-border bg-card/50 p-10 text-center">
