@@ -29,6 +29,9 @@ export const ERROR_CODES = {
   scopeFileTooLarge: 'errors.scopeFileTooLarge',
   scopeFileUnsupported: 'errors.scopeFileUnsupported',
   scopeFileEmpty: 'errors.scopeFileEmpty',
+  evaluationReasoningRequired: 'errors.evaluationReasoningRequired',
+  evaluationLabelInvalid: 'errors.evaluationLabelInvalid',
+  evaluationHistoryNotFound: 'errors.evaluationHistoryNotFound',
 } as const
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES]
