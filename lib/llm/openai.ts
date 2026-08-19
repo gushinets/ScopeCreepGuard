@@ -1,9 +1,86 @@
 import OpenAI from 'openai'
 import type { Locale } from '@/i18n/config'
+import { ERROR_CODES, type ErrorCode } from '@/lib/api/errors'
 import type { Industry } from '@/lib/types'
 import { ANALYSIS_JSON_SCHEMA } from './analysis-json-schema'
 import { buildAnalysisMessages } from './prompt'
 import { parseAnalysisResult } from './schema'
+
+const ANALYSIS_JSON_SCHEMA_RECORD = ANALYSIS_JSON_SCHEMA as unknown as {
+  [key: string]: unknown
+}
+
+export type OpenAIAnalysisResponse = {
+  status?:
+    | 'completed'
+    | 'failed'
+    | 'in_progress'
+    | 'cancelled'
+    | 'queued'
+    | 'incomplete'
+  output_text: string
+  incomplete_details: { reason?: 'max_output_tokens' | 'content_filter' } | null
+  usage?: {
+    input_tokens: number
+    output_tokens: number
+    output_tokens_details: { reasoning_tokens: number }
+  }
+}
+
+export function openaiUsageFields(usage: OpenAIAnalysisResponse['usage']) {
+  if (!usage) {
+    return {}
+  }
+  return {
+    inputTokens: usage.input_tokens,
+    outputTokens: usage.output_tokens,
+    reasoningTokens: usage.output_tokens_details.reasoning_tokens,
+  }
+}
+
+export function analyzeFailureResponse(
+  message: string,
+): { error: ErrorCode; status: number } {
+  if (message === 'openai_api_key_missing') {
+    return { error: ERROR_CODES.analysisUnavailable, status: 503 }
+  }
+  if (
+    message === 'openai_json_parse_failed' ||
+    message === 'openai_analysis_shape_invalid'
+  ) {
+    return { error: ERROR_CODES.analysisInvalid, status: 502 }
+  }
+  return { error: ERROR_CODES.analysisFailed, status: 502 }
+}
+
+export function requireCompletedOutputText(
+  response: OpenAIAnalysisResponse,
+): string {
+  if (response.status !== 'completed') {
+    console.error(
+      JSON.stringify({
+        event: 'openai_incomplete',
+        status: response.status ?? null,
+        incompleteReason: response.incomplete_details?.reason ?? null,
+        ...openaiUsageFields(response.usage),
+      }),
+    )
+    throw new Error('openai_request_failed')
+  }
+
+  if (response.output_text.trim().length === 0) {
+    console.error(
+      JSON.stringify({
+        event: 'openai_empty_content',
+        status: response.status,
+        ...openaiUsageFields(response.usage),
+      }),
+    )
+    throw new Error('openai_request_failed')
+  }
+
+  return response.output_text
+}
 
 export async function analyzeWithOpenAI(input: {
   scope: string
@@ -21,19 +98,22 @@ export async function analyzeWithOpenAI(input: {
     throw new Error('openai_api_key_missing')
   }
 
-  const client = new OpenAI({ apiKey })
+  const client = new OpenAI({ apiKey, maxRetries: 0 })
+  const [system, user] = buildAnalysisMessages(input)
 
-  let completion: OpenAI.Chat.Completions.ChatCompletion
+  let response: OpenAI.Responses.Response
   try {
-    completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: buildAnalysisMessages(input),
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
+    response = await client.responses.create({
+      model: 'gpt-5.4-nano',
+      reasoning: { effort: 'medium' },
+      instructions: system.content,
+      input: user.content,
+      text: {
+        format: {
+          type: 'json_schema',
           name: 'scope_analysis',
           strict: true,
-          schema: ANALYSIS_JSON_SCHEMA,
+          schema: ANALYSIS_JSON_SCHEMA_RECORD,
         },
       },
     })
@@ -47,28 +127,19 @@ export async function analyzeWithOpenAI(input: {
     throw new Error('openai_request_failed')
   }
 
-  const content = completion.choices[0]?.message?.content
-  if (!content) {
-    console.error(
-      JSON.stringify({
-        event: 'openai_empty_content',
-        finishReason: completion.choices[0]?.finish_reason ?? null,
-      }),
-    )
-    throw new Error('openai_request_failed')
-  }
+  const content = requireCompletedOutputText(response)
 
   let parsed: unknown
   try {
     parsed = JSON.parse(content)
-  } catch (error) {
+  } catch {
     console.error(
       JSON.stringify({
         event: 'openai_json_parse_failed',
-        message: error instanceof Error ? error.message : 'Unknown JSON parse error',
+        ...openaiUsageFields(response.usage),
       }),
     )
-    throw new Error('openai_request_failed')
+    throw new Error('openai_json_parse_failed')
   }
 
   try {
@@ -81,10 +152,17 @@ export async function analyzeWithOpenAI(input: {
     console.error(
       JSON.stringify({
         event: 'openai_analysis_shape_invalid',
-        message: error instanceof Error ? error.message : 'invalid_analysis_result',
+        reason: error instanceof Error ? error.message : 'unknown',
         keys,
+        ...openaiUsageFields(response.usage),
       }),
     )
-    throw new Error('openai_request_failed')
+    if (
+      error instanceof Error &&
+      error.message.startsWith('invalid_analysis_result')
+    ) {
+      throw new Error('openai_analysis_shape_invalid')
+    }
+    throw error
   }
 }

@@ -135,3 +135,30 @@ Validation:
 - `pnpm test`
 - `pnpm build`
 - Manual upload smoke on New Project; analyze with and without `OPENAI_API_KEY`.
+
+# Scope Classification Prompt + GPT-5.4 nano
+
+## Goal
+
+Replace Check-scope classification rules and switch the OpenAI call to `gpt-5.4-nano` with medium reasoning, without changing the result UI contract.
+
+## Milestones
+
+### 1. Prompt
+
+- Evidence-based IN_SCOPE / OUT_OF_SCOPE / BORDERLINE system prompt.
+- User prompt labels: PROJECT TYPE, AGREED PROJECT SCOPE, NEW CLIENT REQUEST.
+- Output appendix maps onto existing `AnalysisResult` fields.
+
+### 2. Model call
+
+- `client.responses.create`, model `gpt-5.4-nano`, `reasoning.effort = medium`.
+- Fail incomplete / empty / API errors with `errors.analysisFailed`; invalid JSON or shape failure with `errors.analysisInvalid`.
+
+Definition of done: Check scope uses the new rules on `gpt-5.4-nano`; UI still shows confidence, three tones, Change Order, and history.
+
+Validation:
+
+- `pnpm test`
+- `pnpm lint`
+- `pnpm exec tsc --noEmit`

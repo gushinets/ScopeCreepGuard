@@ -5,7 +5,7 @@ import { ERROR_CODES } from '@/lib/api/errors'
 import { jsonError, readJsonObject } from '@/lib/api/json'
 import { getCurrentUser } from '@/lib/auth/current-user'
 import { parseAnalyzeBody } from '@/lib/llm/analyze-request'
-import { analyzeWithOpenAI } from '@/lib/llm/openai'
+import { analyzeFailureResponse, analyzeWithOpenAI } from '@/lib/llm/openai'
 import { allowAnalyze } from '@/lib/llm/rate-limit'
 import { loadProjectForUser } from '@/lib/projects/data'
 
@@ -72,9 +72,7 @@ export async function POST(request: Request) {
         message,
       }),
     )
-    if (message === 'openai_api_key_missing') {
-      return jsonError(ERROR_CODES.analysisUnavailable, 503)
-    }
-    return jsonError(ERROR_CODES.analysisFailed, 502)
+    const mapped = analyzeFailureResponse(message)
+    return jsonError(mapped.error, mapped.status)
   }
 }

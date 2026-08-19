@@ -184,6 +184,7 @@
     "saveProjectFailed": "Unable to save this project.",
     "analysisUnavailable": "Analysis is unavailable. Configure OPENAI_API_KEY and try again.",
     "analysisFailed": "Scope analysis failed. Please try again.",
+    "analysisInvalid": "The model returned an unusable analysis. Please try again.",
     "analysisInputTooLarge": "Scope and request together are too large to analyze.",
     "analysisRateLimited": "Too many analysis requests. Please wait a moment and try again.",
     "scopeFileTooLarge": "File is larger than 5 MB.",

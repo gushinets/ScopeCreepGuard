@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Live OpenAI happy-path smoke passed after VPN: `POST /api/analyze` returned `200` with verdict, replies, change order, and a history write. Regional `403` is no longer blocking this environment.
+Check-scope classification uses `gpt-5.4-nano` via the OpenAI Responses API with `reasoning.effort = medium` and the evidence-based IN_SCOPE / OUT_OF_SCOPE / BORDERLINE prompt (PROJECT TYPE, AGREED PROJECT SCOPE, NEW CLIENT REQUEST labels). Prior live happy-path smoke (2026-08-17, VPN) returned `200` with verdict, replies, change order, and history; that run predates this model/prompt slice.
 
 ## Done
 
-- LLM scope analysis via `POST /api/analyze` with OpenAI `gpt-4o-mini`, structured `AnalysisResult` validation, and no keyword fallback. Live happy-path verified with VPN (2026-08-17): `200`, `verdict=out_of_scope`, replies, change order, history `201`.
+- LLM scope analysis via `POST /api/analyze` with OpenAI `gpt-5.4-nano` (Responses API, `reasoning.effort = medium`), evidence-based classification prompt, structured `AnalysisResult` validation, and no keyword fallback. Client uses `maxRetries: 0`. Unusable model output (JSON parse or shape failure) maps to `errors.analysisInvalid` (`502`); API / incomplete / empty output maps to `errors.analysisFailed` (`502`); missing key maps to `errors.analysisUnavailable` (`503`).
 - Scope file upload on New Project for `.txt`, `.md`, and `.pdf` (5 MiB max, client text extraction; text-only storage in Postgres). Vitest covers `.txt`/`.md` accept and reject paths; `.pdf` browser upload not E2E-verified; Node/pdfjs manual extract failed (`DOMMatrix is not defined`).
 - OpenAI informational notice on the request panel; footer no longer claims requests are not analyzed by a real AI.
 - Stable API error keys `errors.analysisUnavailable` and `errors.analysisFailed` with EN/RU client translation.

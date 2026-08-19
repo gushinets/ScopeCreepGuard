@@ -17,7 +17,7 @@ export const ANALYSIS_JSON_SCHEMA = {
       enum: ['in_scope', 'borderline', 'out_of_scope'],
     },
     confidence: {
-      type: 'number',
+      type: 'integer',
       description:
         'Certainty as a percentage from 0 to 100, not a 0-1 fraction.',
       minimum: 0,
