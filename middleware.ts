@@ -43,6 +43,9 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!sessionUser && !isPublicPage) {
+    if (pathname === '/') {
+      return NextResponse.rewrite(new URL('/login', request.url))
+    }
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
