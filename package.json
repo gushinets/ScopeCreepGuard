@@ -5,6 +5,7 @@
   "engines": {
     "node": ">=22.13.0"
   },
+  "packageManager": "pnpm@10.34.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,7 +15,9 @@
     "db:up": "docker compose up -d",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "docker:up": "docker compose --profile app up --build -d",
+    "docker:down": "docker compose --profile app down"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
