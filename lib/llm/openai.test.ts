@@ -21,6 +21,7 @@ vi.mock('openai', () => ({
 import {
   analyzeFailureResponse,
   analyzeWithOpenAI,
+  openAIErrorDetail,
   openaiUsageFields,
   requireCompletedOutputText,
   type OpenAIAnalysisResponse,
@@ -172,6 +173,22 @@ describe('analyzeWithOpenAI', () => {
       'openai_api_key_missing',
     )
     expect(createMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('openAIErrorDetail', () => {
+  it('includes the connection cause and redacts proxy credentials', () => {
+    const cause = new Error(
+      'Connect Timeout Error (attempted address: 10.0.0.8:443, timeout: 10000ms)',
+    )
+    const error = new Error('Connection error.', { cause })
+    expect(
+      openAIErrorDetail(
+        new Error('fetch failed: http://user:secret@proxy.internal:8888', { cause: error }),
+      ),
+    ).toBe(
+      'fetch failed: http://***@proxy.internal:8888: Connection error.: Connect Timeout Error (attempted address: 10.0.0.8:443, timeout: 10000ms)',
+    )
   })
 })
 

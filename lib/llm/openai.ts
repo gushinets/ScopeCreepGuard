@@ -38,6 +38,25 @@ export function openaiUsageFields(usage: OpenAIAnalysisResponse['usage']) {
   }
 }
 
+export function openAIErrorDetail(error: unknown): string {
+  const parts: string[] = []
+  let current: unknown = error
+  for (let depth = 0; depth < 4; depth += 1) {
+    if (!(current instanceof Error) || current.message.length === 0) break
+    parts.push(current.message)
+    current = current.cause
+  }
+  const detail = parts.length > 0 ? parts.join(': ') : 'Unknown OpenAI error'
+  return detail.replace(/\/\/[^/\s@]+@/g, '//***@')
+}
+
+function proxyConfigured() {
+  const httpsProxy = process.env.HTTPS_PROXY
+  if (typeof httpsProxy === 'string' && httpsProxy.trim().length > 0) return true
+  const httpProxy = process.env.HTTP_PROXY
+  return typeof httpProxy === 'string' && httpProxy.trim().length > 0
+}
+
 export function analyzeFailureResponse(
   message: string,
 ): { error: ErrorCode; status: number } {
@@ -121,7 +140,8 @@ export async function analyzeWithOpenAI(input: {
     console.error(
       JSON.stringify({
         event: 'openai_request_failed',
-        message: error instanceof Error ? error.message : 'Unknown OpenAI error',
+        proxyConfigured: proxyConfigured(),
+        message: openAIErrorDetail(error),
       }),
     )
     throw new Error('openai_request_failed')
