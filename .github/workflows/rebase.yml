@@ -1,0 +1,20 @@
+name: Require rebase
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.number }}/head
+          fetch-depth: 0
+      - name: Verify branch is rebased on main
+        run: |
+          git fetch origin main
+          test "$(git merge-base HEAD origin/main)" = "$(git rev-parse origin/main)"
+          test -z "$(git rev-list --merges origin/main..HEAD)"
