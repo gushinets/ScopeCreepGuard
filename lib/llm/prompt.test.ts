@@ -5,33 +5,52 @@ const input = {
   scope: 'Build a landing page.',
   request: 'Add a blog.',
   industry: 'Development' as const,
+  locale: 'en' as const,
 }
 
 describe('buildAnalysisMessages', () => {
-  it('instructs the model to write generated fields in Russian when locale is ru', () => {
-    const [system] = buildAnalysisMessages({ ...input, locale: 'ru' })
+  it.each([
+    ['ru', 'Russian'],
+    ['en', 'English'],
+  ] as const)(
+    'uses %s as the interface language while keeping replies and Change Order request-language specific',
+    (locale, language) => {
+      const [system] = buildAnalysisMessages({ ...input, locale })
 
-    expect(system.content).toContain('Russian')
-    expect(system.content).not.toContain('professional English')
-    expect(system.content).toMatch(/summary|reasoning|replies|changeOrder/i)
+      expect(system.content).toContain(`Application interface language: ${language}.`)
+      expect(system.content).toMatch(/Write summary, reasoning, and suggestion in the application interface language/i)
+      expect(system.content).toMatch(/Determine the language of NEW CLIENT REQUEST/i)
+      expect(system.content).toMatch(/all client-facing replies and every Change Order field in the language of NEW CLIENT REQUEST/i)
+      expect(system.content).not.toMatch(/summary, reasoning, and suggestion in the language of NEW CLIENT REQUEST/i)
+    },
+  )
+
+  it('keeps an English client reply separate from a Russian interface', () => {
+    const [system, user] = buildAnalysisMessages({
+      ...input,
+      locale: 'ru',
+      request: 'Add a new column for customer.',
+    })
+
+    expect(system.content).toContain('Application interface language: Russian.')
+    expect(user.content).toContain('Add a new column for customer.')
+    expect(system.content).toMatch(
+      /MUST be written exclusively in the language of NEW CLIENT REQUEST/i,
+    )
+    expect(system.content).toMatch(
+      /Do not write client-facing replies or Change Order fields in the application interface language when it differs from NEW CLIENT REQUEST/i,
+    )
   })
 
-  it('instructs the model to write generated fields in English when locale is en', () => {
-    const [system] = buildAnalysisMessages({ ...input, locale: 'en' })
-
-    expect(system.content).toContain('English')
-    expect(system.content).toMatch(/summary|reasoning|replies|changeOrder/i)
-  })
-
-  it('keeps citations as verbatim scope phrases regardless of locale', () => {
-    const [system] = buildAnalysisMessages({ ...input, locale: 'ru' })
+  it('keeps citations as verbatim scope phrases regardless of request language', () => {
+    const [system] = buildAnalysisMessages(input)
 
     expect(system.content.toLowerCase()).toMatch(/verbatim/)
     expect(system.content.toLowerCase()).toMatch(/do not translate/)
   })
 
   it('uses the evidence-based classification definitions and process', () => {
-    const [system] = buildAnalysisMessages({ ...input, locale: 'en' })
+    const [system] = buildAnalysisMessages(input)
 
     expect(system.content).toContain('You are Scope Creep Guard.')
     expect(system.content).toMatch(/Do NOT classify a request as in-scope merely because it is related/i)
@@ -49,7 +68,7 @@ describe('buildAnalysisMessages', () => {
   })
 
   it('maps classification labels onto lowercase verdict enums in the output appendix', () => {
-    const [system] = buildAnalysisMessages({ ...input, locale: 'en' })
+    const [system] = buildAnalysisMessages(input)
 
     expect(system.content).toContain('in_scope')
     expect(system.content).toContain('out_of_scope')
@@ -64,7 +83,7 @@ describe('buildAnalysisMessages', () => {
   })
 
   it('requires non-empty changeOrder fields for every verdict including in_scope', () => {
-    const [system] = buildAnalysisMessages({ ...input, locale: 'en' })
+    const [system] = buildAnalysisMessages(input)
 
     expect(system.content).toMatch(/non-empty/i)
     expect(system.content).toMatch(/every verdict/i)
@@ -73,7 +92,7 @@ describe('buildAnalysisMessages', () => {
   })
 
   it('builds the labeled user prompt without conversation context', () => {
-    const [, user] = buildAnalysisMessages({ ...input, locale: 'en' })
+    const [, user] = buildAnalysisMessages(input)
 
     expect(user.content).toContain('PROJECT TYPE:')
     expect(user.content).toContain('Development')
@@ -87,7 +106,7 @@ describe('buildAnalysisMessages', () => {
   })
 
   it('drops the old listed-capability procedure and few-shot examples', () => {
-    const [system] = buildAnalysisMessages({ ...input, locale: 'en' })
+    const [system] = buildAnalysisMessages(input)
 
     expect(system.content).not.toMatch(/listed capability/i)
     expect(system.content).not.toMatch(/add the ability/i)
