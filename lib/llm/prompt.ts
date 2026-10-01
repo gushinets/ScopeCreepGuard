@@ -68,10 +68,15 @@ summary: one sentence describing what the client is asking.
 reasoning: the comparison plus the closest scope reference as narrative.
 citations: 0-3 short verbatim phrases from the agreed scope. Do not paraphrase. Do not translate citations.
 suggestion: combine any scope gap and recommended action. Use empty string when there is no gap and no extra action.
-replies.warm / replies.neutral / replies.firm: three professional ${language} replies the freelancer can send to the client.
-Fill changeOrder in all verdicts, still in ${language}. For in_scope: description names the included work, timelineImpact is none / no extra time, additionalCost is included / $0, note remains the draft disclaimer.
-changeOrder.note must say this is a draft, not legal advice, in ${language}.
-Write summary, reasoning, suggestion, replies, and changeOrder fields in ${language}. Use ${language} even if the scope or request is in another language.
+Application interface language: ${language}.
+Determine the language of NEW CLIENT REQUEST.
+Write summary, reasoning, and suggestion in the application interface language.
+Write all client-facing replies and every Change Order field in the language of NEW CLIENT REQUEST.
+Client-facing replies and every Change Order field MUST be written exclusively in the language of NEW CLIENT REQUEST.
+Do not write client-facing replies or Change Order fields in the application interface language when it differs from NEW CLIENT REQUEST.
+replies.warm / replies.neutral / replies.firm: three professional replies the freelancer can send to the client.
+Fill every Change Order field for all verdicts. For in_scope: description names the included work, timelineImpact is none / no extra time, additionalCost is included / $0, note remains the draft disclaimer.
+changeOrder.note must say this is a draft, not legal advice, in the language of NEW CLIENT REQUEST.
 Keep JSON keys and verdict enum values in English and lowercase.
 summary, reasoning, replies.*, and all changeOrder fields must be non-empty strings for every verdict, including in_scope. suggestion may be empty.
 Citations must support THIS verdict. For in_scope, cite the matching included clause. Never cite an unrelated exclusion.
