@@ -94,6 +94,16 @@ describe('buildAnalysisMessages', () => {
     )
   })
 
+  it('gives each client reply tone its own complete-response instruction', () => {
+    const [system] = buildAnalysisMessages(input)
+
+    expect(system.content).toContain('REPLY TONE SKILLS:')
+    expect(system.content).toMatch(/replies\.warm:[\s\S]*warm, calm, professional/i)
+    expect(system.content).toMatch(/replies\.neutral:[\s\S]*neutral, calm, factual/i)
+    expect(system.content).toMatch(/replies\.firm:[\s\S]*respectful, firm, and professional/i)
+    expect(system.content).toMatch(/Do not split one message across warm, neutral, and firm/i)
+  })
+
   it('requires non-empty changeOrder fields for every verdict including in_scope', () => {
     const [system] = buildAnalysisMessages(input)
 

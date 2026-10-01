@@ -1,5 +1,6 @@
 import type { Locale } from '@/i18n/config'
 import type { Industry } from '@/lib/types'
+import { formatReplyToneSkills } from './reply-tone-skills'
 
 function outputLanguageName(locale: Locale) {
   if (locale === 'ru') return 'Russian'
@@ -76,6 +77,8 @@ Write all client-facing replies and every Change Order field in the language of 
 When NEW CLIENT REQUEST has a detectable language, client-facing replies and every Change Order field MUST be written exclusively in the language of NEW CLIENT REQUEST.
 Do not write client-facing replies or Change Order fields in the application interface language when it differs from NEW CLIENT REQUEST and the request language is detectable.
 replies.warm / replies.neutral / replies.firm: three professional replies the freelancer can send to the client.
+${formatReplyToneSkills()}
+Each reply must be complete and independently sendable. Do not split one message across warm, neutral, and firm. Make the three replies meaningfully different in tone and wording while preserving the same scope position.
 Fill every Change Order field for all verdicts. For in_scope: description names the included work, timelineImpact is none / no extra time, additionalCost is included / $0, note remains the draft disclaimer.
 changeOrder.note must say this is a draft, not legal advice, in the request language or the fallback language.
 Keep JSON keys and verdict enum values in English and lowercase.
