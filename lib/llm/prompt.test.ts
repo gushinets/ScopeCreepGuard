@@ -42,6 +42,18 @@ describe('buildAnalysisMessages', () => {
     )
   })
 
+  it('falls back to the interface language for a language-neutral client request', () => {
+    const [system] = buildAnalysisMessages({
+      ...input,
+      locale: 'ru',
+      request: 'SEO',
+    })
+
+    expect(system.content).toMatch(
+      /If NEW CLIENT REQUEST has no detectable language.*use the application interface language for client-facing replies and every Change Order field/i,
+    )
+  })
+
   it('keeps citations as verbatim scope phrases regardless of request language', () => {
     const [system] = buildAnalysisMessages(input)
 

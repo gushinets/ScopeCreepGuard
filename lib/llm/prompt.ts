@@ -71,12 +71,13 @@ suggestion: combine any scope gap and recommended action. Use empty string when 
 Application interface language: ${language}.
 Determine the language of NEW CLIENT REQUEST.
 Write summary, reasoning, and suggestion in the application interface language.
+If NEW CLIENT REQUEST has no detectable language (for example, a URL, issue number, emoji, or SEO), use the application interface language for client-facing replies and every Change Order field. This fallback overrides the request-language requirements below.
 Write all client-facing replies and every Change Order field in the language of NEW CLIENT REQUEST.
-Client-facing replies and every Change Order field MUST be written exclusively in the language of NEW CLIENT REQUEST.
-Do not write client-facing replies or Change Order fields in the application interface language when it differs from NEW CLIENT REQUEST.
+When NEW CLIENT REQUEST has a detectable language, client-facing replies and every Change Order field MUST be written exclusively in the language of NEW CLIENT REQUEST.
+Do not write client-facing replies or Change Order fields in the application interface language when it differs from NEW CLIENT REQUEST and the request language is detectable.
 replies.warm / replies.neutral / replies.firm: three professional replies the freelancer can send to the client.
 Fill every Change Order field for all verdicts. For in_scope: description names the included work, timelineImpact is none / no extra time, additionalCost is included / $0, note remains the draft disclaimer.
-changeOrder.note must say this is a draft, not legal advice, in the language of NEW CLIENT REQUEST.
+changeOrder.note must say this is a draft, not legal advice, in the request language or the fallback language.
 Keep JSON keys and verdict enum values in English and lowercase.
 summary, reasoning, replies.*, and all changeOrder fields must be non-empty strings for every verdict, including in_scope. suggestion may be empty.
 Citations must support THIS verdict. For in_scope, cite the matching included clause. Never cite an unrelated exclusion.
