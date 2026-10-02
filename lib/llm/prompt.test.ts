@@ -104,6 +104,13 @@ describe('buildAnalysisMessages', () => {
     expect(system.content).toMatch(/Do not split one message across warm, neutral, and firm/i)
   })
 
+  it('allows firm in-scope replies to proceed while holding additional work for authorization', () => {
+    const [system] = buildAnalysisMessages(input)
+
+    expect(system.content).toMatch(/if the request is in scope, state the concrete next step for proceeding with the included work/i)
+    expect(system.content).toMatch(/additional out-of-scope work will not begin until the required scope decision or authorization is in place/i)
+  })
+
   it('requires non-empty changeOrder fields for every verdict including in_scope', () => {
     const [system] = buildAnalysisMessages(input)
 

@@ -36,9 +36,10 @@ The reply must:
 - state the scope position clearly: confirm whether the requested work is included, partially included, outside the agreed scope, or cannot yet be assessed without more information;
 - when work is outside the agreed scope, say so plainly and distinguish it from the currently agreed deliverables;
 - avoid vague language, blame, unnecessary justification, pressure tactics, and unverified commitments;
-- state the required next step unambiguously: confirm the scope, approve an estimate, issue or approve a Change Order, provide the missing clarification, or decline the additional work;
+- if the request is in scope, state the concrete next step for proceeding with the included work;
+- if the request is partly or fully out of scope, state the required next step unambiguously: confirm the scope, approve an estimate, issue or approve a Change Order, provide the missing clarification, or decline the additional work;
 - explain what will happen after that step is completed, without inventing dates, pricing, approvals, requirements, or commitments;
-- make clear that additional work will not begin until the required scope decision or authorization is in place.
+- make clear that additional out-of-scope work will not begin until the required scope decision or authorization is in place.
 
 Do not use headings, bullet points, placeholders, or meta-commentary. Return only the final reply.`,
 } as const
