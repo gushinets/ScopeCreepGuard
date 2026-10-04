@@ -46,6 +46,7 @@ interface StoreValue {
   selectedProjectId: string | null
   view: View
   requestText: string
+  analyzedRequest: string | null
   status: AnalysisStatus
   result: AnalysisResult | null
   currentHistoryEntryId: string | null
@@ -171,6 +172,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [view, setView] = useState<View>('check')
   const [requestText, setRequestText] = useState('')
+  const [analyzedRequest, setAnalyzedRequest] = useState<string | null>(null)
   const [status, setStatus] = useState<AnalysisStatus>('idle')
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [currentHistoryEntryId, setCurrentHistoryEntryId] = useState<string | null>(
@@ -233,6 +235,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   function selectProject(id: string) {
     setSelectedProjectId(id)
     setRequestText('')
+    setAnalyzedRequest(null)
     setResult(null)
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
@@ -251,6 +254,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setProjects((prev) => [data.project, ...prev])
     setSelectedProjectId(data.project.id)
     setRequestText('')
+    setAnalyzedRequest(null)
     setResult(null)
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
@@ -260,6 +264,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   function loadExample(text: string) {
     setRequestText(text)
+    setAnalyzedRequest(null)
     setResult(null)
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
@@ -315,6 +320,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         summary: analysis.summary,
       })
       setCurrentHistoryEntryId(historyEntry.id)
+      setAnalyzedRequest(request)
       setResult(analysis)
       setStatus('result')
     } catch (error) {
@@ -357,6 +363,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     setStatus('loading')
+    setAnalyzedRequest(null)
     setResult(null)
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
@@ -364,6 +371,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   function reset() {
+    setAnalyzedRequest(null)
     setResult(null)
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
@@ -476,6 +484,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     selectedProjectId,
     view,
     requestText,
+    analyzedRequest,
     status,
     result,
     currentHistoryEntryId,

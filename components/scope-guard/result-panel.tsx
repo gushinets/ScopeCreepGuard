@@ -136,7 +136,8 @@ function ShortScopeState() {
 }
 
 function ResultState() {
-  const { result, selectedProject, currentHistoryEntryId } = useStore()
+  const { result, selectedProject, currentHistoryEntryId, analyzedRequest } =
+    useStore()
   const t = useTranslations()
   const [showChangeOrder, setShowChangeOrder] = useState(
     result?.verdict === 'out_of_scope',
@@ -204,7 +205,11 @@ function ResultState() {
         {t('result.verifyWarning')}
       </p>
 
-      <ClientReply result={result} />
+      <ClientReply
+        result={result}
+        projectId={selectedProject.id}
+        request={analyzedRequest ?? ''}
+      />
 
       {isOut || showChangeOrder ? (
         <ChangeOrder result={result} projectName={selectedProject.name} />

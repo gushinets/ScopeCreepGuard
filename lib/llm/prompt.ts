@@ -1,5 +1,5 @@
 import type { Locale } from '@/i18n/config'
-import type { Industry } from '@/lib/types'
+import type { Industry, Tone } from '@/lib/types'
 import { formatReplyToneSkills } from './reply-tone-skills'
 
 function outputLanguageName(locale: Locale) {
@@ -71,11 +71,12 @@ citations: 0-3 short verbatim phrases from the agreed scope. Do not paraphrase. 
 suggestion: combine any scope gap and recommended action. Use empty string when there is no gap and no extra action.
 Application interface language: ${language}.
 Determine the language of NEW CLIENT REQUEST.
-Write summary, reasoning, and suggestion in the application interface language.
+LANGUAGE CONTRACT — follow this exactly:
+- summary, reasoning, and suggestion MUST be written exclusively in ${language}, even when NEW CLIENT REQUEST is in another language.
+- replies.warm, replies.neutral, replies.firm, and every Change Order field MUST be written exclusively in the language of NEW CLIENT REQUEST when it has a detectable language.
+- Do not use the language of NEW CLIENT REQUEST for summary, reasoning, or suggestion.
+- Do not use the application interface language for client-facing replies or Change Order fields when it differs from NEW CLIENT REQUEST and the request language is detectable.
 If NEW CLIENT REQUEST has no detectable language (for example, a URL, issue number, emoji, or SEO), use the application interface language for client-facing replies and every Change Order field. This fallback overrides the request-language requirements below.
-Write all client-facing replies and every Change Order field in the language of NEW CLIENT REQUEST.
-When NEW CLIENT REQUEST has a detectable language, client-facing replies and every Change Order field MUST be written exclusively in the language of NEW CLIENT REQUEST.
-Do not write client-facing replies or Change Order fields in the application interface language when it differs from NEW CLIENT REQUEST and the request language is detectable.
 replies.warm / replies.neutral / replies.firm: three professional replies the freelancer can send to the client.
 ${formatReplyToneSkills()}
 Each reply must be complete and independently sendable. Do not split one message across warm, neutral, and firm. Make the three replies meaningfully different in tone and wording while preserving the same scope position.
@@ -95,10 +96,45 @@ AGREED PROJECT SCOPE:
 ${input.scope}
 
 NEW CLIENT REQUEST:
-${input.request}`
+${input.request}
+
+FINAL LANGUAGE CONTRACT: Application interface language is ${language}.
+- summary, reasoning, and suggestion: ${language} only.
+- replies.warm, replies.neutral, replies.firm, and every Change Order field: detected NEW CLIENT REQUEST language only.
+- Do not use the NEW CLIENT REQUEST language for summary, reasoning, or suggestion when it differs from ${language}.
+- Do not use ${language} for replies or Change Order fields when NEW CLIENT REQUEST has a detectable different language.
+- If NEW CLIENT REQUEST has no detectable natural language, use ${language} for replies and every Change Order field.
+Before returning JSON, audit every field against this contract and correct any field that is in the wrong language.`
 
   return [
     { role: 'system' as const, content: system },
     { role: 'user' as const, content: user },
+  ]
+}
+
+export function buildRegenerationMessages(input: {
+  scope: string
+  request: string
+  industry: Industry
+  locale: Locale
+  tone: Tone
+  previousReply: string
+}) {
+  const [system, user] = buildAnalysisMessages(input)
+  const regenerationInstruction = `PREVIOUSLY GENERATED ${input.tone.toUpperCase()} REPLY:
+===
+${input.previousReply}
+===
+
+Generate a new ${input.tone} client-facing reply.
+
+The new reply must be substantively different from the previous reply in wording, structure, and phrasing.
+It must preserve the same scope position, factual basis, and practical next-step requirements supported by the Project Scope and Client Request.
+Do not invent dates, pricing, approvals, commitments, or scope clauses.
+Do not weaken, reverse, or contradict the scope position.`
+
+  return [
+    system,
+    { role: 'user' as const, content: `${user.content}\n\n${regenerationInstruction}` },
   ]
 }

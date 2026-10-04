@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildAnalysisMessages } from './prompt'
+import { buildAnalysisMessages, buildRegenerationMessages } from './prompt'
 
 const input = {
   scope: 'Build a landing page.',
@@ -18,9 +18,16 @@ describe('buildAnalysisMessages', () => {
       const [system] = buildAnalysisMessages({ ...input, locale })
 
       expect(system.content).toContain(`Application interface language: ${language}.`)
-      expect(system.content).toMatch(/Write summary, reasoning, and suggestion in the application interface language/i)
+      expect(system.content).toMatch(
+        new RegExp(
+          `summary, reasoning, and suggestion MUST be written exclusively in ${language}`,
+          'i',
+        ),
+      )
       expect(system.content).toMatch(/Determine the language of NEW CLIENT REQUEST/i)
-      expect(system.content).toMatch(/all client-facing replies and every Change Order field in the language of NEW CLIENT REQUEST/i)
+      expect(system.content).toMatch(
+        /replies\.warm, replies\.neutral, replies\.firm, and every Change Order field MUST be written exclusively in the language of NEW CLIENT REQUEST/i,
+      )
       expect(system.content).not.toMatch(/summary, reasoning, and suggestion in the language of NEW CLIENT REQUEST/i)
     },
   )
@@ -38,7 +45,35 @@ describe('buildAnalysisMessages', () => {
       /MUST be written exclusively in the language of NEW CLIENT REQUEST/i,
     )
     expect(system.content).toMatch(
-      /Do not write client-facing replies or Change Order fields in the application interface language when it differs from NEW CLIENT REQUEST/i,
+      /Do not use the application interface language for client-facing replies or Change Order fields when it differs from NEW CLIENT REQUEST/i,
+    )
+  })
+
+  it('requires an English verdict when the interface is English and the client request is Russian', () => {
+    const [system, user] = buildAnalysisMessages({
+      ...input,
+      locale: 'en',
+      request: 'Добавьте колонку клиенты.',
+    })
+
+    expect(user.content).toContain('Добавьте колонку клиенты.')
+    expect(system.content).toContain(
+      'summary, reasoning, and suggestion MUST be written exclusively in English',
+    )
+    expect(system.content).toContain(
+      'replies.warm, replies.neutral, replies.firm, and every Change Order field MUST be written exclusively in the language of NEW CLIENT REQUEST',
+    )
+    expect(system.content).toContain(
+      'Do not use the language of NEW CLIENT REQUEST for summary, reasoning, or suggestion.',
+    )
+    expect(user.content).toContain(
+      'FINAL LANGUAGE CONTRACT: Application interface language is English.',
+    )
+    expect(user.content).toContain(
+      'summary, reasoning, and suggestion: English only.',
+    )
+    expect(user.content).toContain(
+      'replies.warm, replies.neutral, replies.firm, and every Change Order field: detected NEW CLIENT REQUEST language only.',
     )
   })
 
@@ -143,5 +178,43 @@ describe('buildAnalysisMessages', () => {
     expect(system.content).not.toMatch(/3 more pages/i)
     expect(system.content).not.toMatch(/newsletter/i)
     expect(system.content).not.toMatch(/surface wording/i)
+  })
+})
+
+describe('buildRegenerationMessages', () => {
+  const regenerationInput = {
+    ...input,
+    tone: 'firm' as const,
+    previousReply: 'The blog is outside the agreed scope.',
+  }
+
+  it('reuses the exact analysis system prompt and unchanged user prompt prefix', () => {
+    const [baseSystem, baseUser] = buildAnalysisMessages(input)
+    const [system, user] = buildRegenerationMessages(regenerationInput)
+
+    expect(system).toEqual(baseSystem)
+    expect(user.content.startsWith(`${baseUser.content}\n\n`)).toBe(true)
+  })
+
+  it('encloses the previous reply in separate exact delimiters', () => {
+    const [, user] = buildRegenerationMessages(regenerationInput)
+
+    expect(user.content).toContain(
+      'PREVIOUSLY GENERATED FIRM REPLY:\n===\nThe blog is outside the agreed scope.\n===\n',
+    )
+  })
+
+  it('requires substantive differences while preserving the scope position', () => {
+    const [, user] = buildRegenerationMessages(regenerationInput)
+
+    expect(user.content).toContain(
+      'substantively different from the previous reply in wording, structure, and phrasing',
+    )
+    expect(user.content).toContain(
+      'preserve the same scope position, factual basis, and practical next-step requirements',
+    )
+    expect(user.content).toContain(
+      'Do not weaken, reverse, or contradict the scope position.',
+    )
   })
 })

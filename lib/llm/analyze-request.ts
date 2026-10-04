@@ -1,5 +1,7 @@
 import { ERROR_CODES, type ErrorCode } from '@/lib/api/errors'
 
+export const ANALYSIS_INPUT_MAX_CHARS = 100_000
+
 export function parseAnalyzeBody(body: Record<string, unknown>): {
   ok: true
   projectId: string
