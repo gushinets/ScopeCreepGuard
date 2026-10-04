@@ -1,9 +1,9 @@
 import OpenAI from 'openai'
 import type { Locale } from '@/i18n/config'
 import { ERROR_CODES, type ErrorCode } from '@/lib/api/errors'
-import type { Industry } from '@/lib/types'
+import type { Industry, Tone } from '@/lib/types'
 import { ANALYSIS_JSON_SCHEMA } from './analysis-json-schema'
-import { buildAnalysisMessages } from './prompt'
+import { buildAnalysisMessages, buildRegenerationMessages } from './prompt'
 import { parseAnalysisResult } from './schema'
 
 const ANALYSIS_JSON_SCHEMA_RECORD = ANALYSIS_JSON_SCHEMA as unknown as {
@@ -101,52 +101,7 @@ export function requireCompletedOutputText(
   return response.output_text
 }
 
-export async function analyzeWithOpenAI(input: {
-  scope: string
-  request: string
-  industry: Industry
-  locale: Locale
-}) {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey || apiKey.trim().length === 0) {
-    console.error(
-      JSON.stringify({
-        event: 'openai_api_key_missing',
-      }),
-    )
-    throw new Error('openai_api_key_missing')
-  }
-
-  const client = new OpenAI({ apiKey, maxRetries: 0 })
-  const [system, user] = buildAnalysisMessages(input)
-
-  let response: OpenAI.Responses.Response
-  try {
-    response = await client.responses.create({
-      model: 'gpt-5.4-nano',
-      reasoning: { effort: 'medium' },
-      instructions: system.content,
-      input: user.content,
-      text: {
-        format: {
-          type: 'json_schema',
-          name: 'scope_analysis',
-          strict: true,
-          schema: ANALYSIS_JSON_SCHEMA_RECORD,
-        },
-      },
-    })
-  } catch (error) {
-    console.error(
-      JSON.stringify({
-        event: 'openai_request_failed',
-        proxyConfigured: proxyConfigured(),
-        message: openAIErrorDetail(error),
-      }),
-    )
-    throw new Error('openai_request_failed')
-  }
-
+function parseOpenAIAnalysisResponse(response: OpenAIAnalysisResponse) {
   const content = requireCompletedOutputText(response)
 
   let parsed: unknown
@@ -185,4 +140,105 @@ export async function analyzeWithOpenAI(input: {
     }
     throw error
   }
+}
+
+export async function analyzeWithOpenAI(input: {
+  scope: string
+  request: string
+  industry: Industry
+  locale: Locale
+}) {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey || apiKey.trim().length === 0) {
+    console.error(
+      JSON.stringify({
+        event: 'openai_api_key_missing',
+      }),
+    )
+    throw new Error('openai_api_key_missing')
+  }
+
+  const client = new OpenAI({ apiKey, maxRetries: 2 })
+  const [system, user] = buildAnalysisMessages(input)
+
+  let response: OpenAI.Responses.Response
+  try {
+    response = await client.responses.create({
+      model: 'gpt-5.4-nano',
+      reasoning: { effort: 'medium' },
+      instructions: system.content,
+      input: user.content,
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'scope_analysis',
+          strict: true,
+          schema: ANALYSIS_JSON_SCHEMA_RECORD,
+        },
+      },
+    })
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: 'openai_request_failed',
+        proxyConfigured: proxyConfigured(),
+        message: openAIErrorDetail(error),
+      }),
+    )
+    throw new Error('openai_request_failed')
+  }
+
+  return parseOpenAIAnalysisResponse(response)
+}
+
+export async function regenerateReplyWithOpenAI(input: {
+  scope: string
+  request: string
+  industry: Industry
+  locale: Locale
+  tone: Tone
+  previousReply: string
+}) {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey || apiKey.trim().length === 0) {
+    console.error(
+      JSON.stringify({
+        event: 'openai_api_key_missing',
+      }),
+    )
+    throw new Error('openai_api_key_missing')
+  }
+
+  const client = new OpenAI({ apiKey, maxRetries: 2 })
+  const [system, user] = buildRegenerationMessages(input)
+
+  let response: OpenAI.Responses.Response
+  try {
+    response = await client.responses.create({
+      model: 'gpt-5.4-nano',
+      reasoning: { effort: 'high' },
+      instructions: system.content,
+      input: user.content,
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'scope_analysis',
+          strict: true,
+          schema: ANALYSIS_JSON_SCHEMA_RECORD,
+        },
+      },
+    })
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: 'openai_regeneration_request_failed',
+        proxyConfigured: proxyConfigured(),
+        message: openAIErrorDetail(error),
+      }),
+    )
+    throw new Error('openai_request_failed')
+  }
+
+  const result = parseOpenAIAnalysisResponse(response)
+  return result.replies[input.tone]
 }

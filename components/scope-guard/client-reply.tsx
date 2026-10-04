@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { CheckCheck, Copy, RotateCcw } from 'lucide-react'
+import { CheckCheck, Copy, LoaderCircle, RotateCcw } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -13,15 +13,26 @@ function toneLabelKey(tone: Tone) {
   return `reply.${tone}` as const
 }
 
-export function ClientReply({ result }: { result: AnalysisResult }) {
+export function ClientReply({
+  result,
+  projectId,
+  request,
+}: {
+  result: AnalysisResult
+  projectId: string
+  request: string
+}) {
   const t = useTranslations()
   const [tone, setTone] = useState<Tone>('neutral')
   const [text, setText] = useState(result.replies.neutral)
   const [copied, setCopied] = useState(false)
+  const [isRegenerating, setIsRegenerating] = useState(false)
+  const [regenerationFailed, setRegenerationFailed] = useState(false)
   // Track whether the current text was user-edited so tone/regenerate is intentional.
   const lastGenerated = useRef(result.replies.neutral)
 
   function applyTone(next: Tone) {
+    if (isRegenerating) return
     setTone(next)
     const edited = text !== lastGenerated.current
     if (edited) {
@@ -30,11 +41,54 @@ export function ClientReply({ result }: { result: AnalysisResult }) {
     }
     setText(result.replies[next])
     lastGenerated.current = result.replies[next]
+    setRegenerationFailed(false)
   }
 
-  function regenerate() {
-    setText(result.replies[tone])
-    lastGenerated.current = result.replies[tone]
+  async function regenerate() {
+    const edited = text !== lastGenerated.current
+    if (edited) {
+      const ok = window.confirm(t('reply.confirmReplace'))
+      if (!ok) return
+    }
+
+    const previousReply = text
+    setIsRegenerating(true)
+    setRegenerationFailed(false)
+
+    try {
+      const response = await fetch('/api/replies/regenerate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId, request, tone, previousReply }),
+      })
+      if (!response.ok) throw new Error(`Reply regeneration failed: ${response.status}`)
+
+      const body: unknown = await response.json()
+      if (
+        !body ||
+        typeof body !== 'object' ||
+        Array.isArray(body) ||
+        typeof (body as Record<string, unknown>).reply !== 'string' ||
+        (body as Record<string, string>).reply.trim().length === 0
+      ) {
+        throw new Error('Reply regeneration returned an invalid response')
+      }
+
+      const reply = (body as { reply: string }).reply
+      setText(reply)
+      lastGenerated.current = reply
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: 'client_reply_regeneration_failed',
+          projectId,
+          message: error instanceof Error ? error.message : 'Unknown regeneration error',
+        }),
+      )
+      setRegenerationFailed(true)
+    } finally {
+      setIsRegenerating(false)
+    }
   }
 
   async function copy() {
@@ -73,6 +127,7 @@ export function ClientReply({ result }: { result: AnalysisResult }) {
               type="button"
               role="radio"
               aria-checked={tone === toneOption}
+              disabled={isRegenerating}
               onClick={() => applyTone(toneOption)}
               className={cn(
                 'rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -117,9 +172,24 @@ export function ClientReply({ result }: { result: AnalysisResult }) {
             </>
           )}
         </Button>
-        <Button type="button" variant="outline" onClick={regenerate} className="h-9">
-          <RotateCcw aria-hidden="true" />
-          {t('reply.regenerate')}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void regenerate()}
+          disabled={isRegenerating}
+          className="h-9"
+        >
+          {isRegenerating ? (
+            <>
+              <LoaderCircle className="animate-spin" aria-hidden="true" />
+              {t('reply.regenerating')}
+            </>
+          ) : (
+            <>
+              <RotateCcw aria-hidden="true" />
+              {t('reply.regenerate')}
+            </>
+          )}
         </Button>
         <p className="ml-auto text-xs text-muted-foreground">
           {t('reply.sendYourself')}
@@ -133,6 +203,12 @@ export function ClientReply({ result }: { result: AnalysisResult }) {
         >
           <CheckCheck className="size-3.5" aria-hidden="true" />
           {t('reply.copiedStatus')}
+        </p>
+      )}
+
+      {regenerationFailed && (
+        <p className="mt-2 text-xs font-medium text-destructive" role="alert">
+          {t('reply.regenerateError')}
         </p>
       )}
     </section>

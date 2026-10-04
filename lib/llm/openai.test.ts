@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ERROR_CODES } from '@/lib/api/errors'
 import { ANALYSIS_JSON_SCHEMA } from './analysis-json-schema'
-import { buildAnalysisMessages } from './prompt'
+import { buildAnalysisMessages, buildRegenerationMessages } from './prompt'
 
 const { createMock, openAIConstructorMock } = vi.hoisted(() => ({
   createMock: vi.fn(),
@@ -23,6 +23,7 @@ import {
   analyzeWithOpenAI,
   openAIErrorDetail,
   openaiUsageFields,
+  regenerateReplyWithOpenAI,
   requireCompletedOutputText,
   type OpenAIAnalysisResponse,
 } from './openai'
@@ -111,7 +112,7 @@ describe('analyzeWithOpenAI', () => {
     await expect(analyzeWithOpenAI(analysisInput)).resolves.toEqual(validResult)
     expect(openAIConstructorMock).toHaveBeenCalledWith({
       apiKey: 'test-api-key',
-      maxRetries: 0,
+      maxRetries: 2,
     })
     expect(createMock).toHaveBeenCalledOnce()
     expect(createMock).toHaveBeenCalledWith({
@@ -175,6 +176,43 @@ describe('analyzeWithOpenAI', () => {
     expect(createMock).not.toHaveBeenCalled()
   })
 })
+
+describe('regenerateReplyWithOpenAI', () => {
+  it('uses high reasoning, parses the full result, and returns the selected tone', async () => {
+    createMock.mockResolvedValue({
+      status: 'completed',
+      output_text: JSON.stringify(validResult),
+      incomplete_details: null,
+    })
+    const input = {
+      ...analysisInput,
+      tone: 'firm' as const,
+      previousReply: 'A previous firm reply.',
+    }
+    const [system, user] = buildRegenerationMessages(input)
+
+    await expect(regenerateReplyWithOpenAI(input)).resolves.toBe(
+      validResult.replies.firm,
+    )
+    expect(createMock).toHaveBeenCalledWith({
+      model: 'gpt-5.4-nano',
+      reasoning: { effort: 'high' },
+      instructions: system.content,
+      input: user.content,
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'scope_analysis',
+          strict: true,
+          schema: ANALYSIS_JSON_SCHEMA,
+        },
+      },
+    })
+    expect(createMock.mock.calls[0]?.[0]).not.toHaveProperty('temperature')
+    expect(createMock.mock.calls[0]?.[0]).not.toHaveProperty('previous_response_id')
+  })
+})
+
 
 describe('openAIErrorDetail', () => {
   it('includes the connection cause and redacts proxy credentials', () => {

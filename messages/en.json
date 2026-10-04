@@ -126,6 +126,8 @@
     "copied": "Copied",
     "copy": "Copy reply",
     "regenerate": "Regenerate",
+    "regenerating": "Generating a new variant…",
+    "regenerateError": "Couldn’t generate a new variant. Your reply was not changed. Try again.",
     "sendYourself": "You send it yourself — nothing is sent automatically.",
     "copiedStatus": "Reply copied to clipboard.",
     "confirmReplace": "Switching tone will replace your edits to this reply. Continue?"
