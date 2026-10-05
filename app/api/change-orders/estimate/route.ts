@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       documentLanguage: body.documentLanguage === 'ru' || body.documentLanguage === 'en' ? body.documentLanguage : undefined,
     })
     if (result.verdict === 'in_scope' || !result.hasAdditionalWork) return jsonError(ERROR_CODES.analysisInvalid, 409)
-    if (!result.estimateValid) return jsonError(ERROR_CODES.analysisInvalid, 502)
+    if (!result.estimateValid || result.changeOrder.currency !== project.currency) return jsonError(ERROR_CODES.analysisInvalid, 502)
     result.draftCreatedAt = draftCreatedAt
     result.commercialSignature = commercialSignature(project, typeof body.endDate === 'string' ? body.endDate : undefined)
     return NextResponse.json({ result })
