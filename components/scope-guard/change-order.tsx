@@ -5,12 +5,13 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Copy, Download, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { readProjectDetails } from '@/lib/projects/browser-details'
-import { buildChangeOrderText, formatDocumentDate, type EditableDraft } from '@/lib/change-order/document'
+import { buildChangeOrderText, formatDocumentDate, makeChangeOrderReference, type EditableDraft } from '@/lib/change-order/document'
 import { readChangeOrder, writeChangeOrder } from '@/lib/change-order/draft-storage'
 import { mergeEstimate } from '@/lib/change-order/merge-estimate'
 import { createChangeOrderPdf } from '@/lib/change-order/pdf'
 import { convertAmount, isExchangeRates, type ExchangeRates } from '@/lib/change-order/exchange-rates'
 import type { AnalysisResult, Currency } from '@/lib/types'
+import { ChangeOrderDocumentPreview } from './change-order-document-preview'
 
 export function ChangeOrder({ result, projectName, projectId, historyId, userId, initialDraft, documentLanguage, refreshEstimate = false }: {
   result?: AnalysisResult
@@ -24,16 +25,20 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
 }) {
   const t = useTranslations('changeOrder')
   const locale = useLocale()
-  const [original] = useState<EditableDraft>(() => initialDraft ?? {
-    createdAt: result?.draftCreatedAt ?? new Date().toISOString(),
+  const [original] = useState<EditableDraft>(() => {
+    const createdAt = initialDraft?.createdAt ?? result?.draftCreatedAt ?? new Date().toISOString()
+    return {
+    ...(initialDraft ?? {} as EditableDraft),
+    reference: initialDraft?.reference ?? makeChangeOrderReference(createdAt, historyId),
+    createdAt,
     language: documentLanguage ?? (result?.requestLanguage === 'ru' ? 'ru' : result?.requestLanguage === 'en' ? 'en' : locale === 'ru' ? 'ru' : 'en'),
-    projectName, description: result?.changeOrder.description ?? '',
-    estimatedHours: result?.changeOrder.estimatedHours?.toString() ?? '',
-    additionalCost: result?.changeOrder.additionalCost ?? '',
-    currency: result?.changeOrder.currency ?? '',
-    timelineImpact: result?.changeOrder.timelineImpact ?? '',
-    rationale: result?.changeOrder.rationale ?? '', note: result?.changeOrder.note ?? '',
-    clientName: '', clientEmail: '', endDate: '', additionalTerms: '', approvedBy: '', approvalDate: '',
+    projectName: initialDraft?.projectName ?? projectName, description: initialDraft?.description ?? result?.changeOrder.description ?? '',
+    estimatedHours: initialDraft?.estimatedHours ?? result?.changeOrder.estimatedHours?.toString() ?? '',
+    additionalCost: initialDraft?.additionalCost ?? result?.changeOrder.additionalCost ?? '',
+    currency: initialDraft?.currency ?? result?.changeOrder.currency ?? '',
+    timelineImpact: initialDraft?.timelineImpact ?? result?.changeOrder.timelineImpact ?? '',
+    rationale: initialDraft?.rationale ?? result?.changeOrder.rationale ?? '', note: initialDraft?.note ?? result?.changeOrder.note ?? '',
+    clientName: initialDraft?.clientName ?? '', clientEmail: initialDraft?.clientEmail ?? '', endDate: initialDraft?.endDate ?? '', additionalTerms: initialDraft?.additionalTerms ?? '', approvedBy: initialDraft?.approvedBy ?? '', approvalDate: initialDraft?.approvalDate ?? '',
     aiValues: result ? {
       description: result.changeOrder.description,
       estimatedHours: result.changeOrder.estimatedHours?.toString() ?? '',
@@ -42,11 +47,11 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
       timelineImpact: result.changeOrder.timelineImpact,
       rationale: result.changeOrder.rationale ?? '',
       note: result.changeOrder.note,
-    } : undefined,
-  })
+    } : initialDraft?.aiValues,
+  }})
   const [draft, setDraft] = useState<EditableDraft>(() => {
     const saved = readChangeOrder(userId, projectId, historyId)
-    if (saved) return refreshEstimate && result ? mergeEstimate(saved, original) : saved
+    if (saved) return refreshEstimate && result ? mergeEstimate(saved, original) : { ...original, ...saved, reference: saved.reference ?? original.reference }
     return { ...original, ...readProjectDetails(userId, projectId) }
   })
   const [status, setStatus] = useState<'copied' | 'downloaded' | 'error' | ''>('')
@@ -113,9 +118,9 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
 
   async function download() {
     try {
-      const response = await fetch('/noto-sans.ttf')
-      if (!response.ok) throw new Error('font')
-      const bytes = await createChangeOrderPdf(draft, new Uint8Array(await response.arrayBuffer()))
+      const [regularResponse, boldResponse] = await Promise.all([fetch('/noto-sans.ttf'), fetch('/noto-sans-bold.ttf')])
+      if (!regularResponse.ok || !boldResponse.ok) throw new Error('font')
+      const bytes = await createChangeOrderPdf(draft, new Uint8Array(await regularResponse.arrayBuffer()), new Uint8Array(await boldResponse.arrayBuffer()))
       const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
@@ -148,7 +153,7 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
       {rates && <p className="mt-2 text-xs text-muted-foreground">{t('rateSource', { date: formatDocumentDate(rates.asOf, locale === 'ru' ? 'ru' : 'en') })} · <a href="https://www.cbr.ru/eng/currency_base/daily/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring">{t('rateProvider')}</a></p>}
     </aside>
     <details className="mt-4 rounded-lg border border-border px-3 py-2"><summary className="cursor-pointer text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring">{t('additionalParameters')}</summary><div className="mt-3 grid gap-3">{field('rationale', t('rationaleLabel'), 2)}{field('note', t('noteLabel'), 2)}{field('additionalTerms', t('additionalTerms'), 2)}<div className="grid gap-3 sm:grid-cols-2">{field('clientName', t('clientName'))}{field('clientEmail', t('clientEmail'))}{field('endDate', t('endDate'))}{field('approvedBy', t('approvedBy'))}{field('approvalDate', t('approvalDate'))}</div></div></details>
-    <div className="mt-4 rounded-lg bg-muted p-3"><p className="mb-2 text-xs font-medium text-muted-foreground">{t('preview')}</p><pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{buildChangeOrderText(draft)}</pre></div>
+    <div className="mt-6"><p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('preview')}</p><ChangeOrderDocumentPreview draft={draft} /></div>
     <div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => void copy()}><Copy aria-hidden="true" />{t('copy')}</Button><Button type="button" variant="outline" onClick={() => void download()}><Download aria-hidden="true" />{t('downloadPdf')}</Button></div>
     {status && <p role="status" className="mt-2 text-xs text-muted-foreground">{t(status)}</p>}
   </section>

@@ -11,9 +11,27 @@ const draft: EditableDraft = {
 }
 
 describe('Change Order PDF', () => {
+  it('keeps a typical complete draft on one page', async () => {
+    const font = readFileSync('public/noto-sans.ttf')
+    const boldFont = readFileSync('public/noto-sans-bold.ttf')
+    const bytes = await createChangeOrderPdf({
+      ...draft,
+      reference: 'CO-20261005-A1B2C3',
+      description: 'Разработка дополнительной страницы с формой заявки и адаптивной версткой.',
+      clientName: 'ООО «Север»',
+      clientEmail: 'hello@example.com',
+      rationale: 'Работа не входит в согласованный объем проекта.',
+      note: 'Работы начинаются после письменного согласования.',
+      additionalTerms: 'Оплата в течение пяти рабочих дней после согласования.',
+    }, font, boldFont)
+
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1)
+  }, 15_000)
+
   it('creates a valid multi-page PDF for long Cyrillic text', async () => {
     const font = readFileSync('public/noto-sans.ttf')
-    const bytes = await createChangeOrderPdf({ ...draft, description: 'Дополнительные страницы '.repeat(300) }, font)
+    const boldFont = readFileSync('public/noto-sans-bold.ttf')
+    const bytes = await createChangeOrderPdf({ ...draft, reference: 'CO-20261005-A1B2C3', description: 'Дополнительные страницы '.repeat(300) }, font, boldFont)
     expect(Buffer.from(bytes).subarray(0, 5).toString()).toBe('%PDF-')
     // Full embedding avoids fontkit's broken Cyrillic positioning when a
     // variable font is subset. Keep this guard if the font or PDF stack changes.
