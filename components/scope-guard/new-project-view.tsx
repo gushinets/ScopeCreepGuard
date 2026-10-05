@@ -4,242 +4,116 @@ import { useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { assertErrorCode, type ErrorCode } from '@/lib/api/errors'
 import { readScopeFile } from '@/lib/scope/read-file'
-import type { Industry } from '@/lib/types'
+import { projectFieldErrors, validISODate } from '@/lib/projects/validation'
+import { readProjectDetails, writeProjectDetails, type ProjectDetails } from '@/lib/projects/browser-details'
+import type { Currency, Industry, PricingModel } from '@/lib/types'
 import { useStore } from './store'
 
-const INDUSTRIES: Industry[] = ['Development', 'Design', 'Marketing']
+type Fields = { name: string; scope: string; industry: Industry; startDate: string; pricingModel: PricingModel; currency: Currency; hourlyRate: string; fixedPrice: string }
+const emptyDetails: ProjectDetails = { clientName: '', clientEmail: '', endDate: '' }
+const industries: Industry[] = ['Development', 'Design', 'Marketing']
 
-function industryLabelKey(industry: Industry) {
-  return `industry.${industry}` as const
-}
-
-export function NewProjectView() {
-  const { createProject, setView } = useStore()
+export function NewProjectView({ edit = false }: { edit?: boolean }) {
+  const { createProject, updateProject, selectedProject, user, setView } = useStore()
+  const project = edit ? selectedProject : null
   const t = useTranslations()
-
-  const [name, setName] = useState('')
-  const [client, setClient] = useState('')
-  const [industry, setIndustry] = useState<Industry>('Design')
-  const [scope, setScope] = useState('')
-  const [touched, setTouched] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
+  const [fields, setFields] = useState<Fields>({
+    name: project?.name ?? '', scope: project?.scope ?? '', industry: project?.industry ?? 'Design',
+    startDate: project?.startDate ?? '', pricingModel: project?.pricingModel ?? 'hourly',
+    currency: project?.currency ?? 'RUB', hourlyRate: project?.hourlyRate ?? '', fixedPrice: project?.fixedPrice ?? '',
+  })
+  const [details, setDetails] = useState<ProjectDetails>(() => project && user ? readProjectDetails(user.id, project.id) : emptyDetails)
+  const [attempted, setAttempted] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<ErrorCode | ''>('')
   const [uploadError, setUploadError] = useState<ErrorCode | ''>('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+  const form = useRef<HTMLFormElement>(null)
 
-  const nameError = touched && name.trim().length === 0
+  function change<K extends keyof Fields>(key: K, value: Fields[K]) {
+    setFields((current) => ({ ...current, [key]: value }))
+  }
+  function optional<K extends keyof ProjectDetails>(key: K, value: string) {
+    setDetails((current) => ({ ...current, [key]: value }))
+  }
 
-  async function onScopeFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
+  const errors = attempted ? projectFieldErrors(fields) : {}
+  const emailInvalid = details.clientEmail.trim() !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.clientEmail.trim())
+  const endInvalid = details.endDate !== '' && (!validISODate(details.endDate) || (validISODate(fields.startDate) && details.endDate < fields.startDate))
+
+  async function upload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
     if (!file) return
-
     setUploadError('')
-    try {
-      const text = await readScopeFile(file)
-      setScope(text)
-    } catch (error) {
-      console.error(
-        JSON.stringify({
-          event: 'scope_file_upload_failed',
-          message: error instanceof Error ? error.message : 'Unknown upload error',
-        }),
-      )
-      if (!(error instanceof Error)) {
-        throw new Error('Unknown upload error')
-      }
-      setUploadError(assertErrorCode(error.message))
-    }
+    try { change('scope', await readScopeFile(file)) }
+    catch (error) { setUploadError(assertErrorCode(error instanceof Error ? error.message : '')) }
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    setTouched(true)
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    setAttempted(true)
     setSaveError('')
-    if (name.trim().length === 0) return
-
-    setIsSaving(true)
-    try {
-      await createProject({ name, client, industry, scope })
-    } catch (error) {
-      console.error(
-        JSON.stringify({
-          event: 'new_project_submit_failed',
-          message: error instanceof Error ? error.message : 'Unknown project error',
-        }),
-      )
-      if (!(error instanceof Error)) {
-        throw new Error('Unknown project error')
-      }
-      setSaveError(assertErrorCode(error.message))
-    } finally {
-      setIsSaving(false)
+    const first = Object.keys(projectFieldErrors(fields))[0] ?? (emailInvalid ? 'clientEmail' : endInvalid ? 'endDate' : '')
+    if (first) {
+      requestAnimationFrame(() => form.current?.querySelector<HTMLElement>(`[name="${first}"]`)?.focus())
+      return
     }
+    setSaving(true)
+    try {
+      const saved = project ? await updateProject(project.id, fields) : await createProject(fields)
+      if (user) writeProjectDetails(user.id, saved.id, details)
+    } catch (error) {
+      setSaveError(assertErrorCode(error instanceof Error ? error.message : ''))
+    } finally { setSaving(false) }
   }
 
-  return (
-    <div className="mx-auto max-w-2xl">
-      <button
-        type="button"
-        onClick={() => setView('projects')}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        {t('projects.backToProjects')}
-      </button>
-
-      <h2 className="mt-4 text-xl font-semibold text-foreground">
-        {t('projects.newTitle')}
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t('projects.newDescription')}
-      </p>
-
-      <form onSubmit={submit} className="mt-6 flex flex-col gap-5">
-        <div>
-          <label
-            htmlFor="np-name"
-            className="mb-1.5 block text-sm font-medium text-foreground"
-          >
-            {t('projects.nameLabel')}
-          </label>
-          <input
-            id="np-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t('projects.namePlaceholder')}
-            aria-invalid={nameError}
-            className={cn(
-              'w-full rounded-lg border bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/40',
-              nameError
-                ? 'border-outscope focus-visible:border-outscope'
-                : 'border-input focus-visible:border-ring',
-            )}
-          />
-          {nameError && (
-            <p className="mt-1 text-xs text-outscope-text">
-              {t('projects.nameRequired')}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label
-            htmlFor="np-client"
-            className="mb-1.5 block text-sm font-medium text-foreground"
-          >
-            {t('projects.clientLabel')}{' '}
-            <span className="font-normal text-muted-foreground">
-              {t('projects.optional')}
-            </span>
-          </label>
-          <input
-            id="np-client"
-            value={client}
-            onChange={(e) => setClient(e.target.value)}
-            placeholder={t('projects.clientPlaceholder')}
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-          />
-        </div>
-
-        <div>
-          <span className="mb-1.5 block text-sm font-medium text-foreground">
-            {t('projects.industryLabel')}
-          </span>
-          <div
-            role="radiogroup"
-            aria-label={t('projects.industryLabel')}
-            className="inline-flex rounded-lg border border-border bg-muted p-0.5"
-          >
-            {INDUSTRIES.map((i) => (
-              <button
-                key={i}
-                type="button"
-                role="radio"
-                aria-checked={industry === i}
-                onClick={() => setIndustry(i)}
-                className={cn(
-                  'rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  industry === i
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {t(industryLabelKey(i))}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-            <label
-              htmlFor="np-scope"
-              className="text-sm font-medium text-foreground"
-            >
-              {t('projects.scopeLabel')}
-            </label>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-8 text-xs"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {t('projects.uploadScope')}
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".txt,.md,.pdf,text/plain,application/pdf"
-              className="hidden"
-              onChange={onScopeFileChange}
-            />
-          </div>
-          <textarea
-            id="np-scope"
-            value={scope}
-            onChange={(e) => setScope(e.target.value)}
-            rows={10}
-            placeholder={t('projects.scopePlaceholder')}
-            className="w-full resize-y rounded-lg border border-input bg-background p-3 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-          />
-          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            {t('projects.uploadHint')}
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            {t('projects.scopeTip')}
-          </p>
-        </div>
-
-        {uploadError && (
-          <p className="rounded-lg bg-outscope-soft px-3 py-2 text-sm text-outscope-text">
-            {t(uploadError)}
-          </p>
-        )}
-
-        {saveError && (
-          <p className="rounded-lg bg-outscope-soft px-3 py-2 text-sm text-outscope-text">
-            {t(saveError)}
-          </p>
-        )}
-
-        <div className="flex items-center gap-2">
-          <Button type="submit" className="h-9" disabled={isSaving}>
-            {isSaving ? t('projects.saving') : t('projects.save')}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-9"
-            onClick={() => setView('projects')}
-          >
-            {t('projects.cancel')}
-          </Button>
-        </div>
-      </form>
+  function field(key: keyof Fields | keyof ProjectDetails, label: string, value: string, onChange: (value: string) => void, options: { optional?: boolean; type?: string; error?: string; placeholder?: string } = {}) {
+    return <div key={key}>
+      <label htmlFor={`project-${key}`} className="mb-1.5 block text-sm font-medium text-foreground">
+        {label} <span className="font-normal text-muted-foreground">{options.optional ? t('projects.optional') : t('projects.required')}</span>
+      </label>
+      <input id={`project-${key}`} name={key} type={options.type ?? 'text'} value={value} onChange={(e) => onChange(e.target.value)} placeholder={options.placeholder}
+        aria-invalid={!!options.error} aria-describedby={options.error ? `project-${key}-error` : undefined}
+        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" />
+      {options.error && <p id={`project-${key}-error`} className="mt-1 text-xs text-outscope-text" role="alert">{options.error}</p>}
     </div>
-  )
+  }
+
+  return <div className="mx-auto max-w-2xl">
+    <button type="button" onClick={() => setView('projects')} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft className="size-4" aria-hidden="true" />{t('projects.backToProjects')}</button>
+    <h2 className="mt-4 text-xl font-semibold text-foreground">{t(project ? 'projects.editTitle' : 'projects.newTitle')}</h2>
+    <p className="mt-1 text-sm text-muted-foreground">{t('projects.newDescription')}</p>
+    <form ref={form} noValidate onSubmit={submit} className="mt-6 flex flex-col gap-5">
+      {field('name', t('projects.nameLabel'), fields.name, (v) => change('name', v), { error: errors.name && t(errors.name), placeholder: t('projects.namePlaceholder') })}
+      <div>
+        <label htmlFor="project-industry" className="mb-1.5 block text-sm font-medium">{t('projects.industryLabel')} <span className="font-normal text-muted-foreground">{t('projects.required')}</span></label>
+        <select id="project-industry" name="industry" value={fields.industry} onChange={(e) => change('industry', e.target.value as Industry)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring">{industries.map((i) => <option key={i} value={i}>{t(`industry.${i}`)}</option>)}</select>
+      </div>
+      <div>
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2"><label htmlFor="project-scope" className="text-sm font-medium">{t('projects.scopeLabel')} <span className="font-normal text-muted-foreground">{t('projects.required')}</span></label><Button type="button" variant="outline" className="h-8 text-xs" onClick={() => fileInput.current?.click()}>{t('projects.uploadScope')}</Button><input ref={fileInput} type="file" accept=".txt,.md,.pdf,text/plain,application/pdf" className="hidden" onChange={upload} /></div>
+        <textarea id="project-scope" name="scope" value={fields.scope} onChange={(e) => change('scope', e.target.value)} rows={8} placeholder={t('projects.scopePlaceholder')} aria-invalid={!!errors.scope} aria-describedby={errors.scope ? 'project-scope-error' : undefined} className="w-full resize-y rounded-lg border border-input bg-background p-3 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-ring" />
+        {errors.scope && <p id="project-scope-error" className="text-xs text-outscope-text" role="alert">{t(errors.scope)}</p>}
+        <p className="mt-1 text-xs text-muted-foreground">{t('projects.uploadHint')}</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {field('startDate', t('projects.startDate'), fields.startDate, (v) => change('startDate', v), { type: 'date', error: errors.startDate && t(errors.startDate) })}
+        {field('endDate', t('projects.endDate'), details.endDate, (v) => optional('endDate', v), { type: 'date', optional: true, error: attempted && endInvalid ? t('projects.endDateError') : '' })}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div><label htmlFor="project-pricingModel" className="mb-1.5 block text-sm font-medium">{t('projects.pricingModel')} <span className="font-normal text-muted-foreground">{t('projects.required')}</span></label><select id="project-pricingModel" name="pricingModel" value={fields.pricingModel} onChange={(e) => change('pricingModel', e.target.value as PricingModel)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"><option value="hourly">{t('projects.hourly')}</option><option value="fixed">{t('projects.fixed')}</option></select></div>
+        <div><label htmlFor="project-currency" className="mb-1.5 block text-sm font-medium">{t('projects.currency')} <span className="font-normal text-muted-foreground">{t('projects.required')}</span></label><select id="project-currency" name="currency" value={fields.currency} onChange={(e) => change('currency', e.target.value as Currency)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring">{(['RUB', 'USD', 'EUR'] as const).map((c) => <option key={c}>{c}</option>)}</select></div>
+      </div>
+      {fields.pricingModel === 'hourly' ? field('hourlyRate', t('projects.hourlyRate'), fields.hourlyRate, (v) => change('hourlyRate', v), { type: 'number', error: errors.hourlyRate && t(errors.hourlyRate) }) : field('fixedPrice', t('projects.fixedPrice'), fields.fixedPrice, (v) => change('fixedPrice', v), { type: 'number', error: errors.fixedPrice && t(errors.fixedPrice) })}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {field('clientName', t('projects.clientLabel'), details.clientName, (v) => optional('clientName', v), { optional: true, placeholder: t('projects.clientPlaceholder') })}
+        {field('clientEmail', t('projects.clientEmail'), details.clientEmail, (v) => optional('clientEmail', v), { optional: true, type: 'email', error: attempted && emailInvalid ? t('errors.invalidEmail') : '' })}
+      </div>
+      {uploadError && <p role="alert" className="text-sm text-outscope-text">{t(uploadError)}</p>}
+      {saveError && <p role="alert" className="text-sm text-outscope-text">{t(saveError)}</p>}
+      <div className="flex gap-2"><Button type="submit" disabled={saving}>{saving ? t('projects.saving') : t('projects.save')}</Button><Button type="button" variant="ghost" onClick={() => setView('projects')}>{t('projects.cancel')}</Button></div>
+    </form>
+  </div>
 }

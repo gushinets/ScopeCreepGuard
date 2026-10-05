@@ -1,179 +1,108 @@
 'use client'
 
-import { useState } from 'react'
-import { CheckCheck, Copy, Download, FileText } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { Copy, Download, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { AnalysisResult, ChangeOrderDraft } from '@/lib/types'
+import { readProjectDetails } from '@/lib/projects/browser-details'
+import { buildChangeOrderText, formatDocumentDate, type EditableDraft } from '@/lib/change-order/document'
+import { readChangeOrder, writeChangeOrder } from '@/lib/change-order/draft-storage'
+import { mergeEstimate } from '@/lib/change-order/merge-estimate'
+import { createChangeOrderPdf } from '@/lib/change-order/pdf'
+import type { AnalysisResult, Currency } from '@/lib/types'
 
-function Field({
-  id,
-  label,
-  value,
-  onChange,
-  rows = 2,
-}: {
-  id: string
-  label: string
-  value: string
-  onChange: (v: string) => void
-  rows?: number
-}) {
-  return (
-    <div>
-      <label
-        htmlFor={id}
-        className="mb-1 block text-xs font-medium text-muted-foreground"
-      >
-        {label}
-      </label>
-      <textarea
-        id={id}
-        value={value}
-        rows={rows}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full resize-y rounded-lg border border-input bg-background p-2.5 text-sm leading-relaxed text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-      />
-    </div>
-  )
-}
-
-export function ChangeOrder({
-  result,
-  projectName,
-}: {
-  result: AnalysisResult
+export function ChangeOrder({ result, projectName, projectId, historyId, userId, initialDraft, documentLanguage, refreshEstimate = false }: {
+  result?: AnalysisResult
   projectName: string
+  projectId: string
+  historyId: string
+  userId: string
+  initialDraft?: EditableDraft
+  documentLanguage?: 'ru' | 'en'
+  refreshEstimate?: boolean
 }) {
   const t = useTranslations('changeOrder')
-  const [draft, setDraft] = useState<ChangeOrderDraft>(result.changeOrder)
-  const [copied, setCopied] = useState(false)
-  const [downloaded, setDownloaded] = useState(false)
+  const locale = useLocale()
+  const [original] = useState<EditableDraft>(() => initialDraft ?? {
+    createdAt: result?.draftCreatedAt ?? new Date().toISOString(),
+    language: documentLanguage ?? (result?.requestLanguage === 'ru' ? 'ru' : result?.requestLanguage === 'en' ? 'en' : locale === 'ru' ? 'ru' : 'en'),
+    projectName, description: result?.changeOrder.description ?? '',
+    estimatedHours: result?.changeOrder.estimatedHours?.toString() ?? '',
+    additionalCost: result?.changeOrder.additionalCost ?? '',
+    currency: result?.changeOrder.currency ?? '',
+    timelineImpact: result?.changeOrder.timelineImpact ?? '',
+    rationale: result?.changeOrder.rationale ?? '', note: result?.changeOrder.note ?? '',
+    clientName: '', clientEmail: '', endDate: '', additionalTerms: '', approvedBy: '', approvalDate: '',
+    aiValues: result ? {
+      description: result.changeOrder.description,
+      estimatedHours: result.changeOrder.estimatedHours?.toString() ?? '',
+      additionalCost: result.changeOrder.additionalCost,
+      currency: result.changeOrder.currency ?? '',
+      timelineImpact: result.changeOrder.timelineImpact,
+      rationale: result.changeOrder.rationale ?? '',
+      note: result.changeOrder.note,
+    } : undefined,
+  })
+  const [draft, setDraft] = useState<EditableDraft>(() => {
+    const saved = readChangeOrder(userId, projectId, historyId)
+    if (saved) return refreshEstimate && result ? mergeEstimate(saved, original) : saved
+    return { ...original, ...readProjectDetails(userId, projectId) }
+  })
+  const [status, setStatus] = useState<'copied' | 'downloaded' | 'error' | ''>('')
 
-  function set<K extends keyof ChangeOrderDraft>(key: K, value: string) {
-    setDraft((d) => ({ ...d, [key]: value }))
+  useEffect(() => {
+    writeChangeOrder(userId, projectId, historyId, draft)
+  }, [userId, projectId, historyId, draft])
+
+  function set<K extends keyof EditableDraft>(key: K, value: EditableDraft[K]) {
+    setDraft((current) => ({ ...current, [key]: value }))
+    setStatus('')
   }
 
-  function asText() {
-    return [
-      `${t('draftTitle')} — ${projectName}`,
-      '',
-      `${t('additionalWork')}:\n${draft.description}`,
-      '',
-      `${t('timelineImpact')}:\n${draft.timelineImpact}`,
-      '',
-      `${t('additionalCost')}:\n${draft.additionalCost}`,
-      '',
-      `${t('note')}:\n${draft.note}`,
-    ].join('\n')
+  function field(key: keyof EditableDraft, label: string, rows = 1) {
+    const value = draft[key] as string
+    const proposed = draft.aiValues?.[key as keyof NonNullable<EditableDraft['aiValues']>]
+    const changed = proposed !== undefined && value !== proposed
+    return <div key={key}>
+      <label htmlFor={`co-${key}`} className="mb-1 block text-xs font-medium text-muted-foreground">{label} {proposed !== undefined ? <span className="font-normal">{changed ? t('edited') : t('aiProposal')}</span> : <span className="font-normal">{t('optional')}</span>}</label>
+      {rows > 1 ? <textarea id={`co-${key}`} rows={rows} value={value} onChange={(e) => set(key, e.target.value)} className="w-full resize-y rounded-lg border border-input bg-background p-2.5 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" /> :
+        <input id={`co-${key}`} value={value} onChange={(e) => set(key, e.target.value)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" />}
+    </div>
   }
 
   async function copy() {
+    try { await navigator.clipboard.writeText(buildChangeOrderText(draft)); setStatus('copied') }
+    catch { setStatus('error') }
+  }
+
+  async function download() {
     try {
-      await navigator.clipboard.writeText(asText())
-    } catch (error) {
-      console.error(
-        JSON.stringify({
-          event: 'change_order_clipboard_failed',
-          message: error instanceof Error ? error.message : 'Unknown clipboard error',
-        }),
-      )
-    }
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 2200)
+      const response = await fetch('/noto-sans.ttf')
+      if (!response.ok) throw new Error('font')
+      const bytes = await createChangeOrderPdf(draft, new Uint8Array(await response.arrayBuffer()))
+      const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `change-order-${projectId}.pdf`
+      anchor.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      setStatus('downloaded')
+    } catch { setStatus('error') }
   }
 
-  function download() {
-    const blob = new Blob([asText()], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `change-order-${projectName.toLowerCase().replace(/\s+/g, '-')}.txt`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-    setDownloaded(true)
-    window.setTimeout(() => setDownloaded(false), 2200)
-  }
-
-  return (
-    <section
-      aria-labelledby="change-order-heading"
-      className="rounded-lg border border-border bg-card p-4"
-    >
-      <div className="flex items-center gap-2">
-        <FileText className="size-4 text-muted-foreground" aria-hidden="true" />
-        <h3
-          id="change-order-heading"
-          className="text-sm font-semibold text-foreground"
-        >
-          {t('heading')}
-        </h3>
-      </div>
-
-      <div className="mt-3 grid gap-3">
-        <Field
-          id="co-description"
-          label={t('descriptionLabel')}
-          value={draft.description}
-          onChange={(v) => set('description', v)}
-          rows={3}
-        />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field
-            id="co-timeline"
-            label={t('timelineLabel')}
-            value={draft.timelineImpact}
-            onChange={(v) => set('timelineImpact', v)}
-          />
-          <Field
-            id="co-cost"
-            label={t('costLabel')}
-            value={draft.additionalCost}
-            onChange={(v) => set('additionalCost', v)}
-          />
-        </div>
-        <Field
-          id="co-note"
-          label={t('noteLabel')}
-          value={draft.note}
-          onChange={(v) => set('note', v)}
-        />
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" onClick={copy} className="h-9">
-          {copied ? (
-            <>
-              <CheckCheck aria-hidden="true" />
-              {t('copied')}
-            </>
-          ) : (
-            <>
-              <Copy aria-hidden="true" />
-              {t('copy')}
-            </>
-          )}
-        </Button>
-        <Button type="button" variant="outline" onClick={download} className="h-9">
-          {downloaded ? (
-            <>
-              <CheckCheck aria-hidden="true" />
-              {t('downloaded')}
-            </>
-          ) : (
-            <>
-              <Download aria-hidden="true" />
-              {t('download')}
-            </>
-          )}
-        </Button>
-      </div>
-
-      <p className="mt-3 rounded-md bg-muted px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-        {t('legalNotice')}
-      </p>
-    </section>
-  )
+  return <section aria-labelledby="change-order-heading" className="rounded-lg border border-border bg-card p-4">
+    <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2"><FileText className="size-4 text-muted-foreground" aria-hidden="true" /><h3 id="change-order-heading" className="text-sm font-semibold">{t('heading')}</h3><span className="rounded-md bg-muted px-2 py-0.5 text-xs font-semibold">{t('draft')}</span></div><time className="text-xs text-muted-foreground" dateTime={draft.createdAt}>{formatDocumentDate(draft.createdAt, draft.language)}</time></div>
+    <p className="mt-2 text-sm font-medium">{draft.projectName}</p>
+    <div className="mt-4 grid gap-3">
+      {field('description', t('descriptionLabel'), 3)}
+      <div className="grid gap-3 sm:grid-cols-2">{field('estimatedHours', t('hoursLabel'))}{field('additionalCost', t('costLabel'))}</div>
+      <div><label htmlFor="co-currency" className="mb-1 block text-xs font-medium text-muted-foreground">{t('currencyLabel')} {draft.aiValues?.currency !== undefined && <span className="font-normal">{draft.currency === draft.aiValues.currency ? t('aiProposal') : t('edited')}</span>}</label><select id="co-currency" value={draft.currency} onChange={(e) => set('currency', e.target.value as Currency | '')} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"><option value="">{t('noCurrency')}</option>{(['RUB', 'USD', 'EUR'] as const).map((currency) => <option key={currency}>{currency}</option>)}</select></div>
+      {field('timelineImpact', t('timelineLabel'), 2)}
+    </div>
+    <details className="mt-4 rounded-lg border border-border px-3 py-2"><summary className="cursor-pointer text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring">{t('additionalParameters')}</summary><div className="mt-3 grid gap-3">{field('rationale', t('rationaleLabel'), 2)}{field('note', t('noteLabel'), 2)}{field('additionalTerms', t('additionalTerms'), 2)}<div className="grid gap-3 sm:grid-cols-2">{field('clientName', t('clientName'))}{field('clientEmail', t('clientEmail'))}{field('endDate', t('endDate'))}{field('approvedBy', t('approvedBy'))}{field('approvalDate', t('approvalDate'))}</div></div></details>
+    <div className="mt-4 rounded-lg bg-muted p-3"><p className="mb-2 text-xs font-medium text-muted-foreground">{t('preview')}</p><pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{buildChangeOrderText(draft)}</pre></div>
+    <div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => void copy()}><Copy aria-hidden="true" />{t('copy')}</Button><Button type="button" variant="outline" onClick={() => void download()}><Download aria-hidden="true" />{t('downloadPdf')}</Button></div>
+    {status && <p role="status" className="mt-2 text-xs text-muted-foreground">{t(status)}</p>}
+  </section>
 }

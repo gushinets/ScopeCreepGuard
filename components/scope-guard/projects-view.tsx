@@ -65,7 +65,7 @@ export function ProjectsView() {
       ) : (
         <ul className="mt-6 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
           {projects.map((p) => (
-            <li key={p.id}>
+            <li key={p.id} className="flex items-center">
               <button
                 type="button"
                 onClick={() => {
@@ -79,7 +79,6 @@ export function ProjectsView() {
                     {p.name}
                   </p>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {p.client ? `${p.client} · ` : ''}
                     {t(industryLabelKey(p.industry))} ·{' '}
                     {p.lastChecked
                       ? t('projects.lastChecked', {
@@ -93,6 +92,9 @@ export function ProjectsView() {
                   aria-hidden="true"
                 />
               </button>
+              <Button type="button" variant="ghost" className="mr-3" onClick={() => { selectProject(p.id); setView('edit_project') }}>
+                {t('projects.edit')}
+              </Button>
             </li>
           ))}
         </ul>

@@ -68,11 +68,20 @@ export function parseAnalysisResult(value: unknown): AnalysisResult {
     invalid('changeOrder')
   }
   const co = raw.changeOrder as Record<string, unknown>
+  if (raw.hasAdditionalWork !== undefined && typeof raw.hasAdditionalWork !== 'boolean') invalid('hasAdditionalWork')
+  if (raw.requestLanguage !== undefined && !['ru', 'en', 'other'].includes(String(raw.requestLanguage))) invalid('requestLanguage')
+  if (co.estimatedHours !== undefined && (typeof co.estimatedHours !== 'number' || !Number.isFinite(co.estimatedHours) || co.estimatedHours < 0)) invalid('changeOrder.estimatedHours')
+  if (co.currency !== undefined && !['', 'RUB', 'USD', 'EUR'].includes(String(co.currency))) invalid('changeOrder.currency')
+  if (co.rationale !== undefined && typeof co.rationale !== 'string') invalid('changeOrder.rationale')
+  const estimateValid = raw.hasAdditionalWork === true && co.estimatedHours !== undefined && co.estimatedHours > 0 && /^\d+(?:\.\d{1,2})?$/.test(String(co.additionalCost)) && Number(co.additionalCost) > 0 && co.currency !== '' && typeof co.rationale === 'string' && co.rationale.trim().length > 0
   const changeOrder = {
     description: requireNonEmpty(co.description, 'changeOrder.description'),
     timelineImpact: requireNonEmpty(co.timelineImpact, 'changeOrder.timelineImpact'),
     additionalCost: requireNonEmpty(co.additionalCost, 'changeOrder.additionalCost'),
     note: requireNonEmpty(co.note, 'changeOrder.note'),
+    ...(typeof co.estimatedHours === 'number' ? { estimatedHours: co.estimatedHours } : {}),
+    ...(typeof co.currency === 'string' ? { currency: co.currency as '' | 'RUB' | 'USD' | 'EUR' } : {}),
+    ...(typeof co.rationale === 'string' ? { rationale: co.rationale } : {}),
   }
 
   const result: AnalysisResult = {
@@ -83,6 +92,9 @@ export function parseAnalysisResult(value: unknown): AnalysisResult {
     citations: raw.citations,
     replies,
     changeOrder,
+    ...(typeof raw.hasAdditionalWork === 'boolean' ? { hasAdditionalWork: raw.hasAdditionalWork } : {}),
+    ...(typeof raw.requestLanguage === 'string' ? { requestLanguage: raw.requestLanguage as 'ru' | 'en' | 'other' } : {}),
+    ...(typeof raw.hasAdditionalWork === 'boolean' ? { estimateValid: raw.hasAdditionalWork ? estimateValid : false } : {}),
   }
 
   if (typeof raw.suggestion === 'string' && raw.suggestion.trim().length > 0) {

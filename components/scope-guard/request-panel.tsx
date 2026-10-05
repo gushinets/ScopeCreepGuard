@@ -86,7 +86,6 @@ export function RequestPanel() {
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
-                {p.client ? ` · ${p.client}` : ''}
               </option>
             ))}
           </select>

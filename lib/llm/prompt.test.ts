@@ -73,8 +73,16 @@ describe('buildAnalysisMessages', () => {
       'summary, reasoning, and suggestion: English only.',
     )
     expect(user.content).toContain(
-      'replies.warm, replies.neutral, replies.firm, and every Change Order field: detected NEW CLIENT REQUEST language only.',
+      'replies.warm, replies.neutral, and replies.firm: detected NEW CLIENT REQUEST language only.',
     )
+    expect(user.content).toContain('every Change Order field: detected NEW CLIENT REQUEST language only.')
+  })
+
+  it('honors a selected document language without changing the reply language', () => {
+    const [, user] = buildAnalysisMessages({ ...input, documentLanguage: 'ru' })
+    expect(user.content).toContain('every Change Order field: Russian only.')
+    expect(user.content).toContain('replies.warm, replies.neutral, and replies.firm: detected NEW CLIENT REQUEST language only.')
+    expect(user.content).not.toContain('every Change Order field: detected NEW CLIENT REQUEST language only.')
   })
 
   it('falls back to the interface language for a language-neutral client request', () => {

@@ -10,8 +10,12 @@ export const ANALYSIS_JSON_SCHEMA = {
     'suggestion',
     'replies',
     'changeOrder',
+    'hasAdditionalWork',
+    'requestLanguage',
   ],
   properties: {
+    hasAdditionalWork: { type: 'boolean' },
+    requestLanguage: { type: 'string', enum: ['ru', 'en', 'other'] },
     verdict: {
       type: 'string',
       enum: ['in_scope', 'borderline', 'out_of_scope'],
@@ -46,8 +50,11 @@ export const ANALYSIS_JSON_SCHEMA = {
     changeOrder: {
       type: 'object',
       additionalProperties: false,
-      required: ['description', 'timelineImpact', 'additionalCost', 'note'],
+      required: ['description', 'timelineImpact', 'additionalCost', 'note', 'estimatedHours', 'currency', 'rationale'],
       properties: {
+        estimatedHours: { type: 'number' },
+        currency: { type: 'string', enum: ['', 'RUB', 'USD', 'EUR'] },
+        rationale: { type: 'string' },
         description: {
           type: 'string',
           description:
@@ -61,7 +68,7 @@ export const ANALYSIS_JSON_SCHEMA = {
         additionalCost: {
           type: 'string',
           description:
-            'Non-empty in every verdict. For in_scope, use included / $0 style text.',
+            'Decimal amount without currency symbol, for example 2400.00. For in_scope use 0.',
         },
         note: {
           type: 'string',

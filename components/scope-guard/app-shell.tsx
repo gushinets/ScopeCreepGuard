@@ -21,7 +21,7 @@ function Header() {
   const { view, setView, user, logout } = useStore()
   const t = useTranslations()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const activeNav: View = view === 'new_project' ? 'projects' : view
+  const activeNav: View = view === 'new_project' || view === 'edit_project' ? 'projects' : view
 
   async function handleLogout() {
     setIsLoggingOut(true)
@@ -133,6 +133,7 @@ function Body() {
       {view === 'check' && <ScopeCheckView />}
       {view === 'projects' && <ProjectsView />}
       {view === 'new_project' && <NewProjectView />}
+      {view === 'edit_project' && <NewProjectView key="edit" edit />}
       {view === 'history' && <HistoryView />}
     </main>
   )

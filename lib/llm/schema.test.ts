@@ -84,6 +84,12 @@ describe('parseAnalysisResult', () => {
     ).toThrow('invalid_analysis_result')
   })
 
+  it('preserves the scope verdict when a proposed estimate is zero', () => {
+    const parsed = parseAnalysisResult({ ...valid, hasAdditionalWork: true, changeOrder: { ...valid.changeOrder, estimatedHours: 0, additionalCost: '0', currency: 'USD', rationale: 'Extra work.' } })
+    expect(parsed.verdict).toBe('out_of_scope')
+    expect(parsed.estimateValid).toBe(false)
+  })
+
   it('rejects empty changeOrder fields with a field-specific error', () => {
     expect(() =>
       parseAnalysisResult({
