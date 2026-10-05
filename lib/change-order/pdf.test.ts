@@ -15,6 +15,9 @@ describe('Change Order PDF', () => {
     const font = readFileSync('public/noto-sans.ttf')
     const bytes = await createChangeOrderPdf({ ...draft, description: 'Дополнительные страницы '.repeat(300) }, font)
     expect(Buffer.from(bytes).subarray(0, 5).toString()).toBe('%PDF-')
+    // Full embedding avoids fontkit's broken Cyrillic positioning when a
+    // variable font is subset. Keep this guard if the font or PDF stack changes.
+    expect(bytes.byteLength).toBeGreaterThan(1_000_000)
     expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThan(1)
-  })
+  }, 15_000)
 })

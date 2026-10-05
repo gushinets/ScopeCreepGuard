@@ -5,7 +5,9 @@ import { buildChangeOrderText, type EditableDraft } from './document'
 export async function createChangeOrderPdf(draft: EditableDraft, fontBytes: Uint8Array): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
   pdf.registerFontkit(fontkit)
-  const font = await pdf.embedFont(fontBytes, { subset: true })
+  // fontkit's variable-font subsetter corrupts Cyrillic glyph positioning.
+  // Embedding the complete font keeps Latin and Cyrillic text visually intact.
+  const font = await pdf.embedFont(fontBytes, { subset: false })
   const width = 595, height = 842, margin = 48, bodySize = 11, lineHeight = 17
   let page = pdf.addPage([width, height])
   let y = height - margin
