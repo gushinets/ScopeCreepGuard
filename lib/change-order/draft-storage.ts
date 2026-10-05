@@ -9,7 +9,7 @@ export function readChangeOrder(userId: string, projectId: string, historyId: st
     const value: unknown = JSON.parse(raw)
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null
     const draft = value as EditableDraft
-    if (draft.language !== 'ru' && draft.language !== 'en') return null
+    if (draft.language !== 'ru' && draft.language !== 'en' && draft.language !== 'es') return null
     if (typeof draft.createdAt !== 'string' || typeof draft.projectName !== 'string' || typeof draft.description !== 'string') return null
     return draft
   } catch { return null }

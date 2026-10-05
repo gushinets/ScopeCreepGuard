@@ -49,6 +49,18 @@ describe('buildAnalysisMessages', () => {
     )
   })
 
+  it('requires Spanish replies and Change Order fields for a Spanish request', () => {
+    const [system, user] = buildAnalysisMessages({ ...input, request: 'Añada una página para noticias.' })
+    expect(system.content).toMatch(/Russian, English, Spanish, or other/i)
+    expect(user.content).toContain('detected NEW CLIENT REQUEST language only')
+  })
+
+  it('does not delegate currency conversion to the application', () => {
+    const [system] = buildAnalysisMessages(input)
+    expect(system.content).not.toMatch(/application computes indicative conversions/i)
+    expect(system.content).not.toMatch(/alternative currency amounts/i)
+  })
+
   it('requires an English verdict when the interface is English and the client request is Russian', () => {
     const [system, user] = buildAnalysisMessages({
       ...input,

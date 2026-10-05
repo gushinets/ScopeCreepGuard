@@ -7,7 +7,7 @@ import type { EditableDraft } from './document'
 const draft: EditableDraft = {
   createdAt: '2026-10-05T12:00:00Z', language: 'ru', projectName: 'Сайт', description: 'Дополнительные страницы',
   estimatedHours: '20', additionalCost: '10000', currency: 'RUB', timelineImpact: 'Неделя', rationale: '', note: '',
-  clientName: '', clientEmail: '', endDate: '', additionalTerms: '', approvedBy: '', approvalDate: '',
+  providerName: '', clientName: '', clientEmail: '', endDate: '', additionalTerms: '', clientApproverName: '', approvalDate: '', noAdditionalCharge: false,
 }
 
 describe('Change Order PDF', () => {

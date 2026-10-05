@@ -114,13 +114,15 @@ export async function createChangeOrderPdf(draft: EditableDraft, regularFontByte
 
   sectionHeading(document.sections[1].heading)
   for (const [index, item] of document.commercialTerms.entries()) {
-    ensureSpace(34)
-    const rowY = y - 25
-    page.drawRectangle({ x: MARGIN, y: rowY, width: CONTENT_WIDTH, height: 31, color: index % 2 === 0 ? PAPER : WHITE, borderColor: LINE, borderWidth: 0.7 })
-    page.drawText(safeText(item.label), { x: MARGIN + 13, y: y - 7, font: bold, size: 9, color: MUTED })
     const valueSize = index === document.commercialTerms.length - 1 ? 12 : 10.5
-    page.drawText(safeText(item.value), { x: PAGE_WIDTH - MARGIN - 13 - bold.widthOfTextAtSize(safeText(item.value), valueSize), y: y - 8, font: bold, size: valueSize, color: NAVY })
-    y -= 31
+    const valueLines = wrapText(item.value, bold, valueSize, 220)
+    const rowHeight = Math.max(31, 18 + valueLines.length * (valueSize * 1.2))
+    ensureSpace(rowHeight + 3)
+    const rowY = y - rowHeight + 6
+    page.drawRectangle({ x: MARGIN, y: rowY, width: CONTENT_WIDTH, height: rowHeight, color: index % 2 === 0 ? PAPER : WHITE, borderColor: LINE, borderWidth: 0.7 })
+    page.drawText(safeText(item.label), { x: MARGIN + 13, y: y - 7, font: bold, size: 9, color: MUTED })
+    valueLines.forEach((line, lineIndex) => page.drawText(line, { x: PAGE_WIDTH - MARGIN - 13 - bold.widthOfTextAtSize(line, valueSize), y: y - 8 - lineIndex * valueSize * 1.2, font: bold, size: valueSize, color: NAVY }))
+    y -= rowHeight
   }
   y -= 4
 
@@ -133,20 +135,18 @@ export async function createChangeOrderPdf(draft: EditableDraft, regularFontByte
     paragraph(item.value, { after: 2 })
   }
 
-  ensureSpace(100)
-  sectionHeading(document.approvalHeading)
-  const boxGap = 18
-  const boxWidth = (CONTENT_WIDTH - boxGap) / 2
-  for (const [index, signature] of document.signatures.entries()) {
-    const x = MARGIN + index * (boxWidth + boxGap)
-    page.drawRectangle({ x, y: y - 70, width: boxWidth, height: 73, borderColor: LINE, borderWidth: 0.8 })
-    page.drawText(safeText(signature.label).toUpperCase(), { x: x + 13, y: y - 15, font: bold, size: 8, color: NAVY })
-    page.drawLine({ start: { x: x + 13, y: y - 42 }, end: { x: x + boxWidth - 13, y: y - 42 }, thickness: 0.7, color: MUTED })
-    page.drawText(safeText(document.labels.signature), { x: x + 13, y: y - 54, font: regular, size: 7, color: MUTED })
-    page.drawLine({ start: { x: x + 13, y: y - 64 }, end: { x: x + 105, y: y - 64 }, thickness: 0.7, color: MUTED })
-    page.drawText(safeText(document.labels.date), { x: x + 112, y: y - 67, font: regular, size: 7, color: MUTED })
+  if (document.approval.approverName || document.approval.approvalDate) {
+    ensureSpace(72)
+    sectionHeading(document.approvalHeading)
+    const entries = [
+      document.approval.approverName ? { label: document.labels.approvedBy, value: document.approval.approverName } : null,
+      document.approval.approvalDate ? { label: document.labels.date, value: document.approval.approvalDate } : null,
+    ].filter((entry): entry is { label: string; value: string } => Boolean(entry))
+    for (const entry of entries) {
+      paragraph(entry.label.toUpperCase(), { font: bold, size: 7.5, color: MUTED, after: 0 })
+      paragraph(entry.value, { after: 3 })
+    }
   }
-  y -= 82
 
   const pages = pdf.getPages()
   pages.forEach((pdfPage, index) => {

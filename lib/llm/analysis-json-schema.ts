@@ -15,7 +15,7 @@ export const ANALYSIS_JSON_SCHEMA = {
   ],
   properties: {
     hasAdditionalWork: { type: 'boolean' },
-    requestLanguage: { type: 'string', enum: ['ru', 'en', 'other'] },
+    requestLanguage: { type: 'string', enum: ['ru', 'en', 'es', 'other'] },
     verdict: {
       type: 'string',
       enum: ['in_scope', 'borderline', 'out_of_scope'],

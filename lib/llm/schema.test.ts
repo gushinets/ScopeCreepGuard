@@ -90,6 +90,16 @@ describe('parseAnalysisResult', () => {
     expect(parsed.estimateValid).toBe(false)
   })
 
+  it('accepts a positive paid estimate for genuine additional work', () => {
+    const parsed = parseAnalysisResult({ ...valid, hasAdditionalWork: true, changeOrder: { ...valid.changeOrder, estimatedHours: 6, additionalCost: '900', currency: 'EUR', rationale: 'Additional work.' } })
+    expect(parsed.estimateValid).toBe(true)
+    expect(parsed.changeOrder.additionalCost).toBe('900')
+  })
+
+  it('preserves Spanish as the detected client-request language', () => {
+    expect(parseAnalysisResult({ ...valid, requestLanguage: 'es' }).requestLanguage).toBe('es')
+  })
+
   it('rejects empty changeOrder fields with a field-specific error', () => {
     expect(() =>
       parseAnalysisResult({
