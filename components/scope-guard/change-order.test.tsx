@@ -36,8 +36,20 @@ it('copies and exports the current edited draft', async () => {
   await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('850 USD')))
   expect(vi.mocked(navigator.clipboard.writeText).mock.calls[0][0]).toContain('Add three posts')
   fireEvent.click(screen.getByRole('button', { name: 'downloadPdf' }))
-  await waitFor(() => expect(pdfMock).toHaveBeenCalledWith(expect.objectContaining({ description: 'Add three posts', additionalCost: '850' }), expect.any(Uint8Array)))
+  await waitFor(() => expect(pdfMock).toHaveBeenCalledWith(expect.objectContaining({ description: 'Add three posts', additionalCost: '850', reference: 'CO-20261005-H1' }), expect.any(Uint8Array), expect.any(Uint8Array)))
   expect(localStorage.getItem('scg:change-order:u1:p1:h1')).toContain('Add three posts')
+})
+
+it('presents the editable draft as a formal document', () => {
+  render(<ChangeOrder initialDraft={original} projectName="Website" projectId="p1" historyId="abc123" userId="u1" />)
+  const preview = screen.getByTestId('change-order-document-preview')
+  expect(preview.querySelector('h2')?.textContent).toBe('CHANGE ORDER')
+  expect(preview.textContent).toContain('DRAFT')
+  expect(preview.textContent).toContain('CO-20261005-ABC123')
+  expect(preview.textContent).toContain('1. Requested change')
+  expect(preview.textContent).toContain('2. Commercial terms')
+  expect(preview.textContent).toContain('Provider')
+  expect(preview.textContent).toContain('Client')
 })
 
 it('restores browser-saved edits after remount', async () => {
@@ -62,7 +74,7 @@ it('shows dated currency equivalents and converts the current draft on currency 
   expect(copied).not.toContain('RUB')
   expect(copied).not.toContain('USD')
   fireEvent.click(screen.getByRole('button', { name: 'downloadPdf' }))
-  await waitFor(() => expect(pdfMock).toHaveBeenCalledWith(expect.objectContaining({ additionalCost: '500', currency: 'EUR' }), expect.any(Uint8Array)))
+  await waitFor(() => expect(pdfMock).toHaveBeenCalledWith(expect.objectContaining({ additionalCost: '500', currency: 'EUR' }), expect.any(Uint8Array), expect.any(Uint8Array)))
 })
 
 it('keeps the original amount and currency when live rates are unavailable', async () => {
