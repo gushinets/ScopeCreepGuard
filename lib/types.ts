@@ -30,7 +30,7 @@ export interface AnalysisResult {
   replies: Record<Tone, string>
   changeOrder: ChangeOrderDraft
   hasAdditionalWork?: boolean
-  requestLanguage?: 'ru' | 'en' | 'other'
+  requestLanguage?: 'ru' | 'en' | 'es' | 'other'
   draftCreatedAt?: string
   commercialSignature?: string
   estimateValid?: boolean

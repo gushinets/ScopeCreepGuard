@@ -69,7 +69,7 @@ export function parseAnalysisResult(value: unknown): AnalysisResult {
   }
   const co = raw.changeOrder as Record<string, unknown>
   if (raw.hasAdditionalWork !== undefined && typeof raw.hasAdditionalWork !== 'boolean') invalid('hasAdditionalWork')
-  if (raw.requestLanguage !== undefined && !['ru', 'en', 'other'].includes(String(raw.requestLanguage))) invalid('requestLanguage')
+  if (raw.requestLanguage !== undefined && !['ru', 'en', 'es', 'other'].includes(String(raw.requestLanguage))) invalid('requestLanguage')
   if (co.estimatedHours !== undefined && (typeof co.estimatedHours !== 'number' || !Number.isFinite(co.estimatedHours) || co.estimatedHours < 0)) invalid('changeOrder.estimatedHours')
   if (co.currency !== undefined && !['', 'RUB', 'USD', 'EUR'].includes(String(co.currency))) invalid('changeOrder.currency')
   if (co.rationale !== undefined && typeof co.rationale !== 'string') invalid('changeOrder.rationale')
@@ -93,7 +93,7 @@ export function parseAnalysisResult(value: unknown): AnalysisResult {
     replies,
     changeOrder,
     ...(typeof raw.hasAdditionalWork === 'boolean' ? { hasAdditionalWork: raw.hasAdditionalWork } : {}),
-    ...(typeof raw.requestLanguage === 'string' ? { requestLanguage: raw.requestLanguage as 'ru' | 'en' | 'other' } : {}),
+    ...(typeof raw.requestLanguage === 'string' ? { requestLanguage: raw.requestLanguage as 'ru' | 'en' | 'es' | 'other' } : {}),
     ...(typeof raw.hasAdditionalWork === 'boolean' ? { estimateValid: raw.hasAdditionalWork ? estimateValid : false } : {}),
   }
 

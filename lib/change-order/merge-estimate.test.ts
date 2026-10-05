@@ -6,7 +6,7 @@ const base: EditableDraft = {
   createdAt: '2026-10-05', language: 'en', projectName: 'Site', description: 'Blog',
   estimatedHours: '8', additionalCost: '800', currency: 'USD', timelineImpact: 'Two days',
   rationale: 'Extra feature', note: 'Draft', clientName: '', clientEmail: '', endDate: '',
-  additionalTerms: '', approvedBy: '', approvalDate: '',
+  additionalTerms: '', providerName: '', clientApproverName: '', approvalDate: '', noAdditionalCharge: false,
   aiValues: { description: 'Blog', estimatedHours: '8', additionalCost: '800', currency: 'USD', timelineImpact: 'Two days', rationale: 'Extra feature', note: 'Draft' },
 }
 

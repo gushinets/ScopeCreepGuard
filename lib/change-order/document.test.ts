@@ -5,7 +5,7 @@ const draft: EditableDraft = {
   createdAt: '2026-10-05T12:00:00.000Z', language: 'en', projectName: 'Website',
   description: 'Add a blog', estimatedHours: '10', additionalCost: '1200', currency: 'USD',
   timelineImpact: 'Two days', rationale: 'New feature', note: '',
-  clientName: '', clientEmail: '', endDate: '', additionalTerms: '', approvedBy: '', approvalDate: '',
+  providerName: '', clientName: '', clientEmail: '', endDate: '', additionalTerms: '', clientApproverName: '', approvalDate: '', noAdditionalCharge: false,
 }
 
 describe('change order document', () => {
@@ -24,7 +24,7 @@ describe('change order document', () => {
       { label: 'Estimated effort', value: '10 hours' },
       { label: 'Additional fee', value: '1200 USD' },
     ])
-    expect(document.signatures.map((signature) => signature.label)).toEqual(['Provider', 'Client'])
+    expect(document.approval).toEqual({ approverName: '', approvalDate: '' })
   })
 
   it('creates a stable human-readable document reference', () => {
@@ -38,6 +38,31 @@ describe('change order document', () => {
     expect(text).not.toContain('1200')
     expect(text).not.toContain('[Client')
     expect(text).not.toContain('Client email:')
+    expect(text).not.toContain('Provider:')
+    expect(text).not.toContain('Approved by:')
+  })
+
+  it('keeps provider identity separate from the client approver', () => {
+    const document = createChangeOrderDocument({ ...draft, providerName: 'North Studio LLC', clientName: 'Acme', clientApproverName: 'Ana Ruiz', approvalDate: '2026-10-06' })
+    expect(document.metadata).toContainEqual({ label: 'Provider', value: 'North Studio LLC' })
+    expect(document.metadata).toContainEqual({ label: 'Client', value: 'Acme' })
+    expect(document.approval).toEqual({ approverName: 'Ana Ruiz', approvalDate: 'October 6, 2026' })
+    expect(document.approval.approverName).not.toBe('North Studio LLC')
+  })
+
+  it('renders deliberate free work without losing the positive paid amount', () => {
+    const free = { ...draft, noAdditionalCharge: true }
+    const document = createChangeOrderDocument(free)
+    expect(document.commercialTerms).toContainEqual({ label: 'Additional fee', value: 'No additional charge' })
+    expect(buildChangeOrderText(free)).toContain('outside the agreed scope and will be performed at no additional charge')
+    expect(free.additionalCost).toBe('1200')
+  })
+
+  it('generates Spanish labels and approval text', () => {
+    const text = buildChangeOrderText({ ...draft, language: 'es', description: 'Añadir una página', timelineImpact: 'Dos días', clientApproverName: 'Ana Ruiz' })
+    expect(text).toContain('ORDEN DE CAMBIO — BORRADOR')
+    expect(text).toContain('1. Cambio solicitado')
+    expect(text).toContain('Aprobado por: Ana Ruiz')
   })
   it('uses Russian client-facing text independently of UI language', () => {
     const text = buildChangeOrderText({ ...draft, language: 'ru' })
@@ -56,7 +81,6 @@ describe('change order document', () => {
     expect(text).toContain('Document no.: CO-20261005-A1B2C3')
     expect(text).toContain('1. Requested change')
     expect(text).toContain('2. Commercial terms')
-    expect(text).toContain('Provider:')
-    expect(text).toContain('Client:')
+    expect(text).not.toContain('Approved by:')
   })
 })
