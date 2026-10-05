@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { PDFDocument } from 'pdf-lib'
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { createChangeOrderPdf } from './pdf'
 import type { EditableDraft } from './document'
 
@@ -11,6 +12,24 @@ const draft: EditableDraft = {
 }
 
 describe('Change Order PDF', () => {
+  it('renders the client approver and approval date entered by the user', async () => {
+    const font = readFileSync('public/noto-sans.ttf')
+    const boldFont = readFileSync('public/noto-sans-bold.ttf')
+    const bytes = await createChangeOrderPdf({
+      ...draft,
+      language: 'en',
+      clientApproverName: 'Ana Ruiz',
+      approvalDate: '2026-10-06',
+    }, font, boldFont)
+    const pdf = await getDocument({ data: bytes }).promise
+    const content = await (await pdf.getPage(1)).getTextContent()
+    const text = content.items.map((item) => 'str' in item ? item.str : '').join(' ')
+
+    expect(text).toContain('APPROVED BY')
+    expect(text).toContain('Ana Ruiz')
+    expect(text).toContain('October 6, 2026')
+  }, 15_000)
+
   it('keeps a typical complete draft on one page', async () => {
     const font = readFileSync('public/noto-sans.ttf')
     const boldFont = readFileSync('public/noto-sans-bold.ttf')
