@@ -6,11 +6,17 @@ export type EvaluationAccuracy = 'correct' | 'wrong' | 'debatable'
 
 export type Tone = 'warm' | 'neutral' | 'firm'
 
+export type PricingModel = 'hourly' | 'fixed'
+export type Currency = 'RUB' | 'USD' | 'EUR'
+
 export interface ChangeOrderDraft {
   description: string
   timelineImpact: string
   additionalCost: string
   note: string
+  estimatedHours?: number
+  currency?: Currency | ''
+  rationale?: string
 }
 
 export interface AnalysisResult {
@@ -23,6 +29,11 @@ export interface AnalysisResult {
   suggestion?: string
   replies: Record<Tone, string>
   changeOrder: ChangeOrderDraft
+  hasAdditionalWork?: boolean
+  requestLanguage?: 'ru' | 'en' | 'other'
+  draftCreatedAt?: string
+  commercialSignature?: string
+  estimateValid?: boolean
 }
 
 export interface HistoryEntry {
@@ -36,9 +47,13 @@ export interface HistoryEntry {
 export interface Project {
   id: string
   name: string
-  client?: string
   industry: Industry
   scope: string
+  startDate: string | null
+  pricingModel: PricingModel | null
+  currency: Currency | null
+  hourlyRate: string | null
+  fixedPrice: string | null
   lastChecked?: string
   history: HistoryEntry[]
 }

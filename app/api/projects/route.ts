@@ -12,9 +12,13 @@ function serializeCreatedProject(row: typeof projects.$inferSelect): Project {
   return {
     id: row.id,
     name: row.name,
-    client: row.client ?? undefined,
     industry: row.industry,
     scope: row.scope,
+    startDate: row.startDate,
+    pricingModel: row.pricingModel,
+    currency: row.currency,
+    hourlyRate: row.hourlyRate,
+    fixedPrice: row.fixedPrice,
     lastChecked: row.lastChecked ?? undefined,
     history: [],
   }
@@ -43,9 +47,13 @@ export async function POST(request: NextRequest) {
     .values({
       userId: user.id,
       name: parsed.project.name,
-      client: parsed.project.client,
       industry: parsed.project.industry,
       scope: parsed.project.scope,
+      startDate: parsed.project.startDate,
+      pricingModel: parsed.project.pricingModel,
+      currency: parsed.project.currency,
+      hourlyRate: parsed.project.hourlyRate,
+      fixedPrice: parsed.project.fixedPrice,
     })
     .returning()
 

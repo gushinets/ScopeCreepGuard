@@ -20,9 +20,13 @@ function serializeProject(
   return {
     id: row.id,
     name: row.name,
-    client: row.client ?? undefined,
     industry: row.industry,
     scope: row.scope,
+    startDate: row.startDate,
+    pricingModel: row.pricingModel,
+    currency: row.currency,
+    hourlyRate: row.hourlyRate,
+    fixedPrice: row.fixedPrice,
     lastChecked: row.lastChecked ?? undefined,
     history,
   }

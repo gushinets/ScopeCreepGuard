@@ -15,6 +15,20 @@
       "when": 1787153535821,
       "tag": "0001_huge_warhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791195354928,
+      "tag": "0002_cooing_baron_strucker",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791197160627,
+      "tag": "0003_romantic_thor_girl",
+      "breakpoints": true
     }
   ]
 }

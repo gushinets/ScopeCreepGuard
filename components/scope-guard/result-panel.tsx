@@ -10,6 +10,9 @@ import {
   TriangleAlert,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { commercialSignature } from '@/lib/change-order/commercial-signature'
+import { readProjectDetails } from '@/lib/projects/browser-details'
+import type { AnalysisResult } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { VerdictBanner } from './verdict'
 import { ClientReply } from './client-reply'
@@ -136,16 +139,33 @@ function ShortScopeState() {
 }
 
 function ResultState() {
-  const { result, selectedProject, currentHistoryEntryId, analyzedRequest } =
+  const { result, selectedProject, currentHistoryEntryId, analyzedRequest, user, setView, createEstimate } =
     useStore()
   const t = useTranslations()
-  const [showChangeOrder, setShowChangeOrder] = useState(
-    result?.verdict === 'out_of_scope',
-  )
-
-  const isOut = result?.verdict === 'out_of_scope'
+  const [showChangeOrder, setShowChangeOrder] = useState(false)
+  const [activeEstimate, setActiveEstimate] = useState<AnalysisResult | null>(null)
+  const [documentLanguage, setDocumentLanguage] = useState<'' | 'ru' | 'en'>('')
+  const [generating, setGenerating] = useState(false)
+  const [estimateError, setEstimateError] = useState('')
+  const hasAdditionalWork = result?.verdict !== 'in_scope' && (result?.hasAdditionalWork ?? result?.verdict === 'out_of_scope')
+  const termsComplete = !!selectedProject?.startDate && !!selectedProject.pricingModel && !!selectedProject.currency && !!(selectedProject.hourlyRate || selectedProject.fixedPrice)
 
   if (!result || !selectedProject) return null
+
+  async function openChangeOrder() {
+    if (!result || !selectedProject || !termsComplete) { setView('edit_project'); return }
+    const endDate = user ? readProjectDetails(user.id, selectedProject.id).endDate : ''
+    const needsEstimate = !result.estimateValid || result.commercialSignature !== commercialSignature(selectedProject, endDate) || result.requestLanguage === 'other'
+    if (!needsEstimate) { setShowChangeOrder(true); return }
+    setGenerating(true)
+    setEstimateError('')
+    try {
+      const next = await createEstimate(selectedProject.id, analyzedRequest ?? '', documentLanguage || undefined)
+      setActiveEstimate(next)
+      setShowChangeOrder(true)
+    } catch { setEstimateError(t('result.changeOrderError')) }
+    finally { setGenerating(false) }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -211,19 +231,23 @@ function ResultState() {
         request={analyzedRequest ?? ''}
       />
 
-      {isOut || showChangeOrder ? (
-        <ChangeOrder result={result} projectName={selectedProject.name} />
+      {hasAdditionalWork && result.requestLanguage === 'other' && !showChangeOrder && <div><label htmlFor="co-document-language" className="mb-1 block text-sm">{t('result.documentLanguage')}</label><select id="co-document-language" value={documentLanguage} onChange={(e) => setDocumentLanguage(e.target.value as '' | 'ru' | 'en')} className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"><option value="">{t('result.chooseLanguage')}</option><option value="ru">{t('language.ru')}</option><option value="en">{t('language.en')}</option></select></div>}
+      {estimateError && <p role="alert" className="text-sm text-outscope-text">{estimateError}</p>}
+
+      {hasAdditionalWork && (showChangeOrder && termsComplete && user && currentHistoryEntryId ? (
+        <ChangeOrder result={activeEstimate ?? result} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId} userId={user.id} documentLanguage={documentLanguage || undefined} refreshEstimate={!!activeEstimate} />
       ) : (
         <Button
           type="button"
           variant="outline"
           className="h-9 self-start"
-          onClick={() => setShowChangeOrder(true)}
+          onClick={() => void openChangeOrder()}
+          disabled={generating || (result.requestLanguage === 'other' && !documentLanguage)}
         >
           <TriangleAlert aria-hidden="true" />
-          {t('result.draftChangeOrderAnyway')}
+          {generating ? t('result.generatingChangeOrder') : termsComplete ? t('result.createChangeOrder') : t('result.completeProjectTerms')}
         </Button>
-      )}
+      ))}
     </div>
   )
 }

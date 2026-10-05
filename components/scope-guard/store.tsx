@@ -5,20 +5,25 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import { ERROR_CODES, assertErrorCode, type ErrorCode } from '@/lib/api/errors'
+import { readProjectDetails } from '@/lib/projects/browser-details'
+import { validISODate } from '@/lib/projects/validation'
 import type {
   AnalysisResult,
   EvaluationAccuracy,
   HistoryEntry,
   Industry,
   Project,
+  PricingModel,
+  Currency,
   Verdict,
 } from '@/lib/types'
 
-export type View = 'check' | 'projects' | 'new_project' | 'history'
+export type View = 'check' | 'projects' | 'new_project' | 'edit_project' | 'history'
 
 export type AnalysisStatus =
   | 'idle'
@@ -34,9 +39,13 @@ interface AuthUser {
 
 interface NewProjectInput {
   name: string
-  client: string
   industry: Industry
   scope: string
+  startDate: string
+  pricingModel: PricingModel
+  currency: Currency
+  hourlyRate: string
+  fixedPrice: string
 }
 
 interface StoreValue {
@@ -56,7 +65,9 @@ interface StoreValue {
 
   setView: (v: View) => void
   selectProject: (id: string) => void
-  createProject: (input: NewProjectInput) => Promise<void>
+  createProject: (input: NewProjectInput) => Promise<Project>
+  updateProject: (id: string, input: NewProjectInput) => Promise<Project>
+  createEstimate: (projectId: string, request: string, documentLanguage?: 'ru' | 'en') => Promise<AnalysisResult>
   setRequestText: (t: string) => void
   loadExample: (text: string) => void
   runCheck: () => void
@@ -181,6 +192,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [analysisError, setAnalysisError] = useState<ErrorCode | ''>('')
   const [isLoadingProjects, setIsLoadingProjects] = useState(true)
   const [projectError, setProjectError] = useState<ErrorCode | ''>('')
+  const analysisRun = useRef(0)
 
   const selectedProject =
     projects.find((p) => p.id === selectedProjectId) ?? null
@@ -233,6 +245,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [router])
 
   function selectProject(id: string) {
+    analysisRun.current += 1
     setSelectedProjectId(id)
     setRequestText('')
     setAnalyzedRequest(null)
@@ -251,6 +264,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify(input),
     })
 
+    analysisRun.current += 1
     setProjects((prev) => [data.project, ...prev])
     setSelectedProjectId(data.project.id)
     setRequestText('')
@@ -260,9 +274,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setAnalysisError('')
     setStatus('idle')
     setView('check')
+    return data.project
+  }
+
+  async function updateProject(id: string, input: NewProjectInput) {
+    const prior = projects.find((project) => project.id === id)
+    const data = await apiFetch<ProjectResponse>(`/api/projects/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+    })
+    setProjects((prev) => prev.map((project) => project.id === id ? data.project : project))
+    if (prior?.scope !== input.scope) {
+      analysisRun.current += 1
+      setResult(null)
+      setAnalyzedRequest(null)
+      setCurrentHistoryEntryId(null)
+      setStatus('idle')
+    }
+    setView('check')
+    return data.project
+  }
+
+  async function createEstimate(projectId: string, request: string, documentLanguage?: 'ru' | 'en') {
+    const storedEndDate = user ? readProjectDetails(user.id, projectId).endDate : ''
+    const project = projects.find((item) => item.id === projectId)
+    const endDate = validISODate(storedEndDate) && (!project?.startDate || storedEndDate >= project.startDate) ? storedEndDate : ''
+    const data = await apiFetch<{ result: AnalysisResult }>('/api/change-orders/estimate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId, request, ...(endDate ? { endDate } : {}), ...(documentLanguage ? { documentLanguage } : {}) }),
+    })
+    return data.result
   }
 
   function loadExample(text: string) {
+    analysisRun.current += 1
     setRequestText(text)
     setAnalyzedRequest(null)
     setResult(null)
@@ -302,28 +346,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   async function runAnalysis(project: Project, request: string) {
+    const run = ++analysisRun.current
     try {
+      const storedEndDate = user ? readProjectDetails(user.id, project.id).endDate : ''
+      const endDate = validISODate(storedEndDate) && (!project.startDate || storedEndDate >= project.startDate) ? storedEndDate : ''
       const data = await apiFetch<{ result: AnalysisResult }>(
         '/api/analyze',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ projectId: project.id, request }),
+          body: JSON.stringify({ projectId: project.id, request, ...(endDate ? { endDate } : {}) }),
         },
       )
 
       const analysis = data.result
+      if (run !== analysisRun.current) return
       const historyEntry = await persistHistory(project.id, {
         date: todayISO(),
         request,
         verdict: analysis.verdict,
         summary: analysis.summary,
       })
+      if (run !== analysisRun.current) return
       setCurrentHistoryEntryId(historyEntry.id)
       setAnalyzedRequest(request)
       setResult(analysis)
       setStatus('result')
     } catch (error) {
+      if (run !== analysisRun.current) return
       console.error(
         JSON.stringify({
           event: 'scope_check_failed',
@@ -371,6 +421,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   function reset() {
+    analysisRun.current += 1
     setAnalyzedRequest(null)
     setResult(null)
     setCurrentHistoryEntryId(null)
@@ -494,6 +545,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setView,
     selectProject,
     createProject,
+    updateProject,
+    createEstimate,
     setRequestText,
     loadExample,
     runCheck,

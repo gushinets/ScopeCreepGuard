@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import type { Locale } from '@/i18n/config'
 import { ERROR_CODES, type ErrorCode } from '@/lib/api/errors'
-import type { Industry, Tone } from '@/lib/types'
+import type { Currency, Industry, PricingModel, Tone } from '@/lib/types'
 import { ANALYSIS_JSON_SCHEMA } from './analysis-json-schema'
 import { buildAnalysisMessages, buildRegenerationMessages } from './prompt'
 import { parseAnalysisResult } from './schema'
@@ -147,6 +147,14 @@ export async function analyzeWithOpenAI(input: {
   request: string
   industry: Industry
   locale: Locale
+  pricingModel?: PricingModel | null
+  currency?: Currency | null
+  hourlyRate?: string | null
+  fixedPrice?: string | null
+  startDate?: string | null
+  endDate?: string
+  draftCreatedAt?: string
+  documentLanguage?: Locale
 }) {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey || apiKey.trim().length === 0) {

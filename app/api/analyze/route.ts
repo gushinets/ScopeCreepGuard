@@ -11,6 +11,7 @@ import {
 import { analyzeFailureResponse, analyzeWithOpenAI } from '@/lib/llm/openai'
 import { allowAnalyze } from '@/lib/llm/rate-limit'
 import { loadProjectForUser } from '@/lib/projects/data'
+import { commercialSignature } from '@/lib/change-order/commercial-signature'
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()
@@ -24,6 +25,8 @@ export async function POST(request: Request) {
 
   const project = await loadProjectForUser(parsed.projectId, user.id)
   if (!project) return jsonError(ERROR_CODES.projectNotFound, 404)
+
+  if (parsed.endDate && project.startDate && parsed.endDate < project.startDate) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
 
   if (project.scope.trim().length === 0) {
     return jsonError(ERROR_CODES.scopeRequired, 400)
@@ -56,12 +59,22 @@ export async function POST(request: Request) {
   }
 
   try {
+    const draftCreatedAt = new Date().toISOString()
     const result = await analyzeWithOpenAI({
       scope: project.scope,
       request: parsed.request,
       industry: project.industry,
       locale,
+      pricingModel: project.pricingModel,
+      currency: project.currency,
+      hourlyRate: project.hourlyRate,
+      fixedPrice: project.fixedPrice,
+      startDate: project.startDate,
+      endDate: parsed.endDate,
+      draftCreatedAt,
     })
+    result.draftCreatedAt = draftCreatedAt
+    result.commercialSignature = commercialSignature(project, parsed.endDate)
     return NextResponse.json({ result })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown'
