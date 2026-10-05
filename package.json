@@ -12,7 +12,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "verify:change-order-pdf": "vitest run scripts/change-order-pdf-visual.test.ts",
+    "verify:change-order-pdf": "vitest run --config vitest.visual.config.ts",
     "db:up": "docker compose up -d",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

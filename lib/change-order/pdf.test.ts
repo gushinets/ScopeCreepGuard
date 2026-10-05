@@ -12,6 +12,21 @@ const draft: EditableDraft = {
 }
 
 describe('Change Order PDF', () => {
+  it.each([
+    ['ru', 'СОГЛАСОВАНО', 'ДАТА'],
+    ['en', 'APPROVED BY', 'DATE'],
+    ['es', 'APROBADO POR', 'FECHA'],
+  ] as const)('renders empty %s approval fields', async (language, approverLabel, dateLabel) => {
+    const bytes = await createChangeOrderPdf({ ...draft, language, clientApproverName: '', approvalDate: '' }, readFileSync('public/noto-sans.ttf'), readFileSync('public/noto-sans-bold.ttf'))
+    const pdf = await getDocument({ data: bytes }).promise
+    const texts = await Promise.all(Array.from({ length: pdf.numPages }, async (_, index) => {
+      const content = await (await pdf.getPage(index + 1)).getTextContent()
+      return content.items.map((item) => 'str' in item ? item.str : '').join(' ')
+    }))
+    expect(texts.join(' ')).toContain(approverLabel)
+    expect(texts.join(' ')).toContain(dateLabel)
+  }, 15_000)
+
   it('renders the client approver and approval date entered by the user', async () => {
     const font = readFileSync('public/noto-sans.ttf')
     const boldFont = readFileSync('public/noto-sans-bold.ttf')

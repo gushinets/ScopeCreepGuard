@@ -9,7 +9,7 @@ const project: Project = {
 }
 
 const input = {
-  name: 'Website', industry: 'Development' as const, scope: 'Build five pages',
+  industry: 'Development' as const, scope: 'Build five pages',
   startDate: '2026-10-01', pricingModel: 'hourly' as const, currency: 'USD' as const,
   hourlyRate: '100.00', fixedPrice: '',
 }
@@ -28,6 +28,6 @@ describe('project analysis inputs', () => {
   })
 
   it('does not invalidate analysis for a name-only edit', () => {
-    expect(projectAnalysisInputsChanged(project, { ...input, name: 'Renamed website' })).toBe(false)
+    expect(projectAnalysisInputsChanged({ ...project, name: 'Renamed website' }, input)).toBe(false)
   })
 })

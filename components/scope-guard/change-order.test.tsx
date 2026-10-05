@@ -48,6 +48,18 @@ it('presents the editable draft as a formal document', () => {
   expect(preview.textContent).toContain('2. Commercial terms')
   expect(preview.textContent).not.toContain('Provider')
   expect(preview.textContent).not.toContain('Client email')
+  expect(preview.textContent).toContain('Approved by')
+  expect(preview.textContent).toContain('Date')
+})
+
+it('opens a legacy browser-saved draft with missing optional fields', () => {
+  localStorage.setItem('scg:change-order:u1:p1:h1', JSON.stringify({
+    createdAt: original.createdAt, language: 'en', projectName: 'Website', description: 'Legacy edit',
+    estimatedHours: '4', additionalCost: '400', currency: 'USD',
+  }))
+  render(<ChangeOrder initialDraft={original} projectName="Website" projectId="p1" historyId="h1" userId="u1" />)
+  expect((document.querySelector('#co-description') as HTMLTextAreaElement).value).toBe('Legacy edit')
+  expect(screen.getByTestId('change-order-document-preview').textContent).toContain('Approved by')
 })
 
 it('restores browser-saved edits after remount', async () => {

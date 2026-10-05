@@ -8,6 +8,6 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: [...configDefaults.exclude, 'scripts/docker-entrypoint.test.mjs'],
+    exclude: [...configDefaults.exclude, 'scripts/docker-entrypoint.test.mjs', 'scripts/change-order-pdf-visual.test.ts'],
   },
 })

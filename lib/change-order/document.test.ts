@@ -39,7 +39,8 @@ describe('change order document', () => {
     expect(text).not.toContain('[Client')
     expect(text).not.toContain('Client email:')
     expect(text).not.toContain('Provider:')
-    expect(text).not.toContain('Approved by:')
+    expect(text).toContain('Approved by: ')
+    expect(text).toContain('Date:')
   })
 
   it('keeps provider identity separate from the client approver', () => {
@@ -81,6 +82,17 @@ describe('change order document', () => {
     expect(text).toContain('Document no.: CO-20261005-A1B2C3')
     expect(text).toContain('1. Requested change')
     expect(text).toContain('2. Commercial terms')
-    expect(text).not.toContain('Approved by:')
+    expect(text).toContain('Approved by: ')
+    expect(text).toContain('Date:')
+  })
+
+  it.each([
+    ['en', 'Approved by:', 'Date:'],
+    ['ru', 'Согласовано:', 'Дата:'],
+    ['es', 'Aprobado por:', 'Fecha:'],
+  ] as const)('always includes empty %s approval labels', (language, approvedBy, date) => {
+    const text = buildChangeOrderText({ ...draft, language, clientApproverName: '', approvalDate: '' })
+    expect(text).toContain(approvedBy)
+    expect(text).toContain(date)
   })
 })

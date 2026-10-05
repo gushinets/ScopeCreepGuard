@@ -44,13 +44,13 @@ export function ChangeOrderDocumentPreview({ draft }: { draft: EditableDraft }) 
           <dl className="space-y-3">{document.additionalItems.map(({ label, value }) => <div key={label}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="mt-1 whitespace-pre-wrap text-sm leading-6">{value}</dd></div>)}</dl>
         </DocumentSection>
 
-        {(document.approval.approverName || document.approval.approvalDate) && <section className="mt-8 border-t-2 border-slate-950 pt-4">
+        <section className="mt-8 border-t-2 border-slate-950 pt-4">
           <h3 className="text-sm font-extrabold uppercase tracking-wide">{document.approvalHeading}</h3>
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-            {document.approval.approverName && <div><dt className="font-bold text-slate-600">{t.approvedBy}</dt><dd className="mt-1">{document.approval.approverName}</dd></div>}
-            {document.approval.approvalDate && <div><dt className="font-bold text-slate-600">{t.date}</dt><dd className="mt-1">{document.approval.approvalDate}</dd></div>}
+            <div><dt className="font-bold text-slate-600">{t.approvedBy}</dt><dd className="mt-5 min-h-5 border-b border-slate-400">{document.approval.approverName}</dd></div>
+            <div><dt className="font-bold text-slate-600">{t.date}</dt><dd className="mt-5 min-h-5 border-b border-slate-400">{document.approval.approvalDate}</dd></div>
           </dl>
-        </section>}
+        </section>
       </div>
 
       <footer className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:px-9"><span>{t.draftFooter}</span><span>{document.reference}</span></footer>

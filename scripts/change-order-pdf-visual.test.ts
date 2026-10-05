@@ -1,4 +1,6 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { spawnSync } from 'node:child_process'
+import path from 'node:path'
 import { PDFDocument } from 'pdf-lib'
 import { describe, expect, it } from 'vitest'
 import { createChangeOrderPdf } from '@/lib/change-order/pdf'
@@ -18,22 +20,28 @@ const base = (language: DocumentLanguage): EditableDraft => ({
 })
 
 describe('Change Order PDF visual fixtures', () => {
-  it('writes representative Russian, English, and Spanish PDFs with expected pagination', async () => {
+  it('writes and renders representative Russian, English, and Spanish PDFs', async () => {
     const regular = await readFile('public/noto-sans.ttf')
     const bold = await readFile('public/noto-sans-bold.ttf')
     const russian = { ...base('ru'), description: 'Добавить раздел новостей с поиском, категориями и адаптивной вёрсткой.', timelineImpact: 'Срок увеличится на восемь рабочих дней.', rationale: 'Функция не входит в согласованный объём.', note: 'Черновик для проверки.', additionalTerms: 'Работы начнутся после письменного согласования.' }
-    const longRussian = { ...russian, description: 'Дополнительные работы с подробным описанием. '.repeat(180), additionalCost: '1234567890123456789012345678901234567890' }
+    const longRussian = { ...russian, description: 'Дополнительные работы с подробным описанием. '.repeat(90), additionalCost: '1234567890123456789012345678901234567890' }
     const english = { ...base('en'), description: 'Add a searchable news section with categories and responsive layouts.', timelineImpact: 'Delivery moves by eight business days after approval.', rationale: 'This feature is outside the agreed scope.', note: 'Draft for review.', additionalTerms: 'Work begins after written approval.' }
     const spanish = { ...base('es'), noAdditionalCharge: true }
     const fixtures = { 'change-order-ru-one-page.pdf': russian, 'change-order-ru-long.pdf': longRussian, 'change-order-en.pdf': english, 'change-order-es.pdf': spanish }
 
-    await mkdir('output/pdf/verification', { recursive: true })
+    const outputDirectory = path.resolve('output/pdf/verification')
+    await rm(outputDirectory, { recursive: true, force: true })
+    await mkdir(outputDirectory, { recursive: true })
     for (const [name, draft] of Object.entries(fixtures)) {
       const bytes = await createChangeOrderPdf(draft, regular, bold)
-      await writeFile(`output/pdf/verification/${name}`, bytes)
+      const pdfPath = path.join(outputDirectory, name)
+      await writeFile(pdfPath, bytes)
       const pages = (await PDFDocument.load(bytes)).getPageCount()
       if (name === 'change-order-ru-long.pdf') expect(pages).toBeGreaterThan(1)
       else expect(pages).toBe(1)
+      const imagePrefix = path.join(outputDirectory, name.replace(/\.pdf$/, ''))
+      const rendered = spawnSync('pdftoppm', ['-png', '-r', '144', pdfPath, imagePrefix], { encoding: 'utf8' })
+      expect(rendered.error?.message ?? rendered.stderr, 'pdftoppm must render each PDF').toBe('')
     }
-  }, 30_000)
+  }, 60_000)
 })
