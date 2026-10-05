@@ -73,6 +73,7 @@ export async function POST(request: Request) {
       endDate: parsed.endDate,
       draftCreatedAt,
     })
+    if (result.hasAdditionalWork && project.currency && result.changeOrder.currency !== project.currency) result.estimateValid = false
     result.draftCreatedAt = draftCreatedAt
     result.commercialSignature = commercialSignature(project, parsed.endDate)
     return NextResponse.json({ result })

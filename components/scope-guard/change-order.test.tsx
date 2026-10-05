@@ -6,7 +6,7 @@ import { ChangeOrder } from './change-order'
 
 const pdfMock = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/change-order/pdf', () => ({ createChangeOrderPdf: pdfMock }))
-vi.mock('next-intl', () => ({ useLocale: () => 'en', useTranslations: () => (key: string) => key }))
+vi.mock('next-intl', () => ({ useLocale: () => 'en', useTranslations: () => (key: string, values?: { date?: string }) => key === 'rateSource' ? `rateSource ${values?.date}` : key }))
 
 const original: EditableDraft = {
   createdAt: '2026-10-05T12:00:00Z', language: 'en', projectName: 'Website', description: 'Add blog',
@@ -18,7 +18,9 @@ const original: EditableDraft = {
 beforeEach(() => {
   localStorage.clear()
   pdfMock.mockResolvedValue(new Uint8Array([37, 80, 68, 70, 45]))
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) }))
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => Promise.resolve(url === '/api/exchange-rates'
+    ? { ok: true, json: async () => ({ asOf: '2026-10-03', rubPerUsd: 83.4839, rubPerEur: 94.3201 }) }
+    : { ok: true, arrayBuffer: async () => new ArrayBuffer(8) })))
   Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:pdf') })
   Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } })
@@ -45,4 +47,41 @@ it('restores browser-saved edits after remount', async () => {
   view.unmount()
   render(<ChangeOrder initialDraft={original} projectName="Website" projectId="p1" historyId="h1" userId="u1" />)
   expect((document.querySelector('#co-description') as HTMLTextAreaElement).value).toBe('My own terms')
+})
+
+it('shows dated currency equivalents and converts the current draft on currency change', async () => {
+  render(<ChangeOrder initialDraft={original} projectName="Website" projectId="p1" historyId="h1" userId="u1" />)
+  await waitFor(() => expect(screen.getByText(/83,483\.90/)).toBeTruthy())
+  expect(screen.getByText(/rateSource October 3, 2026/)).toBeTruthy()
+  fireEvent.change(document.querySelector('#co-currency')!, { target: { value: 'EUR' } })
+  expect((document.querySelector('#co-additionalCost') as HTMLInputElement).value).toBe('885.11')
+  fireEvent.change(document.querySelector('#co-additionalCost')!, { target: { value: '500' } })
+  fireEvent.click(screen.getByRole('button', { name: 'copy' }))
+  await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('500 EUR')))
+  const copied = vi.mocked(navigator.clipboard.writeText).mock.calls[0][0]
+  expect(copied).not.toContain('RUB')
+  expect(copied).not.toContain('USD')
+  fireEvent.click(screen.getByRole('button', { name: 'downloadPdf' }))
+  await waitFor(() => expect(pdfMock).toHaveBeenCalledWith(expect.objectContaining({ additionalCost: '500', currency: 'EUR' }), expect.any(Uint8Array)))
+})
+
+it('keeps the original amount and currency when live rates are unavailable', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
+  render(<ChangeOrder initialDraft={original} projectName="Website" projectId="p1" historyId="h1" userId="u1" />)
+  await waitFor(() => expect(screen.getByText('ratesUnavailable')).toBeTruthy())
+  fireEvent.change(document.querySelector('#co-currency')!, { target: { value: 'EUR' } })
+  expect((document.querySelector('#co-currency') as HTMLSelectElement).value).toBe('USD')
+  expect((document.querySelector('#co-additionalCost') as HTMLInputElement).value).toBe('1000')
+})
+
+it('converts a user-edited amount and permits an empty replacement amount', async () => {
+  render(<ChangeOrder initialDraft={original} projectName="Website" projectId="p1" historyId="h1" userId="u1" />)
+  await waitFor(() => expect(screen.getByText(/83,483\.90/)).toBeTruthy())
+  fireEvent.change(document.querySelector('#co-additionalCost')!, { target: { value: '500' } })
+  fireEvent.change(document.querySelector('#co-currency')!, { target: { value: 'EUR' } })
+  expect((document.querySelector('#co-additionalCost') as HTMLInputElement).value).toBe('442.56')
+  fireEvent.change(document.querySelector('#co-additionalCost')!, { target: { value: '' } })
+  fireEvent.change(document.querySelector('#co-currency')!, { target: { value: 'RUB' } })
+  expect((document.querySelector('#co-currency') as HTMLSelectElement).value).toBe('RUB')
+  expect((document.querySelector('#co-additionalCost') as HTMLInputElement).value).toBe('')
 })
