@@ -142,10 +142,8 @@ export function buildChangeOrderText(draft: EditableDraft): string {
   if (document.scheduleImpact) lines.push(document.scheduleImpact)
   lines.push('', document.sections[3].heading)
   for (const item of document.additionalItems) lines.push(`${item.label}: ${item.value}`)
-  if (document.approval.approverName || document.approval.approvalDate) {
-    lines.push('', document.approvalHeading)
-    if (document.approval.approverName) lines.push(`${t.approvedBy}: ${document.approval.approverName}`)
-    if (document.approval.approvalDate) lines.push(`${t.date}: ${document.approval.approvalDate}`)
-  }
+  lines.push('', document.approvalHeading)
+  lines.push(`${t.approvedBy}: ${document.approval.approverName}`)
+  lines.push(`${t.date}: ${document.approval.approvalDate}`)
   return lines.join('\n').trimEnd()
 }

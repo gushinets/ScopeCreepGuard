@@ -135,18 +135,23 @@ export async function createChangeOrderPdf(draft: EditableDraft, regularFontByte
     paragraph(item.value, { after: 2 })
   }
 
-  if (document.approval.approverName || document.approval.approvalDate) {
-    ensureSpace(72)
-    sectionHeading(document.approvalHeading)
-    const entries = [
-      document.approval.approverName ? { label: document.labels.approvedBy, value: document.approval.approverName } : null,
-      document.approval.approvalDate ? { label: document.labels.date, value: document.approval.approvalDate } : null,
-    ].filter((entry): entry is { label: string; value: string } => Boolean(entry))
-    for (const entry of entries) {
-      paragraph(entry.label.toUpperCase(), { font: bold, size: 7.5, color: MUTED, after: 0 })
-      paragraph(entry.value, { after: 3 })
-    }
+  ensureSpace(90)
+  sectionHeading(document.approvalHeading)
+  const approvalColumns = [
+    { label: document.labels.approvedBy, value: document.approval.approverName },
+    { label: document.labels.date, value: document.approval.approvalDate },
+  ]
+  const columnGap = 24
+  const columnWidth = (CONTENT_WIDTH - columnGap) / 2
+  const approvalTop = y
+  for (const [index, entry] of approvalColumns.entries()) {
+    const x = MARGIN + index * (columnWidth + columnGap)
+    page.drawText(safeText(entry.label).toUpperCase(), { x, y: approvalTop, font: bold, size: 7.5, color: MUTED })
+    const valueLines = wrapText(entry.value, regular, 9.5, columnWidth).slice(0, 2)
+    valueLines.forEach((line, lineIndex) => page.drawText(line, { x, y: approvalTop - 17 - lineIndex * 12, font: regular, size: 9.5, color: INK }))
+    page.drawLine({ start: { x, y: approvalTop - 43 }, end: { x: x + columnWidth, y: approvalTop - 43 }, thickness: 0.7, color: MUTED })
   }
+  y = approvalTop - 53
 
   const pages = pdf.getPages()
   pages.forEach((pdfPage, index) => {
