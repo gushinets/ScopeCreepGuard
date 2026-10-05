@@ -11,6 +11,7 @@ import {
 } from 'react'
 import { ERROR_CODES, assertErrorCode, type ErrorCode } from '@/lib/api/errors'
 import { readProjectDetails } from '@/lib/projects/browser-details'
+import { projectAnalysisInputsChanged } from '@/lib/projects/analysis-inputs'
 import { validISODate } from '@/lib/projects/validation'
 import type {
   AnalysisResult,
@@ -283,11 +284,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
     })
     setProjects((prev) => prev.map((project) => project.id === id ? data.project : project))
-    if (prior?.scope !== input.scope) {
+    if (prior && projectAnalysisInputsChanged(prior, input)) {
       analysisRun.current += 1
       setResult(null)
       setAnalyzedRequest(null)
       setCurrentHistoryEntryId(null)
+      setAnalysisError('')
       setStatus('idle')
     }
     setView('check')
