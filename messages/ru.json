@@ -123,9 +123,15 @@
     "completeProjectTerms": "Добавьте условия проекта для допсоглашения",
     "generatingChangeOrder": "Подготавливаем допсоглашение…",
     "changeOrderError": "Не удалось подготовить оценку. Попробуйте снова.",
-    "documentLanguage": "Язык допсоглашения",
+    "documentLanguage": "Язык материалов для клиента",
     "chooseLanguage": "Выберите язык",
-    "confidence": "Уверенность оценки"
+    "confidence": "Уверенность оценки",
+    "clientLanguageHint": "Определён: {language}. Укажите код языка, чтобы обновить ответы и Change Order.",
+    "applyClientLanguage": "Применить",
+    "generatingClientMaterials": "Обновляем материалы для клиента…",
+    "clientLanguageError": "Не удалось обновить материалы для клиента. Анализ и оценка стоимости сохранены.",
+    "supportedClientLanguages": "Языки PDF: RU, EN, ES, DE, FR, IT, NL, PL, PT, TR, UK, BG, EL, CS, SK, HR, RO, HU, FI, SV, DA, NB, ET, LV, LT, ID. Поддерживаются региональные варианты, например pt-BR.",
+    "clientLanguageStorageWarning": "Язык обновлён, но хранилище браузера недоступно. После обновления страницы восстановить выбор не получится."
   },
   "feedback": {
     "heading": "Результат проверки верный?",
@@ -188,7 +194,8 @@
     "additionalWork": "Дополнительные работы",
     "timelineImpact": "Изменение сроков",
     "additionalCost": "Дополнительная стоимость",
-    "note": "Примечание"
+    "note": "Примечание",
+    "pdfLanguageUnsupported": "PDF поддерживает латиницу, кириллицу и греческое письмо. Выберите поддерживаемый язык клиента или замените неподдерживаемые символы перед экспортом."
   },
   "verdict": {
     "in_scope": "Входит в объём работ",
@@ -251,6 +258,7 @@
     "scopeFileEmpty": "Не удалось извлечь текст из файла.",
     "evaluationReasoningRequired": "Отсутствует объяснение результата анализа.",
     "evaluationLabelInvalid": "Некорректный тип результата проверки.",
-    "evaluationHistoryNotFound": "Эта проверка не найдена в истории."
+    "evaluationHistoryNotFound": "Эта проверка не найдена в истории.",
+    "clientLanguageUnsupported": "Этот язык или письменность не поддерживаются в PDF. Выберите поддерживаемый язык с латиницей, кириллицей или греческим письмом."
   }
 }

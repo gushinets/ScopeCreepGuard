@@ -109,7 +109,7 @@ describe('analyzeWithOpenAI', () => {
     })
     const [system, user] = buildAnalysisMessages(analysisInput)
 
-    await expect(analyzeWithOpenAI(analysisInput)).resolves.toEqual(validResult)
+    await expect(analyzeWithOpenAI(analysisInput)).resolves.toEqual({ ...validResult, clientLanguage: 'en' })
     expect(openAIConstructorMock).toHaveBeenCalledWith({
       apiKey: 'test-api-key',
       maxRetries: 2,

@@ -1,10 +1,11 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
 import { PDFDocument } from 'pdf-lib'
 import { describe, expect, it } from 'vitest'
 import { createChangeOrderPdf } from '@/lib/change-order/pdf'
 import type { DocumentLanguage, EditableDraft } from '@/lib/change-order/document'
+import { germanLabels } from '@/lib/change-order/german-fixture'
 
 const base = (language: DocumentLanguage): EditableDraft => ({
   reference: `CO-20261005-${language.toUpperCase()}`,
@@ -27,10 +28,10 @@ describe('Change Order PDF visual fixtures', () => {
     const longRussian = { ...russian, description: 'Дополнительные работы с подробным описанием. '.repeat(90), additionalCost: '1234567890123456789012345678901234567890' }
     const english = { ...base('en'), description: 'Add a searchable news section with categories and responsive layouts.', timelineImpact: 'Delivery moves by eight business days after approval.', rationale: 'This feature is outside the agreed scope.', note: 'Draft for review.', additionalTerms: 'Work begins after written approval.' }
     const spanish = { ...base('es'), noAdditionalCharge: true }
-    const fixtures = { 'change-order-ru-one-page.pdf': russian, 'change-order-ru-long.pdf': longRussian, 'change-order-en.pdf': english, 'change-order-es.pdf': spanish }
+    const german = { ...base('de'), changeOrderLabels: germanLabels, description: 'Zusätzliche Änderungen für Größe und Übersicht.', timelineImpact: 'Acht zusätzliche Arbeitstage.', rationale: 'Zusätzliche Leistung außerhalb des vereinbarten Umfangs.', note: 'Entwurf zur Prüfung.', additionalTerms: 'Beginn nach schriftlicher Zustimmung.' }
+    const fixtures = { 'change-order-ru-one-page.pdf': russian, 'change-order-ru-long.pdf': longRussian, 'change-order-en.pdf': english, 'change-order-es.pdf': spanish, 'change-order-de.pdf': german }
 
-    const outputDirectory = path.resolve('output/pdf/verification')
-    await rm(outputDirectory, { recursive: true, force: true })
+    const outputDirectory = path.resolve(`output/pdf/verification-any-635-${Date.now()}`)
     await mkdir(outputDirectory, { recursive: true })
     for (const [name, draft] of Object.entries(fixtures)) {
       const bytes = await createChangeOrderPdf(draft, regular, bold)

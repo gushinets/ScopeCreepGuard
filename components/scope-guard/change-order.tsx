@@ -11,6 +11,7 @@ import { mergeEstimate } from '@/lib/change-order/merge-estimate'
 import { createChangeOrderPdf } from '@/lib/change-order/pdf'
 import type { AnalysisResult, Currency } from '@/lib/types'
 import { ChangeOrderDocumentPreview } from './change-order-document-preview'
+import { supportedClientLanguage } from '@/lib/client-language'
 
 export function ChangeOrder({ result, projectName, projectId, historyId, userId, initialDraft, documentLanguage, refreshEstimate = false }: {
   result?: AnalysisResult
@@ -19,7 +20,7 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
   historyId: string
   userId: string
   initialDraft?: EditableDraft
-  documentLanguage?: 'ru' | 'en' | 'es'
+  documentLanguage?: string
   refreshEstimate?: boolean
 }) {
   const t = useTranslations('changeOrder')
@@ -30,7 +31,8 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
     ...(initialDraft ?? {} as EditableDraft),
     reference: initialDraft?.reference ?? makeChangeOrderReference(createdAt, historyId),
     createdAt,
-    language: documentLanguage ?? (result?.requestLanguage === 'ru' || result?.requestLanguage === 'en' || result?.requestLanguage === 'es' ? result.requestLanguage : locale === 'ru' ? 'ru' : 'en'),
+    language: documentLanguage ?? initialDraft?.language ?? result?.clientLanguage ?? (result?.requestLanguage && result.requestLanguage !== 'other' ? result.requestLanguage : locale === 'ru' ? 'ru' : 'en'),
+    changeOrderLabels: result?.changeOrderLabels ?? initialDraft?.changeOrderLabels,
     projectName: initialDraft?.projectName ?? projectName, description: initialDraft?.description ?? result?.changeOrder.description ?? '',
     estimatedHours: initialDraft?.estimatedHours ?? result?.changeOrder.estimatedHours?.toString() ?? '',
     additionalCost: initialDraft?.additionalCost ?? result?.changeOrder.additionalCost ?? '',
@@ -49,11 +51,11 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
     } : initialDraft?.aiValues,
   }})
   const [draft, setDraft] = useState<EditableDraft>(() => {
-    const saved = readChangeOrder(userId, projectId, historyId)
+    const saved = readChangeOrder(userId, projectId, historyId, locale === 'ru' ? 'ru' : 'en')
     if (saved) return refreshEstimate && result ? mergeEstimate(saved, original) : { ...original, ...saved, reference: saved.reference ?? original.reference }
     return { ...original, ...readProjectDetails(userId, projectId) }
   })
-  const [status, setStatus] = useState<'copied' | 'downloaded' | 'error' | ''>('')
+  const [status, setStatus] = useState<'copied' | 'downloaded' | 'error' | 'pdfLanguageUnsupported' | ''>('')
 
   useEffect(() => {
     writeChangeOrder(userId, projectId, historyId, draft)
@@ -97,7 +99,7 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
       anchor.click()
       window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
       setStatus('downloaded')
-    } catch { setStatus('error') }
+    } catch (error) { setStatus(error instanceof Error && error.message.startsWith('unsupported_pdf_') ? 'pdfLanguageUnsupported' : 'error') }
   }
 
   return <section aria-labelledby="change-order-heading" className="rounded-lg border border-border bg-card p-4">
@@ -112,7 +114,8 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
     </div>
     <details className="mt-4 rounded-lg border border-border px-3 py-2"><summary className="cursor-pointer text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring">{t('additionalParameters')}</summary><div className="mt-3 grid gap-3">{field('rationale', t('rationaleLabel'), 2)}{field('note', t('noteLabel'), 2)}{field('additionalTerms', t('additionalTerms'), 2)}<div className="grid gap-3 sm:grid-cols-2">{field('providerName', t('providerName'))}{field('clientName', t('clientName'))}{field('clientEmail', t('clientEmail'))}{field('endDate', t('endDate'))}{field('clientApproverName', t('approvedBy'))}{field('approvalDate', t('approvalDate'))}</div></div></details>
     <div className="mt-6"><p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('preview')}</p><ChangeOrderDocumentPreview draft={draft} /></div>
-    <div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => void copy()}><Copy aria-hidden="true" />{t('copy')}</Button><Button type="button" variant="outline" onClick={() => void download()}><Download aria-hidden="true" />{t('downloadPdf')}</Button></div>
+    {!supportedClientLanguage(draft.language) && <p role="alert" className="mt-3 text-sm">{t('pdfLanguageUnsupported')}</p>}
+    <div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => void copy()}><Copy aria-hidden="true" />{t('copy')}</Button><Button type="button" variant="outline" disabled={!supportedClientLanguage(draft.language)} onClick={() => void download()}><Download aria-hidden="true" />{t('downloadPdf')}</Button></div>
     {status && <p role="status" className="mt-2 text-xs text-muted-foreground">{t(status)}</p>}
   </section>
 }

@@ -1,13 +1,18 @@
 import type { EditableDraft } from './document'
+import type { Locale } from '@/i18n/config'
+import { normalizeLanguageTag } from '@/lib/client-language'
+import { normalizeChangeOrderLabels } from './labels'
 
 const key = (userId: string, projectId: string, historyId: string) => `scg:change-order:${userId}:${projectId}:${historyId}`
 
 const text = (value: unknown): string => typeof value === 'string' ? value : ''
 
-export function normalizeChangeOrderDraft(value: unknown): EditableDraft | null {
+export function normalizeChangeOrderDraft(value: unknown, locale: Locale = 'en'): EditableDraft | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const stored = value as Record<string, unknown>
-  if (stored.language !== 'ru' && stored.language !== 'en' && stored.language !== 'es') return null
+  const changeOrderLabels = normalizeChangeOrderLabels(stored.changeOrderLabels)
+  const resolved = normalizeLanguageTag(stored.clientLanguage ?? stored.language) ?? locale
+  const language = ['ru', 'en', 'es'].includes(resolved.split('-')[0]) || changeOrderLabels ? resolved : locale
   if (typeof stored.createdAt !== 'string' || typeof stored.projectName !== 'string' || typeof stored.description !== 'string') return null
 
   const currency = stored.currency === 'RUB' || stored.currency === 'USD' || stored.currency === 'EUR' ? stored.currency : ''
@@ -19,7 +24,8 @@ export function normalizeChangeOrderDraft(value: unknown): EditableDraft | null 
     aiValues,
     reference: typeof stored.reference === 'string' ? stored.reference : undefined,
     createdAt: stored.createdAt,
-    language: stored.language,
+    language,
+    changeOrderLabels,
     projectName: stored.projectName,
     description: stored.description,
     estimatedHours: text(stored.estimatedHours),
@@ -39,12 +45,12 @@ export function normalizeChangeOrderDraft(value: unknown): EditableDraft | null 
   }
 }
 
-export function readChangeOrder(userId: string, projectId: string, historyId: string): EditableDraft | null {
+export function readChangeOrder(userId: string, projectId: string, historyId: string, locale: Locale = 'en'): EditableDraft | null {
   try {
     const raw = localStorage.getItem(key(userId, projectId, historyId))
     if (!raw) return null
     const value: unknown = JSON.parse(raw)
-    return normalizeChangeOrderDraft(value)
+    return normalizeChangeOrderDraft(value, locale)
   } catch { return null }
 }
 

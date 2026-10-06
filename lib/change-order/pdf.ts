@@ -1,6 +1,7 @@
 import { PDFDocument, type PDFFont, type PDFPage, rgb } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import { createChangeOrderDocument, type EditableDraft } from './document'
+import { supportedClientLanguage } from '@/lib/client-language'
 
 const PAGE_WIDTH = 595
 const PAGE_HEIGHT = 842
@@ -41,12 +42,26 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): 
 }
 
 export async function createChangeOrderPdf(draft: EditableDraft, regularFontBytes: Uint8Array, boldFontBytes: Uint8Array): Promise<Uint8Array> {
+  if (!supportedClientLanguage(draft.language)) throw new Error('unsupported_pdf_language')
   const document = createChangeOrderDocument(draft)
   const pdf = await PDFDocument.create()
   pdf.registerFontkit(fontkit)
   // fontkit's variable-font subsetter corrupts Cyrillic glyph positioning.
   const regular = await pdf.embedFont(regularFontBytes, { subset: false })
   const bold = await pdf.embedFont(boldFontBytes, { subset: false })
+  const regularCharacters = new Set(regular.getCharacterSet())
+  const boldCharacters = new Set(bold.getCharacterSet())
+  const verifyText = (value: unknown): void => {
+    if (typeof value === 'string') {
+      for (const character of Array.from(safeText(value + value.toUpperCase()))) {
+        if (/\s/u.test(character)) continue
+        if (/\p{Letter}/u.test(character) && !/[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}]/u.test(character)) throw new Error('unsupported_pdf_glyph')
+        const code = character.codePointAt(0)!
+        if (!regularCharacters.has(code) || !boldCharacters.has(code)) throw new Error('unsupported_pdf_glyph')
+      }
+    } else if (value && typeof value === 'object') Object.values(value).forEach(verifyText)
+  }
+  verifyText(document)
   let page!: PDFPage
   let y = 0
 
@@ -87,24 +102,29 @@ export async function createChangeOrderPdf(draft: EditableDraft, regularFontByte
     y -= options.after ?? 3
   }
   const sectionHeading = (heading: string) => {
-    ensureSpace(27)
+    const lines = wrapText(heading.toUpperCase(), bold, 10.5, CONTENT_WIDTH - 13)
+    ensureSpace(12 + lines.length * 15)
     y -= 5
     page.drawRectangle({ x: MARGIN, y: y - 3, width: 4, height: 18, color: ACCENT })
-    page.drawText(safeText(heading).toUpperCase(), { x: MARGIN + 13, y, font: bold, size: 10.5, color: NAVY })
-    y -= 20
+    lines.forEach((line, index) => page.drawText(line, { x: MARGIN + 13, y: y - index * 15, font: bold, size: 10.5, color: NAVY }))
+    y -= 5 + lines.length * 15
   }
 
   addPage(true)
 
-  const metadataHeight = 16 + document.metadata.length * 19
+  const metadataRows = document.metadata.map((item) => {
+    const labelLines = wrapText(item.label.toUpperCase(), bold, 7.5, 106)
+    const valueLines = wrapText(item.value, regular, 9.5, CONTENT_WIDTH - 150)
+    return { labelLines, valueLines, height: Math.max(19, labelLines.length * 11 + 7, valueLines.length * 13 + 7) }
+  })
+  const metadataHeight = 16 + metadataRows.reduce((total, row) => total + row.height, 0)
   ensureSpace(metadataHeight)
   page.drawRectangle({ x: MARGIN, y: y - metadataHeight + 8, width: CONTENT_WIDTH, height: metadataHeight, color: PAPER, borderColor: LINE, borderWidth: 0.8 })
   y -= 10
-  for (const item of document.metadata) {
-    page.drawText(safeText(item.label).toUpperCase(), { x: MARGIN + 14, y, font: bold, size: 7.5, color: MUTED })
-    const valueLines = wrapText(item.value, regular, 9.5, CONTENT_WIDTH - 150)
-    page.drawText(valueLines[0] ?? '', { x: MARGIN + 132, y: y - 1, font: regular, size: 9.5, color: INK })
-    y -= 19
+  for (const row of metadataRows) {
+    row.labelLines.forEach((line, index) => page.drawText(line, { x: MARGIN + 14, y: y - index * 11, font: bold, size: 7.5, color: MUTED }))
+    row.valueLines.forEach((line, index) => page.drawText(line, { x: MARGIN + 132, y: y - 1 - index * 13, font: regular, size: 9.5, color: INK }))
+    y -= row.height
   }
   y -= 7
   paragraph(document.introduction, { color: MUTED, after: 5 })
@@ -116,11 +136,12 @@ export async function createChangeOrderPdf(draft: EditableDraft, regularFontByte
   for (const [index, item] of document.commercialTerms.entries()) {
     const valueSize = index === document.commercialTerms.length - 1 ? 12 : 10.5
     const valueLines = wrapText(item.value, bold, valueSize, 220)
-    const rowHeight = Math.max(31, 18 + valueLines.length * (valueSize * 1.2))
+    const labelLines = wrapText(item.label, bold, 9, CONTENT_WIDTH - 250)
+    const rowHeight = Math.max(31, 18 + valueLines.length * (valueSize * 1.2), 18 + labelLines.length * 12)
     ensureSpace(rowHeight + 3)
     const rowY = y - rowHeight + 6
     page.drawRectangle({ x: MARGIN, y: rowY, width: CONTENT_WIDTH, height: rowHeight, color: index % 2 === 0 ? PAPER : WHITE, borderColor: LINE, borderWidth: 0.7 })
-    page.drawText(safeText(item.label), { x: MARGIN + 13, y: y - 7, font: bold, size: 9, color: MUTED })
+    labelLines.forEach((line, lineIndex) => page.drawText(line, { x: MARGIN + 13, y: y - 7 - lineIndex * 12, font: bold, size: 9, color: MUTED }))
     valueLines.forEach((line, lineIndex) => page.drawText(line, { x: PAGE_WIDTH - MARGIN - 13 - bold.widthOfTextAtSize(line, valueSize), y: y - 8 - lineIndex * valueSize * 1.2, font: bold, size: valueSize, color: NAVY }))
     y -= rowHeight
   }

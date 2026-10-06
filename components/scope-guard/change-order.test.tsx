@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { EditableDraft } from '@/lib/change-order/document'
 import { ChangeOrder } from './change-order'
+import { germanLabels } from '@/lib/change-order/german-fixture'
 
 const pdfMock = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/change-order/pdf', () => ({ createChangeOrderPdf: pdfMock }))
@@ -25,6 +26,21 @@ beforeEach(() => {
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.clearAllMocks() })
+
+it('retains supplied German labels in preview, copied content, export and storage', async () => {
+  render(<ChangeOrder initialDraft={{ ...original, language: 'de', changeOrderLabels: germanLabels, description: 'Zusätzliche Änderungen' }} projectName="Website" projectId="p1" historyId="h1" userId="u1" />)
+  const preview = screen.getByTestId('change-order-document-preview')
+  expect(preview.textContent).toContain('ÄNDERUNGSAUFTRAG')
+  expect(preview.textContent).toContain('Geschätzter Aufwand')
+  expect(preview.textContent).not.toContain('hours')
+  fireEvent.change(document.querySelector('#co-description')!, { target: { value: 'Geänderte Größe' } })
+  fireEvent.click(screen.getByRole('button', { name: 'copy' }))
+  await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('ÄNDERUNGSAUFTRAG — ENTWURF')))
+  expect(vi.mocked(navigator.clipboard.writeText).mock.calls[0][0]).toContain('Geänderte Größe')
+  fireEvent.click(screen.getByRole('button', { name: 'downloadPdf' }))
+  await waitFor(() => expect(pdfMock).toHaveBeenCalledWith(expect.objectContaining({ language: 'de', changeOrderLabels: germanLabels, description: 'Geänderte Größe' }), expect.any(Uint8Array), expect.any(Uint8Array)))
+  expect(JSON.parse(localStorage.getItem('scg:change-order:u1:p1:h1')!).changeOrderLabels).toEqual(germanLabels)
+})
 
 it('copies and exports the current edited draft', async () => {
   render(<ChangeOrder initialDraft={original} projectName="Website" projectId="p1" historyId="h1" userId="u1" />)
@@ -96,4 +112,12 @@ it('makes no-charge work explicit and restores the paid amount when switched bac
   expect(screen.getByTestId('change-order-document-preview').textContent).toContain('No additional charge')
   fireEvent.click(screen.getByRole('checkbox', { name: /^noAdditionalCharge/ }))
   expect((document.querySelector('#co-additionalCost') as HTMLInputElement).value).toBe('1000')
+})
+
+it('shows localized feedback instead of downloading unsupported glyphs', async () => {
+  pdfMock.mockRejectedValue(new Error('unsupported_pdf_glyph'))
+  render(<ChangeOrder initialDraft={original} projectName="Website" projectId="p1" historyId="h1" userId="u1" />)
+  fireEvent.click(screen.getByRole('button', { name: 'downloadPdf' }))
+  await screen.findByText('pdfLanguageUnsupported')
+  expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled()
 })

@@ -69,6 +69,7 @@ export async function POST(request: Request) {
       locale,
       tone: parsed.value.tone,
       previousReply: parsed.value.previousReply,
+      ...(parsed.value.documentLanguage ? { documentLanguage: parsed.value.documentLanguage } : {}),
     })
     return NextResponse.json({ reply })
   } catch (error) {

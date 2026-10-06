@@ -59,7 +59,7 @@ export function ClientReply({
       const response = await fetch('/api/replies/regenerate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, request, tone, previousReply }),
+        body: JSON.stringify({ projectId, request, tone, previousReply, ...(result.clientLanguage ? { documentLanguage: result.clientLanguage } : {}) }),
       })
       if (!response.ok) throw new Error(`Reply regeneration failed: ${response.status}`)
 

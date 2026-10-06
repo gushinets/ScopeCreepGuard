@@ -1,5 +1,7 @@
 'use client'
 
+import { supportedClientLanguage, PDF_CLIENT_LANGUAGES } from '@/lib/client-language'
+import { applyClientMaterials } from '@/lib/client-materials'
 import { useState } from 'react'
 import {
   ArrowRight,
@@ -12,7 +14,6 @@ import {
 import { useTranslations } from 'next-intl'
 import { commercialSignature } from '@/lib/change-order/commercial-signature'
 import { readProjectDetails } from '@/lib/projects/browser-details'
-import type { AnalysisResult } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { VerdictBanner } from './verdict'
 import { ClientReply } from './client-reply'
@@ -21,14 +22,14 @@ import { VerdictFeedback } from './verdict-feedback'
 import { useStore } from './store'
 
 export function ResultPanel() {
-  const { status, result, runCheck, selectedProject } = useStore()
+  const { status, result, runCheck, selectedProject, currentHistoryEntryId } = useStore()
 
   if (status === 'idle') return <EmptyState />
   if (status === 'loading') return <LoadingState />
   if (status === 'error') return <ErrorState onRetry={runCheck} />
   if (status === 'short_scope') return <ShortScopeState />
   if (status === 'result' && result && selectedProject) {
-    return <ResultState key={`${result.verdict}-${result.summary}`} />
+    return <ResultState key={`${selectedProject.id}-${currentHistoryEntryId}-${result.summary}`} />
   }
   return <EmptyState />
 }
@@ -139,12 +140,13 @@ function ShortScopeState() {
 }
 
 function ResultState() {
-  const { result, selectedProject, currentHistoryEntryId, analyzedRequest, user, setView, createEstimate } =
+  const { result, selectedProject, currentHistoryEntryId, analyzedRequest, user, setView, createEstimate, clientMaterials, changeClientLanguage } =
     useStore()
   const t = useTranslations()
   const [showChangeOrder, setShowChangeOrder] = useState(false)
-  const [activeEstimate, setActiveEstimate] = useState<AnalysisResult | null>(null)
-  const [documentLanguage, setDocumentLanguage] = useState<'' | 'ru' | 'en'>('')
+  const [documentLanguage, setDocumentLanguage] = useState(clientMaterials?.clientLanguage ?? result?.clientLanguage ?? '')
+  const [storageWarning, setStorageWarning] = useState(false)
+  const languageError = documentLanguage && !supportedClientLanguage(documentLanguage) ? t('errors.clientLanguageUnsupported') : ''
   const [generating, setGenerating] = useState(false)
   const [estimateError, setEstimateError] = useState('')
   const hasAdditionalWork = result?.verdict !== 'in_scope' && (result?.hasAdditionalWork ?? result?.verdict === 'out_of_scope')
@@ -152,18 +154,32 @@ function ResultState() {
 
   if (!result || !selectedProject) return null
 
+  const material = clientMaterials ? applyClientMaterials(result, clientMaterials) : result
+
   async function openChangeOrder() {
     if (!result || !selectedProject || !termsComplete) { setView('edit_project'); return }
     const endDate = user ? readProjectDetails(user.id, selectedProject.id).endDate : ''
-    const needsEstimate = !result.estimateValid || result.commercialSignature !== commercialSignature(selectedProject, endDate) || result.requestLanguage === 'other'
+    const needsEstimate = !material.estimateValid || material.commercialSignature !== commercialSignature(selectedProject, endDate)
     if (!needsEstimate) { setShowChangeOrder(true); return }
     setGenerating(true)
     setEstimateError('')
     try {
-      const next = await createEstimate(selectedProject.id, analyzedRequest ?? '', documentLanguage || undefined)
-      setActiveEstimate(next)
+      await createEstimate(selectedProject.id, analyzedRequest ?? '', material.clientLanguage)
       setShowChangeOrder(true)
     } catch { setEstimateError(t('result.changeOrderError')) }
+    finally { setGenerating(false) }
+  }
+
+  async function applyClientLanguage() {
+    const code = supportedClientLanguage(documentLanguage)
+    if (!code || !selectedProject) return
+    setGenerating(true)
+    setEstimateError('')
+    try {
+      const persisted = await changeClientLanguage(code)
+      setDocumentLanguage(code)
+      setStorageWarning(!persisted)
+    } catch { setEstimateError(t('result.clientLanguageError')) }
     finally { setGenerating(false) }
   }
 
@@ -226,23 +242,32 @@ function ResultState() {
       </p>
 
       <ClientReply
-        result={result}
+        key={`${material.clientLanguage}:${JSON.stringify(material.replies)}`}
+        result={material}
         projectId={selectedProject.id}
         request={analyzedRequest ?? ''}
       />
 
-      {hasAdditionalWork && result.requestLanguage === 'other' && !showChangeOrder && <div><label htmlFor="co-document-language" className="mb-1 block text-sm">{t('result.documentLanguage')}</label><select id="co-document-language" value={documentLanguage} onChange={(e) => setDocumentLanguage(e.target.value as '' | 'ru' | 'en')} className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"><option value="">{t('result.chooseLanguage')}</option><option value="ru">{t('language.ru')}</option><option value="en">{t('language.en')}</option></select></div>}
+      <details className="rounded-lg border border-border p-3"><summary className="cursor-pointer text-sm">{t('result.documentLanguage')}</summary>
+        <p className="mt-2 text-xs text-muted-foreground">{t('result.clientLanguageHint', { language: material.clientLanguage ?? '' })}</p>
+        <div className="mt-2 flex gap-2"><input id="co-document-language" aria-label={t('result.documentLanguage')} aria-invalid={!!languageError} aria-describedby="client-language-feedback" disabled={generating} list="client-languages" value={documentLanguage} onChange={(e) => setDocumentLanguage(e.target.value)} placeholder="de, pt, pt-BR..." maxLength={100} className="min-w-0 rounded-lg border border-input bg-background px-3 py-2 text-sm" />
+          <datalist id="client-languages">{[...PDF_CLIENT_LANGUAGES, 'pt-BR'].map((code) => <option key={code} value={code} />)}</datalist>
+          <Button type="button" variant="outline" disabled={generating || !currentHistoryEntryId || !supportedClientLanguage(documentLanguage)} onClick={() => void applyClientLanguage()}>{generating ? t('result.generatingClientMaterials') : t('result.applyClientLanguage')}</Button>
+        </div>
+        <p id="client-language-feedback" role={languageError ? 'alert' : undefined} className="mt-2 text-xs text-muted-foreground">{languageError || t('result.supportedClientLanguages')}</p>
+        {storageWarning && <p role="status" className="mt-2 text-xs">{t('result.clientLanguageStorageWarning')}</p>}
+      </details>
       {estimateError && <p role="alert" className="text-sm text-outscope-text">{estimateError}</p>}
 
       {hasAdditionalWork && (showChangeOrder && termsComplete && user && currentHistoryEntryId ? (
-        <ChangeOrder result={activeEstimate ?? result} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId} userId={user.id} documentLanguage={documentLanguage || undefined} refreshEstimate={!!activeEstimate} />
+        <ChangeOrder key={`${material.draftCreatedAt}:${material.clientLanguage}:${JSON.stringify(material.changeOrder)}:${JSON.stringify(material.changeOrderLabels)}`} result={material} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId} userId={user.id} documentLanguage={material.clientLanguage} refreshEstimate={!!clientMaterials || !!material.estimateValid} />
       ) : (
         <Button
           type="button"
           variant="outline"
           className="h-9 self-start"
           onClick={() => void openChangeOrder()}
-          disabled={generating || (result.requestLanguage === 'other' && !documentLanguage)}
+          disabled={generating}
         >
           <TriangleAlert aria-hidden="true" />
           {generating ? t('result.generatingChangeOrder') : termsComplete ? t('result.createChangeOrder') : t('result.completeProjectTerms')}

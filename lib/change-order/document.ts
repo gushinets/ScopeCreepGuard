@@ -1,12 +1,15 @@
 import type { Currency } from '@/lib/types'
+import { normalizeLanguageTag } from '@/lib/client-language'
+import { normalizeChangeOrderLabels, type ChangeOrderLabels as ClientLabels } from './labels'
 
-export type DocumentLanguage = 'ru' | 'en' | 'es'
+export type DocumentLanguage = string
 
 export interface EditableDraft {
   aiValues?: Partial<Record<'description' | 'estimatedHours' | 'additionalCost' | 'currency' | 'timelineImpact' | 'rationale' | 'note', string>>
   reference?: string
   createdAt: string
   language: DocumentLanguage
+  changeOrderLabels?: ClientLabels
   projectName: string
   description: string
   estimatedHours: string
@@ -34,7 +37,7 @@ interface ChangeOrderLabels {
   page: string; draftFooter: string
 }
 
-const labels: Record<DocumentLanguage, ChangeOrderLabels> = {
+const labels: Record<string, ChangeOrderLabels> = {
   en: {
     title: 'CHANGE ORDER', status: 'DRAFT', documentNumber: 'Document no.', created: 'Created',
     project: 'Project', provider: 'Provider', client: 'Client', email: 'Client email',
@@ -84,7 +87,8 @@ export interface ChangeOrderDocument {
 export function formatDocumentDate(value: string, language: DocumentLanguage): string {
   const date = new Date(`${value.slice(0, 10)}T00:00:00.000Z`)
   if (Number.isNaN(date.getTime())) return value
-  const locale = language === 'ru' ? 'ru-RU' : language === 'es' ? 'es-ES' : 'en-US'
+  const normalized = normalizeLanguageTag(language) ?? 'en'
+  const locale = Intl.DateTimeFormat.supportedLocalesOf([normalized])[0] ?? 'en'
   return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(date)
 }
 
@@ -95,14 +99,21 @@ export function makeChangeOrderReference(createdAt: string, historyId: string): 
 }
 
 export function createChangeOrderDocument(draft: EditableDraft): ChangeOrderDocument {
-  const t = labels[draft.language]
+  const language = normalizeLanguageTag(draft.language) ?? 'en'
+  const base = language.split('-')[0]
+  const supplied = normalizeChangeOrderLabels(draft.changeOrderLabels)
+  const t = labels[base] ?? (supplied ? {
+    ...supplied, status: supplied.draft, email: supplied.clientEmail,
+    effort: supplied.estimatedEffort, fee: supplied.additionalFee, noCharge: supplied.noAdditionalCharge,
+  } : undefined)
+  if (!t) throw new Error('change_order_labels_missing')
   const reference = draft.reference?.trim() || `CO-${draft.createdAt.slice(0, 10).replace(/-/g, '')}`
   const metadata: Array<{ label: string; value: string }> = [{ label: t.project, value: draft.projectName.trim() }]
   if (draft.providerName.trim()) metadata.push({ label: t.provider, value: draft.providerName.trim() })
   if (draft.clientName.trim()) metadata.push({ label: t.client, value: draft.clientName.trim() })
   if (draft.clientEmail.trim()) metadata.push({ label: t.email, value: draft.clientEmail.trim() })
   const commercialTerms: Array<{ label: string; value: string }> = []
-  if (draft.estimatedHours.trim()) commercialTerms.push({ label: t.effort, value: `${draft.estimatedHours.trim()} ${draft.language === 'ru' ? 'ч' : draft.language === 'es' ? 'horas' : 'hours'}` })
+  if (draft.estimatedHours.trim()) commercialTerms.push({ label: t.effort, value: `${draft.estimatedHours.trim()} ${base === 'ru' ? 'ч' : base === 'es' ? 'horas' : base === 'en' ? 'hours' : supplied!.hours}` })
   if (draft.noAdditionalCharge) commercialTerms.push({ label: t.fee, value: t.noCharge })
   else if (draft.additionalCost.trim()) commercialTerms.push({ label: t.fee, value: `${draft.additionalCost.trim()}${draft.currency ? ` ${draft.currency}` : ''}` })
   const additionalItems: Array<{ label: string; value: string }> = []

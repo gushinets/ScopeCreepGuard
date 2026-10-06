@@ -4,7 +4,7 @@ const proposalFields = ['description', 'estimatedHours', 'additionalCost', 'curr
 
 /** Refresh AI values while retaining every term the user has changed. */
 export function mergeEstimate(saved: EditableDraft, proposed: EditableDraft): EditableDraft {
-  const merged = { ...saved, language: proposed.language, projectName: proposed.projectName, aiValues: proposed.aiValues }
+  const merged = { ...saved, language: proposed.language, changeOrderLabels: proposed.changeOrderLabels, projectName: proposed.projectName, aiValues: proposed.aiValues }
   for (const field of proposalFields) {
     if (saved.aiValues?.[field] === saved[field]) {
       merged[field] = proposed[field] as never

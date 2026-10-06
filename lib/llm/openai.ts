@@ -101,7 +101,7 @@ export function requireCompletedOutputText(
   return response.output_text
 }
 
-function parseOpenAIAnalysisResponse(response: OpenAIAnalysisResponse) {
+function parseOpenAIAnalysisResponse(response: OpenAIAnalysisResponse, locale: Locale, override?: string) {
   const content = requireCompletedOutputText(response)
 
   let parsed: unknown
@@ -118,7 +118,7 @@ function parseOpenAIAnalysisResponse(response: OpenAIAnalysisResponse) {
   }
 
   try {
-    return parseAnalysisResult(parsed)
+    return parseAnalysisResult(parsed, locale, override)
   } catch (error) {
     const keys =
       parsed && typeof parsed === 'object' && !Array.isArray(parsed)
@@ -154,7 +154,7 @@ export async function analyzeWithOpenAI(input: {
   startDate?: string | null
   endDate?: string
   draftCreatedAt?: string
-  documentLanguage?: Locale
+  documentLanguage?: string
 }) {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey || apiKey.trim().length === 0) {
@@ -196,7 +196,7 @@ export async function analyzeWithOpenAI(input: {
     throw new Error('openai_request_failed')
   }
 
-  return parseOpenAIAnalysisResponse(response)
+  return parseOpenAIAnalysisResponse(response, input.locale, input.documentLanguage)
 }
 
 export async function regenerateReplyWithOpenAI(input: {
@@ -206,6 +206,7 @@ export async function regenerateReplyWithOpenAI(input: {
   locale: Locale
   tone: Tone
   previousReply: string
+  documentLanguage?: string
 }) {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey || apiKey.trim().length === 0) {
@@ -247,6 +248,6 @@ export async function regenerateReplyWithOpenAI(input: {
     throw new Error('openai_request_failed')
   }
 
-  const result = parseOpenAIAnalysisResponse(response)
+  const result = parseOpenAIAnalysisResponse(response, input.locale, input.documentLanguage)
   return result.replies[input.tone]
 }

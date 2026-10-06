@@ -1,5 +1,6 @@
 import { ERROR_CODES, type ErrorCode } from '@/lib/api/errors'
 import { validISODate } from '@/lib/projects/validation'
+import { supportedClientLanguage } from '@/lib/client-language'
 
 export const ANALYSIS_INPUT_MAX_CHARS = 100_000
 
@@ -8,7 +9,10 @@ export function parseAnalyzeBody(body: Record<string, unknown>): {
   projectId: string
   request: string
   endDate?: string
+  documentLanguage?: string
 } | { ok: false; error: ErrorCode } {
+  const documentLanguage = supportedClientLanguage(body.documentLanguage)
+  if (body.documentLanguage !== undefined && !documentLanguage) return { ok: false, error: ERROR_CODES.clientLanguageUnsupported }
   if (typeof body.projectId !== 'string' || body.projectId.trim().length === 0) {
     return { ok: false, error: ERROR_CODES.requestBodyInvalid }
   }
@@ -23,5 +27,6 @@ export function parseAnalyzeBody(body: Record<string, unknown>): {
     projectId: body.projectId.trim(),
     request: body.request.trim(),
     ...(typeof body.endDate === 'string' ? { endDate: body.endDate } : {}),
+    ...(documentLanguage ? { documentLanguage } : {}),
   }
 }
