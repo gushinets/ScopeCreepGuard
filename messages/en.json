@@ -18,7 +18,8 @@
     "projects": "Projects",
     "history": "History",
     "logout": "Logout",
-    "loggingOut": "Logging out..."
+    "loggingOut": "Logging out...",
+    "drafts": "My drafts"
   },
   "auth": {
     "heroTitle": "Keep client scope private, then check requests with confidence.",
@@ -85,10 +86,11 @@
     "selectProject": "Select a project to see its check history.",
     "previousChecks": "Previous checks for {projectName}.",
     "emptyTitle": "No checks yet",
-    "emptyDescription": "Once you check a client request for this project, it'll show up here.",
+    "emptyDescription": "Create a draft after checking a client request to save it in history.",
     "downloadEvaluations": "Download evaluation JSONL",
     "downloadingEvaluations": "Downloading...",
-    "openChangeOrder": "Open saved Change Order"
+    "openChangeOrder": "Open saved Change Order",
+    "openDraft": "Open saved draft"
   },
   "check": {
     "noProjectTitle": "No project selected",
@@ -259,6 +261,25 @@
     "evaluationReasoningRequired": "Model reasoning is required.",
     "evaluationLabelInvalid": "That verdict label is invalid.",
     "evaluationHistoryNotFound": "That scope check was not found.",
-    "clientLanguageUnsupported": "This language or script is not supported for PDF export. Choose a supported language using Latin, Cyrillic or Greek script."
+    "clientLanguageUnsupported": "This language or script is not supported for PDF export. Choose a supported language using Latin, Cyrillic or Greek script.",
+    "draftNotFound": "Draft not found.",
+    "draftSaveFailed": "Could not save the draft. Your edits are still available; try again.",
+    "draftLoadFailed": "Could not load drafts. Try again."
+  },
+  "drafts": {
+    "title": "My drafts",
+    "description": "Saved requests and documents across all your projects.",
+    "create": "Create draft",
+    "creating": "Creating draft…",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "unsaved": "Unsaved changes",
+    "temporary": "This result enters history only when you create a draft.",
+    "loading": "Loading drafts…",
+    "opening": "Opening…",
+    "emptyTitle": "No drafts yet",
+    "emptyDescription": "Check a client request, then click Create draft.",
+    "retry": "Try again"
   }
 }

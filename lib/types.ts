@@ -39,6 +39,7 @@ export interface AnalysisResult {
 }
 
 export interface HistoryEntry {
+  draftId?: string
   id: string
   date: string
   request: string

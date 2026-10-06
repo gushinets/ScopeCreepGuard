@@ -1,4 +1,7 @@
 export const ERROR_CODES = {
+  draftNotFound: 'errors.draftNotFound',
+  draftSaveFailed: 'errors.draftSaveFailed',
+  draftLoadFailed: 'errors.draftLoadFailed',
   requestBodyInvalid: 'errors.requestBodyInvalid',
   emailRequired: 'errors.emailRequired',
   passwordRequired: 'errors.passwordRequired',

@@ -27,6 +27,14 @@ beforeEach(() => {
 })
 
 describe('client-material language route', () => {
+  it('regenerates temporary materials before any history entry exists', async () => {
+    mocks.project.mockResolvedValue({ ...project, history: [] })
+    const temporary = { ...body } as Record<string, unknown>
+    delete temporary.historyId
+    const response = await POST(request(temporary))
+    expect(response.status).toBe(200)
+    expect((await response.json()).materials.clientLanguage).toBe('de')
+  })
   it('translates established material without performing scope analysis or requiring commercial terms', async () => {
     const response = await POST(request())
     expect(response.status).toBe(200)

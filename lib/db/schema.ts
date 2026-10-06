@@ -3,6 +3,9 @@ import {
   check,
   date,
   numeric,
+  jsonb,
+  uniqueIndex,
+  index,
   pgEnum,
   pgTable,
   text,
@@ -109,3 +112,25 @@ export const evaluationCases = pgTable(
     ),
   ],
 )
+
+
+export const drafts = pgTable('drafts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  historyEntryId: uuid('history_entry_id').notNull().unique().references(() => historyEntries.id, { onDelete: 'cascade' }),
+  idempotencyKey: uuid('idempotency_key').notNull(),
+  analysisSnapshot: jsonb('analysis_snapshot').$type<import('@/lib/types').AnalysisResult>().notNull(),
+  draftDocument: jsonb('draft_document').$type<import('@/lib/drafts/types').DraftDocument>().notNull(),
+  locale: text('locale').notNull(),
+  requestLanguage: text('request_language'),
+  clientMaterialLanguage: text('client_material_language').notNull(),
+  changeOrderLabels: jsonb('change_order_labels').$type<import('@/lib/change-order/labels').ChangeOrderLabels>(),
+  status: text('status').notNull().default('draft'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('drafts_project_creation_key_unique').on(table.projectId, table.idempotencyKey),
+  index('drafts_project_created_at_idx').on(table.projectId, table.createdAt),
+  check('drafts_status_valid', sql`${table.status} = 'draft'`),
+  check('drafts_locale_valid', sql`${table.locale} IN ('ru', 'en')`),
+])

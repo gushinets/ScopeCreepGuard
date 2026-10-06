@@ -1,11 +1,12 @@
 import { and, desc, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { historyEntries, projects } from '@/lib/db/schema'
+import { drafts, historyEntries, projects } from '@/lib/db/schema'
 import type { HistoryEntry, Project } from '@/lib/types'
 
-function serializeHistoryEntry(row: typeof historyEntries.$inferSelect): HistoryEntry {
+function serializeHistoryEntry(row: typeof historyEntries.$inferSelect & { draftId?: string | null }): HistoryEntry {
   return {
     id: row.id,
+    ...(row.draftId ? { draftId: row.draftId } : {}),
     date: row.date,
     request: row.request,
     verdict: row.verdict,
@@ -43,8 +44,9 @@ export async function loadProjectsForUser(userId: string): Promise<Project[]> {
 
   const projectIds = projectRows.map((project) => project.id)
   const historyRows = await db
-    .select()
+    .select({ id: historyEntries.id, projectId: historyEntries.projectId, date: historyEntries.date, request: historyEntries.request, verdict: historyEntries.verdict, summary: historyEntries.summary, draftId: drafts.id })
     .from(historyEntries)
+    .leftJoin(drafts, eq(drafts.historyEntryId, historyEntries.id))
     .where(inArray(historyEntries.projectId, projectIds))
     .orderBy(desc(historyEntries.date))
 
@@ -70,8 +72,9 @@ export async function loadProjectForUser(projectId: string, userId: string) {
   if (!project) return null
 
   const history = await db
-    .select()
+    .select({ id: historyEntries.id, projectId: historyEntries.projectId, date: historyEntries.date, request: historyEntries.request, verdict: historyEntries.verdict, summary: historyEntries.summary, draftId: drafts.id })
     .from(historyEntries)
+    .leftJoin(drafts, eq(drafts.historyEntryId, historyEntries.id))
     .where(eq(historyEntries.projectId, project.id))
     .orderBy(desc(historyEntries.date))
 

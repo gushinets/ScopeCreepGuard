@@ -10,11 +10,13 @@ import { ScopeCheckView } from './scope-check-view'
 import { ProjectsView } from './projects-view'
 import { NewProjectView } from './new-project-view'
 import { HistoryView } from './history-view'
+import { MyDraftsView } from './my-drafts-view'
 
-const NAV: { id: View; labelKey: 'check' | 'projects' | 'history' }[] = [
+const NAV: { id: View; labelKey: 'check' | 'projects' | 'history' | 'drafts' }[] = [
   { id: 'check', labelKey: 'check' },
   { id: 'projects', labelKey: 'projects' },
   { id: 'history', labelKey: 'history' },
+  { id: 'drafts', labelKey: 'drafts' },
 ]
 
 function Header() {
@@ -53,8 +55,8 @@ function Header() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <nav aria-label={t('nav.primary')} className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-3">
+          <nav aria-label={t('nav.primary')} className="flex min-w-0 items-center gap-1 overflow-x-auto">
             {NAV.map((item) => (
               <button
                 key={item.id}
@@ -62,7 +64,7 @@ function Header() {
                 onClick={() => setView(item.id)}
                 aria-current={activeNav === item.id ? 'page' : undefined}
                 className={cn(
-                  'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   activeNav === item.id
                     ? 'bg-muted text-foreground'
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -135,6 +137,7 @@ function Body() {
       {view === 'new_project' && <NewProjectView />}
       {view === 'edit_project' && <NewProjectView key="edit" edit />}
       {view === 'history' && <HistoryView />}
+      {view === 'drafts' && <MyDraftsView />}
     </main>
   )
 }
