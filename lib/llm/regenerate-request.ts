@@ -1,7 +1,7 @@
 import { ERROR_CODES, type ErrorCode } from '@/lib/api/errors'
 import type { Tone } from '@/lib/types'
 import { ANALYSIS_INPUT_MAX_CHARS } from './analyze-request'
-import { supportedClientLanguage } from '@/lib/client-language'
+import { normalizeLanguageTag } from '@/lib/client-language'
 
 const TONES = new Set<Tone>(['warm', 'neutral', 'firm'])
 
@@ -16,8 +16,8 @@ export type RegenerateReplyInput = {
 export function parseRegenerateReplyBody(
   body: Record<string, unknown>,
 ): { ok: true; value: RegenerateReplyInput } | { ok: false; error: ErrorCode } {
-  const documentLanguage = supportedClientLanguage(body.documentLanguage)
-  if (body.documentLanguage !== undefined && !documentLanguage) return { ok: false, error: ERROR_CODES.clientLanguageUnsupported }
+  const documentLanguage = normalizeLanguageTag(body.documentLanguage)
+  if (body.documentLanguage !== undefined && !documentLanguage) return { ok: false, error: ERROR_CODES.requestBodyInvalid }
   if (typeof body.projectId !== 'string' || body.projectId.trim().length === 0) {
     return { ok: false, error: ERROR_CODES.requestBodyInvalid }
   }

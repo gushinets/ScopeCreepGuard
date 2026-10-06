@@ -7,7 +7,7 @@ import { mergeEstimate } from './change-order/merge-estimate'
 
 const key = (userId: string, projectId: string, historyId: string) => `scg:client-materials:${userId}:${projectId}:${historyId}`
 const activeKey = (userId: string) => `scg:client-materials:active:${userId}`
-const context = (project: Project) => JSON.stringify([project.scope, project.startDate, project.pricingModel, project.currency, project.hourlyRate, project.fixedPrice])
+const context = (project: Project) => JSON.stringify([project.scope, project.industry, project.startDate, project.pricingModel, project.currency, project.hourlyRate, project.fixedPrice])
 
 export function saveClientResult(userId: string, project: Project, historyId: string, request: string, locale: Locale, analysis: AnalysisResult, materials: ClientMaterials | null) {
   try {

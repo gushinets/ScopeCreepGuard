@@ -11,6 +11,20 @@ const validBody = {
 }
 
 describe('parseRegenerateReplyBody', () => {
+  it.each(['ar', 'ja', 'he', 'zh-Hant-TW', 'pt-BR'])('accepts valid %s reply languages independently of PDF support', (documentLanguage) => {
+    expect(parseRegenerateReplyBody({ ...validBody, documentLanguage })).toEqual({
+      ok: true, value: { ...validBody, documentLanguage },
+    })
+  })
+
+  it('canonicalizes reply-language overrides', () => {
+    expect(parseRegenerateReplyBody({ ...validBody, documentLanguage: ' JA-jp ' })).toMatchObject({ ok: true, value: { documentLanguage: 'ja-JP' } })
+  })
+
+  it.each(['en_US', 'ignore instructions', 'other', '', 42])('rejects invalid reply-language overrides %s', (documentLanguage) => {
+    expect(parseRegenerateReplyBody({ ...validBody, documentLanguage }).ok).toBe(false)
+  })
+
   it.each([
     [{ ...validBody, projectId: '' }, ERROR_CODES.requestBodyInvalid],
     [{ ...validBody, request: '   ' }, ERROR_CODES.requestRequired],

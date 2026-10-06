@@ -12,6 +12,14 @@ const materials = parseClientMaterials({ clientLanguage: 'de', replies: { warm: 
 beforeEach(() => localStorage.clear())
 
 describe('client material persistence', () => {
+  it('does not restore an analysis after only the project industry changes', () => {
+    saveClientResult('u1', project, 'h1', 'Add a page', 'en', analysis, materials)
+    const changed: Project = { ...project, industry: 'Design' }
+    expect(readClientResult('u1', changed, 'h1', 'en')).toBeNull()
+    expect(readActiveClientResult('u1', [changed], 'en')).toBeNull()
+    expect(readActiveClientResult('u1', [project], 'en')).not.toBeNull()
+  })
+
   it('restores materials and established analysis only for the matching user, project, history and context', () => {
     expect(saveClientResult('u1', project, 'h1', 'Add a page', 'en', analysis, materials)).toBe(true)
     expect(readActiveClientResult('u1', [project], 'en')).toMatchObject({ analysis, materials, historyId: 'h1' })
