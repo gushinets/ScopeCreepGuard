@@ -8,9 +8,6 @@ import { assertErrorCode, type ErrorCode } from '@/lib/api/errors'
 import { localeToDateLocale, type Locale } from '@/i18n/config'
 import { VerdictChip } from './verdict'
 import { useStore } from './store'
-import { readChangeOrder } from '@/lib/change-order/draft-storage'
-import type { EditableDraft } from '@/lib/change-order/document'
-import { ChangeOrder } from './change-order'
 
 function formatDate(iso: string, locale: Locale) {
   return new Date(iso).toLocaleDateString(localeToDateLocale(locale), {
@@ -21,20 +18,12 @@ function formatDate(iso: string, locale: Locale) {
 }
 
 export function HistoryView() {
-  const { selectedProject, downloadEvaluationsExport, user } = useStore()
+  const { selectedProject, downloadEvaluationsExport, openDraft, draftError } = useStore()
   const locale = useLocale()
   const t = useTranslations()
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<ErrorCode | ''>('')
-  const [savedDrafts] = useState<Record<string, EditableDraft>>(() => {
-    const found: Record<string, EditableDraft> = {}
-    if (selectedProject && user) for (const entry of selectedProject.history) {
-      const draft = readChangeOrder(user.id, selectedProject.id, entry.id, locale === 'ru' ? 'ru' : 'en')
-      if (draft) found[entry.id] = draft
-    }
-    return found
-  })
-  const [opened, setOpened] = useState<string | null>(null)
+  const [openingId, setOpeningId] = useState<string | null>(null)
 
   if (!selectedProject) {
     return (
@@ -45,10 +34,6 @@ export function HistoryView() {
   }
 
   const { history } = selectedProject
-
-  if (opened && savedDrafts[opened] && user) {
-    return <div className="mx-auto max-w-3xl"><Button type="button" variant="ghost" onClick={() => setOpened(null)} className="mb-4">{t('projects.backToProjects')}</Button><ChangeOrder initialDraft={savedDrafts[opened]} projectName={selectedProject.name} projectId={selectedProject.id} historyId={opened} userId={user.id} /></div>
-  }
 
   async function onDownload() {
     setIsDownloading(true)
@@ -98,6 +83,7 @@ export function HistoryView() {
             : t('history.downloadEvaluations')}
         </Button>
       </div>
+      {draftError && <p role="alert" className="mt-3 text-sm text-outscope-text">{t(draftError)}</p>}
       {downloadError ? (
         <p className="mt-3 text-sm text-outscope-text" role="alert">
           {t(downloadError)}
@@ -135,7 +121,7 @@ export function HistoryView() {
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground text-pretty">
                 {h.summary}
               </p>
-              {savedDrafts[h.id] && <Button type="button" variant="outline" className="mt-3" onClick={() => setOpened(h.id)}>{t('history.openChangeOrder')}</Button>}
+              {h.draftId && <Button type="button" variant="outline" className="mt-3" disabled={!!openingId} onClick={() => { setOpeningId(h.id); void openDraft(h.draftId!).catch(() => {}).finally(() => setOpeningId(null)) }}>{t(openingId === h.id ? 'drafts.opening' : 'history.openDraft')}</Button>}
             </li>
           ))}
         </ul>

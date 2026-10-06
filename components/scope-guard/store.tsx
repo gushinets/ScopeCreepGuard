@@ -3,9 +3,14 @@
 import { useRouter } from 'next/navigation'
 import { useLocale } from 'next-intl'
 import { applyClientMaterials, parseClientMaterials, type ClientMaterials } from '@/lib/client-materials'
-import { clearActiveClientResult, readActiveClientResult, saveClientResult, updateSavedClientDraft } from '@/lib/client-material-storage'
+import type { CreatedDraftResponse, DraftDocument, DraftListItem, SavedDraft, ReplyDocument } from '@/lib/drafts/types'
+import { editableChangeOrder } from '@/lib/drafts/document'
+import { mergeEstimate } from '@/lib/change-order/merge-estimate'
+import type { EditableDraft } from '@/lib/change-order/document'
+import type { Locale } from '@/i18n/config'
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -27,7 +32,7 @@ import type {
   Verdict,
 } from '@/lib/types'
 
-export type View = 'check' | 'projects' | 'new_project' | 'edit_project' | 'history'
+export type View = 'check' | 'projects' | 'new_project' | 'edit_project' | 'history' | 'drafts'
 
 export type AnalysisStatus =
   | 'idle'
@@ -63,6 +68,17 @@ interface StoreValue {
   status: AnalysisStatus
   result: AnalysisResult | null
   clientMaterials: ClientMaterials | null
+  draftDocument: DraftDocument | null
+  currentDraftId: string | null
+  draftSessionId: string
+  isSavingDraft: boolean
+  draftError: ErrorCode | ''
+  isDraftDirty: boolean
+  saveDraft: () => Promise<void>
+  openDraft: (id: string) => Promise<void>
+  listDrafts: () => Promise<DraftListItem[]>
+  updateChangeOrder: (draft: EditableDraft) => void
+  updateReply: (reply: ReplyDocument) => void
   changeClientLanguage: (language: string) => Promise<boolean>
   currentHistoryEntryId: string | null
   analysisError: ErrorCode | ''
@@ -94,10 +110,6 @@ interface ProjectResponse {
   project: Project
 }
 
-interface HistoryResponse {
-  entry: HistoryEntry
-}
-
 interface MeResponse {
   user: AuthUser
 }
@@ -112,10 +124,6 @@ class ApiError extends Error {
 }
 
 const Ctx = createContext<StoreValue | null>(null)
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10)
-}
 
 async function readApiError(response: Response) {
   let body: unknown
@@ -182,18 +190,36 @@ async function apiFetch<T>(input: RequestInfo | URL, init?: RequestInit) {
   return readApiSuccess<T>(response)
 }
 
+async function listDrafts() {
+  return (await apiFetch<{ drafts: DraftListItem[] }>('/api/drafts', { cache: 'no-store' })).drafts
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const locale = useLocale()
-  const [clientMaterials, setClientMaterials] = useState<ClientMaterials | null>(null)
+  const [draftDocument, setDraftDocument] = useState<DraftDocument | null>(null)
+  const [analysisSnapshot, setAnalysisSnapshot] = useState<AnalysisResult | null>(null)
+  const [analysisLocale, setAnalysisLocale] = useState<Locale>('en')
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null)
+  const [draftSessionId, setDraftSessionId] = useState('')
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [draftError, setDraftError] = useState<ErrorCode | ''>('')
+  const [savedSignature, setSavedSignature] = useState('')
+  const savingDraft = useRef(false)
+  const result = draftDocument?.result ?? null
+  const clientMaterials = draftDocument?.clientMaterials ?? null
   const [user, setUser] = useState<AuthUser | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
-  const [view, setView] = useState<View>('check')
+  const [view, changeView] = useState<View>('check')
+  const draftOpenRun = useRef(0)
+  const setView = useCallback((next: View) => {
+    draftOpenRun.current += 1
+    changeView(next)
+  }, [])
   const [requestText, setRequestText] = useState('')
   const [analyzedRequest, setAnalyzedRequest] = useState<string | null>(null)
   const [status, setStatus] = useState<AnalysisStatus>('idle')
-  const [result, setResult] = useState<AnalysisResult | null>(null)
   const [currentHistoryEntryId, setCurrentHistoryEntryId] = useState<string | null>(
     null,
   )
@@ -201,6 +227,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [isLoadingProjects, setIsLoadingProjects] = useState(true)
   const [projectError, setProjectError] = useState<ErrorCode | ''>('')
   const analysisRun = useRef(0)
+
+  const restoreDraft = useCallback((draft: SavedDraft) => {
+    analysisRun.current += 1
+    setSelectedProjectId(draft.projectId)
+    setRequestText(draft.request)
+    setAnalyzedRequest(draft.request)
+    setAnalysisSnapshot(draft.analysisSnapshot)
+    setAnalysisLocale(draft.locale)
+    setDraftDocument(draft.draftDocument)
+    setCurrentDraftId(draft.id)
+    setCurrentHistoryEntryId(draft.historyEntryId)
+    setDraftSessionId(draft.id)
+    setSavedSignature(JSON.stringify(draft.draftDocument))
+    setAnalysisError('')
+    setDraftError('')
+    setStatus('result')
+    setView('check')
+    const url = new URL(window.location.href)
+    url.searchParams.set('draft', draft.id)
+    window.history.replaceState(window.history.state, '', url)
+  }, [setView])
 
   const selectedProject =
     projects.find((p) => p.id === selectedProjectId) ?? null
@@ -222,23 +269,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
         setUser(meResponse.user)
         setProjects(projectsResponse.projects)
-        const restored = readActiveClientResult(meResponse.user.id, projectsResponse.projects, locale)
-        setSelectedProjectId(restored?.projectId ?? projectsResponse.projects[0]?.id ?? null)
-        if (restored) {
-          setCurrentHistoryEntryId(restored.historyId)
-          setAnalyzedRequest(restored.request)
-          setRequestText(restored.request)
-          setResult(restored.analysis)
-          setClientMaterials(restored.materials)
-          setStatus('result')
-        } else {
-          setCurrentHistoryEntryId(null)
-          setAnalyzedRequest(null)
-          setResult(null)
-          setClientMaterials(null)
-          setStatus('idle')
+        setSelectedProjectId(projectsResponse.projects[0]?.id ?? null)
+        const draftId = new URLSearchParams(window.location.search).get('draft')
+        if (draftId) {
+          const { draft } = await apiFetch<{ draft: SavedDraft }>(`/api/drafts/${draftId}`)
+          if (!isActive) return
+          restoreDraft(draft)
         }
       } catch (error) {
+        if (!isActive) return
+        if (error instanceof ApiError && error.status === 401) {
+          router.replace('/login')
+          return
+        }
+
         console.error(
           JSON.stringify({
             event: 'store_initial_load_failed',
@@ -246,11 +290,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             status: error instanceof ApiError ? error.status : null,
           }),
         )
-
-        if (error instanceof ApiError && error.status === 401) {
-          router.replace('/login')
-          return
-        }
 
         if (isActive) {
           setProjectError(ERROR_CODES.workspaceLoadFailed)
@@ -265,16 +304,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false
     }
-  }, [router, locale])
+  // Locale changes update UI copy without discarding the temporary document.
+  }, [router, restoreDraft])
 
   function selectProject(id: string) {
-    if (user) clearActiveClientResult(user.id)
     analysisRun.current += 1
     setSelectedProjectId(id)
     setRequestText('')
     setAnalyzedRequest(null)
-    setResult(null)
-    setClientMaterials(null)
+    clearDocument()
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
@@ -294,8 +332,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSelectedProjectId(data.project.id)
     setRequestText('')
     setAnalyzedRequest(null)
-    setResult(null)
-    setClientMaterials(null)
+    clearDocument()
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
@@ -311,8 +348,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setProjects((prev) => prev.map((project) => project.id === id ? data.project : project))
     if (prior && projectAnalysisInputsChanged(prior, input)) {
       analysisRun.current += 1
-      setResult(null)
-      setClientMaterials(null)
+      clearDocument()
       setAnalyzedRequest(null)
       setCurrentHistoryEntryId(null)
       setAnalysisError('')
@@ -324,46 +360,52 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   async function createEstimate(projectId: string, request: string, documentLanguage?: string) {
     const run = analysisRun.current
-    const storedEndDate = user ? readProjectDetails(user.id, projectId).endDate : ''
     const project = projects.find((item) => item.id === projectId)
+    const storedEndDate = draftDocument?.changeOrder?.endDate ?? draftDocument?.projectDetails.endDate ?? ''
     const endDate = validISODate(storedEndDate) && (!project?.startDate || storedEndDate >= project.startDate) ? storedEndDate : ''
     const data = await apiFetch<{ result: AnalysisResult }>('/api/change-orders/estimate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectId, request, ...(endDate ? { endDate } : {}), ...(documentLanguage ? { documentLanguage } : {}) }),
     })
     if (run !== analysisRun.current) throw new Error('stale_estimate')
-    if (result && selectedProject && user && currentHistoryEntryId && analyzedRequest && projectId === selectedProject.id) {
-      const updated: AnalysisResult = { ...result, changeOrder: data.result.changeOrder, draftCreatedAt: data.result.draftCreatedAt, commercialSignature: data.result.commercialSignature, estimateValid: data.result.estimateValid, changeOrderLabels: data.result.changeOrderLabels }
-      const nextMaterials = clientMaterials ? { ...clientMaterials, changeOrder: { description: updated.changeOrder.description, timelineImpact: updated.changeOrder.timelineImpact, rationale: updated.changeOrder.rationale ?? '', note: updated.changeOrder.note }, changeOrderLabels: data.result.changeOrderLabels } : null
-      setResult(updated)
-      setClientMaterials(nextMaterials)
-      saveClientResult(user.id, selectedProject, currentHistoryEntryId, analyzedRequest, locale, updated, nextMaterials)
-      return nextMaterials ? applyClientMaterials(updated, nextMaterials) : updated
-    }
+    if (!project) throw new Error('project_missing')
+    setDraftDocument((current) => {
+      if (!current) return current
+      const updated: AnalysisResult = { ...current.result, changeOrder: data.result.changeOrder, draftCreatedAt: data.result.draftCreatedAt, commercialSignature: data.result.commercialSignature, estimateValid: data.result.estimateValid, changeOrderLabels: data.result.changeOrderLabels }
+      const nextMaterials = current.clientMaterials ? { ...current.clientMaterials, changeOrder: { description: updated.changeOrder.description, timelineImpact: updated.changeOrder.timelineImpact, rationale: updated.changeOrder.rationale ?? '', note: updated.changeOrder.note }, changeOrderLabels: data.result.changeOrderLabels } : null
+      const material = nextMaterials ? applyClientMaterials(updated, nextMaterials) : updated
+      const proposed = editableChangeOrder(material, project, current.projectDetails, draftSessionId)
+      return { ...current, result: updated, clientMaterials: nextMaterials, changeOrder: current.changeOrder ? mergeEstimate(current.changeOrder, proposed) : proposed }
+    })
     return data.result
   }
 
   async function changeClientLanguage(language: string): Promise<boolean> {
-    if (!user || !selectedProject || !currentHistoryEntryId || !analyzedRequest || !result) throw new Error('no_current_result')
-    const run = ++analysisRun.current
+    if (!user || !selectedProject || !analyzedRequest || !result) throw new Error('no_current_result')
+    const run = analysisRun.current
     const original = result
     const data = await apiFetch<{ materials: ClientMaterials }>('/api/client-materials/language', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectId: selectedProject.id, historyId: currentHistoryEntryId, request: analyzedRequest, clientLanguage: language, analysis: clientMaterials ? applyClientMaterials(original, clientMaterials) : original }),
+      body: JSON.stringify({ projectId: selectedProject.id, ...(currentHistoryEntryId ? { historyId: currentHistoryEntryId } : {}), request: analyzedRequest, clientLanguage: language, analysis: clientMaterials ? applyClientMaterials(original, clientMaterials) : original }),
     })
     if (run !== analysisRun.current) return true
     const materials = parseClientMaterials(data.materials, language)
-    setClientMaterials(materials)
-    updateSavedClientDraft(user.id, selectedProject.id, currentHistoryEntryId, materials, locale)
-    return saveClientResult(user.id, selectedProject, currentHistoryEntryId, analyzedRequest, locale, original, materials)
+    setDraftDocument((current) => {
+      if (!current) return current
+      const material = applyClientMaterials(current.result, materials)
+      const proposed = editableChangeOrder(material, selectedProject, current.projectDetails, draftSessionId)
+      return { ...current, clientMaterials: materials,
+        reply: { tone: current.reply.tone, text: current.reply.text === current.reply.generated[current.reply.tone] ? materials.replies[current.reply.tone] : current.reply.text, generated: materials.replies },
+        changeOrder: current.changeOrder ? mergeEstimate(current.changeOrder, proposed) : null }
+    })
+    return true
   }
 
   function loadExample(text: string) {
     analysisRun.current += 1
     setRequestText(text)
     setAnalyzedRequest(null)
-    setResult(null)
-    setClientMaterials(null)
+    clearDocument()
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
@@ -376,27 +418,79 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ? {
               ...p,
               lastChecked: entry.date,
-              history: [entry, ...p.history],
+              history: [entry, ...p.history.filter((existing) => existing.id !== entry.id)],
             }
           : p,
       ),
     )
   }
 
-  async function persistHistory(projectId: string, entry: Omit<HistoryEntry, 'id'>) {
-    const data = await apiFetch<HistoryResponse>(
-      `/api/projects/${projectId}/history`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(entry),
-      },
-    )
-
-    applyHistory(projectId, data.entry)
-    return data.entry
+  function clearDraftUrl() {
+    if (typeof window === 'undefined') return
+    const url = new URL(window.location.href)
+    url.searchParams.delete('draft')
+    window.history.replaceState(window.history.state, '', url)
+  }
+  function clearDocument() {
+    setDraftDocument(null)
+    setAnalysisSnapshot(null)
+    setCurrentDraftId(null)
+    setDraftSessionId('')
+    setSavedSignature('')
+    setDraftError('')
+    clearDraftUrl()
+  }
+  async function openDraft(id: string) {
+    const openRun = ++draftOpenRun.current
+    const run = ++analysisRun.current
+    setDraftError('')
+    try {
+      const { draft } = await apiFetch<{ draft: SavedDraft }>(`/api/drafts/${id}`, { cache: 'no-store' })
+      if (run === analysisRun.current && openRun === draftOpenRun.current) restoreDraft(draft)
+    } catch (error) {
+      if (run !== analysisRun.current || openRun !== draftOpenRun.current) return
+      setDraftError(error instanceof ApiError ? error.message as ErrorCode : ERROR_CODES.draftLoadFailed)
+      throw error
+    }
+  }
+  function updateChangeOrder(draft: EditableDraft) {
+    setDraftDocument((current) => current ? { ...current, changeOrder: draft } : current)
+    setDraftError('')
+  }
+  function updateReply(reply: ReplyDocument) {
+    setDraftDocument((current) => current ? { ...current, reply } : current)
+    setDraftError('')
+  }
+  async function saveDraft() {
+    if (savingDraft.current || !draftDocument || !analysisSnapshot || !selectedProject || !analyzedRequest) return
+    savingDraft.current = true
+    setIsSavingDraft(true)
+    setDraftError('')
+    const run = analysisRun.current
+    try {
+      const response: { draft: SavedDraft; entry?: HistoryEntry } = currentDraftId
+        ? await apiFetch<{ draft: SavedDraft }>(`/api/drafts/${currentDraftId}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ draftDocument }),
+          })
+        : await apiFetch<CreatedDraftResponse>('/api/drafts', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectId: selectedProject.id, request: analyzedRequest, locale: analysisLocale, idempotencyKey: draftSessionId, analysisSnapshot, draftDocument }),
+          })
+      if (response.entry) applyHistory(response.draft.projectId, response.entry)
+      if (run !== analysisRun.current) return
+      setCurrentDraftId(response.draft.id)
+      setCurrentHistoryEntryId(response.draft.historyEntryId)
+      // Retain newer edits if a retried POST returns an already committed document.
+      setSavedSignature(JSON.stringify(response.draft.draftDocument))
+      const url = new URL(window.location.href)
+      url.searchParams.set('draft', response.draft.id)
+      window.history.replaceState(window.history.state, '', url)
+    } catch (error) {
+      if (run === analysisRun.current) setDraftError(error instanceof ApiError ? error.message as ErrorCode : ERROR_CODES.draftSaveFailed)
+    } finally {
+      savingDraft.current = false
+      setIsSavingDraft(false)
+    }
   }
 
   async function runAnalysis(project: Project, request: string) {
@@ -415,18 +509,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       const analysis = data.result
       if (run !== analysisRun.current) return
-      const historyEntry = await persistHistory(project.id, {
-        date: todayISO(),
-        request,
-        verdict: analysis.verdict,
-        summary: analysis.summary,
-      })
-      if (run !== analysisRun.current) return
-      setCurrentHistoryEntryId(historyEntry.id)
+      const seed = crypto.randomUUID()
+      const details = user ? readProjectDetails(user.id, project.id) : { clientName: '', clientEmail: '', endDate: '' }
+      setCurrentHistoryEntryId(null)
+      setCurrentDraftId(null)
+      setAnalysisSnapshot(analysis)
+      setAnalysisLocale(locale === 'ru' ? 'ru' : 'en')
+      setDraftSessionId(seed)
+      setSavedSignature('')
       setAnalyzedRequest(request)
-      setResult(analysis)
-      setClientMaterials(null)
-      if (user) saveClientResult(user.id, { ...project, history: [historyEntry, ...project.history] }, historyEntry.id, request, locale, analysis, null)
+      setDraftDocument({
+        version: 1, result: analysis, clientMaterials: null,
+        reply: { tone: 'neutral', text: analysis.replies.neutral, generated: analysis.replies },
+        projectDetails: details,
+        changeOrder: analysis.verdict !== 'in_scope' && (analysis.hasAdditionalWork ?? analysis.verdict === 'out_of_scope')
+          ? editableChangeOrder(analysis, project, details, seed) : null,
+      })
       setStatus('result')
     } catch (error) {
       if (run !== analysisRun.current) return
@@ -464,26 +562,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     if (scope.length < 60) {
       setStatus('short_scope')
-      setResult(null)
-    setClientMaterials(null)
+      clearDocument()
       return
     }
 
     setStatus('loading')
     setAnalyzedRequest(null)
-    setResult(null)
-    setClientMaterials(null)
+    clearDocument()
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
     void runAnalysis(project, request)
   }
 
   function reset() {
-    if (user) clearActiveClientResult(user.id)
     analysisRun.current += 1
     setAnalyzedRequest(null)
-    setResult(null)
-    setClientMaterials(null)
+    clearDocument()
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
@@ -599,6 +693,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     status,
     result,
     clientMaterials,
+    draftDocument, currentDraftId, draftSessionId, isSavingDraft, draftError,
+    isDraftDirty: !!currentDraftId && JSON.stringify(draftDocument) !== savedSignature,
+    saveDraft, openDraft, listDrafts, updateChangeOrder, updateReply,
     changeClientLanguage,
     currentHistoryEntryId,
     analysisError,

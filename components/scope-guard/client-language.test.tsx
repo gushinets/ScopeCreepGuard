@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { germanLabels } from '@/lib/change-order/german-fixture'
 import { commercialSignature } from '@/lib/change-order/commercial-signature'
-import { normalizeChangeOrderDraft, readChangeOrder, writeChangeOrder } from '@/lib/change-order/draft-storage'
+import type { SavedDraft } from '@/lib/drafts/types'
 import type { AnalysisResult, Project } from '@/lib/types'
 import { ResultPanel } from './result-panel'
 import { StoreProvider, useStore } from './store'
@@ -23,6 +23,7 @@ const original: AnalysisResult = {
   hasAdditionalWork: true, estimateValid: true, draftCreatedAt: '2026-10-06',
 }
 let project: Project
+let savedDraft: SavedDraft | null = null
 const fetchMock = vi.fn()
 const materials = {
   clientLanguage: 'de', replies: { warm: 'Danke', neutral: 'Zusätzliche Arbeiten', firm: 'Bitte genehmigen' },
@@ -32,17 +33,22 @@ const materials = {
 
 beforeEach(() => {
   localStorage.clear()
+  window.history.replaceState({}, '', '/')
+  savedDraft = null
   fetchMock.mockReset()
   project = { id: 'p1', name: 'Website', industry: 'Development', scope: 'Build exactly five marketing pages. Additional pages are outside the agreed scope.', startDate: '2026-01-01', pricingModel: 'hourly', currency: 'EUR', hourlyRate: '100', fixedPrice: null, history: [] }
-  fetchMock.mockImplementation(async (url: string) => {
+  fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
     let body
     if (url === '/api/auth/me') body = { user: { id: 'u1', email: 'u@example.com' } }
     else if (url === '/api/projects') body = { projects: [project] }
     else if (url === '/api/analyze') body = { result: { ...original, commercialSignature: commercialSignature(project) } }
-    else if (url === '/api/projects/p1/history') {
-      const entry = { id: 'h1', date: '2026-10-06', request: 'Add a page', verdict: original.verdict, summary: original.summary }
+    else if (url === '/api/drafts' && init?.method === 'POST') {
+      const input = JSON.parse(String(init.body))
+      const entry = { id: 'h1', draftId: 'd1', date: '2026-10-06', request: 'Add a page', verdict: original.verdict, summary: original.summary }
       project = { ...project, history: [entry] }
-      body = { entry }
+      savedDraft = { id: 'd1', projectId: 'p1', historyEntryId: 'h1', request: input.request, status: 'draft', createdAt: original.draftCreatedAt!, updatedAt: original.draftCreatedAt!, locale: 'ru', requestLanguage: null, clientMaterialLanguage: 'de', analysisSnapshot: input.analysisSnapshot, draftDocument: input.draftDocument }
+      body = { draft: savedDraft, entry }
+    } else if (url === '/api/drafts/d1') { body = { draft: savedDraft }
     } else if (url === '/api/client-materials/language') body = { materials }
     else if (url === '/api/change-orders/estimate') body = { result: original }
     else throw new Error(`Unexpected API: ${url}`)
@@ -54,7 +60,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks() })
 
 function Controls() {
   const store = useStore()
-  return <><input aria-label="Request" value={store.requestText} onChange={(e) => store.setRequestText(e.target.value)} /><button onClick={store.runCheck} disabled={!store.selectedProject}>Run</button></>
+  return <><input aria-label="Request" value={store.requestText} onChange={(e) => store.setRequestText(e.target.value)} /><button onClick={store.runCheck} disabled={!store.selectedProject}>Run</button><button onClick={() => { if (store.draftDocument?.changeOrder) store.updateChangeOrder({ ...store.draftDocument.changeOrder, description: 'Custom scope', additionalCost: '175', note: '' }) }}>Edit terms</button><pre data-testid="document">{JSON.stringify(store.draftDocument)}</pre></>
 }
 function app() { return render(<StoreProvider><Controls /><ResultPanel /></StoreProvider>) }
 async function analyze() {
@@ -82,19 +88,23 @@ it('uses only the dedicated language endpoint and preserves scope and monetary v
   expect(screen.getByText('Русское обоснование')).toBeTruthy()
   expect(screen.getByText('Русская рекомендация')).toBeTruthy()
   expect(screen.getByText('Five pages')).toBeTruthy()
-  const stored = JSON.parse(localStorage.getItem('scg:client-materials:u1:p1:h1')!)
-  expect(stored.analysis.changeOrder.additionalCost).toBe('200')
-  expect(stored.analysis.hasAdditionalWork).toBe(true)
-  expect(stored.materials.changeOrder.additionalCost).toBeUndefined()
+  const stored = JSON.parse(screen.getByTestId('document').textContent!)
+  expect(stored.result.changeOrder.additionalCost).toBe('200')
+  expect(stored.result.hasAdditionalWork).toBe(true)
+  expect(stored.clientMaterials.changeOrder.additionalCost).toBeUndefined()
+  expect(localStorage.getItem('scg:client-materials:u1:p1:h1')).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: 'result.createChangeOrder' }))
   await screen.findByText('de: Neue Seite: 200: 2: EUR')
   expect(fetchMock.mock.calls.some(([url]) => url === '/api/change-orders/estimate')).toBe(false)
 })
 
-it('restores the explicit override and client materials after a full provider reload', async () => {
+it('restores explicitly created client materials from the server after reload', async () => {
   const view = await analyze()
   await override()
+  fireEvent.click(screen.getByRole('button', { name: 'drafts.create' }))
+  await screen.findByRole('button', { name: 'drafts.save' })
   view.unmount()
+  localStorage.clear()
   app()
   await screen.findByText('Zusätzliche Arbeiten')
   expect((screen.getByLabelText('result.documentLanguage') as HTMLInputElement).value).toBe('de')
@@ -114,12 +124,12 @@ it('rejects unsupported scripts accessibly before sending a generation request',
 
 it('updates a closed saved draft without overwriting user changes on repeated overrides', async () => {
   await analyze()
-  writeChangeOrder('u1', 'p1', 'h1', normalizeChangeOrderDraft({ createdAt: '2026-10-06', language: 'en', projectName: 'Website', description: 'Custom scope', timelineImpact: 'Two days', additionalCost: '175', note: '', aiValues: { description: 'Extra page', timelineImpact: 'Two days', additionalCost: '200', note: 'Draft' } })!)
+  fireEvent.click(screen.getByText('Edit terms'))
   await override()
-  expect(readChangeOrder('u1', 'p1', 'h1')).toMatchObject({ language: 'de', description: 'Custom scope', timelineImpact: 'Zwei Tage', additionalCost: '175', note: '' })
+  expect(JSON.parse(screen.getByTestId('document').textContent!).changeOrder).toMatchObject({ language: 'de', description: 'Custom scope', timelineImpact: 'Zwei Tage', additionalCost: '175', note: '' })
   // Regenerate again in the same selected language.
   fireEvent.click(screen.getByRole('button', { name: 'result.applyClientLanguage' }))
   await waitFor(() => expect(fetchMock.mock.calls.filter(([url]) => url === '/api/client-materials/language')).toHaveLength(2))
-  expect(readChangeOrder('u1', 'p1', 'h1')).toMatchObject({ description: 'Custom scope', additionalCost: '175', note: '' })
+  expect(JSON.parse(screen.getByTestId('document').textContent!).changeOrder).toMatchObject({ description: 'Custom scope', additionalCost: '175', note: '' })
   expect(fetchMock.mock.calls.some(([url]) => url === '/api/change-orders/estimate')).toBe(false)
 })

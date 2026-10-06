@@ -1,10 +1,11 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CheckCheck, Copy, LoaderCircle, RotateCcw } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import type { ReplyDocument } from '@/lib/drafts/types'
 import type { AnalysisResult, Tone } from '@/lib/types'
 
 const TONES: Tone[] = ['warm', 'neutral', 'firm']
@@ -17,14 +18,28 @@ export function ClientReply({
   result,
   projectId,
   request,
+  document: controlledDocument,
+  onDocumentChange,
+  disabled = false,
 }: {
   result: AnalysisResult
   projectId: string
   request: string
+  document?: ReplyDocument
+  onDocumentChange?: (reply: ReplyDocument) => void
+  disabled?: boolean
 }) {
   const t = useTranslations()
-  const [tone, setTone] = useState<Tone>('neutral')
-  const [text, setText] = useState(result.replies.neutral)
+  const [localDocument, setLocalDocument] = useState<ReplyDocument>({ tone: 'neutral', text: result.replies.neutral, generated: result.replies })
+  const document = controlledDocument ?? localDocument
+  const { tone, text } = document
+  function update(next: ReplyDocument) {
+    if (onDocumentChange) onDocumentChange(next)
+    else setLocalDocument(next)
+  }
+  function setText(next: string) { update({ ...document, text: next }) }
+  const isActive = useRef(true)
+  useEffect(() => { isActive.current = true; return () => { isActive.current = false } }, [])
   const [copied, setCopied] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [regenerationFailed, setRegenerationFailed] = useState(false)
@@ -33,14 +48,13 @@ export function ClientReply({
 
   function applyTone(next: Tone) {
     if (isRegenerating) return
-    setTone(next)
-    const edited = text !== lastGenerated.current
+    const edited = text !== document.generated[tone]
     if (edited) {
       const ok = window.confirm(t('reply.confirmReplace'))
       if (!ok) return
     }
-    setText(result.replies[next])
-    lastGenerated.current = result.replies[next]
+    update({ ...document, tone: next, text: document.generated[next] })
+    lastGenerated.current = document.generated[next]
     setRegenerationFailed(false)
   }
 
@@ -75,7 +89,8 @@ export function ClientReply({
       }
 
       const reply = (body as { reply: string }).reply
-      setText(reply)
+      if (!isActive.current) return
+      update({ ...document, text: reply, generated: { ...document.generated, [tone]: reply } })
       lastGenerated.current = reply
     } catch (error) {
       console.error(
@@ -127,7 +142,7 @@ export function ClientReply({
               type="button"
               role="radio"
               aria-checked={tone === toneOption}
-              disabled={isRegenerating}
+              disabled={disabled || isRegenerating}
               onClick={() => applyTone(toneOption)}
               className={cn(
                 'rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -147,6 +162,7 @@ export function ClientReply({
       </label>
       <textarea
         id="reply-text"
+        disabled={disabled || isRegenerating}
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={12}

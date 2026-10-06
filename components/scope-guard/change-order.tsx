@@ -13,7 +13,7 @@ import type { AnalysisResult, Currency } from '@/lib/types'
 import { ChangeOrderDocumentPreview } from './change-order-document-preview'
 import { supportedClientLanguage } from '@/lib/client-language'
 
-export function ChangeOrder({ result, projectName, projectId, historyId, userId, initialDraft, documentLanguage, refreshEstimate = false }: {
+export function ChangeOrder({ result, projectName, projectId, historyId, userId, initialDraft, documentLanguage, refreshEstimate = false, draft: controlledDraft, onDraftChange, disabled = false }: {
   result?: AnalysisResult
   projectName: string
   projectId: string
@@ -22,6 +22,9 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
   initialDraft?: EditableDraft
   documentLanguage?: string
   refreshEstimate?: boolean
+  draft?: EditableDraft
+  onDraftChange?: (draft: EditableDraft) => void
+  disabled?: boolean
 }) {
   const t = useTranslations('changeOrder')
   const locale = useLocale()
@@ -50,19 +53,22 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
       note: result.changeOrder.note,
     } : initialDraft?.aiValues,
   }})
-  const [draft, setDraft] = useState<EditableDraft>(() => {
+  const [localDraft, setLocalDraft] = useState<EditableDraft>(() => {
+    if (controlledDraft) return controlledDraft
     const saved = readChangeOrder(userId, projectId, historyId, locale === 'ru' ? 'ru' : 'en')
     if (saved) return refreshEstimate && result ? mergeEstimate(saved, original) : { ...original, ...saved, reference: saved.reference ?? original.reference }
     return { ...original, ...readProjectDetails(userId, projectId) }
   })
+  const draft = controlledDraft ?? localDraft
   const [status, setStatus] = useState<'copied' | 'downloaded' | 'error' | 'pdfLanguageUnsupported' | ''>('')
 
   useEffect(() => {
-    writeChangeOrder(userId, projectId, historyId, draft)
-  }, [userId, projectId, historyId, draft])
+    if (!controlledDraft) writeChangeOrder(userId, projectId, historyId, draft)
+  }, [userId, projectId, historyId, draft, controlledDraft])
 
   function set<K extends keyof EditableDraft>(key: K, value: EditableDraft[K]) {
-    setDraft((current) => ({ ...current, [key]: value }))
+    if (onDraftChange) onDraftChange({ ...draft, [key]: value })
+    else setLocalDraft((current) => ({ ...current, [key]: value }))
     setStatus('')
   }
 
@@ -76,8 +82,8 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
     const changed = proposed !== undefined && value !== proposed
     return <div key={key}>
       <label htmlFor={`co-${key}`} className="mb-1 block text-xs font-medium text-muted-foreground">{label} {proposed !== undefined ? <span className="font-normal">{changed ? t('edited') : t('aiProposal')}</span> : <span className="font-normal">{t('optional')}</span>}</label>
-      {rows > 1 ? <textarea id={`co-${key}`} rows={rows} value={value} onChange={(e) => set(key, e.target.value)} className="w-full resize-y rounded-lg border border-input bg-background p-2.5 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" /> :
-        <input id={`co-${key}`} value={value} onChange={(e) => set(key, e.target.value)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" />}
+      {rows > 1 ? <textarea id={`co-${key}`} rows={rows} disabled={disabled} value={value} onChange={(e) => set(key, e.target.value)} className="w-full resize-y rounded-lg border border-input bg-background p-2.5 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" /> :
+        <input id={`co-${key}`} disabled={disabled} value={value} onChange={(e) => set(key, e.target.value)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" />}
     </div>
   }
 
@@ -108,8 +114,8 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
     <div className="mt-4 grid gap-3">
       {field('description', t('descriptionLabel'), 3)}
       <div className="grid gap-3 sm:grid-cols-2">{field('estimatedHours', t('hoursLabel'))}{!draft.noAdditionalCharge && field('additionalCost', t('costLabel'))}</div>
-      <label className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm"><input type="checkbox" checked={draft.noAdditionalCharge} onChange={(event) => set('noAdditionalCharge', event.target.checked)} className="mt-0.5 size-4" /><span><span className="font-medium">{t('noAdditionalCharge')}</span><span className="mt-0.5 block text-xs text-muted-foreground">{t('noAdditionalChargeHint')}</span></span></label>
-      <div><label htmlFor="co-currency" className="mb-1 block text-xs font-medium text-muted-foreground">{t('currencyLabel')} {draft.aiValues?.currency !== undefined && <span className="font-normal">{draft.currency === draft.aiValues.currency ? t('aiProposal') : t('edited')}</span>}</label><select id="co-currency" value={draft.currency} onChange={(e) => changeCurrency(e.target.value as Currency | '')} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"><option value="">{t('noCurrency')}</option>{(['RUB', 'USD', 'EUR'] as const).map((currency) => <option key={currency}>{currency}</option>)}</select></div>
+      <label className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm"><input type="checkbox" disabled={disabled} checked={draft.noAdditionalCharge} onChange={(event) => set('noAdditionalCharge', event.target.checked)} className="mt-0.5 size-4" /><span><span className="font-medium">{t('noAdditionalCharge')}</span><span className="mt-0.5 block text-xs text-muted-foreground">{t('noAdditionalChargeHint')}</span></span></label>
+      <div><label htmlFor="co-currency" className="mb-1 block text-xs font-medium text-muted-foreground">{t('currencyLabel')} {draft.aiValues?.currency !== undefined && <span className="font-normal">{draft.currency === draft.aiValues.currency ? t('aiProposal') : t('edited')}</span>}</label><select id="co-currency" disabled={disabled} value={draft.currency} onChange={(e) => changeCurrency(e.target.value as Currency | '')} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"><option value="">{t('noCurrency')}</option>{(['RUB', 'USD', 'EUR'] as const).map((currency) => <option key={currency}>{currency}</option>)}</select></div>
       {field('timelineImpact', t('timelineLabel'), 2)}
     </div>
     <details className="mt-4 rounded-lg border border-border px-3 py-2"><summary className="cursor-pointer text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring">{t('additionalParameters')}</summary><div className="mt-3 grid gap-3">{field('rationale', t('rationaleLabel'), 2)}{field('note', t('noteLabel'), 2)}{field('additionalTerms', t('additionalTerms'), 2)}<div className="grid gap-3 sm:grid-cols-2">{field('providerName', t('providerName'))}{field('clientName', t('clientName'))}{field('clientEmail', t('clientEmail'))}{field('endDate', t('endDate'))}{field('clientApproverName', t('approvedBy'))}{field('approvalDate', t('approvalDate'))}</div></div></details>
