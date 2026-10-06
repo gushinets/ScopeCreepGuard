@@ -1,6 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useLocale } from 'next-intl'
+import { applyClientMaterials, parseClientMaterials, type ClientMaterials } from '@/lib/client-materials'
+import { clearActiveClientResult, readActiveClientResult, saveClientResult, updateSavedClientDraft } from '@/lib/client-material-storage'
 import {
   createContext,
   useContext,
@@ -59,6 +62,8 @@ interface StoreValue {
   analyzedRequest: string | null
   status: AnalysisStatus
   result: AnalysisResult | null
+  clientMaterials: ClientMaterials | null
+  changeClientLanguage: (language: string) => Promise<boolean>
   currentHistoryEntryId: string | null
   analysisError: ErrorCode | ''
   isLoadingProjects: boolean
@@ -68,7 +73,7 @@ interface StoreValue {
   selectProject: (id: string) => void
   createProject: (input: NewProjectInput) => Promise<Project>
   updateProject: (id: string, input: NewProjectInput) => Promise<Project>
-  createEstimate: (projectId: string, request: string, documentLanguage?: 'ru' | 'en') => Promise<AnalysisResult>
+  createEstimate: (projectId: string, request: string, documentLanguage?: string) => Promise<AnalysisResult>
   setRequestText: (t: string) => void
   loadExample: (text: string) => void
   runCheck: () => void
@@ -179,6 +184,8 @@ async function apiFetch<T>(input: RequestInfo | URL, init?: RequestInit) {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
+  const locale = useLocale()
+  const [clientMaterials, setClientMaterials] = useState<ClientMaterials | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
@@ -215,7 +222,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
         setUser(meResponse.user)
         setProjects(projectsResponse.projects)
-        setSelectedProjectId(projectsResponse.projects[0]?.id ?? null)
+        const restored = readActiveClientResult(meResponse.user.id, projectsResponse.projects, locale)
+        setSelectedProjectId(restored?.projectId ?? projectsResponse.projects[0]?.id ?? null)
+        if (restored) {
+          setCurrentHistoryEntryId(restored.historyId)
+          setAnalyzedRequest(restored.request)
+          setRequestText(restored.request)
+          setResult(restored.analysis)
+          setClientMaterials(restored.materials)
+          setStatus('result')
+        } else {
+          setCurrentHistoryEntryId(null)
+          setAnalyzedRequest(null)
+          setResult(null)
+          setClientMaterials(null)
+          setStatus('idle')
+        }
       } catch (error) {
         console.error(
           JSON.stringify({
@@ -243,14 +265,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false
     }
-  }, [router])
+  }, [router, locale])
 
   function selectProject(id: string) {
+    if (user) clearActiveClientResult(user.id)
     analysisRun.current += 1
     setSelectedProjectId(id)
     setRequestText('')
     setAnalyzedRequest(null)
     setResult(null)
+    setClientMaterials(null)
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
@@ -271,6 +295,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRequestText('')
     setAnalyzedRequest(null)
     setResult(null)
+    setClientMaterials(null)
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
@@ -287,6 +312,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (prior && projectAnalysisInputsChanged(prior, input)) {
       analysisRun.current += 1
       setResult(null)
+      setClientMaterials(null)
       setAnalyzedRequest(null)
       setCurrentHistoryEntryId(null)
       setAnalysisError('')
@@ -296,7 +322,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return data.project
   }
 
-  async function createEstimate(projectId: string, request: string, documentLanguage?: 'ru' | 'en') {
+  async function createEstimate(projectId: string, request: string, documentLanguage?: string) {
+    const run = analysisRun.current
     const storedEndDate = user ? readProjectDetails(user.id, projectId).endDate : ''
     const project = projects.find((item) => item.id === projectId)
     const endDate = validISODate(storedEndDate) && (!project?.startDate || storedEndDate >= project.startDate) ? storedEndDate : ''
@@ -304,7 +331,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectId, request, ...(endDate ? { endDate } : {}), ...(documentLanguage ? { documentLanguage } : {}) }),
     })
+    if (run !== analysisRun.current) throw new Error('stale_estimate')
+    if (result && selectedProject && user && currentHistoryEntryId && analyzedRequest && projectId === selectedProject.id) {
+      const updated: AnalysisResult = { ...result, changeOrder: data.result.changeOrder, draftCreatedAt: data.result.draftCreatedAt, commercialSignature: data.result.commercialSignature, estimateValid: data.result.estimateValid, changeOrderLabels: data.result.changeOrderLabels }
+      const nextMaterials = clientMaterials ? { ...clientMaterials, changeOrder: { description: updated.changeOrder.description, timelineImpact: updated.changeOrder.timelineImpact, rationale: updated.changeOrder.rationale ?? '', note: updated.changeOrder.note }, changeOrderLabels: data.result.changeOrderLabels } : null
+      setResult(updated)
+      setClientMaterials(nextMaterials)
+      saveClientResult(user.id, selectedProject, currentHistoryEntryId, analyzedRequest, locale, updated, nextMaterials)
+      return nextMaterials ? applyClientMaterials(updated, nextMaterials) : updated
+    }
     return data.result
+  }
+
+  async function changeClientLanguage(language: string): Promise<boolean> {
+    if (!user || !selectedProject || !currentHistoryEntryId || !analyzedRequest || !result) throw new Error('no_current_result')
+    const run = ++analysisRun.current
+    const original = result
+    const data = await apiFetch<{ materials: ClientMaterials }>('/api/client-materials/language', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: selectedProject.id, historyId: currentHistoryEntryId, request: analyzedRequest, clientLanguage: language, analysis: clientMaterials ? applyClientMaterials(original, clientMaterials) : original }),
+    })
+    if (run !== analysisRun.current) return true
+    const materials = parseClientMaterials(data.materials, language)
+    setClientMaterials(materials)
+    updateSavedClientDraft(user.id, selectedProject.id, currentHistoryEntryId, materials, locale)
+    return saveClientResult(user.id, selectedProject, currentHistoryEntryId, analyzedRequest, locale, original, materials)
   }
 
   function loadExample(text: string) {
@@ -312,6 +363,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRequestText(text)
     setAnalyzedRequest(null)
     setResult(null)
+    setClientMaterials(null)
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
@@ -373,6 +425,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setCurrentHistoryEntryId(historyEntry.id)
       setAnalyzedRequest(request)
       setResult(analysis)
+      setClientMaterials(null)
+      if (user) saveClientResult(user.id, { ...project, history: [historyEntry, ...project.history] }, historyEntry.id, request, locale, analysis, null)
       setStatus('result')
     } catch (error) {
       if (run !== analysisRun.current) return
@@ -411,21 +465,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (scope.length < 60) {
       setStatus('short_scope')
       setResult(null)
+    setClientMaterials(null)
       return
     }
 
     setStatus('loading')
     setAnalyzedRequest(null)
     setResult(null)
+    setClientMaterials(null)
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
     void runAnalysis(project, request)
   }
 
   function reset() {
+    if (user) clearActiveClientResult(user.id)
     analysisRun.current += 1
     setAnalyzedRequest(null)
     setResult(null)
+    setClientMaterials(null)
     setCurrentHistoryEntryId(null)
     setAnalysisError('')
     setStatus('idle')
@@ -540,6 +598,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     analyzedRequest,
     status,
     result,
+    clientMaterials,
+    changeClientLanguage,
     currentHistoryEntryId,
     analysisError,
     isLoadingProjects,

@@ -22,6 +22,7 @@ export const ERROR_CODES = {
   verdictInvalid: 'errors.verdictInvalid',
   summaryRequired: 'errors.summaryRequired',
   localeInvalid: 'errors.localeInvalid',
+  clientLanguageUnsupported: 'errors.clientLanguageUnsupported',
   requestFailed: 'errors.requestFailed',
   authServiceUnavailable: 'errors.authServiceUnavailable',
   workspaceLoadFailed: 'errors.workspaceLoadFailed',

@@ -1,4 +1,7 @@
 import type { AnalysisResult, Verdict } from '@/lib/types'
+import type { Locale } from '@/i18n/config'
+import { normalizeLanguageTag, resolveClientLanguage } from '@/lib/client-language'
+import { normalizeChangeOrderLabels } from '@/lib/change-order/labels'
 
 const VERDICTS = new Set<Verdict>(['in_scope', 'borderline', 'out_of_scope'])
 
@@ -32,12 +35,16 @@ function requireNonEmpty(value: unknown, reason: string): string {
   return value.trim()
 }
 
-export function parseAnalysisResult(value: unknown): AnalysisResult {
+export function parseAnalysisResult(value: unknown, locale: Locale = 'en', override?: string): AnalysisResult {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     invalid('not_object')
   }
 
   const raw = value as Record<string, unknown>
+  const clientLanguage = resolveClientLanguage(raw.clientLanguage === undefined ? raw.requestLanguage : raw.clientLanguage, locale, override)
+  const changeOrderLabels = normalizeChangeOrderLabels(raw.changeOrderLabels)
+  if (!['ru', 'en', 'es'].includes(clientLanguage.split('-')[0]) && !changeOrderLabels) invalid('changeOrderLabels')
+  if (override && normalizeLanguageTag(raw.clientLanguage) !== clientLanguage) invalid('clientLanguage_override')
 
   if (typeof raw.verdict !== 'string' || !VERDICTS.has(raw.verdict as Verdict)) {
     invalid('verdict')
@@ -92,6 +99,8 @@ export function parseAnalysisResult(value: unknown): AnalysisResult {
     citations: raw.citations,
     replies,
     changeOrder,
+    clientLanguage,
+    ...(changeOrderLabels ? { changeOrderLabels } : {}),
     ...(typeof raw.hasAdditionalWork === 'boolean' ? { hasAdditionalWork: raw.hasAdditionalWork } : {}),
     ...(typeof raw.requestLanguage === 'string' ? { requestLanguage: raw.requestLanguage as 'ru' | 'en' | 'es' | 'other' } : {}),
     ...(typeof raw.hasAdditionalWork === 'boolean' ? { estimateValid: raw.hasAdditionalWork ? estimateValid : false } : {}),

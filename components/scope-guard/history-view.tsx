@@ -29,7 +29,7 @@ export function HistoryView() {
   const [savedDrafts] = useState<Record<string, EditableDraft>>(() => {
     const found: Record<string, EditableDraft> = {}
     if (selectedProject && user) for (const entry of selectedProject.history) {
-      const draft = readChangeOrder(user.id, selectedProject.id, entry.id)
+      const draft = readChangeOrder(user.id, selectedProject.id, entry.id, locale === 'ru' ? 'ru' : 'en')
       if (draft) found[entry.id] = draft
     }
     return found

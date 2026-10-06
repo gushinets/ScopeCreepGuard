@@ -31,6 +31,8 @@ export interface AnalysisResult {
   changeOrder: ChangeOrderDraft
   hasAdditionalWork?: boolean
   requestLanguage?: 'ru' | 'en' | 'es' | 'other'
+  clientLanguage?: string
+  changeOrderLabels?: import('./change-order/labels').ChangeOrderLabels
   draftCreatedAt?: string
   commercialSignature?: string
   estimateValid?: boolean

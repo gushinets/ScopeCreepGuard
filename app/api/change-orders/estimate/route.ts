@@ -10,6 +10,7 @@ import { loadProjectForUser } from '@/lib/projects/data'
 import { ANALYSIS_INPUT_MAX_CHARS } from '@/lib/llm/analyze-request'
 import { analyzeFailureResponse, analyzeWithOpenAI } from '@/lib/llm/openai'
 import { allowAnalyze } from '@/lib/llm/rate-limit'
+import { supportedClientLanguage } from '@/lib/client-language'
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()
@@ -17,11 +18,13 @@ export async function POST(request: Request) {
   const body = await readJsonObject(request)
   if (!body || typeof body.projectId !== 'string' || typeof body.request !== 'string' || !body.request.trim()) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
   if (body.endDate !== undefined && (typeof body.endDate !== 'string' || !validISODate(body.endDate))) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
-  if (body.documentLanguage !== undefined && (typeof body.documentLanguage !== 'string' || !isLocale(body.documentLanguage))) return jsonError(ERROR_CODES.localeInvalid, 400)
+  const documentLanguage = supportedClientLanguage(body.documentLanguage)
+  if (body.documentLanguage !== undefined && !documentLanguage) return jsonError(ERROR_CODES.clientLanguageUnsupported, 400)
   const project = await loadProjectForUser(body.projectId, user.id)
   if (!project) return jsonError(ERROR_CODES.projectNotFound, 404)
   if (typeof body.endDate === 'string' && project.startDate && body.endDate < project.startDate) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
-  if (!project.startDate || !project.pricingModel || !project.currency || !(project.hourlyRate || project.fixedPrice)) return jsonError(ERROR_CODES.pricingModelInvalid, 400)
+  const termsComplete = !!project.startDate && !!project.pricingModel && !!project.currency && !!(project.hourlyRate || project.fixedPrice)
+  if (!termsComplete) return jsonError(ERROR_CODES.pricingModelInvalid, 400)
   if (project.scope.length + body.request.length > ANALYSIS_INPUT_MAX_CHARS) return jsonError(ERROR_CODES.analysisInputTooLarge, 400)
   if (!allowAnalyze(user.id, Date.now())) return jsonError(ERROR_CODES.analysisRateLimited, 429)
   const locale = await getLocale()
@@ -34,7 +37,7 @@ export async function POST(request: Request) {
       fixedPrice: project.fixedPrice, startDate: project.startDate,
       endDate: typeof body.endDate === 'string' ? body.endDate : undefined,
       draftCreatedAt,
-      documentLanguage: body.documentLanguage === 'ru' || body.documentLanguage === 'en' ? body.documentLanguage : undefined,
+      documentLanguage,
     })
     if (result.verdict === 'in_scope' || !result.hasAdditionalWork) return jsonError(ERROR_CODES.analysisInvalid, 409)
     if (!result.estimateValid || result.changeOrder.currency !== project.currency) return jsonError(ERROR_CODES.analysisInvalid, 502)

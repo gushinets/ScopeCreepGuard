@@ -1,3 +1,5 @@
+import { CHANGE_ORDER_LABEL_KEYS } from '@/lib/change-order/labels'
+
 export const ANALYSIS_JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -11,11 +13,17 @@ export const ANALYSIS_JSON_SCHEMA = {
     'replies',
     'changeOrder',
     'hasAdditionalWork',
-    'requestLanguage',
+    'clientLanguage',
+    'changeOrderLabels',
   ],
   properties: {
     hasAdditionalWork: { type: 'boolean' },
-    requestLanguage: { type: 'string', enum: ['ru', 'en', 'es', 'other'] },
+    clientLanguage: { type: 'string', description: 'Final resolved BCP 47 language for all client materials.' },
+    changeOrderLabels: {
+      type: 'object', additionalProperties: false,
+      required: [...CHANGE_ORDER_LABEL_KEYS],
+      properties: Object.fromEntries(CHANGE_ORDER_LABEL_KEYS.map((key) => [key, { type: 'string', description: 'Formal, neutral, non-empty, exclusively in clientLanguage.' }])),
+    },
     verdict: {
       type: 'string',
       enum: ['in_scope', 'borderline', 'out_of_scope'],

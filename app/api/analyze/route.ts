@@ -72,6 +72,7 @@ export async function POST(request: Request) {
       startDate: project.startDate,
       endDate: parsed.endDate,
       draftCreatedAt,
+      documentLanguage: parsed.documentLanguage,
     })
     if (result.hasAdditionalWork && project.currency && result.changeOrder.currency !== project.currency) result.estimateValid = false
     result.draftCreatedAt = draftCreatedAt

@@ -4,6 +4,7 @@ import { PDFDocument } from 'pdf-lib'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { createChangeOrderPdf } from './pdf'
 import type { EditableDraft } from './document'
+import { germanLabels } from './german-fixture'
 
 const draft: EditableDraft = {
   createdAt: '2026-10-05T12:00:00Z', language: 'ru', projectName: 'Сайт', description: 'Дополнительные страницы',
@@ -12,6 +13,45 @@ const draft: EditableDraft = {
 }
 
 describe('Change Order PDF', () => {
+  it('renders supported Ukrainian Cyrillic, including ґ, є, і and ї', async () => {
+    const labels = {
+      title: 'ДОДАТКОВЕ ЗАМОВЛЕННЯ', draft: 'ПРОЄКТ', documentNumber: 'Номер документа', created: 'Створено',
+      project: 'Проєкт', provider: 'Виконавець', client: 'Замовник', clientEmail: 'Електронна пошта замовника',
+      requestedChange: '1. Запитана зміна', commercialTerms: '2. Комерційні умови', estimatedEffort: 'Оцінка трудовитрат',
+      additionalFee: 'Додаткова вартість', noAdditionalCharge: 'Без додаткової оплати', scheduleImpact: '3. Зміна строків',
+      additionalTerms: '4. Додаткові умови', approval: '5. Погодження замовником', approvedBy: 'Погоджено', date: 'Дата',
+      draftFooter: 'Проєкт для перевірки та погодження', introduction: 'Цей документ фіксує додаткові роботи після погодження замовником.',
+      outsideScopeFree: 'Додаткові роботи буде виконано без додаткової оплати.', endDate: 'Нова дата завершення',
+      rationale: 'Обґрунтування оцінки', terms: 'Особливі умови', note: 'Примітка', page: 'Сторінка', hours: 'годин',
+    }
+    const bytes = await createChangeOrderPdf({ ...draft, language: 'uk', changeOrderLabels: labels, projectName: 'Проєкт', description: 'Обґрунтовані зміни для української сторінки.', timelineImpact: 'Два дні', note: 'Проєкт для перевірки', noAdditionalCharge: true }, readFileSync('public/noto-sans.ttf'), readFileSync('public/noto-sans-bold.ttf'))
+    const pdf = await getDocument({ data: bytes }).promise
+    const content = await (await pdf.getPage(1)).getTextContent()
+    const text = content.items.map((item) => 'str' in item ? item.str : '').join(' ')
+    expect(text).toContain('ДОДАТКОВЕ ЗАМОВЛЕННЯ')
+    expect(text).toContain('Обґрунтовані зміни для української сторінки.')
+    expect(text).toContain('Без додаткової оплати')
+    expect(text).toContain('Сторінка 1 /')
+  }, 15_000)
+  it.each(['ar', 'ja', 'zh', 'he', 'th', 'en-Arab'])('rejects unsupported %s before embedding or rendering', async (language) => {
+    await expect(createChangeOrderPdf({ ...draft, language }, new Uint8Array(), new Uint8Array())).rejects.toThrow('unsupported_pdf_language')
+  })
+  it('rejects unsupported user-entered glyphs even under a supported language', async () => {
+    await expect(createChangeOrderPdf({ ...draft, language: 'en', clientName: '日本語' }, readFileSync('public/noto-sans.ttf'), readFileSync('public/noto-sans-bold.ttf'))).rejects.toThrow('unsupported_pdf_glyph')
+  }, 15_000)
+  it('uses supplied German labels and preserves accented text', async () => {
+    const bytes = await createChangeOrderPdf({ ...draft, language: 'de', changeOrderLabels: germanLabels, description: 'Zusätzliche Änderungen für Größe und Übersicht.', noAdditionalCharge: true }, readFileSync('public/noto-sans.ttf'), readFileSync('public/noto-sans-bold.ttf'))
+    const pdf = await getDocument({ data: bytes }).promise
+    const content = await (await pdf.getPage(1)).getTextContent()
+    const text = content.items.map((item) => 'str' in item ? item.str : '').join(' ')
+    expect(text).toContain('ÄNDERUNGSAUFTRAG')
+    expect(text).toContain('Zusätzliche Änderungen für Größe und Übersicht.')
+    expect(text).toContain('Ohne zusätzliche Vergütung')
+    expect(text).toContain('GENEHMIGT VON')
+    expect(text).toContain('Seite 1 /')
+    expect(text).not.toContain('hours')
+    expect(text).not.toContain('APPROVED BY')
+  }, 15_000)
   it.each([
     ['ru', 'СОГЛАСОВАНО', 'ДАТА'],
     ['en', 'APPROVED BY', 'DATE'],

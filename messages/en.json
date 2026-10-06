@@ -123,9 +123,15 @@
     "completeProjectTerms": "Complete project terms to create Change Order",
     "generatingChangeOrder": "Preparing Change Order…",
     "changeOrderError": "Could not prepare an estimate. Try again.",
-    "documentLanguage": "Change Order language",
+    "documentLanguage": "Client material language",
     "chooseLanguage": "Choose a language",
-    "confidence": "Confidence"
+    "confidence": "Confidence",
+    "clientLanguageHint": "Detected: {language}. Use a language code to correct all replies and the Change Order.",
+    "applyClientLanguage": "Apply",
+    "generatingClientMaterials": "Updating client materials…",
+    "clientLanguageError": "Could not update client materials. Your analysis and estimate are unchanged.",
+    "supportedClientLanguages": "PDF languages: RU, EN, ES, DE, FR, IT, NL, PL, PT, TR, UK, BG, EL, CS, SK, HR, RO, HU, FI, SV, DA, NB, ET, LV, LT, ID. Regional variants such as pt-BR are supported.",
+    "clientLanguageStorageWarning": "The language was updated, but browser storage is unavailable. It cannot be restored after a refresh."
   },
   "feedback": {
     "heading": "Was this verdict correct?",
@@ -188,7 +194,8 @@
     "additionalWork": "Additional work",
     "timelineImpact": "Timeline impact",
     "additionalCost": "Additional cost",
-    "note": "Note"
+    "note": "Note",
+    "pdfLanguageUnsupported": "PDF export supports Latin, Cyrillic and Greek text. Choose a supported client language or replace unsupported characters before exporting."
   },
   "verdict": {
     "in_scope": "In scope",
@@ -251,6 +258,7 @@
     "scopeFileEmpty": "Could not extract text from this file.",
     "evaluationReasoningRequired": "Model reasoning is required.",
     "evaluationLabelInvalid": "That verdict label is invalid.",
-    "evaluationHistoryNotFound": "That scope check was not found."
+    "evaluationHistoryNotFound": "That scope check was not found.",
+    "clientLanguageUnsupported": "This language or script is not supported for PDF export. Choose a supported language using Latin, Cyrillic or Greek script."
   }
 }
