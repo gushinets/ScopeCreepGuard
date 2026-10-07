@@ -295,3 +295,28 @@ it('opens older saved drafts with an explicit missing-context message', async ()
   expect((document.querySelector('#co-description') as HTMLTextAreaElement).value).toBe('My own scope')
   expect(screen.queryByText(project.scope)).toBeNull()
 })
+
+
+it.each(['not-a-valid-id', '10000000-0000-4000-8000-000000000009'])('recovers the real workspace from an unavailable deep-linked draft %s', async (id) => {
+  window.history.replaceState({}, '', '/?draft=' + id + '&keep=1')
+  const normalFetch = fetchMock.getMockImplementation()!
+  fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url === '/api/drafts/' + id) return { ok: false, status: 404, json: async () => ({ error: 'errors.draftNotFound' }) }
+    return normalFetch(url, init)
+  })
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    const view = render(<NextIntlClientProvider locale="en" messages={en}><AppShell /></NextIntlClientProvider>)
+    await screen.findByLabelText('New client request')
+    expect(screen.queryByText(en.errors.workspaceLoadFailed)).toBeNull()
+    expect(new URLSearchParams(window.location.search).has('draft')).toBe(false)
+    expect(new URLSearchParams(window.location.search).get('keep')).toBe('1')
+    fireEvent.click(screen.getByRole('button', { name: 'My drafts' }))
+    await screen.findByText('No drafts yet')
+    expect(consoleError).not.toHaveBeenCalled()
+    view.unmount()
+    render(<NextIntlClientProvider locale="en" messages={en}><AppShell /></NextIntlClientProvider>)
+    await screen.findByLabelText('New client request')
+    expect(screen.queryByText(en.errors.workspaceLoadFailed)).toBeNull()
+  } finally { consoleError.mockRestore() }
+})

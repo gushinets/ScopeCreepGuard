@@ -283,10 +283,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setProjects(projectsResponse.projects)
         setSelectedProjectId(projectsResponse.projects[0]?.id ?? null)
         const draftId = new URLSearchParams(window.location.search).get('draft')
-        if (draftId) {
-          const { draft } = await apiFetch<{ draft: SavedDraft }>(`/api/drafts/${draftId}`)
-          if (!isActive) return
-          restoreDraft(draft)
+        if (draftId !== null) {
+          const openRun = ++draftOpenRun.current
+          const run = analysisRun.current
+          try {
+            const { draft } = await apiFetch<{ draft: SavedDraft }>(`/api/drafts/${encodeURIComponent(draftId)}`, { cache: 'no-store' })
+            if (!isActive || openRun !== draftOpenRun.current || run !== analysisRun.current) return
+            restoreDraft(draft)
+          } catch (error) {
+            if (!isActive || openRun !== draftOpenRun.current || run !== analysisRun.current) return
+            // A missing/foreign draft must not invalidate a loaded workspace.
+            // An expired session still uses the normal authentication redirect.
+            if (error instanceof ApiError && error.status === 401) throw error
+            clearDraftUrl()
+            setDraftError(error instanceof ApiError && error.status === 404
+              ? ERROR_CODES.draftNotFound : ERROR_CODES.draftLoadFailed)
+          }
         }
       } catch (error) {
         if (!isActive) return
