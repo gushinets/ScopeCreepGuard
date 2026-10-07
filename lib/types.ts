@@ -50,6 +50,7 @@ export interface HistoryEntry {
 export interface Project {
   id: string
   name: string
+  clientName?: string | null
   industry: Industry
   scope: string
   startDate: string | null

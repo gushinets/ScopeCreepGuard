@@ -23,7 +23,7 @@ describe('project persistence', () => {
     expect(response.status).toBe(201)
     expect(mocks.values).toHaveBeenCalledWith(expect.objectContaining({ startDate: '2026-10-01', pricingModel: 'hourly', currency: 'EUR', hourlyRate: '120.00', fixedPrice: null }))
     const written = mocks.values.mock.lastCall?.[0]
-    expect(written).not.toHaveProperty('client')
+    expect(written).toHaveProperty('client', 'Local only')
     expect(written).not.toHaveProperty('clientName')
     expect(written).not.toHaveProperty('endDate')
     const data = await response.json()

@@ -16,18 +16,18 @@ export async function generationProject(
       // Historical scope/terms cannot be recovered. Existing replies can still
       // be translated from their saved analysis, without importing today's scope.
       return {
-        ...current, name: draft.draftDocument.changeOrder?.projectName ?? '',
+        ...current, name: draft.draftDocument.changeOrder?.projectName ?? '', clientName: (draft.draftDocument?.projectDetails?.clientName ?? draft.draftDocument?.changeOrder?.clientName ?? ''),
         scope: '', startDate: null, pricingModel: null, currency: null, hourlyRate: null, fixedPrice: null,
       }
     }
-    return { ...current, ...draft.projectSnapshot }
+    return { ...current, ...draft.projectSnapshot, clientName: draft.projectSnapshot.clientName === undefined ? (draft.draftDocument?.projectDetails?.clientName ?? draft.draftDocument?.changeOrder?.clientName ?? '') : draft.projectSnapshot.clientName }
   }
   if (body.proof !== undefined) {
     const proofLocale = typeof body.locale === 'string' && isLocale(body.locale) ? body.locale : locale
     const claims = await verifyDraftProof(body.proof, {
       userId, projectId: current.id, request: String(body.request), locale: proofLocale,
     })
-    return { ...current, ...claims.projectSnapshot }
+    return { ...current, ...claims.projectSnapshot, clientName: claims.projectSnapshot.clientName ?? '' }
   }
   return current
 }

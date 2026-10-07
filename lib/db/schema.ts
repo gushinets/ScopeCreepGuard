@@ -88,7 +88,7 @@ export const evaluationCases = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     historyEntryId: uuid('history_entry_id')
       .unique()
-      .references(() => historyEntries.id, { onDelete: 'set null' }),
+      .references(() => historyEntries.id, { onDelete: 'cascade' }),
     scope: text('scope').notNull(),
     request: text('request').notNull(),
     aiVerdict: verdictEnum('ai_verdict').notNull(),

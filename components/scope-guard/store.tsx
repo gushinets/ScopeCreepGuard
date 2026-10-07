@@ -18,7 +18,8 @@ import {
   type ReactNode,
 } from 'react'
 import { ERROR_CODES, assertErrorCode, type ErrorCode } from '@/lib/api/errors'
-import { readProjectDetails } from '@/lib/projects/browser-details'
+import { deleteProjectBrowserData } from '@/lib/projects/delete-browser-data'
+import { readProjectDetails, writeProjectDetails, type ProjectDetails } from '@/lib/projects/browser-details'
 import { projectAnalysisInputsChanged } from '@/lib/projects/analysis-inputs'
 import { validISODate } from '@/lib/projects/validation'
 import type {
@@ -47,6 +48,7 @@ interface AuthUser {
 }
 
 interface NewProjectInput {
+  clientName?: string
   name: string
   industry: Industry
   scope: string
@@ -86,11 +88,13 @@ interface StoreValue {
   analysisError: ErrorCode | ''
   isLoadingProjects: boolean
   projectError: ErrorCode | ''
+  termsChanged: boolean
+  deleteProject: (id: string) => Promise<void>
 
   setView: (v: View) => void
   selectProject: (id: string) => void
   createProject: (input: NewProjectInput) => Promise<Project>
-  updateProject: (id: string, input: NewProjectInput) => Promise<Project>
+  updateProject: (id: string, input: NewProjectInput, details?: ProjectDetails) => Promise<Project>
   createEstimate: (projectId: string, request: string, documentLanguage?: string) => Promise<AnalysisResult>
   setRequestText: (t: string) => void
   loadExample: (text: string) => void
@@ -230,7 +234,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [analysisError, setAnalysisError] = useState<ErrorCode | ''>('')
   const [isLoadingProjects, setIsLoadingProjects] = useState(true)
   const [projectError, setProjectError] = useState<ErrorCode | ''>('')
+  const [termsChanged, setTermsChanged] = useState(false)
   const analysisRun = useRef(0)
+  const latestSession = useRef({ projects, selectedProjectId, currentDraftId })
+  useEffect(() => { latestSession.current = { projects, selectedProjectId, currentDraftId } }, [projects, selectedProjectId, currentDraftId])
 
   const restoreDraft = useCallback((draft: SavedDraft) => {
     analysisRun.current += 1
@@ -259,9 +266,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     projects.find((p) => p.id === selectedProjectId) ?? null
 
   const analysisProject: Project | null = selectedProject && (projectSnapshot
-    ? { ...selectedProject, ...projectSnapshot }
+    ? { ...selectedProject, ...projectSnapshot, name: currentDraftId ? projectSnapshot.name : selectedProject.name, clientName: currentDraftId ? (projectSnapshot.clientName === undefined ? draftDocument?.projectDetails.clientName : projectSnapshot.clientName) : selectedProject.clientName }
     : currentDraftId
-      ? { ...selectedProject, name: draftDocument?.changeOrder?.projectName ?? '', scope: '', startDate: null, pricingModel: null, currency: null, hourlyRate: null, fixedPrice: null }
+      ? { ...selectedProject, name: draftDocument?.changeOrder?.projectName ?? '', clientName: draftDocument?.projectDetails.clientName, scope: '', startDate: null, pricingModel: null, currency: null, hourlyRate: null, fixedPrice: null }
       : selectedProject)
 
   useEffect(() => {
@@ -332,6 +339,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [router, restoreDraft])
 
   function selectProject(id: string) {
+    if (id === selectedProjectId) return
+    setTermsChanged(false)
     analysisRun.current += 1
     setSelectedProjectId(id)
     setRequestText('')
@@ -364,22 +373,58 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return data.project
   }
 
-  async function updateProject(id: string, input: NewProjectInput) {
+  async function updateProject(id: string, input: NewProjectInput, details?: ProjectDetails) {
+    const priorEndDate = user ? readProjectDetails(user.id, id).endDate : ''
     const prior = projects.find((project) => project.id === id)
     const data = await apiFetch<ProjectResponse>(`/api/projects/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
     })
     setProjects((prev) => prev.map((project) => project.id === id ? data.project : project))
-    if (prior && projectAnalysisInputsChanged(prior, input)) {
+    if (user && details) writeProjectDetails(user.id, id, details)
+    const active = latestSession.current
+    const termsChanged = prior && (projectAnalysisInputsChanged(prior, data.project) || (details !== undefined && details.endDate !== priorEndDate))
+    if (id === active.selectedProjectId && !active.currentDraftId && termsChanged) {
+      setTermsChanged(true)
       analysisRun.current += 1
       clearDocument()
       setAnalyzedRequest(null)
       setCurrentHistoryEntryId(null)
       setAnalysisError('')
       setStatus('idle')
+    } else if (id === active.selectedProjectId && !active.currentDraftId && prior) {
+      // Presentation edits update only untouched fields of an unsaved document.
+      // Never rewrite its signed project snapshot or any persisted draft.
+      setDraftDocument(current => current ? {
+        ...current,
+        projectDetails: { ...current.projectDetails, clientName: data.project.clientName ?? '' },
+        changeOrder: current.changeOrder ? {
+          ...current.changeOrder,
+          projectName: current.changeOrder.projectName === prior.name ? data.project.name : current.changeOrder.projectName,
+          clientName: current.changeOrder.clientName === (prior.clientName ?? current.projectDetails.clientName) ? data.project.clientName ?? '' : current.changeOrder.clientName,
+        } : null,
+      } : current)
     }
     setView('check')
     return data.project
+  }
+
+  async function deleteProject(id: string) {
+    await apiFetch<{ ok: true }>(`/api/projects/${id}`, { method: 'DELETE' })
+    if (user) deleteProjectBrowserData(user.id, id)
+    const active = latestSession.current
+    setProjects(prev => prev.filter(project => project.id !== id))
+    if (active.selectedProjectId === id) {
+      analysisRun.current += 1
+      clearDocument()
+      setSelectedProjectId(active.projects.find(project => project.id !== id)?.id ?? null)
+      setRequestText('')
+      setAnalyzedRequest(null)
+      setCurrentHistoryEntryId(null)
+      setAnalysisError('')
+      setTermsChanged(false)
+      setStatus('idle')
+    }
+    setView('projects')
   }
 
   async function createEstimate(projectId: string, request: string, documentLanguage?: string) {
@@ -537,7 +582,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const analysis = data.result
       if (run !== analysisRun.current) return
       const seed = crypto.randomUUID()
-      const details = user ? readProjectDetails(user.id, project.id) : { clientName: '', clientEmail: '', endDate: '' }
+      const localDetails = user ? readProjectDetails(user.id, project.id) : { clientName: '', clientEmail: '', endDate: '' }
+      const contextProject = { ...project, ...data.projectSnapshot }
+      const details = { ...localDetails, clientName: data.projectSnapshot.clientName !== undefined ? data.projectSnapshot.clientName ?? '' : project.clientName !== undefined ? project.clientName ?? '' : localDetails.clientName }
+      setTermsChanged(false)
       setCurrentHistoryEntryId(null)
       setCurrentDraftId(null)
       setAnalysisSnapshot(analysis)
@@ -552,7 +600,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         reply: { tone: 'neutral', text: analysis.replies.neutral, generated: analysis.replies },
         projectDetails: details,
         changeOrder: analysis.verdict !== 'in_scope' && (analysis.hasAdditionalWork ?? analysis.verdict === 'out_of_scope')
-          ? editableChangeOrder(analysis, project, details, seed) : null,
+          ? editableChangeOrder(analysis, contextProject, details, seed) : null,
       })
       setStatus('result')
     } catch (error) {
@@ -731,6 +779,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     analysisError,
     isLoadingProjects,
     projectError,
+    termsChanged,
+    deleteProject,
     setView,
     selectProject,
     createProject,

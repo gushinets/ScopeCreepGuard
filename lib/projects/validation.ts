@@ -7,6 +7,7 @@ const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
 export interface ProjectInput {
   name: string
+  client?: string | null
   industry: Industry
   scope: string
   startDate: string
@@ -58,6 +59,7 @@ export function parseProjectInput(body: Record<string, unknown>): ProjectInputRe
   if (body.currency !== 'RUB' && body.currency !== 'USD' && body.currency !== 'EUR') {
     return { ok: false, error: ERROR_CODES.currencyInvalid }
   }
+  if (body.clientName !== undefined && body.clientName !== null && typeof body.clientName !== 'string') return { ok: false, error: ERROR_CODES.clientInvalid }
   const price = body.pricingModel === 'hourly' ? body.hourlyRate : body.fixedPrice
   const amount = parseMoney(price)
   if (!amount) {
@@ -68,6 +70,7 @@ export function parseProjectInput(body: Record<string, unknown>): ProjectInputRe
     ok: true,
     project: {
       name: body.name.trim(),
+      ...(body.clientName !== undefined ? { client: typeof body.clientName === 'string' ? body.clientName.trim() : null } : {}),
       industry: body.industry as Industry,
       scope: body.scope.trim(),
       startDate: body.startDate,

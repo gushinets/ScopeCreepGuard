@@ -9,6 +9,7 @@ import { readScopeFile } from '@/lib/scope/read-file'
 import { projectFieldErrors, validISODate } from '@/lib/projects/validation'
 import { readProjectDetails, writeProjectDetails, type ProjectDetails } from '@/lib/projects/browser-details'
 import type { Currency, Industry, PricingModel } from '@/lib/types'
+import { DeleteProjectAction } from './delete-project-action'
 import { useStore } from './store'
 
 type Fields = { name: string; scope: string; industry: Industry; startDate: string; pricingModel: PricingModel; currency: Currency; hourlyRate: string; fixedPrice: string }
@@ -24,7 +25,7 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
     startDate: project?.startDate ?? '', pricingModel: project?.pricingModel ?? 'hourly',
     currency: project?.currency ?? 'RUB', hourlyRate: project?.hourlyRate ?? '', fixedPrice: project?.fixedPrice ?? '',
   })
-  const [details, setDetails] = useState<ProjectDetails>(() => project && user ? readProjectDetails(user.id, project.id) : emptyDetails)
+  const [details, setDetails] = useState<ProjectDetails>(() => project && user ? { ...readProjectDetails(user.id, project.id), clientName: project.clientName ?? readProjectDetails(user.id, project.id).clientName } : emptyDetails)
   const [attempted, setAttempted] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<ErrorCode | ''>('')
@@ -63,8 +64,8 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
     }
     setSaving(true)
     try {
-      const saved = project ? await updateProject(project.id, fields) : await createProject(fields)
-      if (user) writeProjectDetails(user.id, saved.id, details)
+      const saved = project ? await updateProject(project.id, { ...fields, clientName: details.clientName }, details) : await createProject({ ...fields, clientName: details.clientName })
+      if (user && !project) writeProjectDetails(user.id, saved.id, details)
     } catch (error) {
       setSaveError(assertErrorCode(error instanceof Error ? error.message : ''))
     } finally { setSaving(false) }
@@ -115,5 +116,6 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
       {saveError && <p role="alert" className="text-sm text-outscope-text">{t(saveError)}</p>}
       <div className="flex gap-2"><Button type="submit" disabled={saving}>{saving ? t('projects.saving') : t('projects.save')}</Button><Button type="button" variant="ghost" onClick={() => setView('projects')}>{t('projects.cancel')}</Button></div>
     </form>
+    {project && <div className="mt-8 border-t border-border pt-5"><DeleteProjectAction project={project} disabled={saving} /></div>}
   </div>
 }
