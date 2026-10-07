@@ -24,3 +24,12 @@ describe('refreshing an AI estimate', () => {
     expect(merged.aiValues?.additionalCost).toBe('1200')
   })
 })
+
+
+it.each(['Renamed project', ''])('preserves the document title %j when regenerating from a historical project', projectName => {
+  const saved = { ...base, projectName }
+  const proposed = { ...base, projectName: 'Original snapshot name', estimatedHours: '12' }
+  const merged = mergeEstimate(saved, proposed)
+  expect(merged.projectName).toBe(projectName)
+  expect(merged.estimatedHours).toBe('12')
+})
