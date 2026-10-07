@@ -5,7 +5,7 @@ import { normalizeLanguageTag } from '@/lib/client-language'
 import { normalizeChangeOrderLabels } from '@/lib/change-order/labels'
 import type { EditableDraft } from '@/lib/change-order/document'
 import type { AnalysisResult, Tone } from '@/lib/types'
-import type { CreateDraftInput, DraftDocument } from './types'
+import type { CreateDraftInput, DraftDocument, DraftProofClaims } from './types'
 
 export const MAX_DRAFT_BYTES = 1_000_000
 export function validDraftId(value: unknown): value is string {
@@ -84,14 +84,23 @@ export function parseDraftDocument(value: unknown, locale: Locale, snapshot: Ana
     projectDetails: { clientName: text(details.clientName), clientEmail: text(details.clientEmail), endDate: text(details.endDate) },
   }
 }
-export function parseCreateDraft(value: unknown): CreateDraftInput {
+export function parseCreateDraftEnvelope(value: unknown) {
   size(value)
   const raw = object(value)
   if (!validDraftId(raw.projectId) || !validDraftId(raw.idempotencyKey) || typeof raw.locale !== 'string' || !isLocale(raw.locale)) invalid()
   const request = text(raw.request, false).trim()
-  const analysisSnapshot = parseSnapshot(raw.analysisSnapshot, raw.locale)
   return {
     projectId: raw.projectId, idempotencyKey: raw.idempotencyKey, locale: raw.locale, request,
-    analysisSnapshot, draftDocument: parseDraftDocument(raw.draftDocument, raw.locale, analysisSnapshot),
+    proof: raw.proof, draftDocument: raw.draftDocument,
+  }
+}
+export function parseCreateDraft(value: unknown, claims: DraftProofClaims): CreateDraftInput {
+  const envelope = parseCreateDraftEnvelope(value)
+  if (envelope.projectId !== claims.projectId || envelope.request !== claims.request || envelope.locale !== claims.locale) invalid()
+  return {
+    projectId: claims.projectId, request: claims.request, locale: claims.locale,
+    idempotencyKey: envelope.idempotencyKey,
+    analysisSnapshot: claims.analysisSnapshot, projectSnapshot: claims.projectSnapshot,
+    draftDocument: parseDraftDocument(envelope.draftDocument, claims.locale, claims.analysisSnapshot),
   }
 }

@@ -41,12 +41,12 @@ beforeEach(() => {
     let body
     if (url === '/api/auth/me') body = { user: { id: 'u1', email: 'u@example.com' } }
     else if (url === '/api/projects') body = { projects: [project] }
-    else if (url === '/api/analyze') body = { result: { ...original, commercialSignature: commercialSignature(project) } }
+    else if (url === '/api/analyze') body = { result: { ...original, commercialSignature: commercialSignature(project) }, proof: 'signed-language-proof', projectSnapshot: { version: 1, ...project, endDate: null, documentLanguage: null } }
     else if (url === '/api/drafts' && init?.method === 'POST') {
       const input = JSON.parse(String(init.body))
       const entry = { id: 'h1', draftId: 'd1', date: '2026-10-06', request: 'Add a page', verdict: original.verdict, summary: original.summary }
       project = { ...project, history: [entry] }
-      savedDraft = { id: 'd1', projectId: 'p1', historyEntryId: 'h1', request: input.request, status: 'draft', createdAt: original.draftCreatedAt!, updatedAt: original.draftCreatedAt!, locale: 'ru', requestLanguage: null, clientMaterialLanguage: 'de', analysisSnapshot: input.analysisSnapshot, draftDocument: input.draftDocument }
+      savedDraft = { id: 'd1', projectId: 'p1', historyEntryId: 'h1', request: input.request, status: 'draft', createdAt: original.draftCreatedAt!, updatedAt: original.draftCreatedAt!, locale: 'ru', requestLanguage: null, clientMaterialLanguage: 'de', projectSnapshot: { version: 1, name: project.name, industry: project.industry, scope: project.scope, startDate: project.startDate, endDate: null, pricingModel: project.pricingModel, currency: project.currency, hourlyRate: project.hourlyRate, fixedPrice: project.fixedPrice, documentLanguage: null }, analysisSnapshot: original, draftDocument: input.draftDocument }
       body = { draft: savedDraft, entry }
     } else if (url === '/api/drafts/d1') { body = { draft: savedDraft }
     } else if (url === '/api/client-materials/language') body = { materials }

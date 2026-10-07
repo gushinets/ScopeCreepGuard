@@ -119,6 +119,8 @@ export const drafts = pgTable('drafts', {
   projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   historyEntryId: uuid('history_entry_id').notNull().unique().references(() => historyEntries.id, { onDelete: 'cascade' }),
   idempotencyKey: uuid('idempotency_key').notNull(),
+  // Nullable only for drafts created before signed project snapshots existed.
+  projectSnapshot: jsonb('project_snapshot').$type<import('@/lib/drafts/types').ProjectSnapshot>(),
   analysisSnapshot: jsonb('analysis_snapshot').$type<import('@/lib/types').AnalysisResult>().notNull(),
   draftDocument: jsonb('draft_document').$type<import('@/lib/drafts/types').DraftDocument>().notNull(),
   locale: text('locale').notNull(),

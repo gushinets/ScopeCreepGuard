@@ -9,7 +9,7 @@ export interface SessionUser {
   email: string
 }
 
-function getAuthSecret() {
+export function getAuthSecret() {
   const secret = process.env.AUTH_SECRET
   if (!secret) {
     console.error(

@@ -21,7 +21,7 @@ import { VerdictFeedback } from './verdict-feedback'
 import { useStore } from './store'
 
 export function ResultPanel() {
-  const { status, result, runCheck, selectedProject, draftSessionId } = useStore()
+  const { status, result, runCheck, analysisProject: selectedProject, draftSessionId } = useStore()
 
   if (status === 'idle') return <EmptyState />
   if (status === 'loading') return <LoadingState />
@@ -139,7 +139,7 @@ function ShortScopeState() {
 }
 
 function ResultState() {
-  const { result, selectedProject, currentHistoryEntryId, analyzedRequest, user, setView, createEstimate, clientMaterials, changeClientLanguage, draftDocument, currentDraftId, draftSessionId, updateReply, updateChangeOrder, saveDraft, isSavingDraft, draftError, isDraftDirty } =
+  const { result, analysisProject: selectedProject, projectSnapshot, currentHistoryEntryId, analyzedRequest, user, setView, createEstimate, clientMaterials, changeClientLanguage, draftDocument, currentDraftId, draftSessionId, updateReply, updateChangeOrder, saveDraft, isSavingDraft, draftError, isDraftDirty } =
     useStore()
   const t = useTranslations()
   const [showChangeOrder, setShowChangeOrder] = useState(!!currentDraftId && !!draftDocument?.changeOrder)
@@ -191,6 +191,18 @@ function ResultState() {
         {!currentDraftId && <p className="text-xs text-muted-foreground">{t('drafts.temporary')}</p>}
       </div>
       {draftError && <p role="alert" className="text-sm text-outscope-text">{t(draftError)}</p>}
+      {projectSnapshot ? <details className="rounded-lg border border-border p-3" open>
+        <summary className="text-sm font-medium">{t('drafts.projectContext')}</summary>
+        <p className="mt-2 text-sm font-medium">{projectSnapshot.name}</p>
+        <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{projectSnapshot.scope}</p>
+        <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
+          <dt>{t('drafts.contextIndustry')}</dt><dd>{projectSnapshot.industry}</dd>
+          <dt>{t('drafts.contextDates')}</dt><dd>{projectSnapshot.startDate ?? '—'} / {projectSnapshot.endDate ?? '—'}</dd>
+          <dt>{t('drafts.contextPricing')}</dt><dd>{projectSnapshot.pricingModel ? t(`drafts.pricing_${projectSnapshot.pricingModel}`) : '—'}</dd>
+          <dt>{t('drafts.contextRate')}</dt><dd>{projectSnapshot.hourlyRate ?? '—'} {projectSnapshot.currency}</dd>
+          <dt>{t('drafts.contextFixed')}</dt><dd>{projectSnapshot.fixedPrice ?? '—'} {projectSnapshot.currency}</dd>
+        </dl>
+      </details> : currentDraftId && <p className="text-xs text-muted-foreground">{t('drafts.legacyContext')}</p>}
       <VerdictBanner
         verdict={result.verdict}
         confidence={result.confidence}

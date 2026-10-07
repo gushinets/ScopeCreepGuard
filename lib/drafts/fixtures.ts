@@ -21,3 +21,11 @@ export const documentFixture: DraftDocument = {
     aiValues: { description: 'Extra page', additionalCost: '200' },
   },
 }
+
+
+export const projectSnapshotFixture: import('./types').ProjectSnapshot = {
+  version: 1, name: 'Website', industry: 'Development',
+  scope: 'Build exactly five pages. Further pages are outside the agreed scope.',
+  startDate: '2026-01-01', endDate: null, pricingModel: 'hourly', currency: 'EUR',
+  hourlyRate: '100.00', fixedPrice: null, documentLanguage: null,
+}

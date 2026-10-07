@@ -3,19 +3,21 @@ import postgres from 'postgres'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import * as schema from '@/lib/db/schema'
-import { analysisFixture, documentFixture } from './fixtures'
+import { analysisFixture, documentFixture, projectSnapshotFixture } from './fixtures'
+
+import { issueDraftProof } from './proof'
 
 const session = vi.hoisted(() => ({ userId: '10000000-0000-4000-8000-000000000001' as string | null }))
 vi.mock('@/lib/auth/current-user', () => ({ getCurrentUser: async () => session.userId ? { id: session.userId } : null }))
 vi.mock('next-intl/server', () => ({ getLocale: async () => 'en' }))
-vi.mock('@/lib/llm/openai', () => ({ analyzeWithOpenAI: async () => analysisFixture, analyzeFailureResponse: () => ({ error: 'errors.analysisFailed', status: 500 }) }))
+vi.mock('@/lib/llm/openai', () => ({ analyzeWithOpenAI: async () => structuredClone(analysisFixture), analyzeFailureResponse: () => ({ error: 'errors.analysisFailed', status: 500 }) }))
 vi.mock('@/lib/llm/rate-limit', () => ({ allowAnalyze: () => true }))
 
 const owner = '10000000-0000-4000-8000-000000000001'
 const other = '10000000-0000-4000-8000-000000000002'
 const projectId = '10000000-0000-4000-8000-000000000003'
 const token = '10000000-0000-4000-8000-000000000004'
-const body = { projectId, request: 'Add another page', locale: 'en', idempotencyKey: token, analysisSnapshot: analysisFixture, draftDocument: documentFixture }
+const body = { proof: '', projectId, request: 'Add another page', locale: 'en', idempotencyKey: token, analysisSnapshot: analysisFixture, draftDocument: documentFixture }
 const request = (method: string, data?: unknown) => new Request('http://localhost/api/drafts', { method, ...(data ? { body: JSON.stringify(data) } : {}) })
 let sql: ReturnType<typeof postgres>
 let collection: typeof import('@/app/api/drafts/route')
@@ -36,12 +38,14 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
     projectsData = await import('@/lib/projects/data')
   })
   beforeEach(async () => {
+    vi.stubEnv('AUTH_SECRET', 'integration-test-secret-at-least-32-characters')
+    body.proof = await issueDraftProof({ userId: owner, projectId, request: body.request, locale: 'en', analysisSnapshot: analysisFixture, projectSnapshot: projectSnapshotFixture })
     session.userId = owner
     await sql`TRUNCATE users CASCADE`
     await sql`INSERT INTO users(id,email,password_hash) VALUES (${owner}, 'owner@example.test', 'unused'), (${other}, 'other@example.test', 'unused')`
     await sql`INSERT INTO projects(id,user_id,name,industry,scope,start_date,pricing_model,currency,hourly_rate) VALUES (${projectId}, ${owner}, 'Website', 'Development', 'Build exactly five pages. Further pages are outside the agreed scope.', '2026-01-01', 'hourly', 'EUR', 100)`
   })
-  afterAll(async () => { await sql?.end(); vi.doUnmock('@/lib/db') })
+  afterAll(async () => { await sql?.end(); vi.doUnmock('@/lib/db'); vi.unstubAllEnvs() })
 
   async function create() {
     const response = await collection.POST(request('POST', body))
@@ -90,11 +94,12 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
   it('PUT replaces editable document but preserves original snapshot and history', async () => {
     const created = await create()
     const changed = { ...documentFixture, reply: { ...documentFixture.reply, text: 'Updated reply' }, changeOrder: { ...documentFixture.changeOrder!, additionalCost: '99', noAdditionalCharge: true } }
-    const response = await detail.PUT(request('PUT', { draftDocument: changed }), context(created.draft.id))
+    const response = await detail.PUT(request('PUT', { draftDocument: changed, analysisSnapshot: { ...analysisFixture, verdict: 'in_scope' }, projectSnapshot: { ...projectSnapshotFixture, scope: 'Forged' } }), context(created.draft.id))
     expect(response.status).toBe(200)
     const updated = (await response.json()).draft
     expect(updated.draftDocument).toEqual(changed)
     expect(updated.analysisSnapshot).toEqual(created.draft.analysisSnapshot)
+    expect(updated.projectSnapshot).toEqual(created.draft.projectSnapshot)
     expect(updated.createdAt).toBe(created.draft.createdAt)
     expect(updated.historyEntryId).toBe(created.entry.id)
     expect(new Date(updated.updatedAt).getTime()).toBeGreaterThanOrEqual(new Date(created.draft.updatedAt).getTime())
@@ -106,7 +111,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
     expect((await detail.GET(request('GET'), context(created.draft.id))).status).toBe(404)
     expect((await detail.PUT(request('PUT', { draftDocument: documentFixture }), context(created.draft.id))).status).toBe(404)
     expect((await (await collection.GET()).json()).drafts).toEqual([])
-    expect((await collection.POST(request('POST', body))).status).toBe(404)
+    expect((await collection.POST(request('POST', body))).status).toBe(400)
     session.userId = owner
     const list = (await (await collection.GET()).json()).drafts
     expect(list).toHaveLength(1)
@@ -120,9 +125,79 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
     expect((await detail.GET(request('GET'), context(token))).status).toBe(401)
     expect((await detail.PUT(request('PUT', { draftDocument: documentFixture }), context(token))).status).toBe(401)
     session.userId = owner
-    expect((await collection.POST(request('POST', { ...body, analysisSnapshot: {} }))).status).toBe(400)
+    expect((await collection.POST(request('POST', { ...body, draftDocument: {} }))).status).toBe(400)
     expect(Number((await sql`SELECT count(*) AS n FROM history_entries`)[0].n)).toBe(0)
   })
+  it('rejects browser-only forged snapshots before writing history or drafts', async () => {
+    const forged = { ...body, proof: undefined, analysisSnapshot: { ...analysisFixture, verdict: 'in_scope', reasoning: 'Forged' } }
+    const response = await collection.POST(request('POST', forged))
+    expect(response.status).toBe(400)
+    expect(Number((await sql`SELECT count(*) AS n FROM history_entries`)[0].n)).toBe(0)
+    expect(Number((await sql`SELECT count(*) AS n FROM drafts`)[0].n)).toBe(0)
+  })
+  it('stores the original project conditions alongside the analysis', async () => {
+    const created = await create()
+    expect(created.draft.projectSnapshot).toMatchObject({
+      name: 'Website', industry: 'Development',
+      scope: 'Build exactly five pages. Further pages are outside the agreed scope.',
+      startDate: '2026-01-01', endDate: null, pricingModel: 'hourly', currency: 'EUR',
+      hourlyRate: '100.00', fixedPrice: null,
+    })
+  })
+
+
+  it('ignores a forged browser snapshot and preserves verified proof snapshots', async () => {
+    const response = await collection.POST(request('POST', {
+      ...body, analysisSnapshot: { ...analysisFixture, reasoning: 'Forged reasoning', replies: { warm: 'Forged', neutral: 'Forged', firm: 'Forged' }, changeOrder: { ...analysisFixture.changeOrder, additionalCost: '999' } },
+      projectSnapshot: { ...projectSnapshotFixture, hourlyRate: '999' },
+    }))
+    expect(response.status).toBe(201)
+    const saved = (await response.json()).draft
+    expect(saved.analysisSnapshot).toEqual(analysisFixture)
+    expect(saved.projectSnapshot).toEqual(projectSnapshotFixture)
+  })
+  it.each([
+    { projectId: other }, { request: 'Different request' }, { locale: 'ru' },
+    { proof: 'malformed' },
+  ])('rejects proof binding violations without partial writes', async (override) => {
+    expect((await collection.POST(request('POST', { ...body, ...override }))).status).toBe(400)
+    expect(Number((await sql`SELECT count(*) AS n FROM drafts`)[0].n)).toBe(0)
+    expect(Number((await sql`SELECT count(*) AS n FROM history_entries`)[0].n)).toBe(0)
+  })
+  it('rejects expired proofs without partial writes', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(Date.now() - 7200_000))
+    const proof = await issueDraftProof({ userId: owner, projectId, request: body.request, locale: 'en', analysisSnapshot: analysisFixture, projectSnapshot: projectSnapshotFixture })
+    vi.useRealTimers()
+    expect((await collection.POST(request('POST', { ...body, proof }))).status).toBe(400)
+    expect(Number((await sql`SELECT count(*) AS n FROM history_entries`)[0].n)).toBe(0)
+    expect(Number((await sql`SELECT count(*) AS n FROM drafts`)[0].n)).toBe(0)
+  })
+  it('keeps the analysis-time project snapshot when project changes before and after creation', async () => {
+    const response = await analyze.POST(request('POST', { projectId, request: body.request, endDate: '2026-12-01', documentLanguage: 'en' }))
+    const analysis = await response.json()
+    expect(analysis.proof).toEqual(expect.any(String))
+    await sql`UPDATE projects SET name = 'Renamed', scope = 'Changed scope', hourly_rate = 999 WHERE id = ${projectId}`
+    const response2 = await collection.POST(request('POST', { ...body, proof: analysis.proof, draftDocument: { ...documentFixture, result: analysis.result } }))
+    expect(response2.status).toBe(201)
+    const created = (await response2.json()).draft
+    expect(created.projectSnapshot).toEqual({ ...projectSnapshotFixture, endDate: '2026-12-01', documentLanguage: 'en' })
+    await sql`UPDATE projects SET name = 'Changed again', hourly_rate = 333 WHERE id = ${projectId}`
+    const reopened = (await (await detail.GET(request('GET'), context(created.id))).json()).draft
+    expect(reopened.projectSnapshot).toEqual(created.projectSnapshot)
+    expect((await (await collection.GET()).json()).drafts[0].projectName).toBe('Website')
+  })
+  it('keeps legacy persisted drafts readable and editable without fabricating a snapshot', async () => {
+    const created = await create()
+    await sql`UPDATE drafts SET project_snapshot = NULL WHERE id = ${created.draft.id}`
+    const reopened = (await (await detail.GET(request('GET'), context(created.draft.id))).json()).draft
+    expect(reopened.projectSnapshot).toBeNull()
+    expect(reopened.draftDocument).toEqual(documentFixture)
+    const response = await detail.PUT(request('PUT', { draftDocument: documentFixture }), context(created.draft.id))
+    expect(response.status).toBe(200)
+    expect((await response.json()).draft.projectSnapshot).toBeNull()
+  })
+
   it('loads legacy history without a draft and leaves evaluations compatible', async () => {
     await sql`INSERT INTO history_entries(project_id,date,request,verdict,summary) VALUES (${projectId}, '2026-10-01', 'Legacy request', 'in_scope', 'Included')`
     const project = await projectsData.loadProjectForUser(projectId, owner)

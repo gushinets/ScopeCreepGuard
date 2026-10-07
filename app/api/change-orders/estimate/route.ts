@@ -1,3 +1,4 @@
+import { generationProject } from '@/lib/drafts/generation-context'
 import { NextResponse } from 'next/server'
 import { getLocale } from 'next-intl/server'
 import { isLocale } from '@/i18n/config'
@@ -20,15 +21,17 @@ export async function POST(request: Request) {
   if (body.endDate !== undefined && (typeof body.endDate !== 'string' || !validISODate(body.endDate))) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
   const documentLanguage = supportedClientLanguage(body.documentLanguage)
   if (body.documentLanguage !== undefined && !documentLanguage) return jsonError(ERROR_CODES.clientLanguageUnsupported, 400)
-  const project = await loadProjectForUser(body.projectId, user.id)
+  let project = await loadProjectForUser(body.projectId, user.id)
   if (!project) return jsonError(ERROR_CODES.projectNotFound, 404)
+  const locale = await getLocale()
+  if (!isLocale(locale)) return jsonError(ERROR_CODES.localeInvalid, 400)
+  try { project = await generationProject(user.id, body, project, locale) }
+  catch { return jsonError(ERROR_CODES.draftProofInvalid, 400) }
   if (typeof body.endDate === 'string' && project.startDate && body.endDate < project.startDate) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
   const termsComplete = !!project.startDate && !!project.pricingModel && !!project.currency && !!(project.hourlyRate || project.fixedPrice)
   if (!termsComplete) return jsonError(ERROR_CODES.pricingModelInvalid, 400)
   if (project.scope.length + body.request.length > ANALYSIS_INPUT_MAX_CHARS) return jsonError(ERROR_CODES.analysisInputTooLarge, 400)
   if (!allowAnalyze(user.id, Date.now())) return jsonError(ERROR_CODES.analysisRateLimited, 429)
-  const locale = await getLocale()
-  if (!isLocale(locale)) return jsonError(ERROR_CODES.localeInvalid, 400)
   const draftCreatedAt = new Date().toISOString()
   try {
     const result = await analyzeWithOpenAI({

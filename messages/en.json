@@ -264,7 +264,8 @@
     "clientLanguageUnsupported": "This language or script is not supported for PDF export. Choose a supported language using Latin, Cyrillic or Greek script.",
     "draftNotFound": "Draft not found.",
     "draftSaveFailed": "Could not save the draft. Your edits are still available; try again.",
-    "draftLoadFailed": "Could not load drafts. Try again."
+    "draftLoadFailed": "Could not load drafts. Try again.",
+    "draftProofInvalid": "The analysis proof is invalid or expired. Run the scope check again before creating a draft."
   },
   "drafts": {
     "title": "My drafts",
@@ -280,6 +281,15 @@
     "opening": "Opening…",
     "emptyTitle": "No drafts yet",
     "emptyDescription": "Check a client request, then click Create draft.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "projectContext": "Project context used for this analysis",
+    "contextIndustry": "Industry",
+    "contextDates": "Start / end date",
+    "contextPricing": "Pricing model",
+    "pricing_hourly": "Hourly",
+    "pricing_fixed": "Fixed price",
+    "contextRate": "Hourly rate",
+    "contextFixed": "Fixed price",
+    "legacyContext": "This older draft has no saved project context. Current project terms have not been substituted."
   }
 }

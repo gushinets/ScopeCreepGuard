@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useLocale } from 'next-intl'
 import { applyClientMaterials, parseClientMaterials, type ClientMaterials } from '@/lib/client-materials'
-import type { CreatedDraftResponse, DraftDocument, DraftListItem, SavedDraft, ReplyDocument } from '@/lib/drafts/types'
+import type { CreatedDraftResponse, DraftDocument, DraftListItem, SavedDraft, ReplyDocument, ProjectSnapshot } from '@/lib/drafts/types'
 import { editableChangeOrder } from '@/lib/drafts/document'
 import { mergeEstimate } from '@/lib/change-order/merge-estimate'
 import type { EditableDraft } from '@/lib/change-order/document'
@@ -61,6 +61,8 @@ interface StoreValue {
   user: AuthUser | null
   projects: Project[]
   selectedProject: Project | null
+  analysisProject: Project | null
+  projectSnapshot: ProjectSnapshot | null
   selectedProjectId: string | null
   view: View
   requestText: string
@@ -198,6 +200,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const locale = useLocale()
   const [draftDocument, setDraftDocument] = useState<DraftDocument | null>(null)
+  const [draftProof, setDraftProof] = useState<string | null>(null)
+  const [projectSnapshot, setProjectSnapshot] = useState<ProjectSnapshot | null>(null)
   const [analysisSnapshot, setAnalysisSnapshot] = useState<AnalysisResult | null>(null)
   const [analysisLocale, setAnalysisLocale] = useState<Locale>('en')
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null)
@@ -234,6 +238,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRequestText(draft.request)
     setAnalyzedRequest(draft.request)
     setAnalysisSnapshot(draft.analysisSnapshot)
+    setDraftProof(null)
+    setProjectSnapshot(draft.projectSnapshot ?? null)
     setAnalysisLocale(draft.locale)
     setDraftDocument(draft.draftDocument)
     setCurrentDraftId(draft.id)
@@ -251,6 +257,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const selectedProject =
     projects.find((p) => p.id === selectedProjectId) ?? null
+
+  const analysisProject: Project | null = selectedProject && (projectSnapshot
+    ? { ...selectedProject, ...projectSnapshot }
+    : currentDraftId
+      ? { ...selectedProject, name: draftDocument?.changeOrder?.projectName ?? '', scope: '', startDate: null, pricingModel: null, currency: null, hourlyRate: null, fixedPrice: null }
+      : selectedProject)
 
   useEffect(() => {
     let isActive = true
@@ -360,12 +372,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   async function createEstimate(projectId: string, request: string, documentLanguage?: string) {
     const run = analysisRun.current
-    const project = projects.find((item) => item.id === projectId)
+    const project = analysisProject?.id === projectId ? analysisProject : projects.find((item) => item.id === projectId)
     const storedEndDate = draftDocument?.changeOrder?.endDate ?? draftDocument?.projectDetails.endDate ?? ''
     const endDate = validISODate(storedEndDate) && (!project?.startDate || storedEndDate >= project.startDate) ? storedEndDate : ''
     const data = await apiFetch<{ result: AnalysisResult }>('/api/change-orders/estimate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectId, request, ...(endDate ? { endDate } : {}), ...(documentLanguage ? { documentLanguage } : {}) }),
+      body: JSON.stringify({ projectId, request, locale: analysisLocale, ...(currentDraftId ? { draftId: currentDraftId } : draftProof ? { proof: draftProof } : {}), ...(endDate ? { endDate } : {}), ...(documentLanguage ? { documentLanguage } : {}) }),
     })
     if (run !== analysisRun.current) throw new Error('stale_estimate')
     if (!project) throw new Error('project_missing')
@@ -386,14 +398,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const original = result
     const data = await apiFetch<{ materials: ClientMaterials }>('/api/client-materials/language', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectId: selectedProject.id, ...(currentHistoryEntryId ? { historyId: currentHistoryEntryId } : {}), request: analyzedRequest, clientLanguage: language, analysis: clientMaterials ? applyClientMaterials(original, clientMaterials) : original }),
+      body: JSON.stringify({ projectId: selectedProject.id, locale: analysisLocale, ...(currentDraftId ? { draftId: currentDraftId } : draftProof ? { proof: draftProof } : {}), ...(currentHistoryEntryId ? { historyId: currentHistoryEntryId } : {}), request: analyzedRequest, clientLanguage: language, analysis: clientMaterials ? applyClientMaterials(original, clientMaterials) : original }),
     })
     if (run !== analysisRun.current) return true
     const materials = parseClientMaterials(data.materials, language)
     setDraftDocument((current) => {
       if (!current) return current
       const material = applyClientMaterials(current.result, materials)
-      const proposed = editableChangeOrder(material, selectedProject, current.projectDetails, draftSessionId)
+      const proposed = editableChangeOrder(material, analysisProject ?? selectedProject, current.projectDetails, draftSessionId)
       return { ...current, clientMaterials: materials,
         reply: { tone: current.reply.tone, text: current.reply.text === current.reply.generated[current.reply.tone] ? materials.replies[current.reply.tone] : current.reply.text, generated: materials.replies },
         changeOrder: current.changeOrder ? mergeEstimate(current.changeOrder, proposed) : null }
@@ -434,6 +446,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   function clearDocument() {
     setDraftDocument(null)
     setAnalysisSnapshot(null)
+    setProjectSnapshot(null)
+    setDraftProof(null)
     setCurrentDraftId(null)
     setDraftSessionId('')
     setSavedSignature('')
@@ -462,6 +476,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDraftError('')
   }
   async function saveDraft() {
+    if (!currentDraftId && !draftProof) { setDraftError(ERROR_CODES.draftProofInvalid); return }
     if (savingDraft.current || !draftDocument || !analysisSnapshot || !selectedProject || !analyzedRequest) return
     savingDraft.current = true
     setIsSavingDraft(true)
@@ -474,7 +489,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           })
         : await apiFetch<CreatedDraftResponse>('/api/drafts', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ projectId: selectedProject.id, request: analyzedRequest, locale: analysisLocale, idempotencyKey: draftSessionId, analysisSnapshot, draftDocument }),
+            body: JSON.stringify({ projectId: selectedProject.id, request: analyzedRequest, locale: analysisLocale, idempotencyKey: draftSessionId, proof: draftProof, draftDocument }),
           })
       if (response.entry) applyHistory(response.draft.projectId, response.entry)
       if (run !== analysisRun.current) return
@@ -498,7 +513,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const storedEndDate = user ? readProjectDetails(user.id, project.id).endDate : ''
       const endDate = validISODate(storedEndDate) && (!project.startDate || storedEndDate >= project.startDate) ? storedEndDate : ''
-      const data = await apiFetch<{ result: AnalysisResult }>(
+      const data = await apiFetch<{ result: AnalysisResult; proof: string; projectSnapshot: ProjectSnapshot }>(
         '/api/analyze',
         {
           method: 'POST',
@@ -514,6 +529,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setCurrentHistoryEntryId(null)
       setCurrentDraftId(null)
       setAnalysisSnapshot(analysis)
+      setDraftProof(data.proof)
+      setProjectSnapshot(data.projectSnapshot)
       setAnalysisLocale(locale === 'ru' ? 'ru' : 'en')
       setDraftSessionId(seed)
       setSavedSignature('')
@@ -686,6 +703,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     user,
     projects,
     selectedProject,
+    analysisProject, projectSnapshot,
     selectedProjectId,
     view,
     requestText,

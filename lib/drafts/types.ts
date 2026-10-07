@@ -1,4 +1,4 @@
-import type { AnalysisResult, HistoryEntry, Tone, Verdict } from '@/lib/types'
+import type { AnalysisResult, HistoryEntry, Tone, Verdict, Project } from '@/lib/types'
 import type { EditableDraft } from '@/lib/change-order/document'
 import type { ClientMaterials } from '@/lib/client-materials'
 import type { ProjectDetails } from '@/lib/projects/browser-details'
@@ -17,12 +17,27 @@ export interface DraftDocument {
   reply: ReplyDocument
   projectDetails: ProjectDetails
 }
+export interface ProjectSnapshot extends Pick<Project, 'name' | 'industry' | 'scope' | 'startDate' | 'pricingModel' | 'currency' | 'hourlyRate' | 'fixedPrice'> {
+  version: 1
+  endDate: string | null
+  documentLanguage: string | null
+}
+export interface DraftProofClaims {
+  userId: string
+  projectId: string
+  request: string
+  locale: Locale
+  analysisSnapshot: AnalysisResult
+  projectSnapshot: ProjectSnapshot
+}
+// Internal, verified server input. The browser submits a proof, never these snapshots.
 export interface CreateDraftInput {
   projectId: string
   request: string
   locale: Locale
   idempotencyKey: string
   analysisSnapshot: AnalysisResult
+  projectSnapshot: ProjectSnapshot
   draftDocument: DraftDocument
 }
 export interface SavedDraft {
@@ -36,6 +51,7 @@ export interface SavedDraft {
   locale: Locale
   requestLanguage: AnalysisResult['requestLanguage'] | null
   clientMaterialLanguage: string
+  projectSnapshot: ProjectSnapshot | null
   analysisSnapshot: AnalysisResult
   draftDocument: DraftDocument
 }
