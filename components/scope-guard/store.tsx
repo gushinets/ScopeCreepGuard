@@ -363,6 +363,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     analysisRun.current += 1
     setProjects((prev) => [data.project, ...prev])
     setSelectedProjectId(data.project.id)
+    setTermsChanged(false)
     setRequestText('')
     setAnalyzedRequest(null)
     clearDocument()

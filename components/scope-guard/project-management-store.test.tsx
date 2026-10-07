@@ -231,3 +231,47 @@ it('does not restore a deleted project draft when an in-flight save returns', as
   expect(window.location.search).toBe('')
   expect(result.current.draftDocument).toBeNull()
 })
+
+
+it.each(['estimate', 'language'] as const)('retains a renamed document after saving, reopening and regenerating %s', async operation => {
+  const { result } = await setup()
+  const snapshot = structuredClone(result.current.projectSnapshot)
+  await act(async () => { await result.current.updateProject('p1', { ...input(), name: 'Renamed project' }) })
+  let persisted = { ...structuredClone(saved), projectSnapshot: snapshot }
+  override = (url, init) => {
+    if (url === '/api/drafts' && init?.method === 'POST') {
+      persisted = { ...persisted, projectSnapshot: snapshot!, draftDocument: JSON.parse(String(init.body)).draftDocument }
+      return json({ draft: persisted, entry: { id: 'h1', draftId: 'd1', date: '2026-10-07', request: 'Add a page', verdict: 'out_of_scope', summary: 'Extra page' } })
+    }
+    if (url === '/api/drafts/d1') return json({ draft: structuredClone(persisted) })
+    if (url === '/api/client-materials/language') return json({ materials: { clientLanguage: 'ru', replies: { warm: 'Привет', neutral: 'Дополнение', firm: 'Подтвердите' }, changeOrder: { description: 'Новая страница', timelineImpact: 'Два дня', rationale: 'Дополнение', note: 'Черновик' } } })
+    return null
+  }
+  await act(async () => { await result.current.saveDraft() })
+  await act(async () => { await result.current.openDraft('d1') })
+  expect(result.current.draftDocument?.changeOrder?.projectName).toBe('Renamed project')
+  expect(result.current.projectSnapshot?.name).toBe('Website')
+  await act(async () => {
+    if (operation === 'estimate') await result.current.createEstimate('p1', 'Add a page')
+    else await result.current.changeClientLanguage('ru')
+  })
+  expect(result.current.draftDocument?.changeOrder?.projectName).toBe('Renamed project')
+  expect(result.current.projectSnapshot).toEqual(snapshot)
+  if (operation === 'language') expect(result.current.draftDocument?.changeOrder?.language).toBe('ru')
+  const url = operation === 'estimate' ? '/api/change-orders/estimate' : '/api/client-materials/language'
+  const regeneration = vi.mocked(fetch).mock.calls.find(([requestUrl]) => requestUrl === url)
+  expect(JSON.parse(String(regeneration?.[1]?.body)).draftId).toBe('d1')
+})
+
+it('clears the terms warning when creating and selecting a new project', async () => {
+  const { result } = await setup()
+  await act(async () => { await result.current.updateProject('p1', { ...input(), scope: 'Changed scope' }) })
+  expect(result.current.termsChanged).toBe(true)
+  override = (url, init) => url === '/api/projects' && init?.method === 'POST'
+    ? json({ project: { ...project, id: 'p3', name: 'New project' } }) : null
+  await act(async () => { await result.current.createProject({ ...input(), name: 'New project' }) })
+  expect(result.current.selectedProjectId).toBe('p3')
+  expect(result.current.termsChanged).toBe(false)
+  expect(result.current.status).toBe('idle')
+  expect(result.current.draftDocument).toBeNull()
+})
