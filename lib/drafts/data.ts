@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { drafts, historyEntries, projects } from '@/lib/db/schema'
 import type { HistoryEntry } from '@/lib/types'
@@ -12,7 +12,7 @@ function serialize(row: typeof drafts.$inferSelect, request: string): SavedDraft
     status: 'draft', locale: row.locale as Locale,
     requestLanguage: row.requestLanguage as SavedDraft['requestLanguage'],
     clientMaterialLanguage: row.clientMaterialLanguage,
-    analysisSnapshot: row.analysisSnapshot, draftDocument: row.draftDocument,
+    projectSnapshot: row.projectSnapshot, analysisSnapshot: row.analysisSnapshot, draftDocument: row.draftDocument,
   }
 }
 function languageData(document: DraftDocument) {
@@ -45,7 +45,7 @@ export async function createDraftForUser(userId: string, input: CreateDraftInput
     if (!entry) throw new Error('history_insert_missing')
     const [draft] = await tx.insert(drafts).values({
       projectId: input.projectId, historyEntryId: entry.id, idempotencyKey: input.idempotencyKey,
-      analysisSnapshot: input.analysisSnapshot, draftDocument: input.draftDocument, locale: input.locale,
+      projectSnapshot: input.projectSnapshot, analysisSnapshot: input.analysisSnapshot, draftDocument: input.draftDocument, locale: input.locale,
       requestLanguage: input.analysisSnapshot.requestLanguage ?? null,
       ...languageData(input.draftDocument), createdAt: now, updatedAt: now,
     }).returning()
@@ -63,7 +63,7 @@ export async function loadDraftForUser(id: string, userId: string): Promise<Save
 }
 export async function listDraftsForUser(userId: string): Promise<DraftListItem[]> {
   const rows = await db.select({
-    id: drafts.id, request: historyEntries.request, projectName: projects.name,
+    id: drafts.id, request: historyEntries.request, projectName: sql<string>`coalesce(${drafts.projectSnapshot}->>'name', ${drafts.draftDocument}->'changeOrder'->>'projectName', ${projects.name})`,
     verdict: historyEntries.verdict, createdAt: drafts.createdAt, updatedAt: drafts.updatedAt,
   }).from(drafts)
     .innerJoin(projects, eq(projects.id, drafts.projectId))

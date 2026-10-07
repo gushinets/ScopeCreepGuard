@@ -1,3 +1,4 @@
+import { generationProject } from '@/lib/drafts/generation-context'
 import { NextResponse } from 'next/server'
 import { getLocale } from 'next-intl/server'
 import { isLocale } from '@/i18n/config'
@@ -19,18 +20,21 @@ export async function POST(request: Request) {
   if (!body || typeof body.projectId !== 'string' || (body.historyId !== undefined && typeof body.historyId !== 'string') || typeof body.request !== 'string') return jsonError(ERROR_CODES.requestBodyInvalid, 400)
   const clientLanguage = supportedClientLanguage(body.clientLanguage)
   if (!clientLanguage) return jsonError(ERROR_CODES.clientLanguageUnsupported, 400)
-  if (JSON.stringify(body).length > ANALYSIS_INPUT_MAX_CHARS) return jsonError(ERROR_CODES.analysisInputTooLarge, 400)
-  const project = await loadProjectForUser(body.projectId, user.id)
+  const inputLength = JSON.stringify({ request: body.request, clientLanguage, analysis: body.analysis }).length
+  if (inputLength > ANALYSIS_INPUT_MAX_CHARS) return jsonError(ERROR_CODES.analysisInputTooLarge, 400)
+  let project = await loadProjectForUser(body.projectId, user.id)
   if (!project) return jsonError(ERROR_CODES.projectNotFound, 404)
   const history = body.historyId === undefined ? null : project.history.find((entry) => entry.id === body.historyId)
   if (body.historyId !== undefined && (!history || history.request !== body.request)) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
   const locale = await getLocale()
   if (!isLocale(locale)) return jsonError(ERROR_CODES.localeInvalid, 400)
+  try { project = await generationProject(user.id, body, project, locale) }
+  catch { return jsonError(ERROR_CODES.draftProofInvalid, 400) }
   let analysis
   try { analysis = parseAnalysisResult(body.analysis, locale) }
   catch { return jsonError(ERROR_CODES.requestBodyInvalid, 400) }
   if (history && (analysis.verdict !== history.verdict || analysis.summary !== history.summary)) return jsonError(ERROR_CODES.requestBodyInvalid, 400)
-  if (project.scope.length + JSON.stringify(body).length > ANALYSIS_INPUT_MAX_CHARS) return jsonError(ERROR_CODES.analysisInputTooLarge, 400)
+  if (project.scope.length + inputLength > ANALYSIS_INPUT_MAX_CHARS) return jsonError(ERROR_CODES.analysisInputTooLarge, 400)
   if (!allowAnalyze(user.id, Date.now())) return jsonError(ERROR_CODES.analysisRateLimited, 429)
   try {
     const materials = await regenerateClientMaterials({ locale, clientLanguage, scope: project.scope, request: body.request, analysis })

@@ -16,7 +16,8 @@ const navigation = vi.hoisted(() => ({ router: { replace: vi.fn() } }))
 vi.mock('next/navigation', () => ({ useRouter: () => navigation.router }))
 vi.mock('@/lib/change-order/pdf', () => ({ createChangeOrderPdf: vi.fn() }))
 const project: Project = { id: 'p1', name: 'Website', industry: 'Development', scope: 'Build five pages. Additional pages are outside the agreed scope and cost extra.', startDate: '2026-01-01', pricingModel: 'hourly', currency: 'EUR', hourlyRate: '100', fixedPrice: null, history: [] }
-const saved = { id: 'd1', projectId: 'p1', historyEntryId: 'h1', status: 'draft', createdAt: '2026-10-06T12:00:00.000Z', updatedAt: '2026-10-06T12:00:00.000Z', locale: 'en', requestLanguage: 'en', clientMaterialLanguage: 'en', analysisSnapshot: analysisFixture, draftDocument: documentFixture, request: 'Add another page' }
+const projectSnapshot = { version: 1 as const, name: 'Original Website', industry: 'Development' as const, scope: 'Original scope: five pages only.', startDate: '2026-01-01', endDate: '2026-12-01', pricingModel: 'hourly' as const, currency: 'EUR' as const, hourlyRate: '100', fixedPrice: null, documentLanguage: null }
+const saved = { projectSnapshot, id: 'd1', projectId: 'p1', historyEntryId: 'h1', status: 'draft', createdAt: '2026-10-06T12:00:00.000Z', updatedAt: '2026-10-06T12:00:00.000Z', locale: 'en', requestLanguage: 'en', clientMaterialLanguage: 'en', analysisSnapshot: analysisFixture, draftDocument: documentFixture, request: 'Add another page' }
 const fetchMock = vi.fn()
 let savedDocument = documentFixture
 let created = false
@@ -31,7 +32,7 @@ beforeEach(() => {
     let body: unknown
     if (url === '/api/auth/me') body = { user: { id: 'u1', email: 'owner@example.test' } }
     else if (url === '/api/projects') body = { projects: [{ ...project, history: created ? [{ id: 'h1', draftId: 'd1', request: saved.request, date: '2026-10-06', verdict: 'out_of_scope', summary: 'Extra page' }] : [] }] }
-    else if (url === '/api/analyze') body = { result: analysisFixture }
+    else if (url === '/api/analyze') body = { result: analysisFixture, proof: 'signed-analysis-proof', projectSnapshot: { ...projectSnapshot, name: project.name, scope: project.scope, endDate: null } }
     else if (url === '/api/drafts' && init?.method === 'POST') {
       if (!created) savedDocument = JSON.parse(String(init.body)).draftDocument
       created = true
@@ -64,7 +65,7 @@ async function analyze(locale: 'en' | 'ru' = 'en') {
   await waitFor(() => expect((screen.getByText('Run') as HTMLButtonElement).disabled).toBe(false))
   fireEvent.change(screen.getByLabelText('Request'), { target: { value: 'Add another page' } })
   fireEvent.click(screen.getByText('Run'))
-  await screen.findByText('Why this verdict')
+  await screen.findByText((locale === 'ru' ? ru : en).result.whyHeading)
   return view
 }
 
@@ -85,6 +86,9 @@ it('creates the complete current document and changes the action to Save without
   fireEvent.change(document.querySelector('#co-additionalCost')!, { target: { value: '175' } })
   fireEvent.click(screen.getByRole('button', { name: 'Create draft' }))
   await screen.findByRole('button', { name: 'Save' })
+  const creation = fetchMock.mock.calls.find(([url, init]) => url === '/api/drafts' && init?.method === 'POST')!
+  expect(JSON.parse(String(creation[1].body)).proof).toBe('signed-analysis-proof')
+  expect(JSON.parse(String(creation[1].body))).not.toHaveProperty('analysisSnapshot')
   expect(savedDocument.reply.text).toBe('My terms')
   expect(savedDocument.changeOrder?.description).toBe('My custom scope')
   expect(savedDocument.changeOrder?.additionalCost).toBe('175')
@@ -196,7 +200,7 @@ it('preserves manual reply text when regenerating client-language materials', as
 it('prepares an invalid estimate after the user creates a draft first', async () => {
   const normalFetch = fetchMock.getMockImplementation()!
   fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
-    if (url === '/api/analyze') return { ok: true, json: async () => ({ result: { ...analysisFixture, estimateValid: false } }) }
+    if (url === '/api/analyze') return { ok: true, json: async () => ({ result: { ...analysisFixture, estimateValid: false }, proof: 'signed-analysis-proof', projectSnapshot: { ...projectSnapshot, name: project.name, scope: project.scope, endDate: null } }) }
     if (url === '/api/change-orders/estimate') return { ok: true, json: async () => ({ result: { ...analysisFixture, changeOrder: { ...analysisFixture.changeOrder, additionalCost: '321' } } }) }
     return normalFetch(url, init)
   })
@@ -244,4 +248,50 @@ it('redirects an unauthenticated workspace to login without logging an expected 
     await waitFor(() => expect(navigation.router.replace).toHaveBeenCalledWith('/login'))
     expect(consoleError).not.toHaveBeenCalled()
   } finally { consoleError.mockRestore() }
+})
+
+
+it('displays saved project context after current project conditions change', async () => {
+  created = true
+  const normalFetch = fetchMock.getMockImplementation()!
+  fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url === '/api/projects') return { ok: true, json: async () => ({ projects: [{ ...project, name: 'Renamed project', scope: 'Changed scope', hourlyRate: '999' }] }) }
+    return normalFetch(url, init)
+  })
+  app()
+  await waitFor(() => expect((screen.getByText('Run') as HTMLButtonElement).disabled).toBe(false))
+  fireEvent.click(screen.getByText('Drafts navigation'))
+  fireEvent.click(await screen.findByRole('button', { name: /Add another page/ }))
+  await screen.findByText('Original scope: five pages only.')
+  expect(screen.getByText('Original Website')).toBeTruthy()
+  expect(screen.getByText('100 EUR')).toBeTruthy()
+  expect(screen.queryByText('Changed scope')).toBeNull()
+})
+
+
+it.each(['en', 'ru'] as const)('shows a localized rerun-analysis error for a rejected proof in %s', async (locale) => {
+  await analyze(locale)
+  const normalFetch = fetchMock.getMockImplementation()!
+  fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url === '/api/drafts' && init?.method === 'POST') return { ok: false, status: 400, json: async () => ({ error: 'errors.draftProofInvalid' }) }
+    return normalFetch(url, init)
+  })
+  fireEvent.click(screen.getByRole('button', { name: locale === 'ru' ? 'Создать черновик' : 'Create draft' }))
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toBe((locale === 'ru' ? ru : en).errors.draftProofInvalid)
+})
+it('opens older saved drafts with an explicit missing-context message', async () => {
+  created = true
+  const normalFetch = fetchMock.getMockImplementation()!
+  fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url === '/api/drafts/d1') return { ok: true, json: async () => ({ draft: { ...saved, projectSnapshot: null, draftDocument: savedDocument } }) }
+    return normalFetch(url, init)
+  })
+  app()
+  await waitFor(() => expect((screen.getByText('Run') as HTMLButtonElement).disabled).toBe(false))
+  fireEvent.click(screen.getByText('Drafts navigation'))
+  fireEvent.click(await screen.findByRole('button', { name: /Add another page/ }))
+  await screen.findByText(en.drafts.legacyContext)
+  expect((document.querySelector('#co-description') as HTMLTextAreaElement).value).toBe('My own scope')
+  expect(screen.queryByText(project.scope)).toBeNull()
 })

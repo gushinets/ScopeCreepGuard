@@ -3,7 +3,8 @@ import { getCurrentUser } from '@/lib/auth/current-user'
 import { ERROR_CODES } from '@/lib/api/errors'
 import { jsonError, readJsonObject } from '@/lib/api/json'
 import { createDraftForUser, listDraftsForUser } from '@/lib/drafts/data'
-import { parseCreateDraft } from '@/lib/drafts/validation'
+import { verifyDraftProof, DraftProofError } from '@/lib/drafts/proof'
+import { parseCreateDraft, parseCreateDraftEnvelope } from '@/lib/drafts/validation'
 
 export async function GET() {
   const user = await getCurrentUser()
@@ -19,8 +20,13 @@ export async function POST(request: Request) {
   if (!user) return jsonError(ERROR_CODES.authRequired, 401)
   const body = await readJsonObject(request)
   let input
-  try { input = parseCreateDraft(body) }
-  catch { return jsonError(ERROR_CODES.requestBodyInvalid, 400) }
+  try {
+    const envelope = parseCreateDraftEnvelope(body)
+    const claims = await verifyDraftProof(envelope.proof, { ...envelope, userId: user.id })
+    input = parseCreateDraft(body, claims)
+  } catch (error) {
+    return jsonError(error instanceof DraftProofError ? ERROR_CODES.draftProofInvalid : ERROR_CODES.requestBodyInvalid, 400)
+  }
   try {
     const created = await createDraftForUser(user.id, input)
     if (!created) return jsonError(ERROR_CODES.projectNotFound, 404)

@@ -11,6 +11,9 @@ import {
 import { analyzeFailureResponse, analyzeWithOpenAI } from '@/lib/llm/openai'
 import { allowAnalyze } from '@/lib/llm/rate-limit'
 import { loadProjectForUser } from '@/lib/projects/data'
+import { issueDraftProof } from '@/lib/drafts/proof'
+import { snapshotProject } from '@/lib/drafts/project-snapshot'
+import { parseSnapshot } from '@/lib/drafts/validation'
 import { commercialSignature } from '@/lib/change-order/commercial-signature'
 
 export async function POST(request: Request) {
@@ -77,7 +80,13 @@ export async function POST(request: Request) {
     if (result.hasAdditionalWork && project.currency && result.changeOrder.currency !== project.currency) result.estimateValid = false
     result.draftCreatedAt = draftCreatedAt
     result.commercialSignature = commercialSignature(project, parsed.endDate)
-    return NextResponse.json({ result })
+    const validated = parseSnapshot(result, locale)
+    const projectSnapshot = snapshotProject(project, parsed.endDate, parsed.documentLanguage)
+    const proof = await issueDraftProof({
+      userId: user.id, projectId: project.id, request: parsed.request, locale,
+      analysisSnapshot: validated, projectSnapshot,
+    })
+    return NextResponse.json({ result: validated, projectSnapshot, proof }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown'
     console.error(
