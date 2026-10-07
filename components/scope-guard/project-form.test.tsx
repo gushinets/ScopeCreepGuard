@@ -25,7 +25,7 @@ it('shows localized errors by every missing field and focuses the first one', ()
   expect(create).not.toHaveBeenCalled()
 })
 
-it('saves optional fields locally and omits them from the project request', async () => {
+it('persists client name while keeping optional end date local', async () => {
   render(<NewProjectView />)
   fireEvent.change(document.querySelector('[name="name"]')!, { target: { value: 'Website' } })
   fireEvent.change(document.querySelector('[name="scope"]')!, { target: { value: 'Build the website' } })
@@ -34,6 +34,6 @@ it('saves optional fields locally and omits them from the project request', asyn
   fireEvent.change(document.querySelector('[name="clientName"]')!, { target: { value: 'Acme' } })
   fireEvent.click(screen.getByRole('button', { name: 'projects.save' }))
   await waitFor(() => expect(create).toHaveBeenCalledOnce())
-  expect(create.mock.lastCall?.[0]).not.toHaveProperty('clientName')
+  expect(create.mock.lastCall?.[0]).toHaveProperty('clientName', 'Acme')
   expect(localStorage.getItem('scg:project:u1:p1')).toContain('Acme')
 })

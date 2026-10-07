@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { localeToDateLocale, type Locale } from '@/i18n/config'
 import type { Industry } from '@/lib/types'
+import { DeleteProjectAction } from './delete-project-action'
 import { useStore } from './store'
 
 function formatDate(iso: string, locale: Locale) {
@@ -95,6 +96,7 @@ export function ProjectsView() {
               <Button type="button" variant="ghost" className="mr-3" onClick={() => { selectProject(p.id); setView('edit_project') }}>
                 {t('projects.edit')}
               </Button>
+              <div className="mr-3"><DeleteProjectAction project={p} /></div>
             </li>
           ))}
         </ul>

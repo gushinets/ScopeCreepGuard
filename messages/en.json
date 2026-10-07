@@ -79,7 +79,14 @@
     "uploadHint": "Accepts .txt, .md, or .pdf up to 5 MB. Text is copied into the field below; the file is not stored.",
     "saving": "Saving...",
     "save": "Save project",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "deleteProject": "Delete project",
+    "deleteLabel": "Delete project {name}",
+    "deleteTitle": "Delete {name}?",
+    "deleteDescription": "This permanently deletes the project, saved drafts, history, and evaluations. This cannot be undone.",
+    "deleting": "Deleting…",
+    "deleteFailed": "Could not delete the project. Please try again.",
+    "termsChanged": "Project terms changed. Run the scope check again to create a new analysis and draft."
   },
   "history": {
     "title": "History",

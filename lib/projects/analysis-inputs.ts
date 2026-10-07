@@ -1,14 +1,10 @@
-import type { Currency, Industry, PricingModel, Project } from '@/lib/types'
+import type { Project } from '@/lib/types'
 
-export interface ProjectAnalysisInput {
-  industry: Industry
-  scope: string
-  startDate: string
-  pricingModel: PricingModel
-  currency: Currency
-  hourlyRate: string
-  fixedPrice: string
+type ProjectAnalysisInput = Pick<Project, 'industry' | 'scope' | 'startDate' | 'pricingModel' | 'currency'> & {
+  hourlyRate: string | null
+  fixedPrice: string | null
 }
+const money = (value: string | null) => value == null || value === '' ? null : Number(value)
 
 export function projectAnalysisInputsChanged(project: Project, input: ProjectAnalysisInput): boolean {
   return project.industry !== input.industry ||
@@ -16,6 +12,6 @@ export function projectAnalysisInputsChanged(project: Project, input: ProjectAna
     project.startDate !== input.startDate ||
     project.pricingModel !== input.pricingModel ||
     project.currency !== input.currency ||
-    (project.hourlyRate ?? '') !== input.hourlyRate ||
-    (project.fixedPrice ?? '') !== input.fixedPrice
+    money(project.hourlyRate) !== money(input.hourlyRate) ||
+    money(project.fixedPrice) !== money(input.fixedPrice)
 }

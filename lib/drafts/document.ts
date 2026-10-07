@@ -13,7 +13,7 @@ export function editableChangeOrder(result: AnalysisResult, project: Project, de
     projectName: project.name, description: co.description,
     estimatedHours: co.estimatedHours?.toString() ?? '', additionalCost: co.additionalCost,
     currency: co.currency ?? '', timelineImpact: co.timelineImpact, rationale: co.rationale ?? '', note: co.note,
-    providerName: '', ...details, additionalTerms: '', clientApproverName: '', approvalDate: '', noAdditionalCharge: false,
+    providerName: '', ...details, clientName: project.clientName === undefined ? details.clientName : project.clientName ?? '', additionalTerms: '', clientApproverName: '', approvalDate: '', noAdditionalCharge: false,
     aiValues: { description: co.description, estimatedHours: co.estimatedHours?.toString() ?? '', additionalCost: co.additionalCost, currency: co.currency ?? '', timelineImpact: co.timelineImpact, rationale: co.rationale ?? '', note: co.note },
   }
 }

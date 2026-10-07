@@ -14,13 +14,14 @@ function serializeHistoryEntry(row: typeof historyEntries.$inferSelect & { draft
   }
 }
 
-function serializeProject(
+export function serializeProject(
   row: typeof projects.$inferSelect,
   history: HistoryEntry[],
 ): Project {
   return {
     id: row.id,
     name: row.name,
+    clientName: row.client,
     industry: row.industry,
     scope: row.scope,
     startDate: row.startDate,

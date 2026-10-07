@@ -21,10 +21,18 @@ describe('project commercial validation', () => {
     expect(parseProjectInput({ ...valid, pricingModel: 'fixed', hourlyRate: '', fixedPrice: '' }).ok).toBe(false)
   })
 
-  it('never returns optional browser details in the persistence payload', () => {
+  it('persists client name but keeps optional end date and email out of the persistence payload', () => {
     const result = parseProjectInput({ ...valid, clientName: 'Acme', clientEmail: 'x@y.test', endDate: '2026-12-01', client: 'Old field' })
     expect(result.ok).toBe(true)
-    if (result.ok) expect(result.project).not.toHaveProperty('client')
+    if (result.ok) expect(result.project).toHaveProperty('client', 'Acme')
     if (result.ok) expect(result.project).not.toHaveProperty('endDate')
   })
+})
+
+it('validates and trims server client metadata while excluding optional end date', () => {
+  expect(parseProjectInput({ ...valid, clientName: ' Acme ', endDate: '2027-01-01' })).toMatchObject({ ok: true, project: { client: 'Acme' } })
+  expect(parseProjectInput({ ...valid, clientName: 123 })).toMatchObject({ ok: false, error: 'errors.clientInvalid' })
+  const parsed = parseProjectInput({ ...valid, clientName: '', endDate: '2027-01-01' })
+  expect(parsed).toMatchObject({ ok: true, project: { client: '' } })
+  if (parsed.ok) expect(parsed.project).not.toHaveProperty('endDate')
 })

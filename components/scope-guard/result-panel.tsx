@@ -43,9 +43,11 @@ function PanelFrame({ children }: { children: React.ReactNode }) {
 
 function EmptyState() {
   const t = useTranslations()
+  const { termsChanged } = useStore()
 
   return (
     <PanelFrame>
+      {termsChanged && <p role="status" className="mb-4 rounded-lg bg-borderline-soft p-3 text-sm">{t('projects.termsChanged')}</p>}
       <div className="m-auto max-w-sm text-center">
         <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
           <ShieldQuestion

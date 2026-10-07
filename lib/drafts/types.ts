@@ -19,6 +19,8 @@ export interface DraftDocument {
 }
 export interface ProjectSnapshot extends Pick<Project, 'name' | 'industry' | 'scope' | 'startDate' | 'pricingModel' | 'currency' | 'hourlyRate' | 'fixedPrice'> {
   version: 1
+  /** Absent on snapshots issued before project client names were persisted. */
+  clientName?: string | null
   endDate: string | null
   documentLanguage: string | null
 }

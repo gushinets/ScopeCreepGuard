@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import postgres from 'postgres'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
+import { join, resolve, sep } from 'node:path'
+import { tmpdir } from 'node:os'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import * as schema from '@/lib/db/schema'
@@ -24,18 +27,39 @@ let collection: typeof import('@/app/api/drafts/route')
 let detail: typeof import('@/app/api/drafts/[id]/route')
 let analyze: typeof import('@/app/api/analyze/route')
 let projectsData: typeof import('@/lib/projects/data')
+let projectRoute: typeof import('@/app/api/projects/[id]/route')
 const context = (id: string) => ({ params: Promise.resolve({ id }) })
 
 describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', () => {
   beforeAll(async () => {
     sql = postgres(process.env.TEST_DATABASE_URL!, { max: 5, onnotice: () => {} })
     const db = drizzle(sql, { schema })
-    await migrate(db, { migrationsFolder: 'drizzle' })
+    // Exercise the production migrator from ANY-548's journal through the new migration.
+    const baselineDir = mkdtempSync(join(tmpdir(), 'scg-any547-migrations-'))
+    try {
+      mkdirSync(join(baselineDir, 'meta'))
+      const journal = JSON.parse(readFileSync('drizzle/meta/_journal.json', 'utf8'))
+      const baseline = { ...journal, entries: journal.entries.filter((entry: { idx: number }) => entry.idx <= 5) }
+      writeFileSync(join(baselineDir, 'meta/_journal.json'), JSON.stringify(baseline))
+      for (const entry of baseline.entries) writeFileSync(join(baselineDir, entry.tag + '.sql'), readFileSync('drizzle/' + entry.tag + '.sql'))
+      await migrate(db, { migrationsFolder: baselineDir })
+      const before = await sql`SELECT hash, created_at FROM drizzle.__drizzle_migrations ORDER BY id`
+      await migrate(db, { migrationsFolder: 'drizzle' })
+      const after = await sql`SELECT hash, created_at FROM drizzle.__drizzle_migrations ORDER BY id`
+      expect(after.slice(0, 6)).toEqual(before.slice(0, 6))
+      expect(after).toHaveLength(7)
+      expect((await sql`SELECT confdeltype FROM pg_constraint WHERE conname = 'evaluation_cases_history_entry_id_history_entries_id_fk'`)[0].confdeltype).toBe('c')
+      expect(await sql`SELECT column_name FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'end_date'`).toHaveLength(0)
+    } finally {
+      if (!resolve(baselineDir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unexpected migration temp path')
+      rmSync(baselineDir, { recursive: true })
+    }
     vi.doMock('@/lib/db', () => ({ db }))
     collection = await import('@/app/api/drafts/route')
     detail = await import('@/app/api/drafts/[id]/route')
     analyze = await import('@/app/api/analyze/route')
     projectsData = await import('@/lib/projects/data')
+    projectRoute = await import('@/app/api/projects/[id]/route')
   })
   beforeEach(async () => {
     vi.stubEnv('AUTH_SECRET', 'integration-test-secret-at-least-32-characters')
@@ -181,7 +205,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
     const response2 = await collection.POST(request('POST', { ...body, proof: analysis.proof, draftDocument: { ...documentFixture, result: analysis.result } }))
     expect(response2.status).toBe(201)
     const created = (await response2.json()).draft
-    expect(created.projectSnapshot).toEqual({ ...projectSnapshotFixture, endDate: '2026-12-01', documentLanguage: 'en' })
+    expect(created.projectSnapshot).toEqual({ ...projectSnapshotFixture, clientName: null, endDate: '2026-12-01', documentLanguage: 'en' })
     await sql`UPDATE projects SET name = 'Changed again', hourly_rate = 333 WHERE id = ${projectId}`
     const reopened = (await (await detail.GET(request('GET'), context(created.id))).json()).draft
     expect(reopened.projectSnapshot).toEqual(created.projectSnapshot)
@@ -204,4 +228,61 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
     expect(project?.history[0]).toMatchObject({ request: 'Legacy request', verdict: 'in_scope' })
     expect(project?.history[0].draftId).toBeUndefined()
   })
+  const projectInput = { name: 'Renamed', clientName: 'Current client', industry: 'Marketing', scope: 'Updated agreed scope with complete new commercial terms.', startDate: '2026-10-07', pricingModel: 'fixed', currency: 'USD', hourlyRate: '', fixedPrice: '5000' }
+  it.each([null, other])('rejects project mutations by unauthenticated or non-owner users: %s', async userId => {
+    const created = await create()
+    session.userId = userId
+    const status = userId === null ? 401 : 404
+    expect((await projectRoute.PATCH(request('PATCH', projectInput), context(projectId))).status).toBe(status)
+    expect((await projectRoute.DELETE(request('DELETE'), context(projectId))).status).toBe(status)
+    session.userId = owner
+    expect((await detail.GET(request('GET'), context(created.draft.id))).status).toBe(200)
+    expect((await sql`SELECT name FROM projects WHERE id = ${projectId}`)[0].name).toBe('Website')
+  })
+  it('persists every project field without changing saved drafts, snapshots, history or evaluations', async () => {
+    const created = await create()
+    await sql`INSERT INTO evaluation_cases (user_id,history_entry_id,scope,request,ai_verdict,ai_reasoning,accuracy,industry) VALUES (${owner},${created.entry.id},'Original scope','Extra','out_of_scope','Original reasoning','debatable','Development')`
+    const draftsBefore = await sql`SELECT * FROM drafts`
+    const historyBefore = await sql`SELECT * FROM history_entries`
+    const evaluationsBefore = await sql`SELECT * FROM evaluation_cases`
+    const response = await projectRoute.PATCH(request('PATCH', { ...projectInput, endDate: '2099-01-01' }), context(projectId))
+    expect(response.status).toBe(200)
+    const updated = (await response.json()).project
+    expect(updated).toMatchObject({ ...projectInput, fixedPrice: '5000.00', hourlyRate: null })
+    expect(updated).not.toHaveProperty('endDate')
+    expect(updated.history[0].draftId).toBe(created.draft.id)
+    expect(await sql`SELECT * FROM drafts`).toEqual(draftsBefore)
+    expect(await sql`SELECT * FROM history_entries`).toEqual(historyBefore)
+    expect(await sql`SELECT * FROM evaluation_cases`).toEqual(evaluationsBefore)
+    expect((await (await detail.GET(request('GET'), context(created.draft.id))).json()).draft).toEqual(created.draft)
+  })
+  it('captures persisted client name in signed snapshots and ignores browser-forged snapshots', async () => {
+    await projectRoute.PATCH(request('PATCH', projectInput), context(projectId))
+    const analyzed = await (await analyze.POST(request('POST', { projectId, request: body.request, endDate: '2026-12-01' }))).json()
+    expect(analyzed.projectSnapshot.clientName).toBe('Current client')
+    const document = { ...documentFixture, result: analyzed.result, projectDetails: { ...documentFixture.projectDetails, clientName: 'Current client' }, changeOrder: { ...documentFixture.changeOrder!, clientName: 'Current client' } }
+    const saved = await (await collection.POST(request('POST', { ...body, proof: analyzed.proof, draftDocument: document, projectSnapshot: { clientName: 'Forged' } }))).json()
+    expect(saved.draft.projectSnapshot.clientName).toBe('Current client')
+    expect(saved.draft.draftDocument.changeOrder.clientName).toBe('Current client')
+  })
+  it('cascades project deletion through persisted drafts, history and evaluations while preserving other projects', async () => {
+    const created = await create()
+    const secondProject = '10000000-0000-4000-8000-000000000005'
+    await sql`INSERT INTO projects(id,user_id,name,industry,scope) VALUES (${secondProject},${other},'Other project','Design','Scope')`
+    const [secondHistory] = await sql`INSERT INTO history_entries(project_id,date,request,verdict,summary) VALUES (${secondProject},'2026-10-07','Extra','out_of_scope','Extra') RETURNING id`
+    await sql`INSERT INTO drafts(project_id,history_entry_id,idempotency_key,analysis_snapshot,draft_document,locale,client_material_language) VALUES (${secondProject},${secondHistory.id},${token},${JSON.stringify(analysisFixture)}::jsonb,${JSON.stringify(documentFixture)}::jsonb,'en','en')`
+    for (const [userId, historyId] of [[owner, created.entry.id], [other, secondHistory.id], [owner, null]]) {
+      await sql`INSERT INTO evaluation_cases(user_id,history_entry_id,scope,request,ai_verdict,ai_reasoning,accuracy,industry) VALUES (${userId},${historyId},'Scope','Extra','out_of_scope','Extra','debatable','Design')`
+    }
+    expect((await projectRoute.DELETE(request('DELETE'), context(projectId))).status).toBe(200)
+    expect((await detail.GET(request('GET'), context(created.draft.id))).status).toBe(404)
+    expect(await sql`SELECT id FROM projects`).toEqual([{ id: secondProject }])
+    expect(await sql`SELECT id FROM history_entries`).toEqual([{ id: secondHistory.id }])
+    expect(await sql`SELECT id FROM drafts WHERE project_id = ${projectId}`).toHaveLength(0)
+    expect(await sql`SELECT id FROM drafts WHERE project_id = ${secondProject}`).toHaveLength(1)
+    expect(await sql`SELECT id FROM evaluation_cases WHERE history_entry_id = ${created.entry.id}`).toHaveLength(0)
+    expect(await sql`SELECT id FROM evaluation_cases WHERE history_entry_id = ${secondHistory.id}`).toHaveLength(1)
+    expect(await sql`SELECT id FROM evaluation_cases WHERE history_entry_id IS NULL`).toHaveLength(1)
+  })
+
 })
