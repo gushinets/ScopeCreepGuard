@@ -1,5 +1,6 @@
 """Owned ephemeral infrastructure and journal replay, never production configuration."""
 
+import hashlib
 import subprocess
 import time
 from contextlib import contextmanager
@@ -10,6 +11,11 @@ import psycopg
 from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+def migration_digest(content: bytes) -> str:
+    """Source provenance only; never substitutes for Drizzle's raw-byte ledger hash."""
+    return hashlib.sha256(content.replace(b"\r\n", b"\n")).hexdigest()
 
 
 def docker(*args):
