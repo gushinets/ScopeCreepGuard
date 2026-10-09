@@ -63,6 +63,8 @@ rather than Python member names.
 
 The packaged baseline_schema.json records every column, default, named constraint,
 index and enum from actual Drizzle replay with SQL SHA256/journal provenance.
+Provenance hashes normalize CRLF to LF so Windows/Linux checkouts agree; these
+are independent of Drizzle's original raw-byte migration ledger hashes.
 Named invariants include users_email_unique, drafts_history_entry_id_unique,
 drafts_project_creation_key_unique(project_id,idempotency_key),
 drafts_project_created_at_idx(project_id,created_at),

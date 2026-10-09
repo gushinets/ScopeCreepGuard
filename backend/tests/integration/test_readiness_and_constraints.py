@@ -1,11 +1,10 @@
 import asyncio
-import hashlib
 import json
 import time
 
 import httpx
 import pytest
-from integration.support import ROOT, docker, replay_drizzle
+from integration.support import ROOT, docker, migration_digest, replay_drizzle
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
 
@@ -17,13 +16,14 @@ def test_reference_provenance_matches_committed_journal():
         (ROOT / "backend/src/scope_guard/infrastructure/database/baseline_schema.json").read_text()
     )
     journal = json.loads((ROOT / "frontend/drizzle/meta/_journal.json").read_text())
+    assert reference["drizzle_hash_normalization"] == "CRLF to LF"
     assert reference["drizzle"] == [
         {
             "tag": item["tag"],
             "when": item["when"],
-            "sha256": hashlib.sha256(
+            "sha256": migration_digest(
                 (ROOT / "frontend/drizzle" / (item["tag"] + ".sql")).read_bytes()
-            ).hexdigest(),
+            ),
         }
         for item in journal["entries"]
     ]
