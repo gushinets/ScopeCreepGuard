@@ -1,0 +1,100 @@
+name: Application checks
+on:
+  push:
+    branches: [main, codex/any-639-data-contracts-and-alembic]
+  pull_request:
+    branches: [main, codex/any-638-frontend-backend-foundation]
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      DATABASE_URL: postgres://scopeguard:scopeguard_dev_password@localhost:5432/scope_creep_guard
+      AUTH_SECRET: ci-disposable-auth-secret-at-least-32-characters
+      NEXT_TELEMETRY_DISABLED: "1"
+      TEST_DATABASE_URL: postgres://scopeguard:scopeguard_ci_password@localhost:5432/scope_guard_ci
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: scope_guard_ci
+          POSTGRES_USER: scopeguard
+          POSTGRES_PASSWORD: scopeguard_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U scopeguard -d scope_guard_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: node --test scripts/docker-entrypoint.test.mjs
+      - run: pnpm lint
+      - run: pnpm exec next typegen
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm build
+      - run: pnpm exec tsc --noEmit
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.19"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --python 3.12
+      - run: uv run pytest --require-integration
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run python scripts/export_openapi.py --check ../contracts/openapi.json
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f compose.yaml --profile app config --quiet
+      - run: docker compose -f docker-compose.yml --profile app config --quiet
+      - run: docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet
+      - run: docker build -t scope-guard-backend:ci backend
+      - name: Verify backend liveness without PostgreSQL
+        run: |
+          docker run -d --name scope-guard-backend-ci -p 8000:8000 scope-guard-backend:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:8000/health/live > /tmp/health.json; then
+              python -c 'import json; assert json.load(open("/tmp/health.json")) == {"status": "ok"}'
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs scope-guard-backend-ci
+          exit 1
+      - if: always()
+        run: docker rm -f scope-guard-backend-ci || true

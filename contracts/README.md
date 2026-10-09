@@ -1,0 +1,1 @@
+openapi.json is generated from FastAPI, never manually authored. From backend run uv run python scripts/export_openapi.py --output ../contracts/openapi.json; use --check with the same path to verify freshness. Only implemented Python operations are represented. Current Next.js business routes are deliberately absent.

@@ -1,0 +1,6 @@
+# Keep this application independent of ignored parent-workspace configuration.
+packages:
+  - .
+onlyBuiltDependencies:
+  - '@swc/core'
+  - esbuild
