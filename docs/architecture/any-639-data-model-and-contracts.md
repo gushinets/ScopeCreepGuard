@@ -102,6 +102,10 @@ snapshots remain null, never replaced with mutable current project state.
 Project end date and client email remain browser-local project fields. Existing
 captured values inside document/snapshot JSON remain supported; no project
 columns are introduced. Current language metadata and label sets are retained.
+Client-material language tags canonicalize casing/registered aliases before
+supported-language/script checks. Langcodes preserves explicit script subtags;
+a bounded obsolete-region correction matches the frontend Intl behavior for
+SU/810/172 in supported languages. Saved snapshot tags remain preserved.
 Exact generation-language canonicalization and JavaScript parser/error parity
 belong to ANY-640 route integration.
 
@@ -159,7 +163,8 @@ Alembic commands are refused; baseline downgrade refuses destructive deletion.
 
 The CLI explicitly selects a named URL environment variable; it never implicitly
 uses application settings. Mutation requires --disposable, the test-only variable,
-loopback host and harness-style user/database, rejecting target query overrides.
+loopback host and harness-style user/database, rejecting target query overrides
+and inherited PGSERVICE/PGSERVICEFILE/PGHOSTADDR/PGPORT for mutation commands.
 These guards supplement ownership by the disposable harness, not permission to
 relabel application URLs. Production adoption is outside ANY-639 execution.
 

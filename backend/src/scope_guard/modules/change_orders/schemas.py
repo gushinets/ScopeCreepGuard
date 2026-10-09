@@ -2,6 +2,7 @@ import re
 from datetime import datetime
 from typing import Literal
 
+from langcodes import Language
 from pydantic import StrictBool, StrictStr, create_model, field_validator, model_validator
 
 from scope_guard.core.contracts import Currency, Text, WireModel, language_tag
@@ -103,7 +104,10 @@ class ClientMaterials(WireModel):
     @field_validator("client_language")
     @classmethod
     def supported_tag(cls, value):
-        value = language_tag(value)
+        # Keep explicit script subtags; standardize_tag would remove defaults.
+        # This normalizes casing and registered aliases before font restrictions.
+        raw = language_tag(value)
+        value = Language.get(raw).to_tag()
         match = re.fullmatch(r"([a-z]{2,3})(?:-([A-Z][a-z]{3}))?(?:-[A-Z]{2}|-\d{3})?", value)
         if not match or match[1] not in SUPPORTED_LANGUAGES:
             raise ValueError("unsupported_language")
@@ -112,6 +116,14 @@ class ClientMaterials(WireModel):
         )
         if match[2] and match[2] != script:
             raise ValueError("unsupported_language")
+        # Intl/CLDR selects successors of these obsolete regions by language.
+        # Langcodes uses RU universally; retain the frontend's supported subset.
+        old_region = raw.rsplit("-", 1)[-1].upper()
+        if old_region in {"SU", "810", "172"}:
+            successors = {"uk": "UA"}
+            if old_region != "172":
+                successors.update(et="EE", lv="LV", lt="LT")
+            value = value.rsplit("-", 1)[0] + "-" + successors.get(match[1], "RU")
         return value
 
     @model_validator(mode="after")

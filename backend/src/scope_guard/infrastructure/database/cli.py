@@ -33,7 +33,10 @@ def main(argv=None) -> int:
             or url.username != "scg_test"
             or not url.database.startswith("scg_test_")
             or url.host not in {"127.0.0.1", "localhost"}
-            or any(os.environ.get(key) for key in ("PGSERVICE", "PGSERVICEFILE", "PGHOSTADDR"))
+            or any(
+                os.environ.get(key)
+                for key in ("PGSERVICE", "PGSERVICEFILE", "PGHOSTADDR", "PGPORT")
+            )
         ):
             raise ValueError("disposable_target_required")
         engine = create_engine(url, hide_parameters=True, connect_args={"connect_timeout": 3})

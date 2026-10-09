@@ -50,3 +50,20 @@ Execution adaptations: native PowerShell ledger replaces shell tracking helpers;
 the user's approved local checkout was used; disposable harness setup moved
 forward to prove ORM behavior; Windows uses an explicit selector loop factory;
 invalid database configuration keeps liveness available and readiness unavailable.
+
+## PR #14 review fixes
+
+Both reported findings reproduced before changes: inherited PGPORT reached
+engine construction for both mutation operations; noncanonical supported tags
+were rejected. Mutation commands now reject inherited PGPORT before connecting,
+including with an explicit URL port. Client materials canonicalize casing and
+registered aliases before the existing supported-language/script restrictions.
+Langcodes 3.5.1 is locked without language-data extras; explicit script subtags
+remain. A bounded SU/810/172 successor mapping matches frontend Intl behavior.
+
+Final complete backend run: 88 passed in 49.24 seconds, including disposable
+PostgreSQL. Ruff, formatting and OpenAPI checks passed. Final production image
+built and passed contract import/canonicalization assertions. Independent review
+found no remaining Important issues and compared 315 supported tag combinations
+with Node Intl without differences. No frontend code or application database
+changed in this follow-up.
