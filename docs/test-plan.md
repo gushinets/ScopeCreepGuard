@@ -1,5 +1,10 @@
 # Auth and Data Isolation Test Plan
 
+> Layout note (ANY-638): application paths and pnpm commands in this document
+> are relative to `frontend/`. Local application configuration is `frontend/.env*`;
+> root Compose commands explicitly use `docker compose -f compose.yaml`. Historical
+> milestones below retain their original context; see root README for current setup.
+
 ## Critical Paths
 
 - Register a new user with a valid email and password.

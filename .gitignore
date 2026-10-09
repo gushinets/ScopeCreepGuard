@@ -41,3 +41,17 @@ Thumbs.db
 *.pem
 *.key
 credentials.json
+
+# Local agent handoff notes (intentionally excluded from Git)
+/AGENT.md
+
+# Python applications and verification artifacts
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.superpowers/
+output/
+*.crt

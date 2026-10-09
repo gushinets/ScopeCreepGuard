@@ -13,12 +13,12 @@
     "lint": "eslint .",
     "test": "vitest run",
     "verify:change-order-pdf": "vitest run --config vitest.visual.config.ts",
-    "db:up": "docker compose up -d",
+    "db:up": "docker compose -f ../compose.yaml up -d postgres",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "docker:up": "docker compose --profile app up --build -d",
-    "docker:down": "docker compose --profile app down"
+    "docker:up": "docker compose -f ../compose.yaml --profile app up --build -d",
+    "docker:down": "docker compose -f ../compose.yaml --profile app down"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

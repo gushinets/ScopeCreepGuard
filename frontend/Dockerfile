@@ -4,7 +4,7 @@ FROM node:${NODE_VERSION} AS dependencies
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN printf '%s\n' 'node-linker=hoisted' > .npmrc \
   && corepack enable \
