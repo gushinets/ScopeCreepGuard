@@ -31,7 +31,7 @@ def main(argv=None) -> int:
             not args.disposable
             or args.database_url_env != "SCOPE_GUARD_TEST_DATABASE_URL"
             or url.username != "scg_test"
-            or not url.database.startswith("scg_test_")
+            or not (url.database or "").startswith("scg_test_")
             or url.host not in {"127.0.0.1", "localhost"}
             or any(
                 os.environ.get(key)

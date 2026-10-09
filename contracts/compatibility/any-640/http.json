@@ -1,0 +1,1723 @@
+{
+  "version": 1,
+  "baseCommit": "97518baacaba56a1a2542fe145b14d62644c5fda",
+  "boundaries": "Real TS handlers and Drizzle; synthetic current-user/locale and deterministic LLM adapters; signed tokens are symbolic.",
+  "errorCodes": [
+    "errors.draftProofInvalid",
+    "errors.draftNotFound",
+    "errors.draftSaveFailed",
+    "errors.draftLoadFailed",
+    "errors.requestBodyInvalid",
+    "errors.emailRequired",
+    "errors.passwordRequired",
+    "errors.invalidEmail",
+    "errors.passwordTooShort",
+    "errors.duplicateEmail",
+    "errors.invalidCredentials",
+    "errors.authRequired",
+    "errors.projectNotFound",
+    "errors.projectNameRequired",
+    "errors.scopeRequired",
+    "errors.industryInvalid",
+    "errors.clientInvalid",
+    "errors.startDateInvalid",
+    "errors.pricingModelInvalid",
+    "errors.currencyInvalid",
+    "errors.hourlyRateInvalid",
+    "errors.fixedPriceInvalid",
+    "errors.historyDateInvalid",
+    "errors.requestRequired",
+    "errors.verdictInvalid",
+    "errors.summaryRequired",
+    "errors.localeInvalid",
+    "errors.clientLanguageUnsupported",
+    "errors.requestFailed",
+    "errors.authServiceUnavailable",
+    "errors.workspaceLoadFailed",
+    "errors.saveProjectFailed",
+    "errors.analysisUnavailable",
+    "errors.analysisFailed",
+    "errors.analysisInvalid",
+    "errors.analysisInputTooLarge",
+    "errors.analysisRateLimited",
+    "errors.scopeFileTooLarge",
+    "errors.scopeFileUnsupported",
+    "errors.scopeFileEmpty",
+    "errors.evaluationReasoningRequired",
+    "errors.evaluationLabelInvalid",
+    "errors.evaluationHistoryNotFound"
+  ],
+  "operations": [
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "request": {
+        "email": " Owner@Example.Test ",
+        "password": "synthetic-password"
+      },
+      "status": 201,
+      "body": {
+        "user": {
+          "id": "$user",
+          "email": "owner@example.test"
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [
+        "scg_session=$session; Path=/; Expires=Sat, 17 Oct 2026 09:00:00 GMT; Max-Age=604800; HttpOnly; SameSite=lax"
+      ],
+      "effects": {
+        "rows": {
+          "users": 1,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "request": {
+        "email": " Owner@Example.Test ",
+        "password": "synthetic-password"
+      },
+      "status": 200,
+      "body": {
+        "user": {
+          "id": "$user",
+          "email": "owner@example.test"
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [
+        "scg_session=$session; Path=/; Expires=Sat, 17 Oct 2026 09:00:00 GMT; Max-Age=604800; HttpOnly; SameSite=lax"
+      ],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "request": null,
+      "status": 200,
+      "body": {
+        "user": {
+          "id": "$user",
+          "email": "owner@example.test"
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects",
+      "request": {
+        "name": " Website ",
+        "clientName": " Acme ",
+        "industry": "Development",
+        "scope": "Five pages only.",
+        "startDate": "2026-01-01",
+        "pricingModel": "hourly",
+        "currency": "EUR",
+        "hourlyRate": "100",
+        "fixedPrice": "ignored",
+        "clientEmail": "browser@example.test",
+        "endDate": "2026-12-01"
+      },
+      "status": 201,
+      "body": {
+        "project": {
+          "id": "$project",
+          "name": "Website",
+          "clientName": "Acme",
+          "industry": "Development",
+          "scope": "Five pages only.",
+          "startDate": "2026-01-01",
+          "pricingModel": "hourly",
+          "currency": "EUR",
+          "hourlyRate": "100.00",
+          "fixedPrice": null,
+          "history": []
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 1,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": true,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects",
+      "request": null,
+      "status": 200,
+      "body": {
+        "projects": [
+          {
+            "id": "$project",
+            "name": "Website",
+            "clientName": "Acme",
+            "industry": "Development",
+            "scope": "Five pages only.",
+            "startDate": "2026-01-01",
+            "pricingModel": "hourly",
+            "currency": "EUR",
+            "hourlyRate": "100.00",
+            "fixedPrice": null,
+            "history": []
+          }
+        ]
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects/{id}",
+      "request": null,
+      "status": 200,
+      "body": {
+        "project": {
+          "id": "$project",
+          "name": "Website",
+          "clientName": "Acme",
+          "industry": "Development",
+          "scope": "Five pages only.",
+          "startDate": "2026-01-01",
+          "pricingModel": "hourly",
+          "currency": "EUR",
+          "hourlyRate": "100.00",
+          "fixedPrice": null,
+          "history": []
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/{id}",
+      "request": {
+        "name": "Renamed",
+        "industry": "Development",
+        "scope": "Five pages only.",
+        "startDate": "2026-01-01",
+        "pricingModel": "hourly",
+        "currency": "EUR",
+        "hourlyRate": "125.10",
+        "fixedPrice": "ignored",
+        "clientEmail": "browser@example.test",
+        "endDate": "2026-12-01"
+      },
+      "status": 200,
+      "body": {
+        "project": {
+          "id": "$project",
+          "name": "Renamed",
+          "clientName": "Acme",
+          "industry": "Development",
+          "scope": "Five pages only.",
+          "startDate": "2026-01-01",
+          "pricingModel": "hourly",
+          "currency": "EUR",
+          "hourlyRate": "125.10",
+          "fixedPrice": null,
+          "history": []
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/analyze",
+      "request": {
+        "projectId": "$project",
+        "request": "Add another page",
+        "endDate": "2026-12-01",
+        "documentLanguage": "en"
+      },
+      "status": 200,
+      "body": {
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 90,
+          "summary": "Extra page",
+          "reasoning": "Not included",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "suggestion": "Get approval",
+          "draftCreatedAt": "2026-10-10T09:00:00.000Z",
+          "commercialSignature": "[\"hourly\",\"EUR\",\"125.10\",null,\"2026-01-01\",\"2026-12-01\"]"
+        },
+        "projectSnapshot": {
+          "clientName": "Acme",
+          "version": 1,
+          "name": "Renamed",
+          "industry": "Development",
+          "scope": "Five pages only.",
+          "startDate": "2026-01-01",
+          "endDate": "2026-12-01",
+          "pricingModel": "hourly",
+          "currency": "EUR",
+          "hourlyRate": "125.10",
+          "fixedPrice": null,
+          "documentLanguage": "en"
+        },
+        "proof": "$proof"
+      },
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "private, no-store"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 1
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/replies/regenerate",
+      "request": {
+        "projectId": "$project",
+        "request": "Add another page",
+        "tone": "firm",
+        "previousReply": "Old reply",
+        "documentLanguage": "en"
+      },
+      "status": 200,
+      "body": {
+        "reply": "Approve first"
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 1
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/client-materials/language",
+      "request": {
+        "projectId": "$project",
+        "request": "Add another page",
+        "proof": "$proof",
+        "locale": "en",
+        "clientLanguage": "en",
+        "analysis": {
+          "verdict": "out_of_scope",
+          "confidence": 90,
+          "summary": "Extra page",
+          "reasoning": "Not included",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "suggestion": "Get approval",
+          "draftCreatedAt": "2026-10-10T09:00:00.000Z",
+          "commercialSignature": "[\"hourly\",\"EUR\",\"125.10\",null,\"2026-01-01\",\"2026-12-01\"]"
+        }
+      },
+      "status": 200,
+      "body": {
+        "materials": {
+          "clientLanguage": "en",
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "rationale": "Extra work",
+            "note": "Draft"
+          }
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 1
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/change-orders/estimate",
+      "request": {
+        "projectId": "$project",
+        "request": "Add another page",
+        "proof": "$proof",
+        "locale": "en",
+        "endDate": "2026-12-01",
+        "documentLanguage": "en"
+      },
+      "status": 200,
+      "body": {
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 90,
+          "summary": "Extra page",
+          "reasoning": "Not included",
+          "citations": [
+            "Five pages"
+          ],
+          "suggestion": "Get approval",
+          "requestLanguage": "en",
+          "clientLanguage": "en",
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work",
+            "note": "Draft"
+          },
+          "hasAdditionalWork": true,
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-10T09:00:00.000Z",
+          "commercialSignature": "[\"hourly\",\"EUR\",\"125.10\",null,\"2026-01-01\",\"2026-12-01\"]"
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 1
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/drafts",
+      "request": {
+        "projectId": "$project",
+        "request": "Add another page",
+        "proof": "$proof",
+        "locale": "en",
+        "idempotencyKey": "10000000-0000-4000-8000-000000000004",
+        "draftDocument": {
+          "version": 1,
+          "result": {
+            "verdict": "out_of_scope",
+            "confidence": 90,
+            "summary": "Extra page",
+            "reasoning": "Not included",
+            "citations": [
+              "Five pages"
+            ],
+            "replies": {
+              "warm": "Hello",
+              "neutral": "Extra work",
+              "firm": "Approve first"
+            },
+            "changeOrder": {
+              "description": "Extra page",
+              "timelineImpact": "Two days",
+              "additionalCost": "200",
+              "note": "Draft",
+              "estimatedHours": 2,
+              "currency": "EUR",
+              "rationale": "Extra work"
+            },
+            "clientLanguage": "en",
+            "hasAdditionalWork": true,
+            "requestLanguage": "en",
+            "estimateValid": true,
+            "suggestion": "Get approval",
+            "draftCreatedAt": "2026-10-10T09:00:00.000Z",
+            "commercialSignature": "[\"hourly\",\"EUR\",\"125.10\",null,\"2026-01-01\",\"2026-12-01\"]"
+          },
+          "clientMaterials": null,
+          "reply": {
+            "tone": "firm",
+            "text": "My edited reply",
+            "generated": {
+              "warm": "Hello",
+              "neutral": "Extra work",
+              "firm": "Approve first"
+            }
+          },
+          "projectDetails": {
+            "clientName": "Client",
+            "clientEmail": "client@example.test",
+            "endDate": "2026-12-01"
+          },
+          "changeOrder": {
+            "reference": "CO-20261006-DRAFT1",
+            "createdAt": "2026-10-06T12:00:00.000Z",
+            "language": "en",
+            "projectName": "Website",
+            "description": "My own scope",
+            "estimatedHours": "1.5",
+            "additionalCost": "175",
+            "currency": "EUR",
+            "timelineImpact": "Three days",
+            "rationale": "Adjusted estimate",
+            "note": "My note",
+            "providerName": "North Studio",
+            "clientName": "Client",
+            "clientEmail": "client@example.test",
+            "endDate": "2026-12-01",
+            "additionalTerms": "Pay upfront",
+            "clientApproverName": "Ana",
+            "approvalDate": "2026-10-07",
+            "noAdditionalCharge": false,
+            "aiValues": {
+              "description": "Extra page",
+              "additionalCost": "200"
+            }
+          }
+        }
+      },
+      "status": 201,
+      "body": {
+        "draft": {
+          "id": "$draft",
+          "projectId": "$project",
+          "historyEntryId": "$history",
+          "request": "Add another page",
+          "createdAt": "2026-10-10T09:00:00.000Z",
+          "updatedAt": "2026-10-10T09:00:00.000Z",
+          "status": "draft",
+          "locale": "en",
+          "requestLanguage": "en",
+          "clientMaterialLanguage": "en",
+          "projectSnapshot": {
+            "name": "Renamed",
+            "scope": "Five pages only.",
+            "endDate": "2026-12-01",
+            "version": 1,
+            "currency": "EUR",
+            "industry": "Development",
+            "startDate": "2026-01-01",
+            "clientName": "Acme",
+            "fixedPrice": null,
+            "hourlyRate": "125.10",
+            "pricingModel": "hourly",
+            "documentLanguage": "en"
+          },
+          "analysisSnapshot": {
+            "replies": {
+              "firm": "Approve first",
+              "warm": "Hello",
+              "neutral": "Extra work"
+            },
+            "summary": "Extra page",
+            "verdict": "out_of_scope",
+            "citations": [
+              "Five pages"
+            ],
+            "reasoning": "Not included",
+            "confidence": 90,
+            "suggestion": "Get approval",
+            "changeOrder": {
+              "note": "Draft",
+              "currency": "EUR",
+              "rationale": "Extra work",
+              "description": "Extra page",
+              "additionalCost": "200",
+              "estimatedHours": 2,
+              "timelineImpact": "Two days"
+            },
+            "estimateValid": true,
+            "clientLanguage": "en",
+            "draftCreatedAt": "2026-10-10T09:00:00.000Z",
+            "requestLanguage": "en",
+            "hasAdditionalWork": true,
+            "commercialSignature": "[\"hourly\",\"EUR\",\"125.10\",null,\"2026-01-01\",\"2026-12-01\"]"
+          },
+          "draftDocument": {
+            "reply": {
+              "text": "My edited reply",
+              "tone": "firm",
+              "generated": {
+                "firm": "Approve first",
+                "warm": "Hello",
+                "neutral": "Extra work"
+              }
+            },
+            "result": {
+              "replies": {
+                "firm": "Approve first",
+                "warm": "Hello",
+                "neutral": "Extra work"
+              },
+              "summary": "Extra page",
+              "verdict": "out_of_scope",
+              "citations": [
+                "Five pages"
+              ],
+              "reasoning": "Not included",
+              "confidence": 90,
+              "suggestion": "Get approval",
+              "changeOrder": {
+                "note": "Draft",
+                "currency": "EUR",
+                "rationale": "Extra work",
+                "description": "Extra page",
+                "additionalCost": "200",
+                "estimatedHours": 2,
+                "timelineImpact": "Two days"
+              },
+              "estimateValid": true,
+              "clientLanguage": "en",
+              "draftCreatedAt": "2026-10-10T09:00:00.000Z",
+              "requestLanguage": "en",
+              "hasAdditionalWork": true,
+              "commercialSignature": "[\"hourly\",\"EUR\",\"125.10\",null,\"2026-01-01\",\"2026-12-01\"]"
+            },
+            "version": 1,
+            "changeOrder": {
+              "note": "My note",
+              "endDate": "2026-12-01",
+              "aiValues": {
+                "description": "Extra page",
+                "additionalCost": "200"
+              },
+              "currency": "EUR",
+              "language": "en",
+              "createdAt": "2026-10-06T12:00:00.000Z",
+              "rationale": "Adjusted estimate",
+              "reference": "CO-20261006-DRAFT1",
+              "clientName": "Client",
+              "clientEmail": "client@example.test",
+              "description": "My own scope",
+              "projectName": "Website",
+              "approvalDate": "2026-10-07",
+              "providerName": "North Studio",
+              "additionalCost": "175",
+              "estimatedHours": "1.5",
+              "timelineImpact": "Three days",
+              "additionalTerms": "Pay upfront",
+              "clientApproverName": "Ana",
+              "noAdditionalCharge": false
+            },
+            "projectDetails": {
+              "endDate": "2026-12-01",
+              "clientName": "Client",
+              "clientEmail": "client@example.test"
+            },
+            "clientMaterials": null
+          }
+        },
+        "entry": {
+          "id": "$history",
+          "projectId": "$project",
+          "date": "2026-10-10",
+          "request": "Add another page",
+          "verdict": "out_of_scope",
+          "summary": "Extra page",
+          "draftId": "$draft"
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 1,
+          "drafts": 1,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": true,
+        "immutableSnapshotsChanged": true,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/drafts",
+      "request": null,
+      "status": 200,
+      "body": {
+        "drafts": [
+          {
+            "id": "$draft",
+            "projectName": "Renamed",
+            "verdict": "out_of_scope",
+            "requestPreview": "Add another page",
+            "createdAt": "2026-10-10T09:00:00.000Z",
+            "updatedAt": "2026-10-10T09:00:00.000Z"
+          }
+        ]
+      },
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "private, no-store"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/drafts/{draftId}",
+      "request": null,
+      "status": 200,
+      "body": {
+        "draft": {
+          "id": "$draft",
+          "projectId": "$project",
+          "historyEntryId": "$history",
+          "request": "Add another page",
+          "createdAt": "2026-10-10T09:00:00.000Z",
+          "updatedAt": "2026-10-10T09:00:00.000Z",
+          "status": "draft",
+          "locale": "en",
+          "requestLanguage": "en",
+          "clientMaterialLanguage": "en",
+          "projectSnapshot": {
+            "name": "Renamed",
+            "scope": "Five pages only.",
+            "endDate": "2026-12-01",
+            "version": 1,
+            "currency": "EUR",
+            "industry": "Development",
+            "startDate": "2026-01-01",
+            "clientName": "Acme",
+            "fixedPrice": null,
+            "hourlyRate": "125.10",
+            "pricingModel": "hourly",
+            "documentLanguage": "en"
+          },
+          "analysisSnapshot": {
+            "replies": {
+              "firm": "Approve first",
+              "warm": "Hello",
+              "neutral": "Extra work"
+            },
+            "summary": "Extra page",
+            "verdict": "out_of_scope",
+            "citations": [
+              "Five pages"
+            ],
+            "reasoning": "Not included",
+            "confidence": 90,
+            "suggestion": "Get approval",
+            "changeOrder": {
+              "note": "Draft",
+              "currency": "EUR",
+              "rationale": "Extra work",
+              "description": "Extra page",
+              "additionalCost": "200",
+              "estimatedHours": 2,
+              "timelineImpact": "Two days"
+            },
+            "estimateValid": true,
+            "clientLanguage": "en",
+            "draftCreatedAt": "2026-10-10T09:00:00.000Z",
+            "requestLanguage": "en",
+            "hasAdditionalWork": true,
+            "commercialSignature": "[\"hourly\",\"EUR\",\"125.10\",null,\"2026-01-01\",\"2026-12-01\"]"
+          },
+          "draftDocument": {
+            "reply": {
+              "text": "My edited reply",
+              "tone": "firm",
+              "generated": {
+                "firm": "Approve first",
+                "warm": "Hello",
+                "neutral": "Extra work"
+              }
+            },
+            "result": {
+              "replies": {
+                "firm": "Approve first",
+                "warm": "Hello",
+                "neutral": "Extra work"
+              },
+              "summary": "Extra page",
+              "verdict": "out_of_scope",
+              "citations": [
+                "Five pages"
+              ],
+              "reasoning": "Not included",
+              "confidence": 90,
+              "suggestion": "Get approval",
+              "changeOrder": {
+                "note": "Draft",
+                "currency": "EUR",
+                "rationale": "Extra work",
+                "description": "Extra page",
+                "additionalCost": "200",
+                "estimatedHours": 2,
+                "timelineImpact": "Two days"
+              },
+              "estimateValid": true,
+              "clientLanguage": "en",
+              "draftCreatedAt": "2026-10-10T09:00:00.000Z",
+              "requestLanguage": "en",
+              "hasAdditionalWork": true,
+              "commercialSignature": "[\"hourly\",\"EUR\",\"125.10\",null,\"2026-01-01\",\"2026-12-01\"]"
+            },
+            "version": 1,
+            "changeOrder": {
+              "note": "My note",
+              "endDate": "2026-12-01",
+              "aiValues": {
+                "description": "Extra page",
+                "additionalCost": "200"
+              },
+              "currency": "EUR",
+              "language": "en",
+              "createdAt": "2026-10-06T12:00:00.000Z",
+              "rationale": "Adjusted estimate",
+              "reference": "CO-20261006-DRAFT1",
+              "clientName": "Client",
+              "clientEmail": "client@example.test",
+              "description": "My own scope",
+              "projectName": "Website",
+              "approvalDate": "2026-10-07",
+              "providerName": "North Studio",
+              "additionalCost": "175",
+              "estimatedHours": "1.5",
+              "timelineImpact": "Three days",
+              "additionalTerms": "Pay upfront",
+              "clientApproverName": "Ana",
+              "noAdditionalCharge": false
+            },
+            "projectDetails": {
+              "endDate": "2026-12-01",
+              "clientName": "Client",
+              "clientEmail": "client@example.test"
+            },
+            "clientMaterials": null
+          }
+        }
+      },
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "private, no-store"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/drafts/{draftId}",
+      "request": {
+        "draftDocument": {
+          "version": 1,
+          "result": {
+            "verdict": "out_of_scope",
+            "confidence": 90,
+            "summary": "Extra page",
+            "reasoning": "Not included",
+            "citations": [
+              "Five pages"
+            ],
+            "replies": {
+              "warm": "Hello",
+              "neutral": "Extra work",
+              "firm": "Approve first"
+            },
+            "changeOrder": {
+              "description": "Extra page",
+              "timelineImpact": "Two days",
+              "additionalCost": "200",
+              "note": "Draft",
+              "estimatedHours": 2,
+              "currency": "EUR",
+              "rationale": "Extra work"
+            },
+            "clientLanguage": "en",
+            "hasAdditionalWork": true,
+            "requestLanguage": "en",
+            "estimateValid": true,
+            "suggestion": "Get approval",
+            "draftCreatedAt": "2026-10-10T09:00:00.000Z",
+            "commercialSignature": "[\"hourly\",\"EUR\",\"125.10\",null,\"2026-01-01\",\"2026-12-01\"]"
+          },
+          "clientMaterials": null,
+          "reply": {
+            "tone": "firm",
+            "text": "Edited Русский reply",
+            "generated": {
+              "warm": "Hello",
+              "neutral": "Extra work",
+              "firm": "Approve first"
+            }
+          },
+          "projectDetails": {
+            "clientName": "Client",
+            "clientEmail": "client@example.test",
+            "endDate": "2026-12-01"
+          },
+          "changeOrder": {
+            "reference": "CO-20261006-DRAFT1",
+            "createdAt": "2026-10-06T12:00:00.000Z",
+            "language": "en",
+            "projectName": "Website",
+            "description": "My own scope",
+            "estimatedHours": "1.5",
+            "additionalCost": "175",
+            "currency": "EUR",
+            "timelineImpact": "Three days",
+            "rationale": "Adjusted estimate",
+            "note": "My note",
+            "providerName": "North Studio",
+            "clientName": "Client",
+            "clientEmail": "client@example.test",
+            "endDate": "2026-12-01",
+            "additionalTerms": "Pay upfront",
+            "clientApproverName": "Ana",
+            "approvalDate": "2026-10-07",
+            "noAdditionalCharge": false,
+            "aiValues": {
+              "description": "Extra page",
+              "additionalCost": "200"
+            }
+          }
+        }
+      },
+      "status": 200,
+      "body": {
+        "draft": {
+          "id": "$draft",
+          "projectId": "$project",
+          "historyEntryId": "$history",
+          "request": "Add another page",
+          "createdAt": "2026-10-10T09:00:00.000Z",
+          "updatedAt": "2026-10-10T09:00:00.000Z",
+          "status": "draft",
+          "locale": "en",
+          "requestLanguage": "en",
+          "clientMaterialLanguage": "en",
+          "projectSnapshot": {
+            "name": "Renamed",
+            "scope": "Five pages only.",
+            "endDate": "2026-12-01",
+            "version": 1,
+            "currency": "EUR",
+            "industry": "Development",
+            "startDate": "2026-01-01",
+            "clientName": "Acme",
+            "fixedPrice": null,
+            "hourlyRate": "125.10",
+            "pricingModel": "hourly",
+            "documentLanguage": "en"
+          },
+          "analysisSnapshot": {
+            "replies": {
+              "firm": "Approve first",
+              "warm": "Hello",
+              "neutral": "Extra work"
+            },
+            "summary": "Extra page",
+            "verdict": "out_of_scope",
+            "citations": [
+              "Five pages"
+            ],
+            "reasoning": "Not included",
+            "confidence": 90,
+            "suggestion": "Get approval",
+            "changeOrder": {
+              "note": "Draft",
+              "currency": "EUR",
+              "rationale": "Extra work",
+              "description": "Extra page",
+              "additionalCost": "200",
+              "estimatedHours": 2,
+              "timelineImpact": "Two days"
+            },
+            "estimateValid": true,
+            "clientLanguage": "en",
+            "draftCreatedAt": "2026-10-10T09:00:00.000Z",
+            "requestLanguage": "en",
+            "hasAdditionalWork": true,
+            "commercialSignature": "[\"hourly\",\"EUR\",\"125.10\",null,\"2026-01-01\",\"2026-12-01\"]"
+          },
+          "draftDocument": {
+            "reply": {
+              "text": "Edited Русский reply",
+              "tone": "firm",
+              "generated": {
+                "firm": "Approve first",
+                "warm": "Hello",
+                "neutral": "Extra work"
+              }
+            },
+            "result": {
+              "replies": {
+                "firm": "Approve first",
+                "warm": "Hello",
+                "neutral": "Extra work"
+              },
+              "summary": "Extra page",
+              "verdict": "out_of_scope",
+              "citations": [
+                "Five pages"
+              ],
+              "reasoning": "Not included",
+              "confidence": 90,
+              "suggestion": "Get approval",
+              "changeOrder": {
+                "note": "Draft",
+                "currency": "EUR",
+                "rationale": "Extra work",
+                "description": "Extra page",
+                "additionalCost": "200",
+                "estimatedHours": 2,
+                "timelineImpact": "Two days"
+              },
+              "estimateValid": true,
+              "clientLanguage": "en",
+              "draftCreatedAt": "2026-10-10T09:00:00.000Z",
+              "requestLanguage": "en",
+              "hasAdditionalWork": true,
+              "commercialSignature": "[\"hourly\",\"EUR\",\"125.10\",null,\"2026-01-01\",\"2026-12-01\"]"
+            },
+            "version": 1,
+            "changeOrder": {
+              "note": "My note",
+              "endDate": "2026-12-01",
+              "aiValues": {
+                "description": "Extra page",
+                "additionalCost": "200"
+              },
+              "currency": "EUR",
+              "language": "en",
+              "createdAt": "2026-10-06T12:00:00.000Z",
+              "rationale": "Adjusted estimate",
+              "reference": "CO-20261006-DRAFT1",
+              "clientName": "Client",
+              "clientEmail": "client@example.test",
+              "description": "My own scope",
+              "projectName": "Website",
+              "approvalDate": "2026-10-07",
+              "providerName": "North Studio",
+              "additionalCost": "175",
+              "estimatedHours": "1.5",
+              "timelineImpact": "Three days",
+              "additionalTerms": "Pay upfront",
+              "clientApproverName": "Ana",
+              "noAdditionalCharge": false
+            },
+            "projectDetails": {
+              "endDate": "2026-12-01",
+              "clientName": "Client",
+              "clientEmail": "client@example.test"
+            },
+            "clientMaterials": null
+          }
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/{id}/history",
+      "request": {
+        "date": "2026-10-08",
+        "request": "Legacy request",
+        "verdict": "borderline",
+        "summary": "Legacy summary"
+      },
+      "status": 201,
+      "body": {
+        "entry": {
+          "id": "$legacyHistory",
+          "date": "2026-10-08",
+          "request": "Legacy request",
+          "verdict": "borderline",
+          "summary": "Legacy summary"
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 1,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": true,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/evaluations",
+      "request": {
+        "historyEntryId": "$history",
+        "accuracy": "wrong",
+        "aiReasoning": "Recorded reasoning",
+        "humanVerdict": "in_scope"
+      },
+      "status": 200,
+      "body": {
+        "evaluation": {
+          "id": "$evaluation",
+          "accuracy": "wrong",
+          "humanVerdict": "in_scope"
+        }
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 1
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/evaluations/export",
+      "request": null,
+      "status": 200,
+      "text": "{\"scope\":\"Five pages only.\",\"request\":\"Add another page\",\"ai_verdict\":\"OUT_OF_SCOPE\",\"human_verdict\":\"IN_SCOPE\",\"ai_reasoning\":\"Recorded reasoning\",\"project_type\":\"development\"}\n",
+      "headers": {
+        "content-type": "application/x-ndjson; charset=utf-8",
+        "content-disposition": "attachment; filename=\"scope-creep-evaluations.jsonl\""
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/locale",
+      "request": {
+        "locale": "ru"
+      },
+      "status": 200,
+      "body": {
+        "ok": true
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [
+        "locale=ru; Path=/; Expires=Sun, 10 Oct 2027 09:00:00 GMT; Max-Age=31536000; SameSite=lax"
+      ],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "request": null,
+      "status": 200,
+      "body": {
+        "ok": true
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [
+        "scg_session=; Path=/; Max-Age=0; HttpOnly; SameSite=lax"
+      ],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": 0,
+          "history": 0,
+          "drafts": 0,
+          "evaluations": 0
+        },
+        "lastCheckedChanged": false,
+        "immutableSnapshotsChanged": false,
+        "llmCalls": 0
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/projects/{id}",
+      "request": null,
+      "status": 200,
+      "body": {
+        "ok": true
+      },
+      "headers": {
+        "content-type": "application/json"
+      },
+      "cookies": [],
+      "effects": {
+        "rows": {
+          "users": 0,
+          "projects": -1,
+          "history": -2,
+          "drafts": -1,
+          "evaluations": -1
+        },
+        "lastCheckedChanged": true,
+        "immutableSnapshotsChanged": true,
+        "llmCalls": 0
+      }
+    }
+  ],
+  "errors": [
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects/{id}",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/{id}",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/analyze",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/replies/regenerate",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/client-materials/language",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/change-orders/estimate",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/drafts",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/drafts",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/drafts/{draftId}",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/drafts/{draftId}",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/{id}/history",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/evaluations",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/evaluations/export",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/projects/{id}",
+      "scenario": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "errors.authRequired"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "scenario": "duplicate_email",
+      "request": {
+        "email": "owner@example.test",
+        "password": "synthetic-password"
+      },
+      "status": 409,
+      "body": {
+        "error": "errors.duplicateEmail"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "scenario": "invalid_credentials",
+      "request": {
+        "email": "owner@example.test",
+        "password": "wrong-password"
+      },
+      "status": 401,
+      "body": {
+        "error": "errors.invalidCredentials"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "scenario": "email_before_password",
+      "request": {},
+      "status": 400,
+      "body": {
+        "error": "errors.emailRequired"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects",
+      "scenario": "name_before_scope",
+      "request": {},
+      "status": 400,
+      "body": {
+        "error": "errors.projectNameRequired"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/{id}",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/analyze",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/replies/regenerate",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/client-materials/language",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/change-orders/estimate",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/drafts",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/drafts/{draftId}",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/{id}/history",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/evaluations",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/locale",
+      "scenario": "null_body",
+      "request": null,
+      "status": 400,
+      "body": {
+        "error": "errors.requestBodyInvalid"
+      }
+    }
+  ]
+}

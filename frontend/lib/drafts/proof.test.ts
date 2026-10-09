@@ -1,6 +1,6 @@
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { createSessionToken } from '@/lib/auth/session'
+import { createSessionToken } from '@/tests/session-fixture'
 import { analysisFixture } from './fixtures'
 import { issueDraftProof, verifyDraftProof } from './proof'
 

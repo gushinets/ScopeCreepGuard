@@ -31,15 +31,24 @@ services:
       - {path: frontend/.env.local, required: false}
     environment:
       DATABASE_URL: *database-url
+      SCOPE_GUARD_ALLOWED_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3000}","http://127.0.0.1:${FRONTEND_PORT:-3000}"]'
+      SCOPE_GUARD_API_ORIGIN: http://backend:8000
 
   backend:
     extends: {file: compose.services.yaml, service: backend}
     profiles: [app]
     ports:
       - "${BACKEND_PORT:-8000}:8000"
+    env_file:
+      - {path: .env, required: false}
+      - {path: .env.local, required: false}
+      - {path: frontend/.env, required: false}
+      - {path: frontend/.env.local, required: false}
     environment:
+      SCOPE_GUARD_PRODUCTION: "true"
       SCOPE_GUARD_LOG_LEVEL: ${SCOPE_GUARD_LOG_LEVEL:-INFO}
       SCOPE_GUARD_DATABASE_URL: *database-url
+      SCOPE_GUARD_ALLOWED_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3000}","http://127.0.0.1:${FRONTEND_PORT:-3000}"]'
 
 volumes:
   scope_creep_guard_postgres:

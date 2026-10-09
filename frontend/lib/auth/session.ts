@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify } from 'jose'
+import { jwtVerify } from 'jose'
 import { JOSEError } from 'jose/errors'
 
 export const SESSION_COOKIE_NAME = 'scg_session'
@@ -22,15 +22,6 @@ export function getAuthSecret() {
     throw new Error('AUTH_SECRET is required')
   }
   return new TextEncoder().encode(secret)
-}
-
-export async function createSessionToken(user: SessionUser) {
-  return new SignJWT({ email: user.email })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setSubject(user.id)
-    .setIssuedAt()
-    .setExpirationTime(`${SESSION_MAX_AGE_SECONDS}s`)
-    .sign(getAuthSecret())
 }
 
 export async function verifySessionToken(token: string): Promise<SessionUser | null> {

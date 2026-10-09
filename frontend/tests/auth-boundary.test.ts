@@ -1,10 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { SignJWT } from 'jose'
-import { middleware } from '@/middleware'
-import { createSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session'
+import { proxy as middleware } from '@/proxy'
+import { SESSION_COOKIE_NAME } from '@/lib/auth/session'
+import { createSessionToken } from '@/tests/session-fixture'
 import { POST as logout } from '@/app/api/auth/logout/route'
 import { ERROR_CODES } from '@/lib/api/errors'
+import { createServer, type Server } from 'node:http'
+
+vi.mock('server-only', () => ({}))
+let server: Server
+let ownerStatus = 200
 
 const secret = 'migration-smoke-secret-at-least-32-characters'
 
@@ -15,8 +21,25 @@ function request(path: string, token?: string) {
 }
 
 describe('relocated Next.js authentication boundary', () => {
-  beforeEach(() => vi.stubEnv('AUTH_SECRET', secret))
-  afterEach(() => {
+  beforeEach(async () => {
+    vi.stubEnv('AUTH_SECRET', secret)
+    ownerStatus = 200
+    server = createServer((incoming, response) => {
+      expect(incoming.headers.cookie).toContain('scg_session=')
+      if (incoming.url === '/api/auth/logout') {
+        response.writeHead(200, { 'content-type': 'application/json', 'set-cookie': 'scg_session=; Path=/; Max-Age=0; HttpOnly; SameSite=lax' })
+        response.end('{"ok":true}')
+      } else {
+        response.writeHead(ownerStatus, { 'content-type': 'application/json', ...(ownerStatus === 401 ? { 'set-cookie': 'scg_session=; Path=/; Max-Age=0; HttpOnly; SameSite=lax' } : {}) })
+        response.end(ownerStatus === 200 ? '{"user":{"id":"migration-user","email":"user@example.test"}}' : '{"error":"errors.authRequired"}')
+      }
+    })
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+    vi.stubEnv('SCOPE_GUARD_API_ORIGIN', `http://127.0.0.1:${(server.address() as { port: number }).port}`)
+  })
+  afterEach(async () => {
+    server.closeAllConnections()
+    await new Promise<void>(resolve => server.close(() => resolve()))
     vi.unstubAllEnvs()
     vi.restoreAllMocks()
   })
@@ -52,11 +75,16 @@ describe('relocated Next.js authentication boundary', () => {
   })
 
   it('logout expires the existing session cookie', async () => {
-    const response = await logout()
-    const cookie = response.cookies.get(SESSION_COOKIE_NAME)
-    expect(cookie?.value).toBe('')
-    expect(cookie?.maxAge).toBe(0)
-    expect(cookie?.path).toBe('/')
-    expect(cookie?.httpOnly).toBe(true)
+    const response = await logout(new Request('http://localhost:3000/api/auth/logout', { method: 'POST', headers: { cookie: 'scg_session=synthetic' } }))
+    expect(response.headers.get('set-cookie')).toBe('scg_session=; Path=/; Max-Age=0; HttpOnly; SameSite=lax')
+  })
+
+  it.each([401, 500, 503])('allows login recovery when Python owner lookup returns %s', async status => {
+    ownerStatus = status
+    const token = await createSessionToken({ id: 'migration-user', email: 'user@example.test' })
+    const response = await middleware(request('/login', token))
+    expect(response.headers.get('x-middleware-next')).toBe('1')
+    expect(response.headers.get('location')).toBeNull()
+    expect(response.headers.get('set-cookie')?.includes('Max-Age=0') ?? false).toBe(status === 401)
   })
 })
