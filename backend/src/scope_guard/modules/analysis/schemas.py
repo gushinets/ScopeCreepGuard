@@ -4,7 +4,20 @@ from typing import Annotated, Literal
 from pydantic import Field, StrictBool, StrictInt, StrictStr, field_validator, model_validator
 
 from scope_guard.core.contracts import Currency, Verdict, WireModel, language_tag
-from scope_guard.modules.change_orders.schemas import ChangeOrderLabels, Replies
+from scope_guard.modules.change_orders.schemas import ChangeOrderLabels
+
+
+class AnalysisReplies(WireModel):
+    warm: StrictStr
+    neutral: StrictStr
+    firm: StrictStr
+
+    @field_validator("*")
+    @classmethod
+    def nonblank(cls, value):
+        if not value.strip():
+            raise ValueError("empty_reply")
+        return value.strip()
 
 
 class AnalysisChangeOrder(WireModel):
@@ -15,6 +28,16 @@ class AnalysisChangeOrder(WireModel):
     estimated_hours: Annotated[float, Field(strict=True, ge=0, allow_inf_nan=False)] | None = None
     currency: Currency | Literal[""] | None = None
     rationale: StrictStr | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_optionals(cls, value):
+        if isinstance(value, dict) and any(
+            key in value and value[key] is None
+            for key in ("estimatedHours", "estimated_hours", "currency", "rationale")
+        ):
+            raise ValueError("invalid_analysis_optional")
+        return value
 
     @field_validator("description", "timeline_impact", "additional_cost", "note")
     @classmethod
@@ -31,7 +54,7 @@ class AnalysisSnapshot(WireModel):
     reasoning: StrictStr
     citations: list[StrictStr]
     suggestion: StrictStr | None = None
-    replies: Replies
+    replies: AnalysisReplies
     change_order: AnalysisChangeOrder
     has_additional_work: StrictBool | None = None
     request_language: Literal["ru", "en", "es", "other"] | None = None
@@ -40,6 +63,29 @@ class AnalysisSnapshot(WireModel):
     draft_created_at: StrictStr | None = None
     commercial_signature: StrictStr | None = None
     estimate_valid: StrictBool | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_optionals(cls, value):
+        if not isinstance(value, dict):
+            return value
+        result = dict(value)
+        for key in (
+            "suggestion",
+            "hasAdditionalWork",
+            "has_additional_work",
+            "requestLanguage",
+            "request_language",
+        ):
+            if key in result and result[key] is None:
+                raise ValueError("invalid_analysis_optional")
+        if isinstance(result.get("suggestion"), str):
+            suggestion = result["suggestion"].strip()
+            if suggestion:
+                result["suggestion"] = suggestion
+            else:
+                del result["suggestion"]
+        return result
 
     @field_validator("summary", "reasoning")
     @classmethod

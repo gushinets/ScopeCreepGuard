@@ -22,4 +22,6 @@ class CommercialTerms:
     @classmethod
     def from_project_input(cls, card: CreateProjectRequest) -> "CommercialTerms":
         amount = card.hourly_rate if card.pricing_model == PricingModel.hourly else card.fixed_price
+        if amount is None:
+            raise ValueError("invalid_commercial_terms")
         return cls(card.start_date, card.pricing_model, card.currency, Decimal(amount))

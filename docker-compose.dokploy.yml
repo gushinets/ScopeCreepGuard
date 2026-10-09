@@ -23,6 +23,8 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+      SCOPE_GUARD_ALLOWED_ORIGINS: ${SCOPE_GUARD_ALLOWED_ORIGINS:?Public origin JSON allowlist is required}
+      SCOPE_GUARD_API_ORIGIN: http://backend:8000
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       HTTPS_PROXY: ${HTTPS_PROXY:-}
       HTTP_PROXY: ${HTTP_PROXY:-}
@@ -36,8 +38,11 @@ services:
   backend:
     extends: {file: compose.services.yaml, service: backend}
     environment:
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+      SCOPE_GUARD_PRODUCTION: "true"
       SCOPE_GUARD_LOG_LEVEL: ${SCOPE_GUARD_LOG_LEVEL:-INFO}
       SCOPE_GUARD_DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      SCOPE_GUARD_ALLOWED_ORIGINS: ${SCOPE_GUARD_ALLOWED_ORIGINS:?Public origin JSON allowlist is required}
     expose: ["8000"]
     restart: unless-stopped
 

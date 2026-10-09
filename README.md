@@ -1,7 +1,7 @@
 # Scope Creep Guard
 
 One repository, two independently runnable applications. Next.js owns all current
-product behavior and PostgreSQL/Drizzle migrations. FastAPI currently owns only
+product behavior and PostgreSQL/Drizzle migrations. FastAPI owns authentication (register, login, logout and me) through the Next.js same-origin gateway, plus
 `GET /health/live`, returning HTTP 200 and `{"status":"ok"}` without integrations.
 See [transitional ownership](docs/architecture/ownership.md).
 
@@ -35,6 +35,14 @@ variable precedence. Root `.env*` configures Compose and remains supported as an
 app container env file. Frontend `.env*` values override root env-file values in
 local Compose, while Compose explicitly sets the internal database URL.
 
+API writes with an `Origin` header require an exact entry in
+`SCOPE_GUARD_ALLOWED_ORIGINS`, a JSON array configured in both services. The
+frontend example includes local browser origins; local Compose derives them from
+`FRONTEND_PORT`. Dokploy requires the public HTTPS origin allowlist explicitly.
+Origin-less server clients remain supported. `SCOPE_GUARD_API_ORIGIN` is a
+server-only forwarding target (internal backend address in Compose); routes
+switch owners one slice at a time without retries or fallback writes.
+
 Python starts without a database. Its optional `backend/.env` can contain
 `SCOPE_GUARD_LOG_LEVEL=INFO` and `SCOPE_GUARD_DATABASE_URL` for connectivity
 readiness; see `backend/.env.example`. Dokploy receives its
@@ -66,7 +74,7 @@ uv run uvicorn scope_guard.main:app --host 127.0.0.1 --port 8000 --reload --loop
 
 Frontend uses port 3000; backend uses port 8000. Check
 `http://127.0.0.1:8000/health/live`. Python `/docs` and `/openapi.json` are internal
-foundation tools, not a replacement for existing Next.js `/api` routes.
+tools for implemented Python routes. Exactly the four `/api/auth/*` handlers forward to Python; other business routes remain TypeScript-owned.
 `/health/ready` checks PostgreSQL connectivity without writing schema; see the
 [ANY-639 specification](docs/architecture/any-639-data-model-and-contracts.md).
 
