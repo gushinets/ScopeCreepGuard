@@ -35,8 +35,9 @@ variable precedence. Root `.env*` configures Compose and remains supported as an
 app container env file. Frontend `.env*` values override root env-file values in
 local Compose, while Compose explicitly sets the internal database URL.
 
-Python needs no secrets or database. Its optional `backend/.env` can contain
-`SCOPE_GUARD_LOG_LEVEL=INFO`; see `backend/.env.example`. Dokploy receives its
+Python starts without a database. Its optional `backend/.env` can contain
+`SCOPE_GUARD_LOG_LEVEL=INFO` and `SCOPE_GUARD_DATABASE_URL` for connectivity
+readiness; see `backend/.env.example`. Dokploy receives its
 database/auth/OpenAI and optional outbound proxy settings from its environment
 configuration. Never put local secrets, certificates or agent handoffs in Git.
 
@@ -60,12 +61,14 @@ From `backend/`, independently of PostgreSQL:
 
 ```sh
 uv sync --locked --python 3.12
-uv run uvicorn scope_guard.main:app --host 127.0.0.1 --port 8000 --reload
+uv run uvicorn scope_guard.main:app --host 127.0.0.1 --port 8000 --reload --loop scope_guard.infrastructure.database.session:event_loop
 ```
 
 Frontend uses port 3000; backend uses port 8000. Check
 `http://127.0.0.1:8000/health/live`. Python `/docs` and `/openapi.json` are internal
 foundation tools, not a replacement for existing Next.js `/api` routes.
+`/health/ready` checks PostgreSQL connectivity without writing schema; see the
+[ANY-639 specification](docs/architecture/any-639-data-model-and-contracts.md).
 
 ## Verification
 
@@ -90,7 +93,7 @@ From `backend/`:
 
 ```sh
 uv sync --locked --python 3.12
-uv run pytest
+uv run pytest --require-integration
 uv run ruff check .
 uv run ruff format --check .
 uv run python scripts/export_openapi.py --check ../contracts/openapi.json
@@ -100,6 +103,10 @@ Generate the contract after implemented API changes:
 `uv run python scripts/export_openapi.py --output ../contracts/openapi.json`.
 For an inaccessible system pytest temp directory, use a **new, unused** directory:
 `uv run pytest --basetemp .pytest_cache/verification-run-001`.
+Backend integration tests require Docker and installed frontend dependencies.
+They provision disposable PostgreSQL themselves and never select application
+credentials. Drizzle retains migration ownership; there are no startup Alembic
+operations. See backend/README.md for explicit preflight and safety boundaries.
 
 ## Containers and Dokploy
 

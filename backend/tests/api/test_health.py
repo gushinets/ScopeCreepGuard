@@ -37,4 +37,4 @@ def test_openapi_describes_the_liveness_response():
     assert response["content"]["application/json"]["schema"] == {
         "$ref": "#/components/schemas/LivenessResponse"
     }
-    assert list(schema["paths"]) == ["/health/live"]
+    assert list(schema["paths"]) == ["/health/live", "/health/ready"]

@@ -12,6 +12,8 @@ WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN useradd --system --uid 10001 --create-home scopeguard
 COPY --from=builder --chown=scopeguard:scopeguard /app/.venv ./.venv
+COPY --chown=scopeguard:scopeguard alembic.ini ./alembic.ini
+COPY --chown=scopeguard:scopeguard alembic ./alembic
 USER scopeguard
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \

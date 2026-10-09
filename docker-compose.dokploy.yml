@@ -37,6 +37,7 @@ services:
     extends: {file: compose.services.yaml, service: backend}
     environment:
       SCOPE_GUARD_LOG_LEVEL: ${SCOPE_GUARD_LOG_LEVEL:-INFO}
+      SCOPE_GUARD_DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
     expose: ["8000"]
     restart: unless-stopped
 

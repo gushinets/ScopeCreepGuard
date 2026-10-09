@@ -1,9 +1,9 @@
 name: Application checks
 on:
   push:
-    branches: [main]
+    branches: [main, codex/any-639-data-contracts-and-alembic]
   pull_request:
-    branches: [main]
+    branches: [main, codex/any-638-frontend-backend-foundation]
 
 permissions:
   contents: read
@@ -57,13 +57,21 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.11.19"
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
       - run: uv sync --locked --python 3.12
-      - run: uv run pytest
+      - run: uv run pytest --require-integration
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run python scripts/export_openapi.py --check ../contracts/openapi.json
