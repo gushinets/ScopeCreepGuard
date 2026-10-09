@@ -1,72 +1,44 @@
-# Production stack for Dokploy. Values come from the Dokploy compose env file.
-# Required: POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, DATABASE_URL,
-# AUTH_SECRET, OPENAI_API_KEY, HTTPS_PROXY, HTTP_PROXY, NODE_USE_ENV_PROXY, NO_PROXY.
-
+# Standalone production entry point for Dokploy.
+# Supply POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, DATABASE_URL,
+# AUTH_SECRET and OPENAI_API_KEY through Dokploy configuration.
 services:
   postgres:
-    image: postgres:17-alpine
+    extends: {file: compose.services.yaml, service: postgres}
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - scope_creep_guard_postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     restart: unless-stopped
 
   migrate:
-    build:
-      context: .
-      target: migrate
+    extends: {file: compose.services.yaml, service: migrate}
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: "no"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
 
   app:
+    extends: {file: compose.services.yaml, service: app}
     build:
-      context: .
-      target: runner
       args:
-        DATABASE_URL: ${DATABASE_URL}
+        DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      AUTH_SECRET: ${AUTH_SECRET}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      NODE_ENV: production
-      HTTPS_PROXY: ${HTTPS_PROXY}
-      HTTP_PROXY: ${HTTP_PROXY}
-      NODE_USE_ENV_PROXY: ${NODE_USE_ENV_PROXY}
-      NO_PROXY: ${NO_PROXY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    init: true
-    expose:
-      - "3000"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      NODE_USE_ENV_PROXY: ${NODE_USE_ENV_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-}
+    expose: ["3000"]
     restart: unless-stopped
     labels:
       - "traefik.http.middlewares.scopecreep-no-h3.headers.customresponseheaders.Alt-Svc="
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:3000/login').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
+
+  backend:
+    extends: {file: compose.services.yaml, service: backend}
+    environment:
+      SCOPE_GUARD_LOG_LEVEL: ${SCOPE_GUARD_LOG_LEVEL:-INFO}
+    expose: ["8000"]
+    restart: unless-stopped
 
 volumes:
   scope_creep_guard_postgres:
