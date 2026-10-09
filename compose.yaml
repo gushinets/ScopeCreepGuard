@@ -39,6 +39,7 @@ services:
       - "${BACKEND_PORT:-8000}:8000"
     environment:
       SCOPE_GUARD_LOG_LEVEL: ${SCOPE_GUARD_LOG_LEVEL:-INFO}
+      SCOPE_GUARD_DATABASE_URL: *database-url
 
 volumes:
   scope_creep_guard_postgres:
