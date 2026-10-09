@@ -67,3 +67,17 @@ built and passed contract import/canonicalization assertions. Independent review
 found no remaining Important issues and compared 315 supported tag combinations
 with Node Intl without differences. No frontend code or application database
 changed in this follow-up.
+
+## Linux CI provenance correction
+
+PR CI exposed one failure with 87 passing tests: provenance recorded raw Windows
+CRLF bytes while GitHub read LF bytes. Verified the normalized digest for 0000
+equals both its Git blob and the reported Linux hash. Generator and source check
+now share CRLF-to-LF normalization and record that format explicitly. Regenerated
+manifest changes only provenance hashes/metadata; schema definitions remain
+identical. Drizzle migration files and its raw-byte ledger hashes remain untouched.
+
+Three regression tests cover CRLF/LF equivalence, changed SQL rejection and lone
+CR preservation. Final full disposable-PostgreSQL run: 91 passed in 49.61 seconds;
+Ruff/format checks passed. Independent review passed and separately verified four
+focused provenance tests.

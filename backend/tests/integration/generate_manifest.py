@@ -1,10 +1,9 @@
 """One-time deliberate reference generation. Never called by application or tests."""
 
-import hashlib
 import json
 
 from sqlalchemy import create_engine
-from support import ROOT, DisposablePostgres, replay_drizzle
+from support import ROOT, DisposablePostgres, migration_digest, replay_drizzle
 
 from scope_guard.infrastructure.database.schema_verification import inspect_schema
 
@@ -22,16 +21,21 @@ if __name__ == "__main__":
         {
             "tag": item["tag"],
             "when": item["when"],
-            "sha256": hashlib.sha256(
+            "sha256": migration_digest(
                 (ROOT / "frontend/drizzle" / (item["tag"] + ".sql")).read_bytes()
-            ).hexdigest(),
+            ),
         }
         for item in journal["entries"]
     ]
     target = ROOT / "backend/src/scope_guard/infrastructure/database/baseline_schema.json"
     target.write_text(
         json.dumps(
-            {"postgres_major": 17, "drizzle": provenance, "schema": schema},
+            {
+                "postgres_major": 17,
+                "drizzle_hash_normalization": "CRLF to LF",
+                "drizzle": provenance,
+                "schema": schema,
+            },
             indent=2,
             ensure_ascii=False,
         )
