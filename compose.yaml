@@ -1,0 +1,44 @@
+x-database-url: &database-url postgres://scopeguard:scopeguard_dev_password@postgres:5432/scope_creep_guard
+
+services:
+  postgres:
+    extends: {file: compose.services.yaml, service: postgres}
+    environment:
+      POSTGRES_DB: scope_creep_guard
+      POSTGRES_USER: scopeguard
+      POSTGRES_PASSWORD: scopeguard_dev_password
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  migrate:
+    extends: {file: compose.services.yaml, service: migrate}
+    profiles: [app]
+    environment:
+      DATABASE_URL: *database-url
+
+  app:
+    extends: {file: compose.services.yaml, service: app}
+    profiles: [app]
+    build:
+      args:
+        DATABASE_URL: *database-url
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    env_file:
+      - {path: .env, required: false}
+      - {path: .env.local, required: false}
+      - {path: frontend/.env, required: false}
+      - {path: frontend/.env.local, required: false}
+    environment:
+      DATABASE_URL: *database-url
+
+  backend:
+    extends: {file: compose.services.yaml, service: backend}
+    profiles: [app]
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      SCOPE_GUARD_LOG_LEVEL: ${SCOPE_GUARD_LOG_LEVEL:-INFO}
+
+volumes:
+  scope_creep_guard_postgres:

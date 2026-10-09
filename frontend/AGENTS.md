@@ -1,3 +1,6 @@
+Apply repository-wide instructions in `../AGENTS.md` as well as the frontend
+instructions below. Installed Next.js documentation is local to this application.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
@@ -7,8 +10,3 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
-
-Store future implementation plans in `docs/architecture/plans/`. Follow that
-directory's README for naming and handoff structure; `docs/plans.md` is a historical
-document, not a plan directory. Inspect Git state and preserve unrelated local
-changes before starting work.
