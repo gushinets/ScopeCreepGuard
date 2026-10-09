@@ -44,3 +44,26 @@ def test_draft_request_is_trimmed_and_must_not_be_blank():
     assert CreateDraftRequest.model_validate(body).request == "Extra"
     with pytest.raises(ValidationError):
         CreateDraftRequest.model_validate({**body, "request": "   "})
+
+
+@pytest.mark.parametrize("operation", ["upgrade-empty", "adopt-baseline"])
+@pytest.mark.parametrize("port", ["", ":5432"])
+def test_inherited_pgport_is_rejected_before_engine_creation(monkeypatch, capsys, operation, port):
+    from scope_guard.infrastructure.database import cli
+
+    monkeypatch.setenv(
+        "SCOPE_GUARD_TEST_DATABASE_URL", f"postgresql://scg_test:x@localhost{port}/scg_test_safe"
+    )
+    monkeypatch.setenv("PGPORT", "6543")
+    for key in ("PGSERVICE", "PGSERVICEFILE", "PGHOSTADDR"):
+        monkeypatch.delenv(key, raising=False)
+
+    def forbidden_engine(*args, **kwargs):
+        pytest.fail("Target guard must reject inherited PGPORT before constructing an engine")
+
+    monkeypatch.setattr(cli, "create_engine", forbidden_engine)
+    assert (
+        cli.main([operation, "--database-url-env", "SCOPE_GUARD_TEST_DATABASE_URL", "--disposable"])
+        == 1
+    )
+    assert "disposable_target_required" in capsys.readouterr().err
