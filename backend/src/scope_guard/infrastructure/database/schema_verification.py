@@ -89,8 +89,8 @@ enabled
                 ).mappings()
             ],
         }
-    enums = {}
-    for row in connection.execute(
+    enums: dict[str, list[str]] = {}
+    for enum_row in connection.execute(
         text("""
         SELECT t.typname, e.enumlabel FROM pg_type t
         JOIN pg_namespace n ON n.oid=t.typnamespace JOIN pg_enum e ON e.enumtypid=t.oid
@@ -98,7 +98,7 @@ enabled
     """),
         {"enums": list(ENUMS)},
     ):
-        enums.setdefault(row.typname, []).append(row.enumlabel)
+        enums.setdefault(enum_row.typname, []).append(enum_row.enumlabel)
     return {"tables": tables, "enums": enums}
 
 
@@ -120,7 +120,7 @@ def compare_schema(actual: dict, expected: dict) -> list[SchemaDifference]:
 
 
 def verify_baseline(connection: Connection) -> None:
-    major = int(connection.exec_driver_sql("SHOW server_version_num").scalar()) // 10000
+    major = int(connection.exec_driver_sql("SHOW server_version_num").scalar_one()) // 10000
     if major != 17:
         raise SchemaCompatibilityError([SchemaDifference("server_major_requires_17")])
     expected = json.loads(

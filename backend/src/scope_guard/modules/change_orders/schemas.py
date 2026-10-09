@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Literal
 
 from langcodes import Language
-from pydantic import StrictBool, StrictStr, create_model, field_validator, model_validator
+from pydantic import StrictBool, StrictStr, field_validator, model_validator
 
 from scope_guard.core.contracts import Currency, Text, WireModel, language_tag
 
@@ -77,9 +77,34 @@ class LabelBase(WireModel):
         return value.strip()
 
 
-ChangeOrderLabels = create_model(
-    "ChangeOrderLabels", __base__=LabelBase, **{key: (StrictStr, ...) for key in LABEL_KEYS}
-)
+class ChangeOrderLabels(LabelBase):
+    title: StrictStr
+    draft: StrictStr
+    documentNumber: StrictStr
+    created: StrictStr
+    project: StrictStr
+    provider: StrictStr
+    client: StrictStr
+    clientEmail: StrictStr
+    requestedChange: StrictStr
+    commercialTerms: StrictStr
+    estimatedEffort: StrictStr
+    additionalFee: StrictStr
+    noAdditionalCharge: StrictStr
+    scheduleImpact: StrictStr
+    additionalTerms: StrictStr
+    approval: StrictStr
+    approvedBy: StrictStr
+    date: StrictStr
+    draftFooter: StrictStr
+    introduction: StrictStr
+    outsideScopeFree: StrictStr
+    endDate: StrictStr
+    rationale: StrictStr
+    terms: StrictStr
+    note: StrictStr
+    page: StrictStr
+    hours: StrictStr
 
 
 class Replies(WireModel):

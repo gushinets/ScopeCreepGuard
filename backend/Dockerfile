@@ -9,7 +9,7 @@ RUN uv sync --locked --no-dev --no-editable
 
 FROM python:3.12-slim AS runner
 WORKDIR /app
-ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 SCOPE_GUARD_PRODUCTION=true
 RUN useradd --system --uid 10001 --create-home scopeguard
 COPY --from=builder --chown=scopeguard:scopeguard /app/.venv ./.venv
 COPY --chown=scopeguard:scopeguard alembic.ini ./alembic.ini
