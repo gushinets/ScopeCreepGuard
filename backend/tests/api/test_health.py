@@ -44,4 +44,6 @@ def test_openapi_describes_the_liveness_response():
         "/api/auth/login",
         "/api/auth/logout",
         "/api/auth/me",
+        "/api/projects",
+        "/api/projects/{project_id}",
     ]

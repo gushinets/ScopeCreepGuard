@@ -106,9 +106,50 @@ def main():
                 )
                 assert request("/api/auth/login", "POST", body)[0] == 200
                 assert request("/api/auth/register", "POST", body, foreign=True)[0] == 403
-                # Python-issued sessions authorize still-TypeScript business routes.
+                # The shared session authorizes the Python-owned project API.
                 status, _, projects = request("/api/projects", cookie=cookie)
                 assert status == 200 and json.loads(projects) == {"projects": []}
+                card = {
+                    "name": "Gateway project",
+                    "clientName": "Client",
+                    "scope": "Five pages",
+                    "industry": "Development",
+                    "startDate": "2026-10-10",
+                    "pricingModel": "hourly",
+                    "currency": "EUR",
+                    "hourlyRate": "100.20",
+                }
+                status, _, created = request("/api/projects", "POST", card, cookie)
+                assert status == 201
+                project = json.loads(created)["project"]
+                path = "/api/projects/" + project["id"]
+                assert request(path, cookie=cookie)[0] == 200
+                assert len(json.loads(request("/api/projects", cookie=cookie)[2])["projects"]) == 1
+                edited = {**card, "name": "Edited", "pricingModel": "fixed", "fixedPrice": "50"}
+                del edited["clientName"]
+                status, _, result = request(path, "PATCH", edited, cookie)
+                assert status == 200 and json.loads(result)["project"]["clientName"] == "Client"
+                assert json.loads(result)["project"]["hourlyRate"] is None
+                status, _, result = request(path, "PATCH", {**edited, "clientName": None}, cookie)
+                assert status == 200 and json.loads(result)["project"]["clientName"] is None
+                assert request(path, "PATCH", {}, cookie)[0] == 400
+                status, foreign_headers, _ = request(
+                    "/api/auth/register", "POST", {**body, "email": "other@example.test"}
+                )
+                assert status == 201
+                foreign_cookie = foreign_headers["set-cookie"].split(";")[0]
+                for method in ("GET", "PATCH", "DELETE"):
+                    assert (
+                        request(path, method, {} if method == "PATCH" else None, foreign_cookie)[0]
+                        == 404
+                    )
+                assert json.loads(request("/api/projects", cookie=foreign_cookie)[2]) == {
+                    "projects": []
+                }
+                assert request("/api/projects", "POST", card, cookie, foreign=True)[0] == 403
+                assert request(path, "DELETE", cookie=cookie)[0] == 200
+                assert request(path, cookie=cookie)[0] == 404
+                assert json.loads(request("/api/projects", cookie=cookie)[2]) == {"projects": []}
                 status, headers, _ = request("/api/auth/logout", "POST", cookie=cookie)
                 assert status == 200 and "Max-Age=0" in headers["set-cookie"]
                 assert request("/api/auth/me", cookie="scg_session=malformed")[0] == 401
@@ -120,7 +161,8 @@ def main():
                 assert request("/api/auth/me", cookie=cookie)[0] == 401
                 assert request("/api/projects", cookie=cookie)[0] == 401
                 print(
-                    "Auth gateway journey: 15 checks passed; owned database and processes removed"
+                    "Gateway journeys: 15 auth and 14 project checks passed; "
+                    "owned resources removed"
                 )
             finally:
                 process.terminate()
