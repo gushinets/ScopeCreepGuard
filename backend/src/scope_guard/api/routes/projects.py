@@ -3,11 +3,18 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 from starlette.responses import JSONResponse
 
-from scope_guard.api.contracts import ErrorResponse, OkResponse, ProjectEnvelope, ProjectsResponse
+from scope_guard.api.contracts import (
+    ErrorResponse,
+    HistoryResponse,
+    OkResponse,
+    ProjectEnvelope,
+    ProjectsResponse,
+)
 from scope_guard.api.dependencies import current_owner, project_service
 from scope_guard.api.errors import read_json_object
+from scope_guard.api.history_input import parse_history
 from scope_guard.api.project_input import parse_project
-from scope_guard.api.project_output import project_to_wire
+from scope_guard.api.project_output import history_to_wire, project_to_wire
 from scope_guard.modules.projects.domain import ProjectCard
 from scope_guard.modules.projects.use_cases import ProjectService
 
@@ -44,6 +51,28 @@ for name in ("hourlyRate", "fixedPrice"):
 request_contract = {
     "requestBody": {"required": True, "content": {"application/json": {"schema": body_schema}}}
 }
+history_contract = {
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "required": ["date", "request", "verdict", "summary"],
+                    "properties": {
+                        "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+                        "request": {"type": "string"},
+                        "verdict": {
+                            "type": "string",
+                            "enum": ["in_scope", "borderline", "out_of_scope"],
+                        },
+                        "summary": {"type": "string"},
+                    },
+                }
+            }
+        },
+    }
+}
 
 
 @router.get("", response_model=ProjectsResponse)
@@ -78,5 +107,22 @@ async def delete_project(project_id: str, owner: Owner, service: Service):
     return JSONResponse({"ok": True})
 
 
+@router.post(
+    "/{project_id:path}/history",
+    status_code=201,
+    response_model=HistoryResponse,
+    openapi_extra=history_contract,
+)
+async def create_history(project_id: str, request: Request, owner: Owner, service: Service):
+    entry = await service.create_history(
+        owner["id"], project_id, lambda: read_history_entry(request)
+    )
+    return JSONResponse({"entry": history_to_wire(entry)}, status_code=201)
+
+
 async def read_card(request: Request) -> ProjectCard:
     return parse_project(await read_json_object(request))
+
+
+async def read_history_entry(request: Request):
+    return parse_history(await read_json_object(request))

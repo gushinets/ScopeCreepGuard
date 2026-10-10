@@ -16,8 +16,10 @@ from scope_guard.api.errors import (
 from scope_guard.api.origin import OriginMiddleware
 from scope_guard.api.routes.auth import router as auth_router
 from scope_guard.api.routes.drafts import router as drafts_router
+from scope_guard.api.routes.evaluations import router as evaluations_router
 from scope_guard.api.routes.generation import router as generation_router
 from scope_guard.api.routes.health import router as health_router
+from scope_guard.api.routes.locale import router as locale_router
 from scope_guard.api.routes.projects import router as projects_router
 from scope_guard.core.config import Settings
 from scope_guard.core.logging import configure_logging
@@ -25,6 +27,7 @@ from scope_guard.infrastructure.database.session import create_database
 from scope_guard.infrastructure.llm.openai import OpenAIGeneration
 from scope_guard.infrastructure.llm.rate_limit import GenerationLimiter
 from scope_guard.modules.auth.use_cases import AuthError
+from scope_guard.modules.evaluations.use_cases import EvaluationError
 from scope_guard.modules.projects.use_cases import ProjectError
 
 
@@ -67,6 +70,8 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     application.include_router(projects_router)
     application.include_router(generation_router)
     application.include_router(drafts_router)
+    application.include_router(locale_router)
+    application.include_router(evaluations_router)
 
     @application.exception_handler(AuthError)
     async def auth_error(_request, error: AuthError):
@@ -74,6 +79,10 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
 
     @application.exception_handler(ProjectError)
     async def project_error(_request, error: ProjectError):
+        return json_error(ErrorCode(error.code), error.status)
+
+    @application.exception_handler(EvaluationError)
+    async def evaluation_error(_request, error: EvaluationError):
         return json_error(ErrorCode(error.code), error.status)
 
     return application

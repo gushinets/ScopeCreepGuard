@@ -95,33 +95,49 @@ def main():
         assert json.loads(request(backend + "/health/live")[2]) == {"status": "ok"}
         status, _, body = request(backend + "/api/locale", "POST", {}, "https://evil.test")
         assert status == 403 and json.loads(body) == {"error": "errors.requestFailed"}
-    with container(
-        "scg-any640-frontend-check",
-        3000,
-        {
-            "DATABASE_URL": SYNTHETIC_DB,
-            "AUTH_SECRET": "synthetic-container-secret-32-characters",
-            "SCOPE_GUARD_ALLOWED_ORIGINS": allowed,
-            "OPENAI_API_KEY": "",
-        },
-    ) as frontend:
-        wait_ready(frontend + "/login")
-        for path in ("/api/locale", "/api/auth/register", "/api/analyze"):
-            status, _, body = request(frontend + path, "POST", {}, "https://evil.test")
-            assert status == 403 and json.loads(body) == {"error": "errors.requestFailed"}
-        status, headers, body = request(
-            frontend + "/api/locale", "POST", {"locale": "ru"}, "https://app.test"
-        )
-        assert status == 200 and json.loads(body) == {"ok": True}
-        assert "locale=ru" in headers["set-cookie"] and "HttpOnly" not in headers["set-cookie"]
-        status, _, body = request(frontend + "/api/analyze", "POST", {}, "https://app.test")
-        assert status == 401 and json.loads(body) == {"error": "errors.authRequired"}
-        for path in ("/api/drafts", "/api/drafts/not-a-uuid"):
-            status, headers, body = request(frontend + path)
-            assert status == 503 and json.loads(body) == {"error": "errors.requestFailed"}
-            assert headers["cache-control"] == "private, no-store"
-        assert request(frontend + "/api/locale", "POST", {"locale": "en"})[0] == 200
-    print("Container builds and production HTTP smoke: 10 checks passed; owned containers removed.")
+        backend_from_container = backend.replace("127.0.0.1", "host.docker.internal")
+        with container(
+            "scg-any640-frontend-check",
+            3000,
+            {
+                "DATABASE_URL": SYNTHETIC_DB,
+                "AUTH_SECRET": "synthetic-container-secret-32-characters",
+                "SCOPE_GUARD_ALLOWED_ORIGINS": allowed,
+                "SCOPE_GUARD_API_ORIGIN": backend_from_container,
+                "OPENAI_API_KEY": "",
+            },
+        ) as frontend:
+            wait_ready(frontend + "/login")
+            for path in ("/api/locale", "/api/auth/register", "/api/analyze"):
+                status, _, body = request(frontend + path, "POST", {}, "https://evil.test")
+                assert status == 403 and json.loads(body) == {"error": "errors.requestFailed"}
+            status, headers, body = request(
+                frontend + "/api/locale", "POST", {"locale": "ru"}, "https://app.test"
+            )
+            assert status == 200 and json.loads(body) == {"ok": True}
+            assert "locale=ru" in headers["set-cookie"] and "HttpOnly" not in headers["set-cookie"]
+            status, _, body = request(frontend + "/api/analyze", "POST", {}, "https://app.test")
+            assert status == 401 and json.loads(body) == {"error": "errors.authRequired"}
+            status, _, body = request(frontend + "/api/drafts")
+            assert status == 401 and json.loads(body) == {"error": "errors.authRequired"}
+            assert request(frontend + "/api/locale", "POST", {"locale": "en"})[0] == 200
+        with container(
+            "scg-any640-frontend-check",
+            3000,
+            {
+                "DATABASE_URL": SYNTHETIC_DB,
+                "AUTH_SECRET": "synthetic-container-secret-32-characters",
+                "SCOPE_GUARD_ALLOWED_ORIGINS": allowed,
+                "SCOPE_GUARD_API_ORIGIN": "http://127.0.0.1:9",
+                "OPENAI_API_KEY": "",
+            },
+        ) as frontend:
+            wait_ready(frontend + "/login")
+            for path in ("/api/drafts", "/api/drafts/not-a-uuid"):
+                status, headers, body = request(frontend + path)
+                assert status == 503 and json.loads(body) == {"error": "errors.requestFailed"}
+                assert headers["cache-control"] == "private, no-store"
+    print("Container builds and production HTTP smoke: 11 checks passed; owned containers removed.")
     print("Independent deployment smoke passed; full browser workflows remain a later-slice gate.")
     return 0
 

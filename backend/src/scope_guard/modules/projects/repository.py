@@ -1,7 +1,12 @@
 from typing import Protocol, Self
 from uuid import UUID
 
-from scope_guard.modules.projects.domain import Project, ProjectCard, ProjectHistoryEntry
+from scope_guard.modules.projects.domain import (
+    ManualHistoryInput,
+    Project,
+    ProjectCard,
+    ProjectHistoryEntry,
+)
 
 
 class ProjectRepository(Protocol):
@@ -10,12 +15,14 @@ class ProjectRepository(Protocol):
     async def create(self, owner: UUID, card: ProjectCard) -> Project: ...
     async def update(self, owner: UUID, identifier: UUID, card: ProjectCard) -> Project | None: ...
     async def delete(self, owner: UUID, identifier: UUID) -> bool: ...
+    async def update_last_checked(self, owner: UUID, identifier: UUID, value: str) -> bool: ...
 
 
 class HistoryRepository(Protocol):
     async def for_projects(
         self, identifiers: tuple[UUID, ...]
     ) -> tuple[ProjectHistoryEntry, ...]: ...
+    async def create(self, project: UUID, value: ManualHistoryInput) -> ProjectHistoryEntry: ...
 
 
 class ProjectWork(Protocol):

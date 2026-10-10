@@ -9,6 +9,7 @@ from scope_guard.infrastructure.database.models import DraftRow, HistoryEntryRow
 from scope_guard.infrastructure.database.unit_of_work import SqlAlchemyUnitOfWork
 from scope_guard.modules.projects.domain import (
     AgreedScope,
+    ManualHistoryInput,
     OptionalClient,
     PricingConfiguration,
     Project,
@@ -99,6 +100,17 @@ class Projects:
             is not None
         )
 
+    async def update_last_checked(self, owner: UUID, identifier: UUID, value: str) -> bool:
+        return (
+            await self.session.scalar(
+                update(ProjectRow)
+                .where(ProjectRow.user_id == owner, ProjectRow.id == identifier)
+                .values(last_checked=date.fromisoformat(value))
+                .returning(ProjectRow.id)
+            )
+            is not None
+        )
+
 
 class History:
     def __init__(self, session: AsyncSession):
@@ -124,6 +136,26 @@ class History:
                 draft_id=draft,
             )
             for row, draft in rows
+        )
+
+    async def create(self, project: UUID, value: ManualHistoryInput) -> ProjectHistoryEntry:
+        row = HistoryEntryRow(
+            project_id=project,
+            date=date.fromisoformat(value.date),
+            request=value.request,
+            verdict=value.verdict,
+            summary=value.summary,
+        )
+        self.session.add(row)
+        await self.session.flush()
+        await self.session.refresh(row)
+        return ProjectHistoryEntry(
+            project_id=row.project_id,
+            id=row.id,
+            date=row.date,
+            request=row.request,
+            verdict=row.verdict,
+            summary=row.summary,
         )
 
 

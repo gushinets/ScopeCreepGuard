@@ -1,12 +1,38 @@
-from scope_guard.core.contracts import EvaluationAccuracy, Verdict
-from scope_guard.modules.evaluations.schemas import EvaluationLabelRequest
+from dataclasses import dataclass
+from uuid import UUID
+
+from scope_guard.core.contracts import EvaluationAccuracy, Industry, Verdict
 
 
-def resolve_human_verdict(label: EvaluationLabelRequest, ai_verdict: Verdict) -> Verdict | None:
-    if label.accuracy == EvaluationAccuracy.debatable:
-        return None
-    if label.accuracy == EvaluationAccuracy.correct:
-        return ai_verdict
-    if label.human_verdict == ai_verdict:
-        raise ValueError("evaluation_label_invalid")
-    return label.human_verdict
+@dataclass(frozen=True, slots=True)
+class EvaluationLabel:
+    history_entry_id: UUID
+    accuracy: EvaluationAccuracy
+    ai_reasoning: str
+    human_verdict: Verdict | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EvaluationExport:
+    scope: str
+    request: str
+    ai_verdict: Verdict
+    human_verdict: Verdict | None
+    ai_reasoning: str
+    industry: Industry
+
+
+@dataclass(frozen=True, slots=True)
+class OwnedHistoryContext:
+    id: UUID
+    scope: str
+    request: str
+    ai_verdict: Verdict
+    industry: Industry
+
+
+@dataclass(frozen=True, slots=True)
+class EvaluationResult:
+    id: UUID
+    accuracy: EvaluationAccuracy
+    human_verdict: Verdict | None
