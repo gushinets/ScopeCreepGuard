@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 import pytest
-from integration.support import replay_drizzle
+from integration.support import prepare_alembic
 from sqlalchemy import create_engine, select
 
 pytestmark = pytest.mark.integration
@@ -17,7 +17,7 @@ def test_mapped_rows_round_trip_decimals_json_and_server_defaults(disposable_url
         UserRow,
     )
 
-    replay_drizzle(disposable_url)
+    prepare_alembic(disposable_url)
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
     try:
         with Session(engine) as session:

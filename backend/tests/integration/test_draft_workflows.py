@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
-from integration.support import replay_drizzle
+from integration.support import prepare_alembic
 from pydantic import SecretStr
 from sqlalchemy import text
 
@@ -31,7 +31,7 @@ SECRET = "synthetic-draft-secret-at-least-32-characters"
 
 
 def test_draft_owner_concurrency_retry_updates_and_legacy(disposable_url, monkeypatch):
-    replay_drizzle(disposable_url)
+    prepare_alembic(disposable_url)
 
     async def run():
         clock = [1791622800.123]
@@ -222,7 +222,7 @@ def test_draft_owner_concurrency_retry_updates_and_legacy(disposable_url, monkey
 
 @pytest.mark.parametrize("table", ["drafts", "projects", "commit"])
 def test_draft_transaction_rolls_back_injected_database_failure(disposable_url, table):
-    replay_drizzle(disposable_url)
+    prepare_alembic(disposable_url)
 
     async def run():
         app = create_app(

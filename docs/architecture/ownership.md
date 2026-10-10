@@ -1,8 +1,8 @@
 # Transitional ownership
 
-Next.js under frontend owns UI/localization, page guards and the same-origin gateway. All 21 current `/api/*` operations forward to FastAPI once, preserving cookies and headers without retries or fallback. Browser PDF/extraction/currency helpers remain unchanged. Drizzle's migration target runs before its app container.
+Next.js under frontend owns UI/localization, page guards and the same-origin gateway. All 21 current `/api/*` operations forward to FastAPI once, preserving cookies and headers without retries or fallback. Browser PDF/extraction/currency helpers remain unchanged. The frontend has no PostgreSQL or migration responsibility.
 
-Python under backend owns startup/configuration/logging, GET /health/live and connectivity-only GET /health/ready, plus POST /api/auth/register, POST /api/auth/login, POST /api/auth/logout and GET /api/auth/me. Auth use cases orchestrate repositories and the inherited Unit of Work; infrastructure adapters implement bcrypt and the existing HS256 session format. Registration/login/me require configured database and shared AUTH_SECRET; logout/liveness do not. Production cookies require SCOPE_GUARD_PRODUCTION=true (the production image default). Public-page redirects confirm Python's owner lookup so deleted-user sessions can recover. Drizzle retains all migration authority. See any-639-data-model-and-contracts.md for schema and operational boundaries.
+Python under backend owns startup/configuration/logging, health endpoints, all public API operations, SQLAlchemy persistence, and Alembic migrations. Application startup never mutates schema. A backend-owned one-shot migration job validates and migrates PostgreSQL before FastAPI becomes ready. See any-639-data-model-and-contracts.md for schema invariants and the ANY-642 handover plan for operational boundaries.
 
 Python also owns GET/POST /api/projects and GET/PATCH/DELETE /api/projects/{id}. Routes handle transport and dependencies; project use cases orchestrate the inherited Unit of Work; repository ports separate workflows from SQLAlchemy adapters. Owned history reads include existing draft links. Project changes preserve saved snapshots; deletion uses existing database cascades. TS single-project helpers remain for pending workflows. No schema or migration ownership changes accompany this cutover.
 
@@ -12,7 +12,12 @@ values and tuples of immutable history entries. HTTP input/output conversion
 stays in api/project_input.py and api/project_output.py; serializers allocate new
 JSON structures and never expose internal state.
 
-ANY-639 designs contracts/data and prepares SQLAlchemy/Alembic without transferring migration authority. ANY-640 migrates existing business/auth operations and routing deliberately. ANY-641 moves PDF/extraction/currency services. Root contracts are generated from implemented Python routes; frontend/lib/api is the shared browser/forwarding boundary.
+ANY-639 designed contracts/data and prepared SQLAlchemy/Alembic. ANY-640 migrated existing business/auth operations and routing. ANY-642 transfers migration authority exclusively to Alembic. ANY-641 remains responsible for PDF/extraction/currency services. Root contracts are generated from implemented Python routes; frontend/lib/api is the shared browser/forwarding boundary.
+
+Empty databases are created through Alembic. Legacy Drizzle databases require an
+explicit adoption flag and must pass full catalog and historical-ledger validation
+before the baseline can be stamped. Unknown or incompatible schemas are rejected
+without mutation. The historical Drizzle ledger remains inert provenance.
 
 Slice D transfers POST /api/analyze, /api/replies/regenerate,
 /api/client-materials/language and /api/change-orders/estimate together. Routes

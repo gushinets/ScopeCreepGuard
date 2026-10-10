@@ -81,7 +81,7 @@ def main():
         ("backend", ["backend"]),
         (
             "frontend",
-            ["--target", "runner", "--build-arg", "DATABASE_URL=" + SYNTHETIC_DB, "frontend"],
+            ["--target", "runner", "frontend"],
         ),
     ):
         subprocess.run(
@@ -100,7 +100,6 @@ def main():
             "scg-any640-frontend-check",
             3000,
             {
-                "DATABASE_URL": SYNTHETIC_DB,
                 "AUTH_SECRET": "synthetic-container-secret-32-characters",
                 "SCOPE_GUARD_ALLOWED_ORIGINS": allowed,
                 "SCOPE_GUARD_API_ORIGIN": backend_from_container,
@@ -125,7 +124,6 @@ def main():
             "scg-any640-frontend-check",
             3000,
             {
-                "DATABASE_URL": SYNTHETIC_DB,
                 "AUTH_SECRET": "synthetic-container-secret-32-characters",
                 "SCOPE_GUARD_ALLOWED_ORIGINS": allowed,
                 "SCOPE_GUARD_API_ORIGIN": "http://127.0.0.1:9",

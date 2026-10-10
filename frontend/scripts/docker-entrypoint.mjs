@@ -37,7 +37,6 @@ function isDirectRun() {
 }
 
 if (isDirectRun()) {
-  requireEnv('DATABASE_URL')
   requireEnv('AUTH_SECRET')
 
   const launch = serverLaunch(process.env)

@@ -2,7 +2,6 @@ import { createServer } from 'node:http'
 import { afterEach, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
-vi.mock('@/lib/db', () => { throw new Error('Draft gateway must not import TS persistence') })
 afterEach(() => vi.unstubAllEnvs())
 
 it('forwards all four draft methods once with raw body and private read headers', async () => {

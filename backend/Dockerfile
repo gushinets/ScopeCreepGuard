@@ -7,7 +7,7 @@ RUN uv sync --locked --no-dev --no-install-project
 COPY src ./src
 RUN uv sync --locked --no-dev --no-editable
 
-FROM python:3.12-slim AS runner
+FROM python:3.12-slim AS runtime
 WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 SCOPE_GUARD_PRODUCTION=true
 RUN useradd --system --uid 10001 --create-home scopeguard
@@ -15,6 +15,11 @@ COPY --from=builder --chown=scopeguard:scopeguard /app/.venv ./.venv
 COPY --chown=scopeguard:scopeguard alembic.ini ./alembic.ini
 COPY --chown=scopeguard:scopeguard alembic ./alembic
 USER scopeguard
+
+FROM runtime AS migration
+CMD ["python", "-m", "scope_guard.infrastructure.database.cli", "migrate", "--database-url-env", "SCOPE_GUARD_DATABASE_URL"]
+
+FROM runtime AS runner
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3)"

@@ -2,7 +2,6 @@ import { createServer } from 'node:http'
 import { afterEach, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
-vi.mock('@/lib/db', () => { throw new Error('Migrated project handlers must not import TypeScript persistence') })
 afterEach(() => vi.unstubAllEnvs())
 
 it('forwards exactly the five project methods while preserving response status and headers', async () => {

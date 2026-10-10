@@ -13,15 +13,19 @@ services:
   migrate:
     extends: {file: compose.services.yaml, service: migrate}
     environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      SCOPE_GUARD_DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      SCOPE_GUARD_ADOPT_LEGACY: ${SCOPE_GUARD_ADOPT_LEGACY:-false}
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        if [ "$${SCOPE_GUARD_ADOPT_LEGACY}" = "true" ]; then set -- --adopt-legacy; fi;
+        python -m scope_guard.infrastructure.database.cli migrate
+        --database-url-env SCOPE_GUARD_DATABASE_URL "$$@"
 
   app:
     extends: {file: compose.services.yaml, service: app}
-    build:
-      args:
-        DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
     environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
       SCOPE_GUARD_ALLOWED_ORIGINS: ${SCOPE_GUARD_ALLOWED_ORIGINS:?Public origin JSON allowlist is required}
       SCOPE_GUARD_API_ORIGIN: http://backend:8000

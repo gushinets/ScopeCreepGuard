@@ -4,7 +4,7 @@ from uuid import UUID
 
 import httpx
 import pytest
-from integration.support import replay_drizzle
+from integration.support import prepare_alembic
 from pydantic import SecretStr
 from sqlalchemy import text
 
@@ -29,7 +29,7 @@ CARD = {
 
 
 def test_project_ownership_history_snapshots_and_cascades(disposable_url):
-    replay_drizzle(disposable_url)
+    prepare_alembic(disposable_url)
 
     async def run():
         app = create_app(

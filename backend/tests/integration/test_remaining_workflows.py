@@ -2,7 +2,7 @@ import asyncio
 
 import httpx
 import pytest
-from integration.support import replay_drizzle
+from integration.support import prepare_alembic
 from pydantic import SecretStr
 from sqlalchemy import text
 
@@ -23,7 +23,7 @@ CARD = {
 
 
 def test_history_evaluation_export_and_owner_isolation(disposable_url):
-    replay_drizzle(disposable_url)
+    prepare_alembic(disposable_url)
 
     async def run():
         app = create_app(
@@ -263,7 +263,7 @@ def test_history_evaluation_export_and_owner_isolation(disposable_url):
 def test_manual_history_rolls_back_insert_and_last_checked_when_commit_fails(
     disposable_url, monkeypatch
 ):
-    replay_drizzle(disposable_url)
+    prepare_alembic(disposable_url)
 
     async def run():
         app = create_app(

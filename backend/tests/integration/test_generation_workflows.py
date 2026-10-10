@@ -4,7 +4,7 @@ from pathlib import Path
 
 import httpx
 import pytest
-from integration.support import replay_drizzle
+from integration.support import prepare_alembic
 from pydantic import SecretStr
 from sqlalchemy import text
 
@@ -30,7 +30,7 @@ CARD = {
 
 
 def test_generation_reads_are_owned_detached_and_never_write(disposable_url):
-    replay_drizzle(disposable_url)
+    prepare_alembic(disposable_url)
 
     async def run():
         app = create_app(

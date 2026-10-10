@@ -8,7 +8,8 @@ from support import ROOT, DisposablePostgres, migration_digest, replay_drizzle
 from scope_guard.infrastructure.database.schema_verification import inspect_schema
 
 if __name__ == "__main__":
-    journal = json.loads((ROOT / "frontend/drizzle/meta/_journal.json").read_text())
+    fixture = ROOT / "backend/tests/fixtures/legacy_drizzle"
+    journal = json.loads((fixture / "_journal.json").read_text())
     with DisposablePostgres() as server, server.database() as url:
         replay_drizzle(url)
         engine = create_engine(url.replace("postgresql://", "postgresql+psycopg://"))
@@ -21,9 +22,7 @@ if __name__ == "__main__":
         {
             "tag": item["tag"],
             "when": item["when"],
-            "sha256": migration_digest(
-                (ROOT / "frontend/drizzle" / (item["tag"] + ".sql")).read_bytes()
-            ),
+            "sha256": migration_digest((fixture / (item["tag"] + ".sql")).read_bytes()),
         }
         for item in journal["entries"]
     ]
