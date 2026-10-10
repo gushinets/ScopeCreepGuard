@@ -1,5 +1,5 @@
 import { expect, it, vi, afterEach } from 'vitest'
-import { verifyDraftProof } from '@/lib/drafts/proof'
+import { verifyDraftProof } from '@/tests/draft-proof-reference'
 import { issueDraftProof } from '@/tests/draft-proof-fixture'
 import { analysisFixture, projectSnapshotFixture } from '@/lib/drafts/fixtures'
 import { pythonProof } from './python-proof-fixture'

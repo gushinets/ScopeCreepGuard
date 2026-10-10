@@ -144,10 +144,10 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
     session.userId = other
     expect((await detail.GET(request('GET'), context(created.draft.id))).status).toBe(404)
     expect((await detail.PUT(request('PUT', { draftDocument: documentFixture }), context(created.draft.id))).status).toBe(404)
-    expect((await (await collection.GET()).json()).drafts).toEqual([])
+    expect((await (await collection.GET(request('GET'))).json()).drafts).toEqual([])
     expect((await collection.POST(request('POST', body))).status).toBe(400)
     session.userId = owner
-    const list = (await (await collection.GET()).json()).drafts
+    const list = (await (await collection.GET(request('GET'))).json()).drafts
     expect(list).toHaveLength(1)
     expect(list[0]).toMatchObject({ id: created.draft.id, requestPreview: 'Add another page', projectName: 'Website', verdict: 'out_of_scope' })
     expect(list[0]).not.toHaveProperty('analysisSnapshot')
@@ -155,7 +155,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
   it('requires authentication and rejects malformed documents before insertion', async () => {
     session.userId = null
     expect((await collection.POST(request('POST', body))).status).toBe(401)
-    expect((await collection.GET()).status).toBe(401)
+    expect((await collection.GET(request('GET'))).status).toBe(401)
     expect((await detail.GET(request('GET'), context(token))).status).toBe(401)
     expect((await detail.PUT(request('PUT', { draftDocument: documentFixture }), context(token))).status).toBe(401)
     session.userId = owner
@@ -219,7 +219,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
     await sql`UPDATE projects SET name = 'Changed again', hourly_rate = 333 WHERE id = ${projectId}`
     const reopened = (await (await detail.GET(request('GET'), context(created.id))).json()).draft
     expect(reopened.projectSnapshot).toEqual(created.projectSnapshot)
-    expect((await (await collection.GET()).json()).drafts[0].projectName).toBe('Website')
+    expect((await (await collection.GET(request('GET'))).json()).drafts[0].projectName).toBe('Website')
   })
   it('keeps legacy persisted drafts readable and editable without fabricating a snapshot', async () => {
     const created = await create()

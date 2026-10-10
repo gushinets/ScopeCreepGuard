@@ -27,6 +27,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Python authenticates draft APIs; page navigation still uses the session guard.
+  if (pathname === '/api/drafts' || pathname.startsWith('/api/drafts/')) {
+    return NextResponse.next()
+  }
+
   const isPublicPage = PUBLIC_PAGE_PATHS.has(pathname)
   const isAuthApi = pathname.startsWith('/api/auth/')
   const isLocaleApi = pathname === '/api/locale'

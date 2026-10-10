@@ -115,9 +115,13 @@ def main():
         assert status == 200 and json.loads(body) == {"ok": True}
         assert "locale=ru" in headers["set-cookie"] and "HttpOnly" not in headers["set-cookie"]
         status, _, body = request(frontend + "/api/analyze", "POST", {}, "https://app.test")
-        assert status == 503 and json.loads(body) == {"error": "errors.requestFailed"}
+        assert status == 401 and json.loads(body) == {"error": "errors.authRequired"}
+        for path in ("/api/drafts", "/api/drafts/not-a-uuid"):
+            status, headers, body = request(frontend + path)
+            assert status == 503 and json.loads(body) == {"error": "errors.requestFailed"}
+            assert headers["cache-control"] == "private, no-store"
         assert request(frontend + "/api/locale", "POST", {"locale": "en"})[0] == 200
-    print("Container builds and production HTTP smoke: 8 checks passed; owned containers removed.")
+    print("Container builds and production HTTP smoke: 10 checks passed; owned containers removed.")
     print("Independent deployment smoke passed; full browser workflows remain a later-slice gate.")
     return 0
 

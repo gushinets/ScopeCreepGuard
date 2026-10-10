@@ -47,8 +47,10 @@ jobs:
       - run: pnpm build
       - name: Authentication and projects through production Next.js and FastAPI
         run: node ../scripts/verify-any640.mjs --suite auth-gateway
-      - name: Generation and transitional draft saving through production gateways
+      - name: Generation and Python draft saving through production gateways
         run: node ../scripts/verify-any640.mjs --suite generation-gateway
+      - name: Draft persistence through production gateways
+        run: node ../scripts/verify-any640.mjs --suite drafts-gateway
       - run: pnpm exec tsc --noEmit
 
   backend:

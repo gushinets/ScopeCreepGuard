@@ -1,8 +1,8 @@
 import { createHmac } from 'node:crypto'
 import { SignJWT } from 'jose'
 import { getAuthSecret } from '@/lib/auth/session'
-import { parseSnapshot } from '@/lib/drafts/validation'
-import { DRAFT_PROOF_LIFETIME_SECONDS } from '@/lib/drafts/proof'
+import { parseSnapshot } from '@/tests/draft-validation-reference'
+import { DRAFT_PROOF_LIFETIME_SECONDS } from '@/tests/draft-proof-reference'
 import type { DraftProofClaims } from '@/lib/drafts/types'
 
 const VERSION = 'scg-draft-proof-v1'

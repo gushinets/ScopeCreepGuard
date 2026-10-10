@@ -1,6 +1,6 @@
 # Transitional ownership
 
-Next.js under frontend owns UI/localization, page guards and the same-origin gateway. Four auth operations, five project operations and all four generation operations forward to FastAPI once, preserving cookies and headers without retries or fallback. The remaining eight operations, including legacy history creation, draft saving/loading/updating, evaluations and locale writes, remain TypeScript-owned. Browser PDF/extraction/currency helpers remain unchanged. Drizzle's migration target runs before its app container.
+Next.js under frontend owns UI/localization, page guards and the same-origin gateway. Four auth operations, five project operations, all four generation operations and four draft operations forward to FastAPI once, preserving cookies and headers without retries or fallback. The remaining four operations (legacy history POST, evaluation labeling/export and locale writes) remain TypeScript-owned. Browser PDF/extraction/currency helpers remain unchanged. Drizzle's migration target runs before its app container.
 
 Python under backend owns startup/configuration/logging, GET /health/live and connectivity-only GET /health/ready, plus POST /api/auth/register, POST /api/auth/login, POST /api/auth/logout and GET /api/auth/me. Auth use cases orchestrate repositories and the inherited Unit of Work; infrastructure adapters implement bcrypt and the existing HS256 session format. Registration/login/me require configured database and shared AUTH_SECRET; logout/liveness do not. Production cookies require SCOPE_GUARD_PRODUCTION=true (the production image default). Public-page redirects confirm Python's owner lookup so deleted-user sessions can recover. Drizzle retains all migration authority. See any-639-data-model-and-contracts.md for schema and operational boundaries.
 
@@ -24,8 +24,8 @@ prompts, schemas, reasoning and per-attempt timeout. One app-scoped limiter admi
 ten operations/user/rolling minute; production must use one worker and one replica.
 
 Python issues and verifies the existing signed draft-proof format. TypeScript
-retains verification for its saver through Slice E; its issuer and old generation
-reference helpers now exist only in tests. Shared pure serialization allocates
+proof verification and draft persistence validation now exist only in tests;
+production TypeScript draft persistence is retired. Shared pure serialization allocates
 fresh JSON for both infrastructure signing/prompt construction and the HTTP output
 boundary. Provider schemas remain separate from permissive runtime normalization.
 The frontend OpenAI SDK/key is retired; backend configuration owns the key and
@@ -33,3 +33,20 @@ outbound provider proxies. Deployment and rollback use a matching image pair,
 with generation admission stopped/drained and a rolling-minute quiet window.
 
 Root tests/e2e covers complete user journeys; deploy/proxy records future routing. Frontend feature folders document future ownership without changing imports or presentation behavior. Historical documents under docs/superpowers and root product documents retain original paths as historical context; use README.md for current setup.
+
+Slice E transfers GET/POST /api/drafts and GET/PUT /api/drafts/{id}. Python
+routes own ordered parsing, proof validation, error mapping and fresh JSON output.
+Frozen/slotted nested draft values and recursively typed immutable JSON preserve
+historical missing/null snapshots without normalizing reads. Repository ports
+return detached domain values; SQLAlchemy adapters own joins, ownership predicates
+and mutations; the inherited UoW owns commit/rollback/close. No schema change.
+
+Creation validates the complete envelope/proof/document before write work, locks
+the owned project then checks its creation key, atomically inserts one linked
+history/draft pair and updates lastChecked. Valid retries return stored state
+unchanged; expired proofs fail even for an existing key. PUT changes document,
+client-material language, labels and updatedAt only. No draft operation calls LLM.
+All draft GET responses, including errors and gateway outages, are private,no-store.
+Deployment is a grouped four-operation cutover after backend availability and
+draft-write draining; rollback uses the previous compatible image pair and keeps
+persisted data. No request-level fallback or migration reversal.
