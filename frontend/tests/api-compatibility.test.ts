@@ -18,24 +18,6 @@ const state = vi.hoisted(() => ({
 }))
 vi.mock('@/lib/auth/current-user', () => ({ getCurrentUser: async () => state.user }))
 vi.mock('next-intl/server', () => ({ getLocale: async () => state.locale }))
-vi.mock('@/lib/llm/rate-limit', () => ({ allowAnalyze: () => true }))
-vi.mock('@/lib/llm/openai', async (original) => ({
-  ...await original<typeof import('@/lib/llm/openai')>(),
-  analyzeWithOpenAI: async () => { state.calls += 1; return structuredClone(state.result) },
-  regenerateReplyWithOpenAI: async (input: { tone: 'warm' | 'neutral' | 'firm' }) => {
-    state.calls += 1
-    return analysisFixture.replies[input.tone]
-  },
-}))
-vi.mock('@/lib/llm/client-materials', () => ({
-  regenerateClientMaterials: async () => {
-    state.calls += 1
-    return { clientLanguage: 'en', replies: analysisFixture.replies, changeOrder: {
-      description: analysisFixture.changeOrder.description, timelineImpact: analysisFixture.changeOrder.timelineImpact,
-      rationale: analysisFixture.changeOrder.rationale ?? '', note: analysisFixture.changeOrder.note,
-    } }
-  },
-}))
 
 afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); vi.restoreAllMocks() })
 
@@ -92,7 +74,7 @@ it.skipIf(!process.env.SCG_COMPATIBILITY_DATABASE_URL)('freezes all 21 HTTP oper
     const operation = { method, path, handler: module[method] as Handler }
     operations.push(operation)
     const before = await rows()
-    const calls = state.calls
+    const calls = (await (await fetch(process.env.SCOPE_GUARD_API_ORIGIN + '/__generation_calls')).json()).calls
     const response = await invoke(operation, body)
     expect(response.status).toBe(options.status ?? 200)
     const raw = await response.text()
@@ -110,6 +92,7 @@ it.skipIf(!process.env.SCG_COMPATIBILITY_DATABASE_URL)('freezes all 21 HTTP oper
         cookie = `scg_session=${token}; locale=en`
       }
     }
+    state.calls = (await (await fetch(process.env.SCOPE_GUARD_API_ORIGIN + '/__generation_calls')).json()).calls
     const after = await rows()
     const delta = Object.fromEntries(Object.keys(before.counts).map((key) => [key, after.counts[key] - before.counts[key]]))
     expect(delta).toEqual({ users: 0, projects: 0, history: 0, drafts: 0, evaluations: 0, ...options.delta })

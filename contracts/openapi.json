@@ -994,10 +994,856 @@
           }
         }
       }
+    },
+    "/api/analyze": {
+      "post": {
+        "tags": [
+          "generation"
+        ],
+        "summary": "Analyze",
+        "operationId": "analyze_api_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "projectId": {
+                    "type": "string"
+                  },
+                  "request": {
+                    "type": "string"
+                  },
+                  "documentLanguage": {
+                    "type": "string"
+                  },
+                  "endDate": {
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "projectId",
+                  "request"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/replies/regenerate": {
+      "post": {
+        "tags": [
+          "generation"
+        ],
+        "summary": "Reply",
+        "operationId": "reply_api_replies_regenerate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "projectId": {
+                    "type": "string"
+                  },
+                  "request": {
+                    "type": "string"
+                  },
+                  "documentLanguage": {
+                    "type": "string"
+                  },
+                  "endDate": {
+                    "type": "string"
+                  },
+                  "tone": {
+                    "type": "string",
+                    "enum": [
+                      "warm",
+                      "neutral",
+                      "firm"
+                    ]
+                  },
+                  "previousReply": {
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "projectId",
+                  "request",
+                  "tone",
+                  "previousReply"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplyResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/client-materials/language": {
+      "post": {
+        "tags": [
+          "generation"
+        ],
+        "summary": "Materials",
+        "operationId": "materials_api_client_materials_language_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "projectId": {
+                    "type": "string"
+                  },
+                  "request": {
+                    "type": "string"
+                  },
+                  "documentLanguage": {
+                    "type": "string"
+                  },
+                  "endDate": {
+                    "type": "string"
+                  },
+                  "draftId": {
+                    "type": "string"
+                  },
+                  "proof": {
+                    "type": "string"
+                  },
+                  "locale": {
+                    "type": "string"
+                  },
+                  "historyId": {
+                    "type": "string"
+                  },
+                  "clientLanguage": {
+                    "type": "string"
+                  },
+                  "analysis": {
+                    "type": "object"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "projectId",
+                  "request",
+                  "clientLanguage",
+                  "analysis"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/change-orders/estimate": {
+      "post": {
+        "tags": [
+          "generation"
+        ],
+        "summary": "Estimate",
+        "operationId": "estimate_api_change_orders_estimate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "projectId": {
+                    "type": "string"
+                  },
+                  "request": {
+                    "type": "string"
+                  },
+                  "documentLanguage": {
+                    "type": "string"
+                  },
+                  "endDate": {
+                    "type": "string"
+                  },
+                  "draftId": {
+                    "type": "string"
+                  },
+                  "proof": {
+                    "type": "string"
+                  },
+                  "locale": {
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "projectId",
+                  "request"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstimateResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AnalysisChangeOrder": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "timelineImpact": {
+            "type": "string",
+            "title": "Timelineimpact"
+          },
+          "additionalCost": {
+            "type": "string",
+            "title": "Additionalcost"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "estimatedHours": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimatedhours"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Currency"
+              },
+              {
+                "type": "string",
+                "const": ""
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "description",
+          "timelineImpact",
+          "additionalCost",
+          "note"
+        ],
+        "title": "AnalysisChangeOrder"
+      },
+      "AnalysisReplies": {
+        "properties": {
+          "warm": {
+            "type": "string",
+            "title": "Warm"
+          },
+          "neutral": {
+            "type": "string",
+            "title": "Neutral"
+          },
+          "firm": {
+            "type": "string",
+            "title": "Firm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "warm",
+          "neutral",
+          "firm"
+        ],
+        "title": "AnalysisReplies"
+      },
+      "AnalysisSnapshot": {
+        "properties": {
+          "verdict": {
+            "$ref": "#/components/schemas/Verdict"
+          },
+          "confidence": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "reasoning": {
+            "type": "string",
+            "title": "Reasoning"
+          },
+          "citations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Citations"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion"
+          },
+          "replies": {
+            "$ref": "#/components/schemas/AnalysisReplies"
+          },
+          "changeOrder": {
+            "$ref": "#/components/schemas/AnalysisChangeOrder"
+          },
+          "hasAdditionalWork": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hasadditionalwork"
+          },
+          "requestLanguage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ru",
+                  "en",
+                  "es",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestlanguage"
+          },
+          "clientLanguage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientlanguage"
+          },
+          "changeOrderLabels": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChangeOrderLabels"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "draftCreatedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftcreatedat"
+          },
+          "commercialSignature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commercialsignature"
+          },
+          "estimateValid": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimatevalid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict",
+          "confidence",
+          "summary",
+          "reasoning",
+          "citations",
+          "replies",
+          "changeOrder"
+        ],
+        "title": "AnalysisSnapshot"
+      },
+      "AnalyzeResponse": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/AnalysisSnapshot"
+          },
+          "projectSnapshot": {
+            "$ref": "#/components/schemas/ProjectSnapshot"
+          },
+          "proof": {
+            "type": "string",
+            "title": "Proof"
+          }
+        },
+        "type": "object",
+        "required": [
+          "result",
+          "projectSnapshot",
+          "proof"
+        ],
+        "title": "AnalyzeResponse"
+      },
       "AuthResponse": {
         "properties": {
           "user": {
@@ -1009,6 +1855,218 @@
           "user"
         ],
         "title": "AuthResponse"
+      },
+      "ChangeOrderLabels": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "draft": {
+            "type": "string",
+            "title": "Draft"
+          },
+          "documentNumber": {
+            "type": "string",
+            "title": "Documentnumber"
+          },
+          "created": {
+            "type": "string",
+            "title": "Created"
+          },
+          "project": {
+            "type": "string",
+            "title": "Project"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "client": {
+            "type": "string",
+            "title": "Client"
+          },
+          "clientEmail": {
+            "type": "string",
+            "title": "Clientemail"
+          },
+          "requestedChange": {
+            "type": "string",
+            "title": "Requestedchange"
+          },
+          "commercialTerms": {
+            "type": "string",
+            "title": "Commercialterms"
+          },
+          "estimatedEffort": {
+            "type": "string",
+            "title": "Estimatedeffort"
+          },
+          "additionalFee": {
+            "type": "string",
+            "title": "Additionalfee"
+          },
+          "noAdditionalCharge": {
+            "type": "string",
+            "title": "Noadditionalcharge"
+          },
+          "scheduleImpact": {
+            "type": "string",
+            "title": "Scheduleimpact"
+          },
+          "additionalTerms": {
+            "type": "string",
+            "title": "Additionalterms"
+          },
+          "approval": {
+            "type": "string",
+            "title": "Approval"
+          },
+          "approvedBy": {
+            "type": "string",
+            "title": "Approvedby"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "draftFooter": {
+            "type": "string",
+            "title": "Draftfooter"
+          },
+          "introduction": {
+            "type": "string",
+            "title": "Introduction"
+          },
+          "outsideScopeFree": {
+            "type": "string",
+            "title": "Outsidescopefree"
+          },
+          "endDate": {
+            "type": "string",
+            "title": "Enddate"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "terms": {
+            "type": "string",
+            "title": "Terms"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "page": {
+            "type": "string",
+            "title": "Page"
+          },
+          "hours": {
+            "type": "string",
+            "title": "Hours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "draft",
+          "documentNumber",
+          "created",
+          "project",
+          "provider",
+          "client",
+          "clientEmail",
+          "requestedChange",
+          "commercialTerms",
+          "estimatedEffort",
+          "additionalFee",
+          "noAdditionalCharge",
+          "scheduleImpact",
+          "additionalTerms",
+          "approval",
+          "approvedBy",
+          "date",
+          "draftFooter",
+          "introduction",
+          "outsideScopeFree",
+          "endDate",
+          "rationale",
+          "terms",
+          "note",
+          "page",
+          "hours"
+        ],
+        "title": "ChangeOrderLabels"
+      },
+      "ClientChangeOrderText": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Description"
+          },
+          "timelineImpact": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Timelineimpact"
+          },
+          "rationale": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Rationale"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "description",
+          "timelineImpact",
+          "rationale",
+          "note"
+        ],
+        "title": "ClientChangeOrderText"
+      },
+      "ClientMaterials": {
+        "properties": {
+          "clientLanguage": {
+            "type": "string",
+            "title": "Clientlanguage"
+          },
+          "replies": {
+            "$ref": "#/components/schemas/Replies"
+          },
+          "changeOrder": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientChangeOrderText"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "changeOrderLabels": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChangeOrderLabels"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "clientLanguage",
+          "replies"
+        ],
+        "title": "ClientMaterials"
       },
       "Currency": {
         "type": "string",
@@ -1073,6 +2131,18 @@
           "error"
         ],
         "title": "ErrorResponse"
+      },
+      "EstimateResponse": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/AnalysisSnapshot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "title": "EstimateResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1153,6 +2223,18 @@
         },
         "type": "object",
         "title": "LivenessResponse"
+      },
+      "MaterialsResponse": {
+        "properties": {
+          "materials": {
+            "$ref": "#/components/schemas/ClientMaterials"
+          }
+        },
+        "type": "object",
+        "required": [
+          "materials"
+        ],
+        "title": "MaterialsResponse"
       },
       "OkResponse": {
         "properties": {
@@ -1306,6 +2388,128 @@
         ],
         "title": "ProjectResponse"
       },
+      "ProjectSnapshot": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Version"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "clientName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientname"
+          },
+          "industry": {
+            "$ref": "#/components/schemas/Industry"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "startDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startdate"
+          },
+          "endDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enddate"
+          },
+          "pricingModel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PricingModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Currency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hourlyRate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hourlyrate"
+          },
+          "fixedPrice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixedprice"
+          },
+          "documentLanguage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documentlanguage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "name",
+          "industry",
+          "scope",
+          "startDate",
+          "endDate",
+          "pricingModel",
+          "currency",
+          "hourlyRate",
+          "fixedPrice",
+          "documentLanguage"
+        ],
+        "title": "ProjectSnapshot"
+      },
       "ProjectsResponse": {
         "properties": {
           "projects": {
@@ -1347,6 +2551,45 @@
           "database"
         ],
         "title": "ReadinessResponse"
+      },
+      "Replies": {
+        "properties": {
+          "warm": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Warm"
+          },
+          "neutral": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Neutral"
+          },
+          "firm": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Firm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "warm",
+          "neutral",
+          "firm"
+        ],
+        "title": "Replies"
+      },
+      "ReplyResponse": {
+        "properties": {
+          "reply": {
+            "type": "string",
+            "title": "Reply"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reply"
+        ],
+        "title": "ReplyResponse"
       },
       "UserResponse": {
         "properties": {

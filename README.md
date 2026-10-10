@@ -29,7 +29,8 @@ Use Node >=22.13.0, pnpm **10.34.1**, Python **3.12**, uv **0.11.19**, and Docke
 Compose >=2.24.0. Corepack selects pnpm from `frontend/package.json`.
 
 Create `frontend/.env.local` from `frontend/.env.example` and provide your own
-`DATABASE_URL`, `AUTH_SECRET` and `OPENAI_API_KEY`. Existing root `.env*` files are
+`DATABASE_URL` and `AUTH_SECRET`. Configure the same auth secret and database URL
+in `backend/.env`, together with `OPENAI_API_KEY` for generation. Existing root `.env*` files are
 not moved or copied automatically. Next.js now resolves `.env*` from `frontend/`;
 Drizzle resolves `frontend/.env.local` before `frontend/.env`, preserving process
 variable precedence. Root `.env*` configures Compose and remains supported as an
@@ -49,6 +50,14 @@ Python starts without a database. Its optional `backend/.env` can contain
 readiness; see `backend/.env.example`. Dokploy receives its
 database/auth/OpenAI and optional outbound proxy settings from its environment
 configuration. Never put local secrets, certificates or agent handoffs in Git.
+
+FastAPI owns analysis, reply regeneration, client-material translation and Change
+Order estimation together. Next.js forwards these four routes once. The frontend
+requires no OpenAI key. Generation reads detached context, closes its transaction,
+then calls OpenAI; it never saves a draft or history. The TypeScript draft saver
+continues verifying Python-issued proofs until Slice E. Run one backend worker and
+one replica to preserve the shared rolling generation limit. Roll out and roll back
+the frontend/backend image pair using the drain procedure in the Slice D plan.
 
 ## Run locally
 

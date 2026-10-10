@@ -2,7 +2,8 @@ import { expect, it } from 'vitest'
 import { snapshotProject } from './project-snapshot'
 import { editableChangeOrder } from './document'
 import { analysisFixture, projectSnapshotFixture } from './fixtures'
-import { issueDraftProof, verifyDraftProof } from './proof'
+import { verifyDraftProof } from './proof'
+import { issueDraftProof } from '@/tests/draft-proof-fixture'
 import { afterEach, vi } from 'vitest'
 const project = { id: '10000000-0000-4000-8000-000000000001', ...projectSnapshotFixture, clientName: 'Server client', history: [] }
 afterEach(() => vi.unstubAllEnvs())

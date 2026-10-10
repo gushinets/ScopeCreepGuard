@@ -8,12 +8,13 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 
 import psycopg
 from verify_any640 import ROOT, DisposablePostgres, auth_server, replay_drizzle
 
 
-def main():
+def main(generation=False):
     with DisposablePostgres() as server, server.database() as url:
         replay_drizzle(url)
         env = dict(os.environ)
@@ -147,6 +148,10 @@ def main():
                     "projects": []
                 }
                 assert request("/api/projects", "POST", card, cookie, foreign=True)[0] == 403
+                if generation:
+                    generation_journey(
+                        request, cookie + "; locale=en", foreign_cookie, project, url, backend
+                    )
                 assert request(path, "DELETE", cookie=cookie)[0] == 200
                 assert request(path, cookie=cookie)[0] == 404
                 assert json.loads(request("/api/projects", cookie=cookie)[2]) == {"projects": []}
@@ -172,6 +177,87 @@ def main():
                     process.kill()
                     process.wait()
     return 0
+
+
+def generation_journey(request, cookie, foreign_cookie, project, url, backend):
+    fixture = json.loads(
+        (ROOT / "contracts/compatibility/any-640/generation.json").read_text(encoding="utf-8")
+    )
+    body = {"projectId": project["id"], "request": "Add another page", "documentLanguage": "en"}
+
+    def calls():
+        with urllib.request.urlopen(backend + "/__generation_calls") as response:
+            return json.load(response)["calls"]
+
+    initial_calls = calls()
+    status, headers, raw = request("/api/analyze", "POST", body, cookie)
+    assert status == 200 and headers["cache-control"] == "private, no-store"
+    assert headers["x-request-id"]
+    analyzed = json.loads(raw)
+    context = {
+        "projectId": project["id"],
+        "request": body["request"],
+        "locale": "en",
+        "proof": analyzed["proof"],
+    }
+    operations = (
+        ("/api/replies/regenerate", {**body, "tone": "firm", "previousReply": "old"}),
+        (
+            "/api/client-materials/language",
+            {**context, "clientLanguage": "en", "analysis": analyzed["result"]},
+        ),
+        ("/api/change-orders/estimate", context),
+    )
+    for path, payload in operations:
+        status, response_headers, _ = request(path, "POST", payload, cookie)
+        assert status == 200 and "cache-control" not in response_headers
+        assert request(path, "POST", payload, foreign_cookie)[0] == 404
+    with psycopg.connect(url) as database:
+        assert database.execute("SELECT count(*) FROM drafts").fetchone()[0] == 0
+        assert database.execute("SELECT count(*) FROM history_entries").fetchone()[0] == 0
+        assert (
+            database.execute(
+                "SELECT last_checked FROM projects WHERE id=%s", (project["id"],)
+            ).fetchone()[0]
+            is None
+        )
+    assert calls() == initial_calls + 4
+    document = {**fixture["documentFixture"], "result": analyzed["result"]}
+    save = {
+        **context,
+        "idempotencyKey": "10000000-0000-4000-8000-000000000004",
+        "draftDocument": document,
+    }
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(
+            executor.map(lambda _: request("/api/drafts", "POST", save, cookie), range(2))
+        )
+    assert all(response[0] in (200, 201) for response in responses)
+    drafts = [json.loads(response[2])["draft"] for response in responses]
+    assert drafts[0]["id"] == drafts[1]["id"]
+    reopened = json.loads(request("/api/drafts/" + drafts[0]["id"], cookie=cookie)[2])["draft"]
+    assert reopened["analysisSnapshot"] == analyzed["result"]
+    assert reopened["projectSnapshot"] == analyzed["projectSnapshot"]
+    assert calls() == initial_calls + 4
+    with psycopg.connect(url) as database:
+        assert database.execute("SELECT count(*) FROM drafts").fetchone()[0] == 1
+        assert database.execute("SELECT count(*) FROM history_entries").fetchone()[0] == 1
+        database.execute(
+            "UPDATE projects SET scope='Current scope', hourly_rate=NULL, "
+            "fixed_price=999 WHERE id=%s",
+            (project["id"],),
+        )
+    for path, payload in operations[1:]:
+        assert request(path, "POST", {**payload, "draftId": drafts[0]["id"]}, cookie)[0] == 200
+    for _ in range(4):
+        assert request("/api/replies/regenerate", "POST", operations[0][1], cookie)[0] == 200
+    status, _, raw = request("/api/analyze", "POST", body, cookie)
+    assert status == 429 and json.loads(raw) == {"error": "errors.analysisRateLimited"}
+    assert calls() == initial_calls + 10
+    print(
+        "Generation gateway: four owners, zero generation writes, "
+        "Python proof -> TS saver/reload/dedup, historical context and shared limit passed."
+    )
 
 
 if __name__ == "__main__":

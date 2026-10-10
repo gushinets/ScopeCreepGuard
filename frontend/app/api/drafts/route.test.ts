@@ -1,6 +1,6 @@
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { issueDraftProof } from '@/lib/drafts/proof'
+import { issueDraftProof } from '@/tests/draft-proof-fixture'
 import { analysisFixture, documentFixture, projectSnapshotFixture } from '@/lib/drafts/fixtures'
 import type { CreateDraftInput } from '@/lib/drafts/types'
 const mocks = vi.hoisted(() => ({ userId: '10000000-0000-4000-8000-000000000001', create: vi.fn() }))

@@ -138,13 +138,219 @@ export interface paths {
         patch: operations["update_project_api_projects__project_id__patch"];
         trace?: never;
     };
+    "/api/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Analyze */
+        post: operations["analyze_api_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/replies/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reply */
+        post: operations["reply_api_replies_regenerate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/client-materials/language": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Materials */
+        post: operations["materials_api_client_materials_language_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/change-orders/estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Estimate */
+        post: operations["estimate_api_change_orders_estimate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnalysisChangeOrder */
+        AnalysisChangeOrder: {
+            /** Description */
+            description: string;
+            /** Timelineimpact */
+            timelineImpact: string;
+            /** Additionalcost */
+            additionalCost: string;
+            /** Note */
+            note: string;
+            /** Estimatedhours */
+            estimatedHours?: number | null;
+            /** Currency */
+            currency?: components["schemas"]["Currency"] | "" | null;
+            /** Rationale */
+            rationale?: string | null;
+        };
+        /** AnalysisReplies */
+        AnalysisReplies: {
+            /** Warm */
+            warm: string;
+            /** Neutral */
+            neutral: string;
+            /** Firm */
+            firm: string;
+        };
+        /** AnalysisSnapshot */
+        AnalysisSnapshot: {
+            verdict: components["schemas"]["Verdict"];
+            /** Confidence */
+            confidence: number;
+            /** Summary */
+            summary: string;
+            /** Reasoning */
+            reasoning: string;
+            /** Citations */
+            citations: string[];
+            /** Suggestion */
+            suggestion?: string | null;
+            replies: components["schemas"]["AnalysisReplies"];
+            changeOrder: components["schemas"]["AnalysisChangeOrder"];
+            /** Hasadditionalwork */
+            hasAdditionalWork?: boolean | null;
+            /** Requestlanguage */
+            requestLanguage?: ("ru" | "en" | "es" | "other") | null;
+            /** Clientlanguage */
+            clientLanguage?: string | null;
+            changeOrderLabels?: components["schemas"]["ChangeOrderLabels"] | null;
+            /** Draftcreatedat */
+            draftCreatedAt?: string | null;
+            /** Commercialsignature */
+            commercialSignature?: string | null;
+            /** Estimatevalid */
+            estimateValid?: boolean | null;
+        };
+        /** AnalyzeResponse */
+        AnalyzeResponse: {
+            result: components["schemas"]["AnalysisSnapshot"];
+            projectSnapshot: components["schemas"]["ProjectSnapshot"];
+            /** Proof */
+            proof: string;
+        };
         /** AuthResponse */
         AuthResponse: {
             user: components["schemas"]["UserResponse"];
+        };
+        /** ChangeOrderLabels */
+        ChangeOrderLabels: {
+            /** Title */
+            title: string;
+            /** Draft */
+            draft: string;
+            /** Documentnumber */
+            documentNumber: string;
+            /** Created */
+            created: string;
+            /** Project */
+            project: string;
+            /** Provider */
+            provider: string;
+            /** Client */
+            client: string;
+            /** Clientemail */
+            clientEmail: string;
+            /** Requestedchange */
+            requestedChange: string;
+            /** Commercialterms */
+            commercialTerms: string;
+            /** Estimatedeffort */
+            estimatedEffort: string;
+            /** Additionalfee */
+            additionalFee: string;
+            /** Noadditionalcharge */
+            noAdditionalCharge: string;
+            /** Scheduleimpact */
+            scheduleImpact: string;
+            /** Additionalterms */
+            additionalTerms: string;
+            /** Approval */
+            approval: string;
+            /** Approvedby */
+            approvedBy: string;
+            /** Date */
+            date: string;
+            /** Draftfooter */
+            draftFooter: string;
+            /** Introduction */
+            introduction: string;
+            /** Outsidescopefree */
+            outsideScopeFree: string;
+            /** Enddate */
+            endDate: string;
+            /** Rationale */
+            rationale: string;
+            /** Terms */
+            terms: string;
+            /** Note */
+            note: string;
+            /** Page */
+            page: string;
+            /** Hours */
+            hours: string;
+        };
+        /** ClientChangeOrderText */
+        ClientChangeOrderText: {
+            /** Description */
+            description: string;
+            /** Timelineimpact */
+            timelineImpact: string;
+            /** Rationale */
+            rationale: string;
+            /** Note */
+            note: string;
+        };
+        /** ClientMaterials */
+        ClientMaterials: {
+            /** Clientlanguage */
+            clientLanguage: string;
+            replies: components["schemas"]["Replies"];
+            changeOrder?: components["schemas"]["ClientChangeOrderText"] | null;
+            changeOrderLabels?: components["schemas"]["ChangeOrderLabels"] | null;
         };
         /**
          * Currency
@@ -159,6 +365,10 @@ export interface components {
         /** ErrorResponse */
         ErrorResponse: {
             error: components["schemas"]["ErrorCode"];
+        };
+        /** EstimateResponse */
+        EstimateResponse: {
+            result: components["schemas"]["AnalysisSnapshot"];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -198,6 +408,10 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** MaterialsResponse */
+        MaterialsResponse: {
+            materials: components["schemas"]["ClientMaterials"];
         };
         /** OkResponse */
         OkResponse: {
@@ -243,6 +457,33 @@ export interface components {
             /** History */
             history: components["schemas"]["HistoryEntryResponse"][];
         };
+        /** ProjectSnapshot */
+        ProjectSnapshot: {
+            /**
+             * Version
+             * @constant
+             */
+            version: 1;
+            /** Name */
+            name: string;
+            /** Clientname */
+            clientName?: string | null;
+            industry: components["schemas"]["Industry"];
+            /** Scope */
+            scope: string;
+            /** Startdate */
+            startDate: string | null;
+            /** Enddate */
+            endDate: string | null;
+            pricingModel: components["schemas"]["PricingModel"] | null;
+            currency: components["schemas"]["Currency"] | null;
+            /** Hourlyrate */
+            hourlyRate: string | null;
+            /** Fixedprice */
+            fixedPrice: string | null;
+            /** Documentlanguage */
+            documentLanguage: string | null;
+        };
         /** ProjectsResponse */
         ProjectsResponse: {
             /** Projects */
@@ -260,6 +501,20 @@ export interface components {
              * @enum {string}
              */
             database: "ok" | "unavailable";
+        };
+        /** Replies */
+        Replies: {
+            /** Warm */
+            warm: string;
+            /** Neutral */
+            neutral: string;
+            /** Firm */
+            firm: string;
+        };
+        /** ReplyResponse */
+        ReplyResponse: {
+            /** Reply */
+            reply: string;
         };
         /** UserResponse */
         UserResponse: {
@@ -1024,6 +1279,458 @@ export interface operations {
             };
             /** @description Unexpected request failure */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    analyze_api_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    projectId: string;
+                    request: string;
+                    documentLanguage?: string;
+                    endDate?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyzeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reply_api_replies_regenerate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    projectId: string;
+                    request: string;
+                    documentLanguage?: string;
+                    endDate?: string;
+                    /** @enum {string} */
+                    tone: "warm" | "neutral" | "firm";
+                    previousReply: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    materials_api_client_materials_language_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    projectId: string;
+                    request: string;
+                    documentLanguage?: string;
+                    endDate?: string;
+                    draftId?: string;
+                    proof?: string;
+                    locale?: string;
+                    historyId?: string;
+                    clientLanguage: string;
+                    analysis: Record<string, never>;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    estimate_api_change_orders_estimate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    projectId: string;
+                    request: string;
+                    documentLanguage?: string;
+                    endDate?: string;
+                    draftId?: string;
+                    proof?: string;
+                    locale?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
