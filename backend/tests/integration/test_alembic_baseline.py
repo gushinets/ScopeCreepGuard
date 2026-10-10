@@ -262,6 +262,44 @@ def test_guarded_migrate_rejects_unknown_non_public_schema(disposable_url):
         engine.dispose()
 
 
+@pytest.mark.parametrize(
+    "statements",
+    [
+        ["CREATE SCHEMA unknown"],
+        ["CREATE TYPE public.unexpected_enum AS ENUM ('unexpected')"],
+        ["CREATE DOMAIN public.unexpected_domain AS text"],
+        ["CREATE FUNCTION public.unexpected_function() RETURNS integer LANGUAGE sql AS 'SELECT 1'"],
+        [
+            "CREATE FOREIGN DATA WRAPPER fixture_fdw",
+            "CREATE SERVER fixture_server FOREIGN DATA WRAPPER fixture_fdw",
+            "CREATE FOREIGN TABLE public.unexpected_foreign_table(id integer) "
+            "SERVER fixture_server",
+        ],
+    ],
+)
+def test_guarded_migrate_rejects_all_user_defined_objects_before_empty_initialization(
+    disposable_url, statements
+):
+    """Unknown catalog objects must never be classified as an empty database."""
+    from scope_guard.infrastructure.database.migrations import migrate
+    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+
+    engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
+    try:
+        with engine.begin() as connection:
+            for statement in statements:
+                connection.exec_driver_sql(statement)
+        with engine.begin() as connection:
+            with pytest.raises(SchemaCompatibilityError, match="legacy_adoption_required"):
+                migrate(connection)
+            assert (
+                connection.exec_driver_sql("SELECT to_regclass('public.alembic_version')").scalar()
+                is None
+            )
+    finally:
+        engine.dispose()
+
+
 def test_guarded_migrate_rejects_legacy_ledger_hash_drift(disposable_url):
     from scope_guard.infrastructure.database.migrations import migrate
     from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError

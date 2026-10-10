@@ -153,13 +153,40 @@ def adopt_baseline(connection: Connection) -> None:
 def _has_database_objects(connection: Connection) -> bool:
     return (
         connection.exec_driver_sql("""
-            SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-            WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S')
-            UNION ALL SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
-            WHERE n.nspname='public' AND t.typtype='e'
+            SELECT 1 FROM pg_namespace n
+            WHERE n.nspname NOT IN ('public', 'information_schema')
+              AND left(n.nspname, 3) <> 'pg_'
             UNION ALL SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-            WHERE n.nspname NOT IN ('public','information_schema')
-              AND n.nspname NOT LIKE 'pg_%%' AND c.relkind IN ('r','p','v','m','S')
+            WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S','f','c','i')
+            UNION ALL SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
+            WHERE n.nspname='public' AND t.typtype <> 'p'
+            UNION ALL SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+            WHERE n.nspname='public'
+            UNION ALL SELECT 1 FROM pg_operator o JOIN pg_namespace n ON n.oid=o.oprnamespace
+            WHERE n.nspname='public'
+            UNION ALL SELECT 1 FROM pg_collation c JOIN pg_namespace n ON n.oid=c.collnamespace
+            WHERE n.nspname='public'
+            UNION ALL SELECT 1 FROM pg_conversion c JOIN pg_namespace n ON n.oid=c.connamespace
+            WHERE n.nspname='public'
+            UNION ALL SELECT 1 FROM pg_opclass o JOIN pg_namespace n ON n.oid=o.opcnamespace
+            WHERE n.nspname='public'
+            UNION ALL SELECT 1 FROM pg_opfamily o JOIN pg_namespace n ON n.oid=o.opfnamespace
+            WHERE n.nspname='public'
+            UNION ALL SELECT 1 FROM pg_ts_config c JOIN pg_namespace n ON n.oid=c.cfgnamespace
+            WHERE n.nspname='public'
+            UNION ALL SELECT 1 FROM pg_ts_dict d JOIN pg_namespace n ON n.oid=d.dictnamespace
+            WHERE n.nspname='public'
+            UNION ALL SELECT 1 FROM pg_ts_parser p JOIN pg_namespace n ON n.oid=p.prsnamespace
+            WHERE n.nspname='public'
+            UNION ALL SELECT 1 FROM pg_ts_template t JOIN pg_namespace n ON n.oid=t.tmplnamespace
+            WHERE n.nspname='public'
+            UNION ALL SELECT 1 FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace
+            WHERE n.nspname='public'
+            UNION ALL SELECT 1 FROM pg_foreign_data_wrapper
+            UNION ALL SELECT 1 FROM pg_foreign_server
+            UNION ALL SELECT 1 FROM pg_event_trigger
+            UNION ALL SELECT 1 FROM pg_publication
+            UNION ALL SELECT 1 FROM pg_subscription
         """).first()
         is not None
     )

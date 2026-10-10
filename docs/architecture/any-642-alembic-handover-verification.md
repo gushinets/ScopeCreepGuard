@@ -91,3 +91,16 @@ selected.
   managed-state validator intentionally verifies only the application boundary
   shared by later revisions; the immutable complete baseline comparison remains
   exclusive to legacy adoption and baseline-managed databases.
+
+## Empty-state catalog review follow-up
+
+- The empty-state guard now rejects non-system schemas, public relations and
+  catalog objects, foreign-data objects, event triggers, publications, and
+  subscriptions before it can initialize Alembic. This prevents an empty custom
+  schema, domain, function, foreign table, or similar user-defined object from
+  bypassing explicit legacy adoption.
+- Regression coverage creates an empty user schema, enum, domain, function, and
+  foreign table on disposable PostgreSQL databases. All five states reject
+  without creating `alembic_version`; the complete Alembic integration suite
+  passed 17 tests and the final backend suite passed 385 tests, with the
+  inherited Starlette/httpx deprecation warning.
