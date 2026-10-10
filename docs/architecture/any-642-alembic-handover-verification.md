@@ -25,6 +25,24 @@ selected.
   schema drift, partial schemas, extra public objects, unknown user schemas, and
   malformed ledger/revision states are rejected without stamping.
 
+## Revision-aware runner follow-up
+
+- The baseline-only revision defect was reproduced with a test-only
+  `0002_revision_probe` descendant that adds a public table. The original runner
+  rejected its own post-upgrade catalog with the immutable baseline validator.
+- Final focused migration unit/integration suite: 26 passed in 12.98s. It covers fresh
+  initialization and no-op reruns, legacy adoption/row-and-ledger preservation,
+  legacy rejection states, and a baseline-managed database upgrading to the
+  test-only descendant head and rerunning safely.
+- Invalid managed version states are rejected without mutation: missing,
+  malformed, multiple, and unknown revision rows. The runner now discovers the
+  accepted lineage from the local Alembic script directory rather than comparing
+  exclusively to the Drizzle baseline revision.
+- Final full backend suite after the follow-up: 380 passed in 67.28s, with the same
+  inherited Starlette/httpx deprecation warning. Ruff lint and format passed;
+  mypy reported no issues in 80 source files and retained four existing
+  unchecked-body notes. `git diff --check` passed.
+
 ## Backend
 
 - Final full `pytest --require-integration`: 375 passed in 66.48s with one inherited
@@ -68,3 +86,8 @@ selected.
   adoption flag for one run, and remove it after success.
 - ANY-641 retains PDF export, scope extraction, and currency-service migration.
   Later runtime work may reassess proxy topology and broader production hardening.
+- A future revision that needs stricter catalog checks must register its
+  revision-specific validator in the backend schema verifier. The generic
+  managed-state validator intentionally verifies only the application boundary
+  shared by later revisions; the immutable complete baseline comparison remains
+  exclusive to legacy adoption and baseline-managed databases.

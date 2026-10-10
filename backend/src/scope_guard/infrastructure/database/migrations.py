@@ -1,8 +1,10 @@
 """Guarded Alembic migration ownership for empty and legacy databases."""
 
+import re
 from pathlib import Path
 
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy.engine import Connection
 
 from alembic import command
@@ -11,6 +13,7 @@ from scope_guard.infrastructure.database.schema_verification import (
     SchemaCompatibilityError,
     SchemaDifference,
     verify_baseline,
+    verify_revision_schema,
 )
 
 BASELINE = "0001_existing_drizzle_schema"
@@ -60,6 +63,7 @@ LEGACY_PROVENANCE = (
         },
     ),
 )
+REVISION_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
 
 
 def config(connection: Connection) -> Config:
@@ -71,20 +75,53 @@ def config(connection: Connection) -> Config:
     return result
 
 
+def _lineage(connection: Connection) -> tuple[Config, set[str], str]:
+    migration_config = config(connection)
+    scripts = ScriptDirectory.from_config(migration_config)
+    heads = scripts.get_heads()
+    if len(heads) != 1:
+        raise SchemaCompatibilityError([SchemaDifference("invalid_alembic_lineage")])
+    return migration_config, {revision.revision for revision in scripts.walk_revisions()}, heads[0]
+
+
 def current_revision(connection: Connection) -> str | None:
     if connection.exec_driver_sql("SELECT to_regclass('public.alembic_version')").scalar() is None:
         return None
+    columns = connection.exec_driver_sql("""
+        SELECT column_name, data_type, is_nullable FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='alembic_version' ORDER BY ordinal_position
+    """).all()
+    if columns != [("version_num", "character varying", "NO")]:
+        raise SchemaCompatibilityError([SchemaDifference("malformed_alembic_revision")])
     values = (
         connection.exec_driver_sql("SELECT version_num FROM public.alembic_version").scalars().all()
     )
-    if values != [BASELINE]:
-        raise SchemaCompatibilityError([SchemaDifference("unexpected_alembic_revision")])
-    return BASELINE
+    if not values:
+        raise SchemaCompatibilityError([SchemaDifference("missing_alembic_revision")])
+    if len(values) != 1:
+        raise SchemaCompatibilityError([SchemaDifference("multiple_alembic_revisions")])
+    revision = values[0]
+    if not revision or not REVISION_PATTERN.fullmatch(revision):
+        raise SchemaCompatibilityError([SchemaDifference("malformed_alembic_revision")])
+    _, known_revisions, _ = _lineage(connection)
+    if revision not in known_revisions:
+        raise SchemaCompatibilityError([SchemaDifference("unknown_alembic_revision")])
+    return revision
+
+
+def current_head(connection: Connection) -> str:
+    """Return the single configured Alembic head for the guarded lineage."""
+    _, _, head = _lineage(connection)
+    return head
 
 
 def upgrade_empty(connection: Connection) -> None:
-    if current_revision(connection) is not None:
-        verify_baseline(connection)
+    revision = current_revision(connection)
+    if revision is not None:
+        head = current_head(connection)
+        verify_revision_schema(connection, revision=revision, head=head)
+        command.upgrade(config(connection), "head")
+        verify_revision_schema(connection, revision=current_revision(connection), head=head)
         return
     objects = connection.exec_driver_sql("""
         SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -95,8 +132,10 @@ def upgrade_empty(connection: Connection) -> None:
     if objects is not None:
         raise SchemaCompatibilityError([SchemaDifference("database_not_empty")])
     connection.exec_driver_sql("SET LOCAL search_path TO public")
-    command.upgrade(config(connection), BASELINE)
-    verify_baseline(connection)
+    command.upgrade(config(connection), "head")
+    verify_revision_schema(
+        connection, revision=current_revision(connection), head=current_head(connection)
+    )
 
 
 def adopt_baseline(connection: Connection) -> None:
@@ -157,17 +196,22 @@ def migrate(connection: Connection, *, adopt_legacy: bool = False) -> None:
     connection.exec_driver_sql("SELECT pg_advisory_xact_lock(%s)", (MIGRATION_LOCK_ID,))
     revision = current_revision(connection)
     if revision is not None:
-        verify_baseline(connection)
+        head = current_head(connection)
+        verify_revision_schema(connection, revision=revision, head=head)
         command.upgrade(config(connection), "head")
-        verify_baseline(connection)
+        verify_revision_schema(connection, revision=current_revision(connection), head=head)
         return
     if not _has_database_objects(connection):
         command.upgrade(config(connection), "head")
-        verify_baseline(connection)
+        verify_revision_schema(
+            connection, revision=current_revision(connection), head=current_head(connection)
+        )
         return
     if not adopt_legacy:
         raise SchemaCompatibilityError([SchemaDifference("legacy_adoption_required")])
     verify_legacy_ledger(connection)
     adopt_baseline(connection)
     command.upgrade(config(connection), "head")
-    verify_baseline(connection)
+    verify_revision_schema(
+        connection, revision=current_revision(connection), head=current_head(connection)
+    )

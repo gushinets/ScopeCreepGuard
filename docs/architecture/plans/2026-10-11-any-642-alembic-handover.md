@@ -28,6 +28,19 @@
 - Docker requires `DATABASE_URL` in the frontend image build and frontend entrypoint although every public API operation is now Python-owned.
 - Documentation still declares Drizzle as migration owner.
 
+## Follow-up defect: future Alembic revisions
+
+The completed handover correctly stamps a compatible Drizzle database at
+`0001_existing_drizzle_schema`, but its first runner implementation treats that
+single revision as the only valid Alembic state. Once a descendant revision is
+introduced, an otherwise valid Alembic-managed database is rejected before it
+can be upgraded. The runner also applies the immutable baseline catalog check
+after every upgrade, even though a later revision is expected to change that
+catalog.
+
+This follow-up retains strict legacy adoption while separating it from normal
+Alembic lifecycle management. It does not add a product schema revision.
+
 ## Target architecture
 
 `frontend -> backend API -> PostgreSQL`
@@ -35,6 +48,20 @@
 `backend SQLAlchemy metadata + Alembic -> PostgreSQL`
 
 The frontend has no database URL, ORM, migration code, migration dependency, or migration image. Application startup never mutates schema; a one-shot backend migration job must succeed before backend and frontend availability.
+
+### Corrected migration-state model
+
+| State | Recognition | Allowed action | Schema validation |
+|---|---|---|---|
+| Empty | No database objects and no `alembic_version` table | Upgrade directly to Alembic `head` | Current-head validator |
+| Legacy Drizzle | Application objects, no `alembic_version` table | Require explicit adoption; ledger/catalog validation, lock, stamp baseline, then upgrade to `head` | Immutable baseline before stamping; current-head after upgrade |
+| Alembic-managed | Exactly one nonempty revision in `alembic_version` that appears in the local Alembic script lineage | Upgrade from that revision to `head` | Baseline validator at baseline; current-head validator at head; revision-keyed extension point for later revisions |
+| Invalid | Missing/malformed/multiple/foreign/unknown revisions, or an incompatible legacy catalog/ledger | Fail without mutation | No schema mutation or stamp |
+
+The script directory is the authority for valid Alembic revision identifiers and
+the runner must recognize the configured lineage from its heads through all
+ancestors. The immutable Drizzle baseline catalog remains an adoption guard,
+not a universal assertion after later Alembic revisions.
 
 ## Ordered implementation
 
@@ -50,6 +77,28 @@ The frontend has no database URL, ORM, migration code, migration dependency, or 
 - Compatible legacy: reject unless `--adopt-legacy`; validate, lock managed tables, revalidate, stamp the baseline, upgrade to head, then validate.
 - Alembic-managed: accept only known revisions, upgrade to head, then validate.
 - Repeat execution at head is a validated no-op. Any failure rolls back the transaction and exits nonzero with sanitized output.
+
+### 1a. Revision-aware Alembic lifecycle follow-up
+
+**Files:** alter backend migration state classification and schema verification;
+extend Alembic integration/unit tests and backend migration documentation.
+
+- Replace the baseline-only revision equality check with script-directory
+  discovery using Alembic's revision map. A managed database must contain
+  exactly one nonempty revision and that revision must be an ancestor of a
+  configured current head; malformed, multiple, foreign, and unknown values
+  fail before upgrade.
+- Keep the legacy path only for databases without `alembic_version`. It must
+  retain ledger verification, immutable baseline catalog verification, table
+  locking, revalidation, baseline stamp, and business-row/ledger preservation.
+- Add `verify_revision_schema(connection, revision)` as the migration runner's
+  revision-aware boundary: baseline uses `verify_baseline`; current head uses
+  the canonical current-head verifier; a revision-validator registry provides
+  an explicit extension point for any future intermediate revision that cannot
+  safely share the head validator.
+- Add a test-only descendant revision to prove a database at the baseline is
+  upgraded to a later local head and reruns safely without applying the frozen
+  baseline comparison to the intentionally changed post-baseline catalog.
 
 ### 2. Backend-owned legacy provenance
 
@@ -127,8 +176,22 @@ Unknown objects, partial schema, provenance drift, incompatible catalog state, m
 | Containers/configuration | backend/frontend images, migration job smoke, three Compose configurations |
 | Repository hygiene | full diff review, `git diff --check`, staged diff check, unrelated files preserved |
 
+### Follow-up verification cases
+
+| Scenario | Required result |
+|---|---|
+| Fresh disposable database | reaches the current script-directory head, passes current-head validation, and reruns without DDL or revision change |
+| Compatible populated legacy database | fails without adoption flag; with the flag validates ledger and immutable baseline, preserves rows/ledger, stamps baseline, reaches head, and reruns safely |
+| Test-only future revision | baseline-managed disposable database upgrades to the descendant revision; its changed schema passes revision-aware validation and reruns safely |
+| Managed revision failures | unknown, malformed, empty, foreign, and multiple revision rows fail before upgrade |
+| Legacy failures | incompatible catalog, drifted ledger, and pre-stamp schema mismatch fail without a stamp or mutation |
+
 ## Handoff and follow-up ownership
 
 - ANY-641 still owns PDF export redesign, scope extraction migration, and currency-service migration.
 - Later ANY-642 work may reassess proxy topology, integrated user journeys, production hardening, and deployment operations beyond the minimum executable migration handover.
 - No production migration or deployment is performed by this branch; operators must schedule the legacy freeze, backup, explicit adoption flag, and post-cutover flag removal.
+- Future Alembic revisions must be added under `backend/alembic/versions/` with
+  their revision-aware validator entry when the new catalog cannot be verified
+  by the current-head model. Do not reinstate frontend Drizzle tooling or
+  weaken the adoption-time immutable baseline comparison.
