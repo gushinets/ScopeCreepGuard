@@ -9,6 +9,9 @@ import * as schema from '@/lib/db/schema'
 import { analysisFixture, documentFixture, projectSnapshotFixture } from './fixtures'
 
 import { issueDraftProof } from './proof'
+import { createSessionToken } from '@/tests/session-fixture'
+
+vi.mock('server-only', () => ({}))
 
 const session = vi.hoisted(() => ({ userId: '10000000-0000-4000-8000-000000000001' as string | null }))
 vi.mock('@/lib/auth/current-user', () => ({ getCurrentUser: async () => session.userId ? { id: session.userId } : null }))
@@ -21,7 +24,11 @@ const other = '10000000-0000-4000-8000-000000000002'
 const projectId = '10000000-0000-4000-8000-000000000003'
 const token = '10000000-0000-4000-8000-000000000004'
 const body = { proof: '', projectId, request: 'Add another page', locale: 'en', idempotencyKey: token, analysisSnapshot: analysisFixture, draftDocument: documentFixture }
-const request = (method: string, data?: unknown) => new Request('http://localhost/api/drafts', { method, ...(data ? { body: JSON.stringify(data) } : {}) })
+const cookies = new Map<string, string>()
+const request = (method: string, data?: unknown) => new Request('http://localhost/api/drafts', {
+  method, headers: { cookie: session.userId ? cookies.get(session.userId) ?? '' : '' },
+  ...(data ? { body: JSON.stringify(data) } : {}),
+})
 let sql: ReturnType<typeof postgres>
 let collection: typeof import('@/app/api/drafts/route')
 let detail: typeof import('@/app/api/drafts/[id]/route')
@@ -63,6 +70,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
   })
   beforeEach(async () => {
     vi.stubEnv('AUTH_SECRET', 'integration-test-secret-at-least-32-characters')
+    if (!process.env.SCG_LEGACY_API_ORIGIN) throw new Error('Owned Python project gateway required')
+    vi.stubEnv('SCOPE_GUARD_API_ORIGIN', process.env.SCG_LEGACY_API_ORIGIN)
+    for (const id of [owner, other]) cookies.set(id, 'scg_session=' + await createSessionToken({ id, email: 'unused@example.test' }))
     body.proof = await issueDraftProof({ userId: owner, projectId, request: body.request, locale: 'en', analysisSnapshot: analysisFixture, projectSnapshot: projectSnapshotFixture })
     session.userId = owner
     await sql`TRUNCATE users CASCADE`

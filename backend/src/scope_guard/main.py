@@ -15,10 +15,12 @@ from scope_guard.api.errors import (
 from scope_guard.api.origin import OriginMiddleware
 from scope_guard.api.routes.auth import router as auth_router
 from scope_guard.api.routes.health import router as health_router
+from scope_guard.api.routes.projects import router as projects_router
 from scope_guard.core.config import Settings
 from scope_guard.core.logging import configure_logging
 from scope_guard.infrastructure.database.session import create_database
 from scope_guard.modules.auth.use_cases import AuthError
+from scope_guard.modules.projects.use_cases import ProjectError
 
 
 def create_app(settings: Settings | None = None, clock: Callable[[], float] = time.time) -> FastAPI:
@@ -49,9 +51,14 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     application.add_middleware(OriginMiddleware, allowed_origins=settings.allowed_origins)
     application.include_router(health_router)
     application.include_router(auth_router)
+    application.include_router(projects_router)
 
     @application.exception_handler(AuthError)
     async def auth_error(_request, error: AuthError):
+        return json_error(ErrorCode(error.code), error.status)
+
+    @application.exception_handler(ProjectError)
+    async def project_error(_request, error: ProjectError):
         return json_error(ErrorCode(error.code), error.status)
 
     return application

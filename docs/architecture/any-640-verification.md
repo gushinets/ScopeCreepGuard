@@ -1,4 +1,11 @@
-# ANY-640 — slices A and B verification and handoff
+# ANY-640 — slices A, B and C verification and handoff
+
+Current checkpoint: Slice C is complete, including the immutable-value correction.
+The user authorized publication on the same child branch, from pre-publication
+HEAD `0249a0bed2d1d182e9580031195ed70e0d22d12e` (published slices A/B) and the
+exact ANY-639 parent recorded below. Final staged checks are recorded at the end. Python
+owns four authentication and five project operations; twelve operations remain
+TypeScript-owned. Earlier sections retain their historical slice evidence.
 
 Date: 2026-10-10. Branch: `codex/any-640-fastapi-business-workflows`.
 Exact fetched ANY-639 base and pre-publication HEAD:
@@ -288,3 +295,152 @@ No implementation changes were made during publication preparation.
 All database mutations were confined to owned disposable test databases. No rebase,
 branch switch, reset, clean, stash, application migration or PR change occurred.
 Slice C and full browser form journeys remain outside this publication.
+
+## Slice C — projects/history/ownership, 2026-10-10
+
+Branch remains `codex/any-640-fastapi-business-workflows`; HEAD is
+`0249a0bed2d1d182e9580031195ed70e0d22d12e`, directly descended from
+`97518baacaba56a1a2542fe145b14d62644c5fda`. C is uncommitted; index empty.
+
+Python owns GET/POST /api/projects and GET/PATCH/DELETE /api/projects/{id}.
+Next handlers forward once to the configured origin. Use cases orchestrate the
+inherited Unit of Work through project/history ports and SQLAlchemy adapters.
+Full PATCH resolves the owned resource before decoding its body. Preserve
+omitted/null clients, inactive price nulls, ignored browser fields, monetary
+strings, nullable legacy terms, project/history ordering and draft-link omission.
+Project edits preserve immutable snapshots; deletion uses existing cascades.
+Legacy history POST, generation/proofs, drafts, evaluations and locale remain TS.
+Retain single-project TS helpers for those workflows; retire only superseded
+project list query and route handlers. Eleven old Drizzle-handler mock tests
+were replaced by Python rules and two new fixture/gateway test files, accounting
+for the frontend count changing from 395 to 386 across the same 45 files.
+
+| Command | Observed result |
+|---|---|
+| Backend: `uv run --no-sync pytest --require-integration --basetemp .pytest_cache/any640_c_final -q` | Exit 0; 176 passed in 58.87s, including owned PostgreSQL and cross-runtime tests |
+| Backend: `uv run --no-sync ruff check .`; `uv run --no-sync ruff format --check .`; `uv run --no-sync mypy src/scope_guard` | All exit 0; 86 files formatted, 36 sources typed |
+| Backend: `uv run --no-sync python scripts/export_openapi.py --output ../contracts/openapi.json`, then `--check ../contracts/openapi.json` | Exit 0; eight implemented paths, nine API operations plus health; fresh |
+| `node scripts/verify-any640.mjs --suite contracts` | Exit 0; frozen 21-operation corpus unchanged through nine Python operations; 19 Python contract checks passed |
+| `node scripts/verify-any640.mjs --suite frontend` | Exit 0; 386 tests/45 files in 13.46s, then 19 Python contract checks passed |
+| Frontend: `node scripts/api-types.mjs`; `corepack pnpm api:types:check`; `corepack pnpm exec next typegen`; `corepack pnpm exec tsc --noEmit`; `corepack pnpm build`; post-build `corepack pnpm exec tsc --noEmit` | All exit 0; synthetic unreachable build database, fresh types and production build |
+| Frontend: `corepack pnpm lint`; root: `node --test frontend/scripts/docker-entrypoint.test.mjs` | Exit 0; two inherited unused-variable warnings; 3 entrypoint tests passed |
+| `node scripts/verify-any640.mjs --suite auth-gateway` | Exit 0; 15 auth and 14 project checks through production Next/FastAPI and disposable PostgreSQL; owned resources removed |
+| `node scripts/verify-any640.mjs --suite containers` | Exit 0; both production images built, 8 deployment HTTP smoke checks passed; owned containers removed |
+| `docker compose -f compose.yaml --profile app config --quiet`; `docker compose -f docker-compose.yml --profile app config --quiet`; `docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet` | All exit 0; tracked configuration only |
+| `docker run --rm -v 'D:/Devpy/ScopeCreepGuard:/repo:ro' -w /repo rhysd/actionlint:latest` | Exit 0; CI valid, including main and stacked parent targets |
+| `git diff --check`; `git diff --cached --check`; index/migration-path audit | Exit 0; index empty, no Drizzle/schema changes; unrelated files preserved |
+
+TDD: 19 actual TS parser vectors were frozen before Python implementation;
+Python collection failed for missing use cases. Gateway regression failed on
+forbidden TS database imports before forwarding. PostgreSQL exposed a mapped-enum
+refresh issue, fixed before successful runs. Final checks cover two tenants,
+invalid input/auth precedence, unchanged snapshots, linked cascades and surviving
+unlinked evaluations. Existing frontend persistence tests now use Python project
+PATCH/DELETE against their owned legacy database.
+
+Independent read-only review found no important correctness/security/compatibility
+defects. Docker was initially stopped; after the user started it all required
+checks passed. CI gateway coverage now includes projects. Foreign Origins remain
+rejected without CORS; forwarding has no retry, fallback or second writer.
+
+Limits: gateway checks use production servers over HTTP; full browser form journeys
+remain Slice G. Both runtimes require shared session configuration/database.
+Malformed project IDs retain legacy generic 500; year-zero dates retain legacy
+persistence failure. Inherited Vite/two lint warnings remain. Remote CI for these
+local changes has not been inspected. No schema/migrations/application database,
+branch or PR was changed. Next: Slice C review; no staging/commit/push or Slice D.
+
+## Slice C architectural correction — immutable project values, 2026-10-10
+
+Same branch/HEAD/base as above. Required correction before publication: the
+previous frozen Project contained a mutable card dict and returned mutable
+application JSON. Replace it with frozen/slotted AgreedScope, ProjectDate,
+ProjectDates, OptionalClient, PricingConfiguration, ProjectCard, Project,
+ProjectHistoryEntry and ProjectDetail. Nested data is scalar/enum/date/Decimal
+or immutable value objects; history and repository/application collections are
+tuples. Request JSON is parsed to a card in the API layer before entering use
+cases; PATCH's typed reader runs after owned-resource lookup. Responses are
+serialized at the API boundary into fresh nested structures. SQL conversion
+dictionaries stay adapter-local. Inherited CommercialTerms is unchanged.
+
+Files changed by this correction, relative to the existing local Slice C work:
+
+- backend/src/scope_guard/modules/projects/{domain.py,repository.py,use_cases.py}
+- backend/src/scope_guard/infrastructure/database/repositories/projects.py
+- backend/src/scope_guard/api/{project_input.py,project_output.py,routes/projects.py}
+- backend/tests/unit/{test_project_immutability.py,test_project_parser.py}
+- backend/tests/integration/test_project_workflows.py
+- docs/architecture/plans/2026-10-10-any-640-immutable-project-values.md
+- docs/architecture/plans/2026-10-10-any-640-fastapi-business-workflows.md
+- docs/architecture/{ownership.md,any-640-verification.md}
+- ignored root AGENT.md (not staged or tracked)
+
+Compatibility: no wire/OpenAPI/generated-type changes from the existing Slice C
+state. Keep null legacy terms, omitted optional lastChecked/draftId, two-decimal
+money, omitted versus null clients, raw body/error precedence, owner isolation,
+transaction timing, snapshots and cascades. Lexical ProjectDate preserves legacy
+year-zero parser acceptance/persistence failure. No domain mappings or mutable
+project-card containers remain in the application interfaces.
+
+| Command | Observed result |
+|---|---|
+| Backend: `uv run --no-sync pytest tests/unit/test_project_immutability.py --basetemp .pytest_cache/immutable_boundary_red -q` | Expected exit 1; three regression tests reproduced mutable parser/repository/application outputs before correction |
+| Backend: `uv run --no-sync pytest tests/unit/test_project_immutability.py tests/unit/test_project_parser.py tests/api/test_projects.py --basetemp .pytest_cache/immutable_green -q` | Exit 0; initial 12 focused checks passed |
+| Backend: `uv run --no-sync pytest --require-integration --basetemp .pytest_cache/immutable_final -q` | Exit 0; 181 passed in 72.37s, including disposable PostgreSQL and real repository/application mutation assertions |
+| Backend: `uv run --no-sync ruff check .`; `uv run --no-sync ruff format --check .`; `uv run --no-sync mypy src/scope_guard` | All exit 0; 89 files formatted, 38 sources typed |
+| Backend: `uv run --no-sync python scripts/export_openapi.py --check ../contracts/openapi.json` | Exit 0; existing Slice C OpenAPI unchanged/fresh |
+| Root: `node scripts/verify-any640.mjs --suite frontend` | Exit 0; 386 tests/45 files passed in 25.14s, then 19 Python contract checks passed in 0.90s |
+| Root: `node scripts/verify-any640.mjs --suite contracts` | Exit 0; frozen 21-operation corpus unchanged (one corpus test), then 19 Python contract checks in 0.91s |
+| Frontend: `corepack pnpm api:types:check`; `corepack pnpm exec next typegen`; `corepack pnpm exec tsc --noEmit`; `corepack pnpm lint` | All exit 0; generated types fresh; two inherited unused-variable lint warnings |
+| Root: `git diff --check`; `git diff --cached --check`; `git check-ignore AGENT.md`; migration/index audit | Exit 0; ignored handoff, empty index and unchanged Drizzle/schema paths |
+
+The first full backend run caught accidentally displaced inherited CommercialTerms
+(test_commercial_terms_uses_decimal_and_does_not_mirror_legacy_rows). It was restored
+unchanged and the full final suite passed; no failing tests remain. Regression
+coverage rejects nested mutation, detaches request/row data, mutates serialized
+history then checks fresh output and persisted state, and exercises existing
+API compatibility through real PostgreSQL and the unchanged frozen corpus.
+
+Limits: Python frozen dataclasses protect the supported typed interface, not
+deliberate object.__setattr__ bypasses. Existing wire schema classes remain
+transport representations and do not cross migrated project use cases. Full
+browser form coverage remains Slice G; inherited Vite/two lint warnings remain.
+No frontend implementation change, schema/migration/application DB change,
+staging, commit, push, branch/PR change or Slice D work. Unrelated files preserved.
+
+## Slice C final staged verification for publication — 2026-10-10
+
+The user explicitly authorized committing/pushing completed Slice C and the
+immutable-value correction to the existing `codex/any-640-fastapi-business-workflows`
+branch used for slices A/B. Local HEAD and independently read remote HEAD both
+matched `0249a0bed2d1d182e9580031195ed70e0d22d12e` before publication; exact
+ANY-639 parent remains `97518baacaba56a1a2542fe145b14d62644c5fda`.
+The staged set contains 34 Slice C files: Python project transport/domain/use
+cases/repositories/tests, gateways and frontend regression tests, contracts,
+CI journey label and documentation. No implementation changes during preparation.
+Ignored AGENT.md and unrelated .gitignore/dev.sh/docker-compose.override.yml/
+pnpm-workspace.yaml/test_openai.mjs remain excluded, as do migrations and secrets.
+
+| Final command | Observed result |
+|---|---|
+| Backend: `uv run --no-sync pytest --require-integration --basetemp .pytest_cache/any640_c_publish -q` | Exit 0; 181 passed in 78.93s |
+| Backend: `uv run --no-sync ruff check .`; `uv run --no-sync ruff format --check .`; `uv run --no-sync mypy src/scope_guard`; `uv run --no-sync python scripts/export_openapi.py --check ../contracts/openapi.json` | All exit 0; 89 files formatted, 38 sources typed; OpenAPI fresh |
+| Root: `node scripts/verify-any640.mjs --suite frontend` | Final exit 0; 386 tests/45 files passed in 12.54s; then 19 Python contract checks in 0.60s; frozen corpus unchanged |
+| Frontend: `corepack pnpm api:types:check`; `corepack pnpm exec next typegen`; `corepack pnpm exec tsc --noEmit`; `corepack pnpm build`; post-build `corepack pnpm exec tsc --noEmit` | All exit 0; synthetic unreachable build database; fresh types and production build |
+| Frontend: `corepack pnpm lint`; `node --test scripts/docker-entrypoint.test.mjs` | Both exit 0; two inherited warnings, 3 entrypoint tests passed |
+| Root: `node scripts/verify-any640.mjs --suite auth-gateway` | Exit 0; 15 auth and 14 project journey checks passed; owned resources removed |
+| Root: `node scripts/verify-any640.mjs --suite containers` | Exit 0; both images built and 8 HTTP deployment checks passed; owned containers removed |
+| `docker compose -f compose.yaml --profile app config --quiet`; `docker compose -f docker-compose.yml --profile app config --quiet`; `docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet`; `docker run --rm -v 'D:/Devpy/ScopeCreepGuard:/repo:ro' -w /repo rhysd/actionlint:latest` | All exit 0 |
+| `git diff --cached --check`; `git diff --check`; staged-path/migration audit | Passed; only 34 intended files staged, no schema/migrations or unrelated files |
+
+The first frontend run alongside backend tests, native build and container build
+returned HTTP 500 on registration in tests/api-compatibility.test.ts (385 passed,
+one failed). After those workloads finished, the complete identical frontend
+command passed; no source or fixture change was needed. Exact underlying exception
+was not retained by the harness, so concurrent load is a possible cause rather
+than a proven diagnosis. Final production registration and project journeys passed.
+This transient verification failure remains a known test-harness risk.
+
+No rebase, branch switch, reset, clean, stash, application migration, PR creation
+or PR-base change. All test database mutations used owned disposable resources.
+Slice D and full browser form journeys remain outside this publication.
