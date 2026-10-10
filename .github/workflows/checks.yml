@@ -59,6 +59,17 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      # The Python auth compatibility test invokes the frozen frontend jose and
+      # bcryptjs fixture script; this is not frontend migration tooling.
+      - run: pnpm --dir ../frontend install --frozen-lockfile
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.11.19"
