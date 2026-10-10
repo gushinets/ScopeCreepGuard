@@ -39,6 +39,13 @@ def draft_service(request: Request):
     )
 
 
+def evaluation_service(request: Request):
+    from scope_guard.infrastructure.database.repositories.evaluations import EvaluationUnitOfWork
+    from scope_guard.modules.evaluations.use_cases import EvaluationService
+
+    return EvaluationService(lambda: EvaluationUnitOfWork(request.app.state.database.new_uow()))
+
+
 def generation_service(request: Request):
     from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
     from scope_guard.infrastructure.database.repositories.generation import GenerationReadWork

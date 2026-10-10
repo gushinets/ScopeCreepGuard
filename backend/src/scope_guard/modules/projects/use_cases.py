@@ -2,6 +2,7 @@ from collections.abc import Awaitable, Callable
 from uuid import UUID
 
 from scope_guard.modules.projects.domain import (
+    ManualHistoryInput,
     Project,
     ProjectCard,
     ProjectDetail,
@@ -75,3 +76,20 @@ class ProjectService:
             if not await work.projects.delete(UUID(owner), identifier(value)):
                 raise ProjectError("projectNotFound", 404)
             await work.commit()
+
+    async def create_history(
+        self,
+        owner: str,
+        value: str,
+        read_entry: Callable[[], Awaitable[ManualHistoryInput]],
+    ) -> ProjectHistoryEntry:
+        async with self.factory() as work:
+            key = identifier(value)
+            owner_id = UUID(owner)
+            if await work.projects.get_owned(owner_id, key) is None:
+                raise ProjectError("projectNotFound", 404)
+            entry = await work.history.create(key, await read_entry())
+            if not await work.projects.update_last_checked(owner_id, key, entry.date.isoformat()):
+                raise ProjectError("projectNotFound", 404)
+            await work.commit()
+            return entry

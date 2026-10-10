@@ -126,6 +126,30 @@ def test_jsonl_contract_is_valid_unicode_and_exact_newline():
     }
 
 
+def test_evaluation_openapi_distinguishes_all_accuracy_request_variants():
+    from scope_guard.core.config import Settings
+    from scope_guard.main import create_app
+
+    schema = create_app(Settings(_env_file=None)).openapi()["paths"]["/api/evaluations"]["post"][
+        "requestBody"
+    ]["content"]["application/json"]["schema"]
+    variants = {branch["properties"]["accuracy"]["const"]: branch for branch in schema["oneOf"]}
+    assert set(variants) == {"correct", "wrong", "debatable"}
+    for branch in variants.values():
+        assert {"historyEntryId", "accuracy", "aiReasoning"} <= set(branch["required"])
+
+    wrong = variants["wrong"]
+    assert "humanVerdict" in wrong["required"]
+    assert wrong["properties"]["humanVerdict"] == {
+        "type": "string",
+        "enum": ["in_scope", "borderline", "out_of_scope"],
+    }
+    for accuracy in ("correct", "debatable"):
+        branch = variants[accuracy]
+        assert "humanVerdict" not in branch["required"]
+        assert branch["properties"]["humanVerdict"] is False
+
+
 @pytest.mark.parametrize(
     "field", ["suggestion", "hasAdditionalWork", "requestLanguage", "estimatedHours", "rationale"]
 )

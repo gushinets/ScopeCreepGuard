@@ -995,6 +995,134 @@
         }
       }
     },
+    "/api/projects/{project_id}/history": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Create History",
+        "operationId": "create_history_api_projects__project_id__history_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "date",
+                  "request",
+                  "verdict",
+                  "summary"
+                ],
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                  },
+                  "request": {
+                    "type": "string"
+                  },
+                  "verdict": {
+                    "type": "string",
+                    "enum": [
+                      "in_scope",
+                      "borderline",
+                      "out_of_scope"
+                    ]
+                  },
+                  "summary": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/analyze": {
       "post": {
         "tags": [
@@ -4074,6 +4202,304 @@
           }
         }
       }
+    },
+    "/api/locale": {
+      "post": {
+        "tags": [
+          "locale"
+        ],
+        "summary": "Set Locale",
+        "operationId": "set_locale_api_locale_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "locale": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "ru"
+                    ]
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "locale"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evaluations": {
+      "post": {
+        "tags": [
+          "evaluations"
+        ],
+        "summary": "Create Evaluation",
+        "operationId": "create_evaluation_api_evaluations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "historyEntryId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "accuracy": {
+                        "type": "string",
+                        "const": "correct"
+                      },
+                      "aiReasoning": {
+                        "type": "string"
+                      },
+                      "humanVerdict": false
+                    },
+                    "type": "object",
+                    "required": [
+                      "historyEntryId",
+                      "accuracy",
+                      "aiReasoning"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "historyEntryId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "accuracy": {
+                        "type": "string",
+                        "const": "debatable"
+                      },
+                      "aiReasoning": {
+                        "type": "string"
+                      },
+                      "humanVerdict": false
+                    },
+                    "type": "object",
+                    "required": [
+                      "historyEntryId",
+                      "accuracy",
+                      "aiReasoning"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "historyEntryId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "accuracy": {
+                        "type": "string",
+                        "const": "wrong"
+                      },
+                      "aiReasoning": {
+                        "type": "string"
+                      },
+                      "humanVerdict": {
+                        "type": "string",
+                        "enum": [
+                          "in_scope",
+                          "borderline",
+                          "out_of_scope"
+                        ]
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "historyEntryId",
+                      "accuracy",
+                      "aiReasoning",
+                      "humanVerdict"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evaluations/export": {
+      "get": {
+        "tags": [
+          "evaluations"
+        ],
+        "summary": "Export Evaluations",
+        "operationId": "export_evaluations_api_evaluations_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string",
+                  "const": "attachment; filename=\"scope-creep-evaluations.jsonl\""
+                }
+              }
+            },
+            "content": {
+              "application/x-ndjson": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4868,6 +5294,56 @@
         ],
         "title": "EstimateResponse"
       },
+      "EvaluationAccuracy": {
+        "type": "string",
+        "enum": [
+          "correct",
+          "wrong",
+          "debatable"
+        ],
+        "title": "EvaluationAccuracy"
+      },
+      "EvaluationEnvelope": {
+        "properties": {
+          "evaluation": {
+            "$ref": "#/components/schemas/EvaluationResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation"
+        ],
+        "title": "EvaluationEnvelope"
+      },
+      "EvaluationResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "accuracy": {
+            "$ref": "#/components/schemas/EvaluationAccuracy"
+          },
+          "humanVerdict": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Verdict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "accuracy",
+          "humanVerdict"
+        ],
+        "title": "EvaluationResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -4926,6 +5402,18 @@
           "summary"
         ],
         "title": "HistoryEntryResponse"
+      },
+      "HistoryResponse": {
+        "properties": {
+          "entry": {
+            "$ref": "#/components/schemas/HistoryEntryResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry"
+        ],
+        "title": "HistoryResponse"
       },
       "Industry": {
         "type": "string",

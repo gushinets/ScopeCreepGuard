@@ -60,6 +60,11 @@ describe('relocated Next.js authentication boundary', () => {
     expect(await response.json()).toEqual({ error: ERROR_CODES.authRequired })
   })
 
+  it.each(['/api/projects/id/history', '/api/evaluations', '/api/evaluations/export'])('delegates migrated %s authentication to Python', async path => {
+    const response = await middleware(request(path))
+    expect(response.headers.get('x-middleware-next')).toBe('1')
+  })
+
   it('accepts existing signed sessions and redirects authenticated login', async () => {
     const token = await createSessionToken({ id: 'migration-user', email: 'user@example.test' })
     expect((await middleware(request('/api/projects', token))).headers.get('x-middleware-next')).toBe('1')

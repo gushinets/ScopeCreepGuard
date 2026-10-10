@@ -89,6 +89,14 @@ class ProjectHistoryEntry:
 
 
 @dataclass(frozen=True, slots=True)
+class ManualHistoryInput:
+    date: str
+    request: str
+    verdict: Verdict
+    summary: str
+
+
+@dataclass(frozen=True, slots=True)
 class ProjectDetail:
     project: Project
     history: tuple[ProjectHistoryEntry, ...] = ()

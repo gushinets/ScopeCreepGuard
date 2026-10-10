@@ -27,8 +27,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Python authenticates draft APIs; page navigation still uses the session guard.
-  if (pathname === '/api/drafts' || pathname.startsWith('/api/drafts/')) {
+  // Python authenticates migrated APIs; page navigation still uses the session guard.
+  const pythonOwnedApi = pathname === '/api/drafts' || pathname.startsWith('/api/drafts/') ||
+    pathname === '/api/evaluations' || pathname === '/api/evaluations/export' ||
+    /^\/api\/projects\/[^/]+\/history$/.test(pathname)
+  if (pythonOwnedApi) {
     return NextResponse.next()
   }
 

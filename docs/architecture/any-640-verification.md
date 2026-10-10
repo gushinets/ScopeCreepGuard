@@ -671,3 +671,118 @@ sanitized status/error/latency, never documents, requests, cookies or proofs.
 Deployment, live-provider testing and full Slice G browser journeys remain outside
 this task. The app-scoped generation limiter's single-worker/replica constraint
 from Slice D remains. Container outcome and any infrastructure limit follow below.
+
+## Slice F — remaining API operations, 2026-10-11
+
+Approved/executed plan:
+`plans/2026-10-10-any-640-slice-f-remaining-api-operations.md`.
+Starting/current HEAD is committed Slice E
+`e9fd72300ef75aa05deccbad2ad09522de62185f`; branch remains
+`codex/any-640-fastapi-business-workflows`. Slice F is intentionally uncommitted.
+The four named unrelated untracked files were preserved and ignored `AGENT.md`
+was updated. No staging, commit, push, PR, branch/worktree operation, migration,
+deployment, live-provider call or application-database mutation occurred.
+
+### Ownership and implementation
+
+FastAPI now owns POST `/api/projects/{id}/history`, POST `/api/evaluations`,
+GET `/api/evaluations/export` and public POST `/api/locale`. Together with earlier
+slices, all 21 current API operations are Python-owned behind the same-origin Next
+gateway. The four Next handlers forward exactly once and have no TypeScript
+business fallback. The Next proxy retains Origin protection and delegates the
+three protected operations' authentication to Python.
+
+Manual history validates in legacy order after the owner-scoped project lookup,
+then inserts one history row and updates `lastChecked` in one UoW transaction.
+It never calls generation or creates drafts/evaluations. Evaluation creation reads
+owned stored history, resolves correct/wrong/debatable, captures the required
+scope/industry/request/reasoning context, and upserts one row per history entry.
+Export filters by owner, orders by `createdAt,id`, and emits the exact compact
+UTF-8 JSONL field order/casing with no bytes for an empty export and one final
+newline otherwise. Locale writes the existing public one-year cookie with Path,
+SameSite and environment-dependent Secure attributes and never opens a UoW.
+
+API parsing/cookies/headers/error mapping live under `api`; frozen detached values,
+ports and workflows live under `modules`; SQLAlchemy owner filters, mutations,
+upsert and row conversion live under `infrastructure/database/repositories`.
+The existing UoW owns commit/rollback/close. Drizzle tables and migration files are
+unchanged. Generated OpenAPI and frontend API types include the four operations.
+
+### Commands and observed results
+
+Backend commands used the repository venv/locked environment and owned basetemps.
+Integration and compatibility suites created only disposable PostgreSQL databases.
+
+| Exact command | Result |
+| --- | --- |
+| Focused unit/API Slice F suite | Final 24 passed after the initial 20 missing-route/module failures established the regression baseline; includes review-found encoded-slash routing |
+| `python -m pytest --require-integration --basetemp D:\\Devpy\\ScopeCreepGuard\\backend-test-tmp-any640f-full -q -p no:cacheprovider` | 366 passed, 95.12s; one inherited Starlette/httpx warning |
+| Final post-review `python -m pytest --require-integration --basetemp D:\\Devpy\\ScopeCreepGuard\\backend-test-tmp-any640f-final2 -q -p no:cacheprovider` from `backend` | 367 passed, 82.92s; one inherited Starlette/httpx warning |
+| Final `python -m pytest --require-integration ... backend/tests/integration/test_remaining_workflows.py` | 2 passed, 12.89s after adding the valid-missing-history parity assertion |
+| `python -m ruff check .`; `python -m ruff format --check .` | Passed; 148 files formatted at the full check boundary; changed container verifier formatted and linted again |
+| `python -m mypy src/scope_guard` | Passed, 80 source files; four inherited untyped-body notes |
+| `python scripts/export_openapi.py --check ../contracts/openapi.json` | Passed |
+| `corepack pnpm api:types:check`; `corepack pnpm exec next typegen`; `corepack pnpm exec tsc --noEmit` | Passed |
+| Focused remaining-gateway/auth tests | 17 passed |
+| `node scripts/verify-any640.mjs --suite frontend` | 341 tests / 45 files passed; 19 Python contract checks passed |
+| `node scripts/verify-any640.mjs --suite contracts` | Frontend frozen corpus passed; 19 Python contract checks passed |
+| `corepack pnpm lint` | Passed with one inherited unused `_s` warning in `lib/llm/schema.test.ts` |
+| `corepack pnpm build` followed by `corepack pnpm exec tsc --noEmit` | Passed; all 19 pages generated and post-build types passed |
+| `node --test scripts/docker-entrypoint.test.mjs` | 3 passed |
+| `node scripts/verify-any640.mjs --suite containers` | Both images built; 11 connected/outage production HTTP smoke checks passed; owned containers removed |
+| Three Compose `config --quiet` checks for current, legacy and Dokploy files | All exited 0; no services started |
+| `git diff --check` | Passed at the implementation boundary; final audit recorded below |
+
+Coverage includes every manual-history validation code/order, owner isolation,
+atomic insert plus `lastChecked`, injected commit rollback and zero provider/draft
+side effects; all evaluation label rules, malformed/valid-missing/foreign history,
+replacement and concurrent upsert, historical context and two-user isolation;
+exact export bytes/field order/casing/Unicode/headers/time order/empty/final newline;
+development and production locale cookies; one-attempt raw Next forwarding,
+cancellation and outage mapping; OpenAPI inventory and generated-type freshness.
+
+The first container run after cutover failed because its frontend container had no
+backend origin. Connecting both owned images revealed that two inherited outage
+assertions were actually exercising the absent configuration. The final harness
+runs a connected phase for locale/auth forwarding and a separate unreachable-backend
+phase for 503/private-cache behavior; all 11 checks pass. A non-escalated integration
+launch also failed on sandbox cache/temp access and an incorrect working-directory
+path; the direct repository venv rerun above passed. These are harness/environment
+failures, not product assertions.
+
+Independent read-only review found one Important encoded-slash project-ID gap:
+FastAPI decoded `%2F` before matching the ordinary history parameter, bypassing
+authentication and the legacy error envelope. The history route now uses a path
+converter; regression coverage proves unauthenticated 401/authRequired followed
+by authenticated malformed-ID 500/requestFailed. The reviewer confirmed the fix
+and reported no remaining Critical or Important findings. The first post-review
+full-suite command was launched from the repository root and produced 365 passes
+plus two expected Alembic working-directory failures; the corrected backend-CWD
+run above passed all 367 tests.
+
+### Remaining limits and rollout
+
+Deployment and live-provider verification remain outside this slice. Full Slice G
+browser journeys and cleanup of unrelated test-only legacy TypeScript helpers remain
+follow-ups. The obsolete evaluation data/validation/export modules and their duplicate
+unit tests were removed in the review follow-up after an import audit. Production
+retains Slice D's single-worker/replica limiter constraint.
+Deploy the compatible backend before switching the four forwarders; rollback uses
+the previous compatible backend/frontend image pair. No per-request fallback or
+schema reversal exists or is needed.
+
+### Evaluation contract review follow-up, 2026-10-11
+
+POST `/api/evaluations` now publishes a three-branch OpenAPI 3.1 `oneOf` matching
+the manual compatibility parser. Every branch requires `historyEntryId`, `accuracy`
+and `aiReasoning`; `wrong` also requires an enum `humanVerdict`, while `correct` and
+`debatable` declare that property as a false schema. Generated TypeScript is a
+discriminated union and exposes `humanVerdict?: never` for the two forbidden cases.
+Runtime parsing, validation order, errors and response behavior are unchanged.
+
+Focused evidence: 41 backend contract/parser tests passed; OpenAPI freshness, Ruff
+and mypy passed; generated frontend types were fresh; the gateway test passed 2/2;
+and TypeScript passed with compile-only valid/impossible-payload assertions. The
+first Vitest launch hit sandbox `spawn EPERM`; the authorized rerun passed. No
+evaluation legacy-module imports remain. No migrations, unrelated files, commit or
+push were touched.

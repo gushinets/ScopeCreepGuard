@@ -1,6 +1,6 @@
 # Transitional ownership
 
-Next.js under frontend owns UI/localization, page guards and the same-origin gateway. Four auth operations, five project operations, all four generation operations and four draft operations forward to FastAPI once, preserving cookies and headers without retries or fallback. The remaining four operations (legacy history POST, evaluation labeling/export and locale writes) remain TypeScript-owned. Browser PDF/extraction/currency helpers remain unchanged. Drizzle's migration target runs before its app container.
+Next.js under frontend owns UI/localization, page guards and the same-origin gateway. All 21 current `/api/*` operations forward to FastAPI once, preserving cookies and headers without retries or fallback. Browser PDF/extraction/currency helpers remain unchanged. Drizzle's migration target runs before its app container.
 
 Python under backend owns startup/configuration/logging, GET /health/live and connectivity-only GET /health/ready, plus POST /api/auth/register, POST /api/auth/login, POST /api/auth/logout and GET /api/auth/me. Auth use cases orchestrate repositories and the inherited Unit of Work; infrastructure adapters implement bcrypt and the existing HS256 session format. Registration/login/me require configured database and shared AUTH_SECRET; logout/liveness do not. Production cookies require SCOPE_GUARD_PRODUCTION=true (the production image default). Public-page redirects confirm Python's owner lookup so deleted-user sessions can recover. Drizzle retains all migration authority. See any-639-data-model-and-contracts.md for schema and operational boundaries.
 
@@ -50,3 +50,15 @@ All draft GET responses, including errors and gateway outages, are private,no-st
 Deployment is a grouped four-operation cutover after backend availability and
 draft-write draining; rollback uses the previous compatible image pair and keeps
 persisted data. No request-level fallback or migration reversal.
+
+Slice F transfers POST `/api/projects/{id}/history`, POST `/api/evaluations`,
+GET `/api/evaluations/export` and POST `/api/locale`. Manual history uses the
+project UoW to insert one entry and update `lastChecked` atomically, without a
+draft, evaluation, snapshot change or provider call. Evaluation use cases resolve
+the three accuracy labels from owned stored history; the SQLAlchemy adapter keeps
+one evaluation per history entry and captures its required historical context.
+Export is owner-filtered, ordered by creation time and ID, and serialized as the
+legacy compact UTF-8 JSONL contract. Locale is public and writes only the existing
+one-year cookie. Routes own parsing, response headers, cookies and error mapping;
+repositories return frozen detached values. No table, migration or UI behavior
+changes accompany this final API cutover.

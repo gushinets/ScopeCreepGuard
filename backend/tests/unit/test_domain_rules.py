@@ -31,27 +31,27 @@ def test_edits_allow_document_money_but_protect_original_analysis():
 
 def test_evaluation_resolution_rejects_wrong_equal_to_ai():
     from scope_guard.core.contracts import Verdict
-    from scope_guard.modules.evaluations.domain import resolve_human_verdict
+    from scope_guard.modules.evaluations.domain import EvaluationLabel
     from scope_guard.modules.evaluations.schemas import EvaluationLabelRequest
+    from scope_guard.modules.evaluations.use_cases import EvaluationError, resolve_human_verdict
+
+    def parsed(value):
+        return EvaluationLabel(**EvaluationLabelRequest.model_validate(value).model_dump())
 
     base = {"historyEntryId": "11111111-1111-4111-8111-111111111111", "aiReasoning": "reason"}
     assert (
         resolve_human_verdict(
-            EvaluationLabelRequest.model_validate({**base, "accuracy": "debatable"}),
+            parsed({**base, "accuracy": "debatable"}),
             Verdict.in_scope,
         )
         is None
     )
     assert (
-        resolve_human_verdict(
-            EvaluationLabelRequest.model_validate({**base, "accuracy": "correct"}), Verdict.in_scope
-        )
+        resolve_human_verdict(parsed({**base, "accuracy": "correct"}), Verdict.in_scope)
         == Verdict.in_scope
     )
-    with pytest.raises(ValueError, match="evaluation_label_invalid"):
+    with pytest.raises(EvaluationError, match="evaluationLabelInvalid"):
         resolve_human_verdict(
-            EvaluationLabelRequest.model_validate(
-                {**base, "accuracy": "wrong", "humanVerdict": "in_scope"}
-            ),
+            parsed({**base, "accuracy": "wrong", "humanVerdict": "in_scope"}),
             Verdict.in_scope,
         )
