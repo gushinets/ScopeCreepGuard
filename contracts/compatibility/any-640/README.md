@@ -7,15 +7,21 @@ Actual registration/login, bcrypt, session issuance, draft proof issuance and
 verification, parsers, serialization, transactions and cascading deletes run.
 This is handler-level characterization, not production HTTP/E2E evidence.
 
-Slice B now checks the four auth operations through real Next.js forwarding
+Slices B/C now check four auth and five project operations through real Next.js forwarding
 handlers and an owned FastAPI HTTP server against the same disposable database.
 Only still-TypeScript workflows use the synthetic current-user resolver; Python
-auth verifies cookies and loads owners itself. The original HTTP baseline remains
+authentication and project authorization verify cookies and load owners themselves. The original HTTP baseline remains
 unchanged. `auth.json` adds synthetic bcryptjs and JOSE vectors; Python-generated
 hashes/tokens are checked back in Node, including Unicode, lone surrogates, nulls
 and the bcrypt 72-byte boundary. Session tokens issued by either runtime include
 integer `iat`/`exp`, an HS256 header, UUID subject and email. Python rejects signed
 tokens missing those issued-format claims; it accepts future `iat` as JOSE does.
+
+`projects.json` freezes 19 actual TypeScript parser cases, including validation
+order, JavaScript whitespace, omitted/null clients, ignored browser fields,
+calendar dates and Number/toFixed monetary behavior. Python unit tests replay
+these vectors. The corpus now exercises nine Python operations and twelve TS
+operations; legacy history creation and all generation/draft writes remain TS.
 
 UUID/token aliases are consistent symbolic identifiers, not real credentials.
 UTC time is fixed. Cookies remain individual strings; JSONL remains exact bytes.

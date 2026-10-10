@@ -1,0 +1,352 @@
+[
+  {
+    "body": {},
+    "expected": {
+      "ok": false,
+      "error": "errors.projectNameRequired"
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "000100.20",
+      "clientName": " Owner ",
+      "endDate": "2099-01-01",
+      "clientEmail": "ignored@example.test"
+    },
+    "expected": {
+      "ok": true,
+      "project": {
+        "name": "Website",
+        "client": "Owner",
+        "industry": "Development",
+        "scope": "Five pages",
+        "startDate": "2026-10-10",
+        "pricingModel": "hourly",
+        "currency": "EUR",
+        "hourlyRate": "100.20",
+        "fixedPrice": null
+      }
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "000100.20",
+      "clientName": null
+    },
+    "expected": {
+      "ok": true,
+      "project": {
+        "name": "Website",
+        "client": null,
+        "industry": "Development",
+        "scope": "Five pages",
+        "startDate": "2026-10-10",
+        "pricingModel": "hourly",
+        "currency": "EUR",
+        "hourlyRate": "100.20",
+        "fixedPrice": null
+      }
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "000100.20",
+      "clientName": 42
+    },
+    "expected": {
+      "ok": false,
+      "error": "errors.clientInvalid"
+    }
+  },
+  {
+    "body": {
+      "name": "",
+      "scope": "",
+      "industry": "Unknown",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "000100.20"
+    },
+    "expected": {
+      "ok": false,
+      "error": "errors.projectNameRequired"
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": "﻿ ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "000100.20"
+    },
+    "expected": {
+      "ok": false,
+      "error": "errors.scopeRequired"
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "000100.20"
+    },
+    "expected": {
+      "ok": false,
+      "error": "errors.industryInvalid"
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-02-30",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "000100.20"
+    },
+    "expected": {
+      "ok": false,
+      "error": "errors.startDateInvalid"
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "0000-02-29",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "000100.20"
+    },
+    "expected": {
+      "ok": true,
+      "project": {
+        "name": "Website",
+        "industry": "Development",
+        "scope": "Five pages",
+        "startDate": "0000-02-29",
+        "pricingModel": "hourly",
+        "currency": "EUR",
+        "hourlyRate": "100.20",
+        "fixedPrice": null
+      }
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "other",
+      "currency": "EUR",
+      "hourlyRate": "000100.20"
+    },
+    "expected": {
+      "ok": false,
+      "error": "errors.pricingModelInvalid"
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "GBP",
+      "hourlyRate": "000100.20"
+    },
+    "expected": {
+      "ok": false,
+      "error": "errors.currencyInvalid"
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": 12.3
+    },
+    "expected": {
+      "ok": true,
+      "project": {
+        "name": "Website",
+        "industry": "Development",
+        "scope": "Five pages",
+        "startDate": "2026-10-10",
+        "pricingModel": "hourly",
+        "currency": "EUR",
+        "hourlyRate": "12.30",
+        "fixedPrice": null
+      }
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": true
+    },
+    "expected": {
+      "ok": false,
+      "error": "errors.hourlyRateInvalid"
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "1.005"
+    },
+    "expected": {
+      "ok": false,
+      "error": "errors.hourlyRateInvalid"
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "0"
+    },
+    "expected": {
+      "ok": false,
+      "error": "errors.hourlyRateInvalid"
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "1000000000000"
+    },
+    "expected": {
+      "ok": false,
+      "error": "errors.hourlyRateInvalid"
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "﻿ 999999999999.99 "
+    },
+    "expected": {
+      "ok": true,
+      "project": {
+        "name": "Website",
+        "industry": "Development",
+        "scope": "Five pages",
+        "startDate": "2026-10-10",
+        "pricingModel": "hourly",
+        "currency": "EUR",
+        "hourlyRate": "999999999999.99",
+        "fixedPrice": null
+      }
+    }
+  },
+  {
+    "body": {
+      "name": " Website ",
+      "scope": " Five pages ",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "fixed",
+      "currency": "EUR",
+      "hourlyRate": "ignored",
+      "fixedPrice": "1234.50"
+    },
+    "expected": {
+      "ok": true,
+      "project": {
+        "name": "Website",
+        "industry": "Development",
+        "scope": "Five pages",
+        "startDate": "2026-10-10",
+        "pricingModel": "fixed",
+        "currency": "EUR",
+        "hourlyRate": null,
+        "fixedPrice": "1234.50"
+      }
+    }
+  },
+  {
+    "body": {
+      "name": "﻿ Name  ",
+      "scope": "scope",
+      "industry": "Development",
+      "startDate": "2026-10-10",
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "000100.20",
+      "clientName": ""
+    },
+    "expected": {
+      "ok": true,
+      "project": {
+        "name": "Name",
+        "client": "",
+        "industry": "Development",
+        "scope": "scope",
+        "startDate": "2026-10-10",
+        "pricingModel": "hourly",
+        "currency": "EUR",
+        "hourlyRate": "100.20",
+        "fixedPrice": null
+      }
+    }
+  }
+]

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { drafts, historyEntries, projects } from '@/lib/db/schema'
 import type { HistoryEntry, Project } from '@/lib/types'
@@ -32,35 +32,6 @@ export function serializeProject(
     lastChecked: row.lastChecked ?? undefined,
     history,
   }
-}
-
-export async function loadProjectsForUser(userId: string): Promise<Project[]> {
-  const projectRows = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.userId, userId))
-    .orderBy(desc(projects.createdAt))
-
-  if (projectRows.length === 0) return []
-
-  const projectIds = projectRows.map((project) => project.id)
-  const historyRows = await db
-    .select({ id: historyEntries.id, projectId: historyEntries.projectId, date: historyEntries.date, request: historyEntries.request, verdict: historyEntries.verdict, summary: historyEntries.summary, draftId: drafts.id })
-    .from(historyEntries)
-    .leftJoin(drafts, eq(drafts.historyEntryId, historyEntries.id))
-    .where(inArray(historyEntries.projectId, projectIds))
-    .orderBy(desc(historyEntries.date))
-
-  const historyByProject = new Map<string, HistoryEntry[]>()
-  for (const row of historyRows) {
-    const entries = historyByProject.get(row.projectId) ?? []
-    entries.push(serializeHistoryEntry(row))
-    historyByProject.set(row.projectId, entries)
-  }
-
-  return projectRows.map((project) =>
-    serializeProject(project, historyByProject.get(project.id) ?? []),
-  )
 }
 
 export async function loadProjectForUser(projectId: string, userId: string) {

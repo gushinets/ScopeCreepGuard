@@ -8,7 +8,7 @@ import sys
 import tempfile
 import time
 import urllib.request
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -75,8 +75,17 @@ def main() -> int:
             SCOPE_GUARD_PRODUCTION="false",
         )
         # Invoke Node directly: no shell interpretation of the generated URL.
-        with auth_server(env) as origin:
+        with ExitStack() as stack:
+            origin = stack.enter_context(auth_server(env))
             env["SCOPE_GUARD_API_ORIGIN"] = origin
+            if args.suite == "frontend":
+                legacy_env = {
+                    **env,
+                    "SCOPE_GUARD_DATABASE_URL": legacy_url,
+                    "AUTH_SECRET": "integration-test-secret-at-least-32-characters",
+                    "SCG_AUTH_REALTIME": "1",
+                }
+                env["SCG_LEGACY_API_ORIGIN"] = stack.enter_context(auth_server(legacy_env))
             completed = subprocess.run(
                 ["node", "node_modules/vitest/vitest.mjs", "run"]
                 + ([] if args.suite == "frontend" else ["tests/api-compatibility.test.ts"]),

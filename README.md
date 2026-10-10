@@ -1,7 +1,8 @@
 # Scope Creep Guard
 
-One repository, two independently runnable applications. Next.js owns all current
-product behavior and PostgreSQL/Drizzle migrations. FastAPI owns authentication (register, login, logout and me) through the Next.js same-origin gateway, plus
+One repository, two independently runnable applications. Next.js owns the frontend,
+pending business workflows and PostgreSQL/Drizzle migrations. FastAPI owns authentication
+(register, login, logout and me) and project list/create/get/update/delete through the Next.js same-origin gateway, plus
 `GET /health/live`, returning HTTP 200 and `{"status":"ok"}` without integrations.
 See [transitional ownership](docs/architecture/ownership.md).
 
@@ -74,7 +75,7 @@ uv run uvicorn scope_guard.main:app --host 127.0.0.1 --port 8000 --reload --loop
 
 Frontend uses port 3000; backend uses port 8000. Check
 `http://127.0.0.1:8000/health/live`. Python `/docs` and `/openapi.json` are internal
-tools for implemented Python routes. Exactly the four `/api/auth/*` handlers forward to Python; other business routes remain TypeScript-owned.
+tools for implemented Python routes. The four `/api/auth/*` operations and five project operations forward to Python; the remaining twelve operations, including legacy history creation, remain TypeScript-owned.
 `/health/ready` checks PostgreSQL connectivity without writing schema; see the
 [ANY-639 specification](docs/architecture/any-639-data-model-and-contracts.md).
 

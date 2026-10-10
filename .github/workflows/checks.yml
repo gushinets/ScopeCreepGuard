@@ -45,7 +45,7 @@ jobs:
       - run: pnpm exec next typegen
       - run: pnpm exec tsc --noEmit
       - run: pnpm build
-      - name: Authentication journey through production Next.js and FastAPI
+      - name: Authentication and projects through production Next.js and FastAPI
         run: node ../scripts/verify-any640.mjs --suite auth-gateway
       - run: pnpm exec tsc --noEmit
 

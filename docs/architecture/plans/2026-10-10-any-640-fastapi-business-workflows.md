@@ -170,11 +170,17 @@ Gate: frontend register/login/me/logout; production/dev flags; expired/tampered/
 
 ### C. Projects/history repositories/ownership
 
-- [ ] Project/history ports/adapters/use cases; five project methods and exact ordering/serialization.
-- [ ] Preserve omission, inactive price nulls, legacy terms/browser details; shared owned history reads.
-- [ ] Cut five methods; legacy history POST stays TS until F; remove superseded project business code after frontend consumption.
+- [x] Project/history ports/adapters/use cases; five project methods and exact ordering/serialization.
+- [x] Preserve omission, inactive price nulls, legacy terms/browser details; shared owned history reads.
+- [x] Cut five methods; legacy history POST stays TS until F; remove superseded project business code after frontend consumption.
+
+Implementation checkpoint: SQLAlchemy project/history adapters compose the inherited Unit of Work. Full PATCH checks ownership before decoding its body. Retain TS single-project serialization/owner helpers for pending generation and legacy history; remove only the superseded list query and route business handlers. Frozen parser vectors characterize actual Number/toFixed monetary behavior. Production gateway and disposable database checks cover frontend consumption, foreign owners, cascades and immutable snapshots. See the Slice C verification record; Slice D awaits review.
 
 Gate: frontend create/edit/delete; two users; cascades/unlinked evaluations; unchanged snapshots; no schema changes.
+
+Required architectural follow-up: replace the shallow frozen Project/card dict
+with nested immutable typed values and immutable application/repository outputs.
+See [the correction plan](2026-10-10-any-640-immutable-project-values.md).
 
 ### D. Generation/OpenAI/proofs
 
