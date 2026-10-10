@@ -21,6 +21,9 @@ class Settings(BaseSettings):
         default=None, validation_alias=AliasChoices("SCOPE_GUARD_AUTH_SECRET", "AUTH_SECRET")
     )
     production: bool = False
+    openai_api_key: SecretStr | None = Field(
+        default=None, validation_alias=AliasChoices("SCOPE_GUARD_OPENAI_API_KEY", "OPENAI_API_KEY")
+    )
 
     @field_validator("allowed_origins")
     @classmethod

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildAnalysisMessages } from '@/lib/llm/prompt'
+import { buildAnalysisMessages } from '@/tests/generation-baseline/prompt'
 
 const base = { scope: 'Build five pages', request: 'Add a blog', industry: 'Development' as const, locale: 'en' as const, startDate: '2026-01-01', draftCreatedAt: '2026-02-01T12:00:00Z', currency: 'USD' as const }
 

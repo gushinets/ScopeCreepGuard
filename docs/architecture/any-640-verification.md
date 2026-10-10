@@ -1,4 +1,9 @@
-# ANY-640 — slices A, B and C verification and handoff
+# ANY-640 — slices A, B, C and D verification and handoff
+
+Current working-tree checkpoint: Slice D implementation is ready for review,
+with container verification blocked by npm registry download timeouts. See the
+Slice D record at the end. Nothing has been staged, committed or published.
+The earlier Slice C publication record below remains historical.
 
 Current checkpoint: Slice C is complete, including the immutable-value correction.
 The user authorized publication on the same child branch, from pre-publication
@@ -444,3 +449,99 @@ This transient verification failure remains a known test-harness risk.
 No rebase, branch switch, reset, clean, stash, application migration, PR creation
 or PR-base change. All test database mutations used owned disposable resources.
 Slice D and full browser form journeys remain outside this publication.
+
+## Slice D — generation, OpenAI and draft proofs, 2026-10-10
+
+User explicitly approved implementation of the Slice D plan. Branch remains
+`codex/any-640-fastapi-business-workflows`, HEAD remains
+`5068724db1f89c999c6aac6b60c5aa2b0129bcad`; Slice C/correction were not redone.
+Plan: [generation migration](plans/2026-10-10-any-640-slice-d-generation-openai-proofs.md).
+
+FastAPI now owns all four generation operations together. Next handlers call the
+existing forwarder once. Python owns exact frozen prompts, Responses access,
+normalization, historical context and proof issuance/verification. TypeScript
+draft saving/verifying remains through E. No generation writes, schema changes,
+production fallback or duplicate logical invocation were introduced.
+
+Layout: API input/locale/cancellation/routes and fresh serialization; immutable
+analysis domain/ports/context/use cases; change-order estimation/use case;
+historical draft overlay and owned read repositories; infrastructure proofs,
+OpenAI/retry/limiter/language/prompts/provider schemas; core JS compatibility.
+Three related analysis operations share `GenerationUseCases` methods; estimation
+uses `EstimateChangeOrder`. The draft read port lives alongside the other read
+ports in `modules.analysis.ports`, rather than a separate one-port module.
+Pure `modules.analysis.serialization` is shared by HTTP, prompts and proofs;
+infrastructure does not depend on HTTP serialization.
+
+Production TypeScript provider calls, prompts, request parsers, limiter and proof
+issuance were retired. Frozen TS prompt/parser/limiter references and issuance
+are test-only. Browser and saver normalizers/verifier remain. Frontend OpenAI
+dependency/configuration was removed; backend uses locked official SDK 2.54.0.
+
+### Fresh verification evidence
+
+Commands below use backend/frontend directories where applicable. Every database
+test used owned disposable PostgreSQL; no application DB or live provider calls.
+
+| Command | Observed result |
+| --- | --- |
+| `python -m pytest --require-integration --basetemp .pytest_cache/any640_d_final1 -q -p no:cacheprovider` (backend venv) | 300 passed, 108.23s; one upstream Starlette/httpx deprecation warning |
+| Final pre-commit `python -m pytest --require-integration --basetemp .pytest_cache/any640_d_commit -q -p no:cacheprovider` | 307 passed, 91.18s; one upstream Starlette/httpx deprecation warning; includes the collection-safe review-edge tests |
+| `python -m pytest tests/unit/test_generation_review_edges.py tests/unit/test_generation_compatibility.py -q -p no:cacheprovider` | Final language fixes: 23 passed, 3.90s |
+| `node scripts/verify-any640.mjs --suite frontend` | 341 tests / 42 files passed; 19 Python contracts passed |
+| Final pre-commit `node scripts/verify-any640.mjs --suite frontend` | 341 tests / 42 files passed in 15.82s; 19 Python contracts passed in 0.84s |
+| `node scripts/verify-any640.mjs --suite contracts` | Existing frozen 21-operation corpus passed; 19 Python contracts passed |
+| `node scripts/verify-any640.mjs --suite generation-gateway` | Four generation routes, zero writes, Python proof → TS saver, concurrent dedup/reload, historical context and shared limiter passed; 15 auth / 14 project journey checks passed |
+| `python -m ruff check .` / `python -m ruff format --check .` | Passed; 126 files formatted |
+| `python -m mypy src/scope_guard` | Passed, 64 source files; notes about pre-existing/untyped constructor body checking remain |
+| `python scripts/export_openapi.py --check ../contracts/openapi.json` | Passed after final changes |
+| `corepack pnpm api:types:check`, `exec next typegen`, `exec tsc --noEmit`, `build` | Passed for the cutover; final static/focused recheck recorded below |
+| Final `corepack pnpm lint`, `exec tsc --noEmit`, `api:types:check` | Passed; one existing unused-variable lint warning in schema.test.ts |
+| Final `vitest run tests/generation-baseline.test.ts tests/generation-gateway.test.ts tests/draft-proof-interop.test.ts` | 4 tests / 3 files passed, 2.28s |
+| Compose configuration checks for compose.yaml, docker-compose.yml and Dokploy; actionlint | Passed |
+| `git diff --check`, `git diff --cached --stat`, `git rev-parse HEAD`, `git check-ignore AGENT.md` | Passed; index empty, HEAD unchanged, handoff ignored |
+
+The earlier 300-test run preceded the last transformed-extension/Unicode-key
+language fixes. The final 307-test pre-commit run covers those changes and the
+collection-safe, self-contained review-edge fixtures. The final frontend suite
+also ran after the fixes.
+
+Coverage includes exact rendered prompts/schemas and tones, EN/RU interface and
+broad client tags, nullable/omitted historical context, commercial timeline and
+signature vectors, malformed output/error distinctions, proof expiry/tampering/
+binding and bidirectional JOSE interoperability, shared rolling admission,
+cancel/retry behavior, owned reads and pool return before generation, no row or
+timestamp mutations, frontend outages and private-content log sentinels.
+
+Independent read-only review initially requested three Important corrections:
+Intl structural/canonical language parity; escaped lone-surrogate request/response
+serialization; overflow-safe model numeric validation. Regressions were observed
+failing, then passing. A second review identified transformed-extension and
+Unicode-key/region alias gaps, subsequently fixed and checked against Node.
+Final reviewer approved the reported fixes, with no remaining Important finding
+in that follow-up scope. The SDK request hook is covered through actual official
+SDK MockTransport: well-formed JSON bytes preserve surrogates, authentication,
+response parsing and sole retry ownership. Recheck this hook on SDK upgrades.
+
+### Remaining verification gate and rollout
+
+`node scripts/verify-any640.mjs --suite containers` failed twice while installing
+frontend dependencies: npm registry socket timeouts (postgres, then postcss).
+Backend image built; frontend image did not build, so the eight container smoke
+checks did not execute. This gate failed rather than being skipped. The existing
+frontend image predates Slice D and is not evidence for this change. A subsequent
+host-network retry was interrupted; no result is claimed. Native frontend build
+and production gateway checks passed, but do not replace image-pair verification.
+
+Before deployment, rerun the container harness after registry connectivity
+recovers. No additional product behavior approval is required. The user authorized
+one local Slice D commit after final staged review; push/PR remain unauthorized.
+Deployment remains outside
+this task: backend first; stop four-route admission, drain, wait 60-second quiet
+window; deploy all four frontend forwarders together, remove frontend provider
+configuration, reopen. Rollback is the previous frontend/backend image pair and
+configuration with the same admission/drain procedure.
+
+Unrelated `.gitignore`, dev.sh, docker-compose.override.yml, pnpm-workspace.yaml
+and test_openai.mjs were preserved. AGENT.md remains ignored. No Git mutations,
+deployment, migrations or production database operations occurred.

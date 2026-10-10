@@ -2,7 +2,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createSessionToken } from '@/tests/session-fixture'
 import { analysisFixture } from './fixtures'
-import { issueDraftProof, verifyDraftProof } from './proof'
+import { verifyDraftProof } from './proof'
+import { issueDraftProof } from '@/tests/draft-proof-fixture'
 
 const claims = {
   userId: '10000000-0000-4000-8000-000000000001',
