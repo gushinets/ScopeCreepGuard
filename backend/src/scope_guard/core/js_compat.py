@@ -82,6 +82,11 @@ def date_parse_finite(value: object) -> bool:
     if not isinstance(value, str) or not trim(value):
         return False
     raw = trim(value)
+    # V8 accepts lowercase ISO separators and legacy space-separated local times.
+    if re.match(r"^(?:[+-][0-9]{6}|[0-9]{4})-[0-9]{2}-[0-9]{2}[tT ]", raw):
+        raw = re.sub(r"(?<=[0-9])[tT ](?=[0-9]{2}:)", "T", raw, count=1)
+        if raw.endswith("z"):
+            raw = raw[:-1] + "Z"
     pattern = (
         r"([+-][0-9]{6}|[0-9]{4})(?:-([0-9]{1,2})(?:-([0-9]{1,2}))?)?"
         r"(?:T([0-9]{2}):([0-9]{2})(?::([0-9]{2})(?:\.([0-9]+))?)?"
@@ -130,6 +135,11 @@ def date_parse_finite(value: object) -> bool:
     if re.fullmatch(r"[0-9]{1,2}", raw):
         number = int(raw)
         return number <= 12 or number >= 32
+    # Slash dates with two-digit years use V8's 00..49/50..99 century pivot.
+    # Only finiteness is needed; day overflow through 31 is accepted by V8 too.
+    short_date = re.fullmatch(r"([0-9]{1,2})/([0-9]{1,2})/([0-9]{2})", raw)
+    if short_date:
+        return 1 <= int(short_date[1]) <= 12 and 1 <= int(short_date[2]) <= 31
     from datetime import datetime
     from email.utils import parsedate_to_datetime
 

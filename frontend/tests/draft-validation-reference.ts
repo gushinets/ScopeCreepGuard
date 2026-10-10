@@ -5,7 +5,7 @@ import { normalizeLanguageTag } from '@/lib/client-language'
 import { normalizeChangeOrderLabels } from '@/lib/change-order/labels'
 import type { EditableDraft } from '@/lib/change-order/document'
 import type { AnalysisResult, Tone } from '@/lib/types'
-import type { CreateDraftInput, DraftDocument, DraftProofClaims } from './types'
+import type { CreateDraftInput, DraftDocument, DraftProofClaims } from '@/lib/drafts/types'
 
 export const MAX_DRAFT_BYTES = 1_000_000
 export function validDraftId(value: unknown): value is string {

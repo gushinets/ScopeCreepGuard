@@ -14,7 +14,7 @@ import psycopg
 from verify_any640 import ROOT, DisposablePostgres, auth_server, replay_drizzle
 
 
-def main(generation=False):
+def main(generation=False, drafts=False):
     with DisposablePostgres() as server, server.database() as url:
         replay_drizzle(url)
         env = dict(os.environ)
@@ -148,7 +148,7 @@ def main(generation=False):
                     "projects": []
                 }
                 assert request("/api/projects", "POST", card, cookie, foreign=True)[0] == 403
-                if generation:
+                if generation or drafts:
                     generation_journey(
                         request, cookie + "; locale=en", foreign_cookie, project, url, backend
                     )
@@ -232,12 +232,34 @@ def generation_journey(request, cookie, foreign_cookie, project, url, backend):
         responses = list(
             executor.map(lambda _: request("/api/drafts", "POST", save, cookie), range(2))
         )
-    assert all(response[0] in (200, 201) for response in responses)
+    assert sorted(response[0] for response in responses) == [200, 201]
     drafts = [json.loads(response[2])["draft"] for response in responses]
     assert drafts[0]["id"] == drafts[1]["id"]
     reopened = json.loads(request("/api/drafts/" + drafts[0]["id"], cookie=cookie)[2])["draft"]
     assert reopened["analysisSnapshot"] == analyzed["result"]
     assert reopened["projectSnapshot"] == analyzed["projectSnapshot"]
+    path = "/api/drafts/" + drafts[0]["id"]
+    status, headers, raw = request("/api/drafts", cookie=cookie)
+    assert status == 200 and headers["cache-control"] == "private, no-store"
+    assert json.loads(raw)["drafts"][0]["id"] == drafts[0]["id"]
+    changed = {**document, "reply": {**document["reply"], "text": "Editable gateway reply"}}
+    status, _, raw = request("/api/drafts", "POST", {**save, "draftDocument": changed}, cookie)
+    assert status == 200 and json.loads(raw)["draft"]["draftDocument"] == document
+    status, _, raw = request(path, "PUT", {"draftDocument": changed}, cookie)
+    assert status == 200
+    updated = json.loads(raw)["draft"]
+    assert updated["draftDocument"] == changed
+    for field in ("analysisSnapshot", "projectSnapshot", "createdAt", "historyEntryId", "request"):
+        assert updated[field] == reopened[field]
+    for identifier in (drafts[0]["id"], "malformed", "10000000-0000-4000-8000-000000000009"):
+        for method in ("GET", "PUT"):
+            status, headers, raw = request(
+                "/api/drafts/" + identifier, method, {} if method == "PUT" else None, foreign_cookie
+            )
+            assert status == 404 and json.loads(raw) == {"error": "errors.draftNotFound"}
+            if method == "GET":
+                assert headers["cache-control"] == "private, no-store"
+    assert json.loads(request("/api/drafts", cookie=foreign_cookie)[2]) == {"drafts": []}
     assert calls() == initial_calls + 4
     with psycopg.connect(url) as database:
         assert database.execute("SELECT count(*) FROM drafts").fetchone()[0] == 1
@@ -256,7 +278,8 @@ def generation_journey(request, cookie, foreign_cookie, project, url, backend):
     assert calls() == initial_calls + 10
     print(
         "Generation gateway: four owners, zero generation writes, "
-        "Python proof -> TS saver/reload/dedup, historical context and shared limit passed."
+        "Python proof -> Python drafts/list/PUT/reload/dedup, owner isolation, "
+        "historical context and shared limit passed."
     )
 
 

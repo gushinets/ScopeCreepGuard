@@ -3,8 +3,8 @@ import { createHmac } from 'node:crypto'
 import { jwtVerify } from 'jose'
 import { getAuthSecret } from '@/lib/auth/session'
 import { isLocale } from '@/i18n/config'
-import { parseSnapshot, validDraftId } from './validation'
-import type { DraftProofClaims } from './types'
+import { parseSnapshot, validDraftId } from './draft-validation-reference'
+import type { DraftProofClaims } from '@/lib/drafts/types'
 
 const VERSION = 'scg-draft-proof-v1'
 export const DRAFT_PROOF_LIFETIME_SECONDS = 60 * 60

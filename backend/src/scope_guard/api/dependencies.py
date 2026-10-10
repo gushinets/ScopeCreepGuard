@@ -30,6 +30,15 @@ def project_service(request: Request) -> ProjectService:
     return ProjectService(lambda: ProjectUnitOfWork(request.app.state.database.new_uow()))
 
 
+def draft_service(request: Request):
+    from scope_guard.infrastructure.database.repositories.draft_persistence import DraftUnitOfWork
+    from scope_guard.modules.drafts.use_cases import DraftService
+
+    return DraftService(
+        lambda: DraftUnitOfWork(request.app.state.database.new_uow()), request.app.state.clock
+    )
+
+
 def generation_service(request: Request):
     from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
     from scope_guard.infrastructure.database.repositories.generation import GenerationReadWork

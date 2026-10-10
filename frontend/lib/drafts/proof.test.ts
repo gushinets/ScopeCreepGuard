@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createSessionToken } from '@/tests/session-fixture'
 import { analysisFixture } from './fixtures'
-import { verifyDraftProof } from './proof'
+import { verifyDraftProof } from '@/tests/draft-proof-reference'
 import { issueDraftProof } from '@/tests/draft-proof-fixture'
 
 const claims = {
