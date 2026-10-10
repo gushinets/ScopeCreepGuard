@@ -146,3 +146,53 @@ def verify_baseline(connection: Connection) -> None:
         differences.append(SchemaDifference("schema.unexpected_public_enum." + name))
     if differences:
         raise SchemaCompatibilityError(differences)
+
+
+def verify_managed_schema(connection: Connection) -> None:
+    """Check the invariant application boundary shared by all Alembic revisions."""
+    major = int(connection.exec_driver_sql("SHOW server_version_num").scalar_one()) // 10000
+    if major != 17:
+        raise SchemaCompatibilityError([SchemaDifference("server_major_requires_17")])
+    public_objects = set(
+        connection.exec_driver_sql("""
+            SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+            WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S')
+        """).scalars()
+    )
+    differences = [
+        SchemaDifference("schema.missing_public_object." + name)
+        for name in sorted((set(TABLES) | {"alembic_version"}) - public_objects)
+    ]
+    public_enums = set(
+        connection.exec_driver_sql("""
+            SELECT t.typname FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
+            WHERE n.nspname='public' AND t.typtype='e'
+        """).scalars()
+    )
+    differences.extend(
+        SchemaDifference("schema.missing_public_enum." + name)
+        for name in sorted(set(ENUMS) - public_enums)
+    )
+    if differences:
+        raise SchemaCompatibilityError(differences)
+
+
+def verify_current_head(connection: Connection) -> None:
+    """Validate the active Alembic head's shared application boundary."""
+    verify_managed_schema(connection)
+
+
+REVISION_VALIDATORS = {"0001_existing_drizzle_schema": verify_baseline}
+
+
+def verify_revision_schema(connection: Connection, *, revision: str | None, head: str) -> None:
+    """Validate a known Alembic state without applying legacy baseline rules to descendants."""
+    if revision is None:
+        raise SchemaCompatibilityError([SchemaDifference("missing_alembic_revision")])
+    validator = REVISION_VALIDATORS.get(revision)
+    if validator is not None:
+        validator(connection)
+    elif revision == head:
+        verify_current_head(connection)
+    else:
+        verify_managed_schema(connection)

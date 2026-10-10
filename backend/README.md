@@ -33,11 +33,16 @@ selected environment variable:
 uv run python -m scope_guard.infrastructure.database.cli migrate --database-url-env SCOPE_GUARD_DATABASE_URL
 ```
 
-For a verified legacy database, add `--adopt-legacy` during the one reviewed
-cutover. The command validates schema and the historical ledger before stamping.
-Exact mismatch or an unexpected revision rejects; direct Alembic mutation and
-destructive baseline downgrade are refused. The old `check`, `upgrade-empty`, and
-`adopt-baseline` operations remain test/preflight tools with disposable guards.
+For a verified legacy database with no `alembic_version` table, add
+`--adopt-legacy` during the one reviewed cutover. The command validates the
+immutable baseline schema and historical ledger before stamping, then upgrades
+to the local Alembic head. Alembic-managed databases accept exactly one known
+revision from the local lineage and upgrade from it to head; malformed, multiple,
+foreign, or unknown revision rows reject safely. The baseline validator remains
+strict for the baseline, while later revisions use revision-aware validation.
+Direct Alembic mutation and destructive baseline downgrade are refused. The old
+`check`, `upgrade-empty`, and `adopt-baseline` operations remain test/preflight
+tools with disposable guards.
 
 Installations use committed uv.lock; `.venv` and caches are ignored. API transport
 lives in api/routes; core owns configuration/logging. Future module, infrastructure

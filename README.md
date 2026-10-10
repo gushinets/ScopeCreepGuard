@@ -77,6 +77,13 @@ job validates the complete schema and historical ledger before stamping the
 baseline. Unknown or incompatible states fail without stamping. Remove the flag
 after adoption. Repeated runs at Alembic head validate and exit safely.
 
+Alembic-managed databases must contain exactly one known revision from the
+backend's local Alembic lineage. The migration job upgrades any such revision to
+the configured head. Missing, malformed, multiple, foreign, or unknown revision
+rows fail without mutation. The frozen Drizzle baseline comparison applies only
+to legacy adoption and the baseline revision; future revisions use the
+revision-aware backend validator.
+
 No automatic destructive downgrade exists. Roll back application images without
 reversing a valid stamp or re-enabling Drizzle; restore the database from a
 reviewed backup when database recovery is required.

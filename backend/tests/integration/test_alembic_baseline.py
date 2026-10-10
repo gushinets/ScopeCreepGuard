@@ -1,4 +1,8 @@
+import shutil
+from pathlib import Path
+
 import pytest
+from alembic.config import Config
 from integration.support import replay_drizzle, rows
 from sqlalchemy import create_engine
 
@@ -137,6 +141,78 @@ def test_guarded_migrate_initializes_empty_database_and_is_idempotent(disposable
                 connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar()
                 == BASELINE
             )
+    finally:
+        engine.dispose()
+
+
+def test_guarded_migrate_upgrades_known_baseline_to_test_only_future_head(
+    disposable_url, monkeypatch, tmp_path
+):
+    """A known baseline must advance through local descendants, not be rejected."""
+    from scope_guard.infrastructure.database import migrations
+
+    root = Path(__file__).resolve().parents[2]
+    future_alembic = tmp_path / "alembic"
+    shutil.copytree(root / "alembic", future_alembic)
+    shutil.copy(
+        root / "tests/fixtures/alembic_future/0002_revision_probe.py",
+        future_alembic / "versions/0002_revision_probe.py",
+    )
+    future_ini = tmp_path / "alembic.ini"
+    shutil.copy(root / "alembic.ini", future_ini)
+
+    def future_config(connection):
+        result = Config(str(future_ini))
+        result.attributes.update(connection=connection, verified_operation=True)
+        return result
+
+    engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
+    try:
+        with engine.begin() as connection:
+            migrations.migrate(connection)
+            assert migrations.current_revision(connection) == migrations.BASELINE
+        monkeypatch.setattr(migrations, "config", future_config)
+        with engine.begin() as connection:
+            migrations.migrate(connection)
+            assert migrations.current_revision(connection) == "0002_revision_probe"
+            assert connection.exec_driver_sql(
+                "SELECT to_regclass('public.revision_probe')"
+            ).scalar()
+            migrations.migrate(connection)
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("revisions", "reason"),
+    [
+        (["not_a_local_revision"], "unknown_alembic_revision"),
+        (["0001 invalid"], "malformed_alembic_revision"),
+        (["0001_existing_drizzle_schema", "not_a_local_revision"], "multiple_alembic_revisions"),
+        ([], "missing_alembic_revision"),
+    ],
+)
+def test_guarded_migrate_rejects_invalid_alembic_version_state(disposable_url, revisions, reason):
+    """Invalid version ledgers must fail before the guarded runner upgrades anything."""
+    from scope_guard.infrastructure.database.migrations import migrate
+    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+
+    engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
+    try:
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "CREATE TABLE public.alembic_version (version_num varchar(32) NOT NULL)"
+            )
+            for revision in revisions:
+                connection.exec_driver_sql(
+                    "INSERT INTO public.alembic_version(version_num) VALUES (%s)", (revision,)
+                )
+        with engine.begin() as connection:
+            with pytest.raises(SchemaCompatibilityError, match=reason):
+                migrate(connection)
+            assert connection.exec_driver_sql(
+                "SELECT version_num FROM public.alembic_version"
+            ).all() == [(revision,) for revision in revisions]
     finally:
         engine.dispose()
 
