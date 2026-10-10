@@ -1,6 +1,6 @@
 
 import { createHmac } from 'node:crypto'
-import { SignJWT, jwtVerify } from 'jose'
+import { jwtVerify } from 'jose'
 import { getAuthSecret } from '@/lib/auth/session'
 import { isLocale } from '@/i18n/config'
 import { parseSnapshot, validDraftId } from './validation'
@@ -14,15 +14,6 @@ export class DraftProofError extends Error {
 function signingKey() {
   // Domain separation: session cookies cannot act as draft proofs.
   return createHmac('sha256', getAuthSecret()).update(VERSION).digest()
-}
-export async function issueDraftProof(claims: DraftProofClaims): Promise<string> {
-  const analysisSnapshot = parseSnapshot(claims.analysisSnapshot, claims.locale)
-  const now = Math.floor(Date.now() / 1000)
-  return new SignJWT({ ...claims, analysisSnapshot, version: VERSION })
-    .setProtectedHeader({ alg: 'HS256', typ: VERSION })
-    .setIssuer('scope-creep-guard').setAudience('draft-creation')
-    .setSubject(claims.userId).setIssuedAt(now)
-    .setExpirationTime(now + DRAFT_PROOF_LIFETIME_SECONDS).sign(signingKey())
 }
 export async function verifyDraftProof(
   proof: unknown,

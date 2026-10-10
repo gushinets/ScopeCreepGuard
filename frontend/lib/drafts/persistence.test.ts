@@ -8,16 +8,15 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import * as schema from '@/lib/db/schema'
 import { analysisFixture, documentFixture, projectSnapshotFixture } from './fixtures'
 
-import { issueDraftProof } from './proof'
+import { issueDraftProof } from '@/tests/draft-proof-fixture'
 import { createSessionToken } from '@/tests/session-fixture'
+import { pythonProof } from '@/tests/python-proof-fixture'
 
 vi.mock('server-only', () => ({}))
 
 const session = vi.hoisted(() => ({ userId: '10000000-0000-4000-8000-000000000001' as string | null }))
 vi.mock('@/lib/auth/current-user', () => ({ getCurrentUser: async () => session.userId ? { id: session.userId } : null }))
 vi.mock('next-intl/server', () => ({ getLocale: async () => 'en' }))
-vi.mock('@/lib/llm/openai', () => ({ analyzeWithOpenAI: async () => structuredClone(analysisFixture), analyzeFailureResponse: () => ({ error: 'errors.analysisFailed', status: 500 }) }))
-vi.mock('@/lib/llm/rate-limit', () => ({ allowAnalyze: () => true }))
 
 const owner = '10000000-0000-4000-8000-000000000001'
 const other = '10000000-0000-4000-8000-000000000002'
@@ -72,7 +71,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
     vi.stubEnv('AUTH_SECRET', 'integration-test-secret-at-least-32-characters')
     if (!process.env.SCG_LEGACY_API_ORIGIN) throw new Error('Owned Python project gateway required')
     vi.stubEnv('SCOPE_GUARD_API_ORIGIN', process.env.SCG_LEGACY_API_ORIGIN)
-    for (const id of [owner, other]) cookies.set(id, 'scg_session=' + await createSessionToken({ id, email: 'unused@example.test' }))
+    for (const id of [owner, other]) cookies.set(id, 'scg_session=' + await createSessionToken({ id, email: 'unused@example.test' }) + '; locale=en')
     body.proof = await issueDraftProof({ userId: owner, projectId, request: body.request, locale: 'en', analysisSnapshot: analysisFixture, projectSnapshot: projectSnapshotFixture })
     session.userId = owner
     await sql`TRUNCATE users CASCADE`
@@ -94,6 +93,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('PostgreSQL draft persistence', 
     expect((await sql`SELECT last_checked FROM projects`)[0].last_checked).toBeNull()
   })
   it('creates one linked history and draft atomically and deduplicates concurrent retries', async () => {
+    body.proof = pythonProof('issue', { userId: owner, projectId, request: body.request, locale: 'en', analysisSnapshot: analysisFixture, projectSnapshot: projectSnapshotFixture })
     const responses = await Promise.all([collection.POST(request('POST', body)), collection.POST(request('POST', body))])
     const data = await Promise.all(responses.map((response) => response.json()))
     expect(data[0].draft.id).toBe(data[1].draft.id)

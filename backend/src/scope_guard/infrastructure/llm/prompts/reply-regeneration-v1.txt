@@ -1,0 +1,11 @@
+PREVIOUSLY GENERATED @@TONE_UPPER@@ REPLY:
+===
+@@PREVIOUS@@
+===
+
+Generate a new @@TONE@@ client-facing reply.
+
+The new reply must be substantively different from the previous reply in wording, structure, and phrasing.
+It must preserve the same scope position, factual basis, and practical next-step requirements supported by the Project Scope and Client Request.
+Do not invent dates, pricing, approvals, commitments, or scope clauses.
+Do not weaken, reverse, or contradict the scope position.

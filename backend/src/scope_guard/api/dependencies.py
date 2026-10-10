@@ -28,3 +28,19 @@ async def current_owner(request: Request) -> dict[str, str]:
 
 def project_service(request: Request) -> ProjectService:
     return ProjectService(lambda: ProjectUnitOfWork(request.app.state.database.new_uow()))
+
+
+def generation_service(request: Request):
+    from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
+    from scope_guard.infrastructure.database.repositories.generation import GenerationReadWork
+    from scope_guard.modules.analysis.use_cases import GenerationUseCases
+
+    state = request.app.state
+    secret = state.settings.auth_secret.get_secret_value() if state.settings.auth_secret else ""
+    return GenerationUseCases(
+        lambda: GenerationReadWork(state.database.new_uow()),
+        state.generator,
+        DraftProofs(secret, state.clock),
+        state.generation_limiter,
+        state.clock,
+    )

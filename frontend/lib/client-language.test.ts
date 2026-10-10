@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { normalizeLanguageTag, resolveClientLanguage, supportedClientLanguage } from './client-language'
 import { parseAnalysisResult } from './llm/schema'
-import { ANALYSIS_JSON_SCHEMA } from './llm/analysis-json-schema'
+import { ANALYSIS_JSON_SCHEMA } from '@/tests/generation-baseline/analysis-json-schema'
 import { normalizeChangeOrderDraft } from './change-order/draft-storage'
 import { germanLabels } from './change-order/german-fixture'
-import { parseAnalyzeBody } from './llm/analyze-request'
-import { parseRegenerateReplyBody } from './llm/regenerate-request'
+import { parseAnalyzeBody } from '@/tests/generation-baseline/analyze-request'
+import { parseRegenerateReplyBody } from '@/tests/generation-baseline/regenerate-request'
 
 const legacy = { verdict: 'out_of_scope', confidence: 90, summary: 'Дополнительные работы.', reasoning: 'Вне объёма.', citations: [], replies: { warm: 'Danke.', neutral: 'Zusätzliche Arbeiten.', firm: 'Bitte genehmigen.' }, changeOrder: { description: 'Neue Seite.', timelineImpact: 'Zwei Tage.', additionalCost: '200', note: 'Entwurf.' } }
 
