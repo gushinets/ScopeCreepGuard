@@ -1,0 +1,1 @@
+Reserved for deliberate endpoint-by-endpoint routing during ANY-640. Today all existing business /api paths and / serve Next.js. Python liveness is available on its separate port. Never switch the entire /api prefix while operations still belong to Next.js.

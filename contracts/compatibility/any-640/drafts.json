@@ -1,0 +1,1059 @@
+{
+  "source": "Frozen pre-cutover TypeScript parser; no production imports",
+  "base": {
+    "projectInput": {
+      "name": " Website ",
+      "clientName": " Acme ",
+      "industry": "Design",
+      "scope": " Build five pages ",
+      "startDate": "2026-10-01",
+      "pricingModel": "hourly",
+      "currency": "USD",
+      "hourlyRate": 125,
+      "fixedPrice": "ignored",
+      "clientEmail": "client@example.test",
+      "endDate": "2026-12-01"
+    },
+    "legacyProject": {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "Legacy",
+      "clientName": null,
+      "industry": "Design",
+      "scope": "Scope",
+      "startDate": null,
+      "pricingModel": null,
+      "currency": null,
+      "hourlyRate": null,
+      "fixedPrice": null,
+      "history": []
+    },
+    "snapshot": {
+      "version": 1,
+      "name": "Website",
+      "industry": "Development",
+      "scope": "Five pages",
+      "startDate": "2026-01-01",
+      "endDate": null,
+      "pricingModel": "hourly",
+      "currency": "EUR",
+      "hourlyRate": "100.00",
+      "fixedPrice": null,
+      "documentLanguage": null
+    },
+    "analysis": {
+      "verdict": "out_of_scope",
+      "confidence": 95,
+      "summary": "Extra page",
+      "reasoning": "Outside scope",
+      "citations": [
+        "Five pages"
+      ],
+      "requestLanguage": "en",
+      "clientLanguage": "en",
+      "replies": {
+        "warm": "Hello",
+        "neutral": "Extra work",
+        "firm": "Approve first"
+      },
+      "changeOrder": {
+        "description": "Extra page",
+        "timelineImpact": "Two days",
+        "additionalCost": "200",
+        "estimatedHours": 2,
+        "currency": "EUR",
+        "rationale": "Extra work",
+        "note": "Draft"
+      },
+      "hasAdditionalWork": true,
+      "estimateValid": true,
+      "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+      "commercialSignature": "original-terms"
+    },
+    "document": {
+      "version": 1,
+      "result": {
+        "verdict": "out_of_scope",
+        "confidence": 95,
+        "summary": "Extra page",
+        "reasoning": "Outside scope",
+        "citations": [
+          "Five pages"
+        ],
+        "requestLanguage": "en",
+        "clientLanguage": "en",
+        "replies": {
+          "warm": "Hello",
+          "neutral": "Extra work",
+          "firm": "Approve first"
+        },
+        "changeOrder": {
+          "description": "Extra page",
+          "timelineImpact": "Two days",
+          "additionalCost": "200",
+          "estimatedHours": 2,
+          "currency": "EUR",
+          "rationale": "Extra work",
+          "note": "Draft"
+        },
+        "hasAdditionalWork": true,
+        "estimateValid": true,
+        "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+        "commercialSignature": "original-terms"
+      },
+      "clientMaterials": null,
+      "reply": {
+        "tone": "firm",
+        "text": "My edited reply",
+        "generated": {
+          "warm": "Hello",
+          "neutral": "Extra work",
+          "firm": "Approve first"
+        }
+      },
+      "projectDetails": {
+        "clientName": "Client",
+        "clientEmail": "client@example.test",
+        "endDate": "2026-12-01"
+      },
+      "changeOrder": {
+        "reference": "CO-20261006-DRAFT1",
+        "createdAt": "2026-10-06T12:00:00.000Z",
+        "language": "en",
+        "projectName": "Website",
+        "description": "My own scope",
+        "estimatedHours": "1.5",
+        "additionalCost": "175",
+        "currency": "EUR",
+        "timelineImpact": "Three days",
+        "rationale": "Adjusted estimate",
+        "note": "My note",
+        "providerName": "North Studio",
+        "clientName": "Client",
+        "clientEmail": "client@example.test",
+        "endDate": "2026-12-01",
+        "additionalTerms": "Pay upfront",
+        "clientApproverName": "Ana",
+        "approvalDate": "2026-10-07",
+        "noAdditionalCharge": false,
+        "aiValues": {
+          "description": "Extra page",
+          "additionalCost": "200"
+        }
+      }
+    }
+  },
+  "documents": [
+    {
+      "name": "original",
+      "path": "",
+      "value": null,
+      "valid": true,
+      "output": {
+        "version": 1,
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 95,
+          "summary": "Extra page",
+          "reasoning": "Outside scope",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+          "commercialSignature": "original-terms"
+        },
+        "clientMaterials": null,
+        "changeOrder": {
+          "createdAt": "2026-10-06T12:00:00.000Z",
+          "projectName": "Website",
+          "description": "My own scope",
+          "estimatedHours": "1.5",
+          "additionalCost": "175",
+          "timelineImpact": "Three days",
+          "rationale": "Adjusted estimate",
+          "note": "My note",
+          "providerName": "North Studio",
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01",
+          "additionalTerms": "Pay upfront",
+          "clientApproverName": "Ana",
+          "approvalDate": "2026-10-07",
+          "language": "en",
+          "currency": "EUR",
+          "noAdditionalCharge": false,
+          "reference": "CO-20261006-DRAFT1",
+          "aiValues": {
+            "description": "Extra page",
+            "additionalCost": "200"
+          }
+        },
+        "reply": {
+          "tone": "firm",
+          "text": "My edited reply",
+          "generated": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          }
+        },
+        "projectDetails": {
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01"
+        }
+      }
+    },
+    {
+      "name": "empty editable description",
+      "path": "changeOrder.description",
+      "value": "",
+      "valid": true,
+      "output": {
+        "version": 1,
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 95,
+          "summary": "Extra page",
+          "reasoning": "Outside scope",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+          "commercialSignature": "original-terms"
+        },
+        "clientMaterials": null,
+        "changeOrder": {
+          "createdAt": "2026-10-06T12:00:00.000Z",
+          "projectName": "Website",
+          "description": "",
+          "estimatedHours": "1.5",
+          "additionalCost": "175",
+          "timelineImpact": "Three days",
+          "rationale": "Adjusted estimate",
+          "note": "My note",
+          "providerName": "North Studio",
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01",
+          "additionalTerms": "Pay upfront",
+          "clientApproverName": "Ana",
+          "approvalDate": "2026-10-07",
+          "language": "en",
+          "currency": "EUR",
+          "noAdditionalCharge": false,
+          "reference": "CO-20261006-DRAFT1",
+          "aiValues": {
+            "description": "Extra page",
+            "additionalCost": "200"
+          }
+        },
+        "reply": {
+          "tone": "firm",
+          "text": "My edited reply",
+          "generated": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          }
+        },
+        "projectDetails": {
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01"
+        }
+      }
+    },
+    {
+      "name": "legacy date",
+      "path": "changeOrder.createdAt",
+      "value": "October 6, 2026",
+      "valid": true,
+      "output": {
+        "version": 1,
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 95,
+          "summary": "Extra page",
+          "reasoning": "Outside scope",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+          "commercialSignature": "original-terms"
+        },
+        "clientMaterials": null,
+        "changeOrder": {
+          "createdAt": "October 6, 2026",
+          "projectName": "Website",
+          "description": "My own scope",
+          "estimatedHours": "1.5",
+          "additionalCost": "175",
+          "timelineImpact": "Three days",
+          "rationale": "Adjusted estimate",
+          "note": "My note",
+          "providerName": "North Studio",
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01",
+          "additionalTerms": "Pay upfront",
+          "clientApproverName": "Ana",
+          "approvalDate": "2026-10-07",
+          "language": "en",
+          "currency": "EUR",
+          "noAdditionalCharge": false,
+          "reference": "CO-20261006-DRAFT1",
+          "aiValues": {
+            "description": "Extra page",
+            "additionalCost": "200"
+          }
+        },
+        "reply": {
+          "tone": "firm",
+          "text": "My edited reply",
+          "generated": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          }
+        },
+        "projectDetails": {
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01"
+        }
+      }
+    },
+    {
+      "name": "two-digit slash date",
+      "path": "changeOrder.createdAt",
+      "value": "10/10/26",
+      "valid": true,
+      "output": {
+        "version": 1,
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 95,
+          "summary": "Extra page",
+          "reasoning": "Outside scope",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+          "commercialSignature": "original-terms"
+        },
+        "clientMaterials": null,
+        "changeOrder": {
+          "createdAt": "10/10/26",
+          "projectName": "Website",
+          "description": "My own scope",
+          "estimatedHours": "1.5",
+          "additionalCost": "175",
+          "timelineImpact": "Three days",
+          "rationale": "Adjusted estimate",
+          "note": "My note",
+          "providerName": "North Studio",
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01",
+          "additionalTerms": "Pay upfront",
+          "clientApproverName": "Ana",
+          "approvalDate": "2026-10-07",
+          "language": "en",
+          "currency": "EUR",
+          "noAdditionalCharge": false,
+          "reference": "CO-20261006-DRAFT1",
+          "aiValues": {
+            "description": "Extra page",
+            "additionalCost": "200"
+          }
+        },
+        "reply": {
+          "tone": "firm",
+          "text": "My edited reply",
+          "generated": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          }
+        },
+        "projectDetails": {
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01"
+        }
+      }
+    },
+    {
+      "name": "legacy space timestamp",
+      "path": "changeOrder.createdAt",
+      "value": "2026-10-10 09:00",
+      "valid": true,
+      "output": {
+        "version": 1,
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 95,
+          "summary": "Extra page",
+          "reasoning": "Outside scope",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+          "commercialSignature": "original-terms"
+        },
+        "clientMaterials": null,
+        "changeOrder": {
+          "createdAt": "2026-10-10 09:00",
+          "projectName": "Website",
+          "description": "My own scope",
+          "estimatedHours": "1.5",
+          "additionalCost": "175",
+          "timelineImpact": "Three days",
+          "rationale": "Adjusted estimate",
+          "note": "My note",
+          "providerName": "North Studio",
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01",
+          "additionalTerms": "Pay upfront",
+          "clientApproverName": "Ana",
+          "approvalDate": "2026-10-07",
+          "language": "en",
+          "currency": "EUR",
+          "noAdditionalCharge": false,
+          "reference": "CO-20261006-DRAFT1",
+          "aiValues": {
+            "description": "Extra page",
+            "additionalCost": "200"
+          }
+        },
+        "reply": {
+          "tone": "firm",
+          "text": "My edited reply",
+          "generated": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          }
+        },
+        "projectDetails": {
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01"
+        }
+      }
+    },
+    {
+      "name": "lowercase ISO timestamp",
+      "path": "changeOrder.createdAt",
+      "value": "2026-10-10t09:00:00.000z",
+      "valid": true,
+      "output": {
+        "version": 1,
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 95,
+          "summary": "Extra page",
+          "reasoning": "Outside scope",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+          "commercialSignature": "original-terms"
+        },
+        "clientMaterials": null,
+        "changeOrder": {
+          "createdAt": "2026-10-10t09:00:00.000z",
+          "projectName": "Website",
+          "description": "My own scope",
+          "estimatedHours": "1.5",
+          "additionalCost": "175",
+          "timelineImpact": "Three days",
+          "rationale": "Adjusted estimate",
+          "note": "My note",
+          "providerName": "North Studio",
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01",
+          "additionalTerms": "Pay upfront",
+          "clientApproverName": "Ana",
+          "approvalDate": "2026-10-07",
+          "language": "en",
+          "currency": "EUR",
+          "noAdditionalCharge": false,
+          "reference": "CO-20261006-DRAFT1",
+          "aiValues": {
+            "description": "Extra page",
+            "additionalCost": "200"
+          }
+        },
+        "reply": {
+          "tone": "firm",
+          "text": "My edited reply",
+          "generated": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          }
+        },
+        "projectDetails": {
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01"
+        }
+      }
+    },
+    {
+      "name": "array currency compatibility",
+      "path": "changeOrder.currency",
+      "value": [],
+      "valid": true,
+      "output": {
+        "version": 1,
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 95,
+          "summary": "Extra page",
+          "reasoning": "Outside scope",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+          "commercialSignature": "original-terms"
+        },
+        "clientMaterials": null,
+        "changeOrder": {
+          "createdAt": "2026-10-06T12:00:00.000Z",
+          "projectName": "Website",
+          "description": "My own scope",
+          "estimatedHours": "1.5",
+          "additionalCost": "175",
+          "timelineImpact": "Three days",
+          "rationale": "Adjusted estimate",
+          "note": "My note",
+          "providerName": "North Studio",
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01",
+          "additionalTerms": "Pay upfront",
+          "clientApproverName": "Ana",
+          "approvalDate": "2026-10-07",
+          "language": "en",
+          "currency": [],
+          "noAdditionalCharge": false,
+          "reference": "CO-20261006-DRAFT1",
+          "aiValues": {
+            "description": "Extra page",
+            "additionalCost": "200"
+          }
+        },
+        "reply": {
+          "tone": "firm",
+          "text": "My edited reply",
+          "generated": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          }
+        },
+        "projectDetails": {
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01"
+        }
+      }
+    },
+    {
+      "name": "array tone compatibility",
+      "path": "reply.tone",
+      "value": [
+        "firm"
+      ],
+      "valid": true,
+      "output": {
+        "version": 1,
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 95,
+          "summary": "Extra page",
+          "reasoning": "Outside scope",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+          "commercialSignature": "original-terms"
+        },
+        "clientMaterials": null,
+        "changeOrder": {
+          "createdAt": "2026-10-06T12:00:00.000Z",
+          "projectName": "Website",
+          "description": "My own scope",
+          "estimatedHours": "1.5",
+          "additionalCost": "175",
+          "timelineImpact": "Three days",
+          "rationale": "Adjusted estimate",
+          "note": "My note",
+          "providerName": "North Studio",
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01",
+          "additionalTerms": "Pay upfront",
+          "clientApproverName": "Ana",
+          "approvalDate": "2026-10-07",
+          "language": "en",
+          "currency": "EUR",
+          "noAdditionalCharge": false,
+          "reference": "CO-20261006-DRAFT1",
+          "aiValues": {
+            "description": "Extra page",
+            "additionalCost": "200"
+          }
+        },
+        "reply": {
+          "tone": [
+            "firm"
+          ],
+          "text": "My edited reply",
+          "generated": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          }
+        },
+        "projectDetails": {
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01"
+        }
+      }
+    },
+    {
+      "name": "missing reference",
+      "path": "changeOrder.reference",
+      "remove": true,
+      "valid": true,
+      "output": {
+        "version": 1,
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 95,
+          "summary": "Extra page",
+          "reasoning": "Outside scope",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+          "commercialSignature": "original-terms"
+        },
+        "clientMaterials": null,
+        "changeOrder": {
+          "createdAt": "2026-10-06T12:00:00.000Z",
+          "projectName": "Website",
+          "description": "My own scope",
+          "estimatedHours": "1.5",
+          "additionalCost": "175",
+          "timelineImpact": "Three days",
+          "rationale": "Adjusted estimate",
+          "note": "My note",
+          "providerName": "North Studio",
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01",
+          "additionalTerms": "Pay upfront",
+          "clientApproverName": "Ana",
+          "approvalDate": "2026-10-07",
+          "language": "en",
+          "currency": "EUR",
+          "noAdditionalCharge": false,
+          "aiValues": {
+            "description": "Extra page",
+            "additionalCost": "200"
+          }
+        },
+        "reply": {
+          "tone": "firm",
+          "text": "My edited reply",
+          "generated": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          }
+        },
+        "projectDetails": {
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01"
+        }
+      }
+    },
+    {
+      "name": "null reference",
+      "path": "changeOrder.reference",
+      "value": null,
+      "valid": false
+    },
+    {
+      "name": "missing materials",
+      "path": "clientMaterials",
+      "remove": true,
+      "valid": false
+    },
+    {
+      "name": "missing change order",
+      "path": "changeOrder",
+      "remove": true,
+      "valid": false
+    },
+    {
+      "name": "null change order",
+      "path": "changeOrder",
+      "value": null,
+      "valid": true,
+      "output": {
+        "version": 1,
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 95,
+          "summary": "Extra page",
+          "reasoning": "Outside scope",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+          "commercialSignature": "original-terms"
+        },
+        "clientMaterials": null,
+        "changeOrder": null,
+        "reply": {
+          "tone": "firm",
+          "text": "My edited reply",
+          "generated": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          }
+        },
+        "projectDetails": {
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01"
+        }
+      }
+    },
+    {
+      "name": "boolean version",
+      "path": "version",
+      "value": true,
+      "valid": false
+    },
+    {
+      "name": "immutable summary",
+      "path": "result.summary",
+      "value": "changed",
+      "valid": false
+    },
+    {
+      "name": "immutable null request language",
+      "path": "result.requestLanguage",
+      "value": null,
+      "valid": false
+    },
+    {
+      "name": "ai unknown field",
+      "path": "changeOrder.aiValues.unknown",
+      "value": "x",
+      "valid": false
+    },
+    {
+      "name": "null ai values",
+      "path": "changeOrder.aiValues",
+      "value": null,
+      "valid": false
+    },
+    {
+      "name": "null editor labels",
+      "path": "changeOrder.changeOrderLabels",
+      "value": null,
+      "valid": false
+    },
+    {
+      "name": "unknown properties discarded",
+      "path": "ignored",
+      "value": "small",
+      "valid": true,
+      "output": {
+        "version": 1,
+        "result": {
+          "verdict": "out_of_scope",
+          "confidence": 95,
+          "summary": "Extra page",
+          "reasoning": "Outside scope",
+          "citations": [
+            "Five pages"
+          ],
+          "replies": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          },
+          "changeOrder": {
+            "description": "Extra page",
+            "timelineImpact": "Two days",
+            "additionalCost": "200",
+            "note": "Draft",
+            "estimatedHours": 2,
+            "currency": "EUR",
+            "rationale": "Extra work"
+          },
+          "clientLanguage": "en",
+          "hasAdditionalWork": true,
+          "requestLanguage": "en",
+          "estimateValid": true,
+          "draftCreatedAt": "2026-10-06T12:00:00.000Z",
+          "commercialSignature": "original-terms"
+        },
+        "clientMaterials": null,
+        "changeOrder": {
+          "createdAt": "2026-10-06T12:00:00.000Z",
+          "projectName": "Website",
+          "description": "My own scope",
+          "estimatedHours": "1.5",
+          "additionalCost": "175",
+          "timelineImpact": "Three days",
+          "rationale": "Adjusted estimate",
+          "note": "My note",
+          "providerName": "North Studio",
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01",
+          "additionalTerms": "Pay upfront",
+          "clientApproverName": "Ana",
+          "approvalDate": "2026-10-07",
+          "language": "en",
+          "currency": "EUR",
+          "noAdditionalCharge": false,
+          "reference": "CO-20261006-DRAFT1",
+          "aiValues": {
+            "description": "Extra page",
+            "additionalCost": "200"
+          }
+        },
+        "reply": {
+          "tone": "firm",
+          "text": "My edited reply",
+          "generated": {
+            "warm": "Hello",
+            "neutral": "Extra work",
+            "firm": "Approve first"
+          }
+        },
+        "projectDetails": {
+          "clientName": "Client",
+          "clientEmail": "client@example.test",
+          "endDate": "2026-12-01"
+        }
+      }
+    },
+    {
+      "name": "UTF16 exact limit",
+      "path": "reply.text",
+      "value": "😀",
+      "repeat": 50000,
+      "valid": true
+    },
+    {
+      "name": "UTF16 over limit",
+      "path": "reply.text",
+      "value": "😀",
+      "repeat": 50001,
+      "valid": false
+    },
+    {
+      "name": "UTF8 ignored size overflow",
+      "path": "ignored",
+      "value": "Ж",
+      "repeat": 500000,
+      "valid": false
+    }
+  ]
+}

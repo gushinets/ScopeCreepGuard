@@ -1,5 +1,10 @@
 # Auth and Data Isolation Plan
 
+> Layout note (ANY-638): application paths and pnpm commands in this document
+> are relative to `frontend/`. Local application configuration is `frontend/.env*`;
+> root Compose commands explicitly use `docker compose -f compose.yaml`. Historical
+> milestones below retain their original context; see root README for current setup.
+
 ## Goal
 
 Add email/password registration and login backed by local Postgres, then isolate projects and check history by the authenticated user.

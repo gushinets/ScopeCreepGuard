@@ -1,0 +1,105 @@
+name: Application checks
+on:
+  push:
+    branches: [main, codex/any-639-data-contracts-and-alembic, codex/any-640-fastapi-business-workflows]
+  pull_request:
+    branches: [main, codex/any-638-frontend-backend-foundation, codex/any-639-data-contracts-and-alembic]
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      DATABASE_URL: postgres://scg_test:synthetic@127.0.0.1:9/scg_test_build
+      AUTH_SECRET: ci-disposable-auth-secret-at-least-32-characters
+      NEXT_TELEMETRY_DISABLED: "1"
+      OPENAI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.19"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --python 3.12
+        working-directory: backend
+      - name: Frontend tests including owned PostgreSQL and compatibility fixtures
+        run: node ../scripts/verify-any640.mjs --suite frontend
+      - run: node --test scripts/docker-entrypoint.test.mjs
+      - run: pnpm lint
+      - run: pnpm api:types:check
+      - run: pnpm exec next typegen
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm build
+      - name: Authentication and projects through production Next.js and FastAPI
+        run: node ../scripts/verify-any640.mjs --suite auth-gateway
+      - name: Generation and Python draft saving through production gateways
+        run: node ../scripts/verify-any640.mjs --suite generation-gateway
+      - name: Draft persistence through production gateways
+        run: node ../scripts/verify-any640.mjs --suite drafts-gateway
+      - run: pnpm exec tsc --noEmit
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.19"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --python 3.12
+      - run: uv run pytest --require-integration
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy src/scope_guard
+      - run: uv run python scripts/export_openapi.py --check ../contracts/openapi.json
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f compose.yaml --profile app config --quiet
+      - run: docker compose -f docker-compose.yml --profile app config --quiet
+      - run: docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet
+      - run: docker build -t scope-guard-backend:ci backend
+      - name: Verify backend liveness without PostgreSQL
+        run: |
+          docker run -d --name scope-guard-backend-ci -p 8000:8000 scope-guard-backend:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:8000/health/live > /tmp/health.json; then
+              python -c 'import json; assert json.load(open("/tmp/health.json")) == {"status": "ok"}'
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend liveness did not respond after $attempt attempts"
+          docker logs scope-guard-backend-ci
+          exit 1
+      - if: always()
+        run: docker rm -f scope-guard-backend-ci || true

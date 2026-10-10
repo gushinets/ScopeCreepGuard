@@ -18,6 +18,7 @@ out/
 dist/
 build/
 coverage/
+output/pdf/verification/
 *.tsbuildinfo
 
 # Logs and OS files
@@ -41,3 +42,18 @@ Thumbs.db
 *.pem
 *.key
 credentials.json
+.pnpm-store
+
+# Local agent handoff notes (intentionally excluded from Git)
+/AGENT.md
+
+# Python applications and verification artifacts
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.superpowers/
+output/
+*.crt

@@ -1,5 +1,10 @@
 # Auth and Data Isolation Status
 
+> Layout note (ANY-638): application paths and pnpm commands in this document
+> are relative to `frontend/`. Local application configuration is `frontend/.env*`;
+> root Compose commands explicitly use `docker compose -f compose.yaml`. Historical
+> milestones below retain their original context; see root README for current setup.
+
 ## Current Phase
 
 Check-scope classification uses `gpt-5.4-nano` via the OpenAI Responses API with `reasoning.effort = medium` and the evidence-based IN_SCOPE / OUT_OF_SCOPE / BORDERLINE prompt (PROJECT TYPE, AGREED PROJECT SCOPE, NEW CLIENT REQUEST labels). Verdict labeling (Correct / Wrong / Debatable) and JSONL export are available on the Check-scope result panel and History. Prior live happy-path smoke (2026-08-17, VPN) returned `200` with verdict, replies, change order, and history; that run predates this model/prompt slice.

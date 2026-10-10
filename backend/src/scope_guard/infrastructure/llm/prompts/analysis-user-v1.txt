@@ -1,0 +1,21 @@
+PROJECT TYPE:
+@@INDUSTRY@@
+
+AGREED PROJECT SCOPE:
+@@SCOPE@@
+
+NEW CLIENT REQUEST:
+=== BEGIN UNTRUSTED CLIENT REQUEST ===
+@@REQUEST@@
+=== END UNTRUSTED CLIENT REQUEST ===
+
+PROJECT COMMERCIAL TERMS:
+@@TERMS@@
+
+@@OVERRIDE_SENTENCE@@
+
+FINAL LANGUAGE CONTRACT: Application interface language is @@LANGUAGE@@.
+- summary, reasoning, and suggestion: @@LANGUAGE@@ only.
+- replies.warm, replies.neutral, replies.firm, every Change Order field and every document label: clientLanguage only.
+- Resolve clientLanguage using the system resolution order.
+Before returning JSON, audit clientLanguage and every field against this contract and correct any field that is in the wrong language.
