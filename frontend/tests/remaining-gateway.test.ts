@@ -2,7 +2,6 @@ import { afterEach, expect, it, vi } from 'vitest'
 
 const forwarding = vi.hoisted(() => ({ call: vi.fn() }))
 vi.mock('@/lib/api/forward', () => ({ forwardToBackend: forwarding.call }))
-vi.mock('@/lib/db', () => { throw new Error('Migrated remaining APIs must not import TypeScript persistence') })
 
 afterEach(() => {
   forwarding.call.mockReset()

@@ -27,6 +27,67 @@ def test_mutation_never_implicitly_uses_application_configuration(monkeypatch, c
     assert "disposable_target_required" in capsys.readouterr().err
 
 
+def test_operational_migrate_requires_explicit_url_environment(monkeypatch, capsys):
+    from scope_guard.infrastructure.database.cli import main
+
+    monkeypatch.delenv("SCOPE_GUARD_DATABASE_URL", raising=False)
+    assert main(["migrate", "--database-url-env", "SCOPE_GUARD_DATABASE_URL"]) == 1
+    assert "database_target_missing" in capsys.readouterr().err
+
+
+def test_operational_migrate_delegates_with_explicit_adoption(monkeypatch, capsys):
+    from scope_guard.infrastructure.database import cli
+
+    monkeypatch.setenv(
+        "SCOPE_GUARD_DATABASE_URL", "postgresql://scopeguard:x@postgres/scope_creep_guard"
+    )
+    monkeypatch.delenv("PGPORT", raising=False)
+    monkeypatch.delenv("PGSERVICE", raising=False)
+    monkeypatch.delenv("PGSERVICEFILE", raising=False)
+    monkeypatch.delenv("PGHOSTADDR", raising=False)
+    calls = []
+
+    class Connection:
+        def exec_driver_sql(self, *args):
+            pass
+
+    class Transaction:
+        def __enter__(self):
+            return Connection()
+
+        def __exit__(self, *args):
+            return False
+
+    class Engine:
+        def begin(self):
+            return Transaction()
+
+        def dispose(self):
+            pass
+
+    monkeypatch.setattr(cli, "create_engine", lambda *args, **kwargs: Engine())
+    monkeypatch.setattr(
+        cli,
+        "migrate",
+        lambda connection, *, adopt_legacy: calls.append((connection, adopt_legacy)),
+        raising=False,
+    )
+
+    assert (
+        cli.main(
+            [
+                "migrate",
+                "--database-url-env",
+                "SCOPE_GUARD_DATABASE_URL",
+                "--adopt-legacy",
+            ]
+        )
+        == 0
+    )
+    assert calls and calls[0][1] is True
+    assert capsys.readouterr().out.strip() == "migration_complete"
+
+
 def test_draft_request_is_trimmed_and_must_not_be_blank():
     from pydantic import ValidationError
     from test_contracts import fixture

@@ -4,7 +4,7 @@ import time
 
 import httpx
 import pytest
-from integration.support import ROOT, docker, migration_digest, replay_drizzle
+from integration.support import ROOT, docker, migration_digest, prepare_alembic
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
 
@@ -15,15 +15,14 @@ def test_reference_provenance_matches_committed_journal():
     reference = json.loads(
         (ROOT / "backend/src/scope_guard/infrastructure/database/baseline_schema.json").read_text()
     )
-    journal = json.loads((ROOT / "frontend/drizzle/meta/_journal.json").read_text())
+    fixture = ROOT / "backend/tests/fixtures/legacy_drizzle"
+    journal = json.loads((fixture / "_journal.json").read_text())
     assert reference["drizzle_hash_normalization"] == "CRLF to LF"
     assert reference["drizzle"] == [
         {
             "tag": item["tag"],
             "when": item["when"],
-            "sha256": migration_digest(
-                (ROOT / "frontend/drizzle" / (item["tag"] + ".sql")).read_bytes()
-            ),
+            "sha256": migration_digest((fixture / (item["tag"] + ".sql")).read_bytes()),
         }
         for item in journal["entries"]
     ]
@@ -33,7 +32,7 @@ def test_ready_recovers_and_uow_returns_failed_connections(disposable_url, postg
     from scope_guard.core.config import Settings
     from scope_guard.main import create_app
 
-    replay_drizzle(disposable_url)
+    prepare_alembic(disposable_url)
 
     async def exercise():
         app = create_app(Settings(_env_file=None, database_url=disposable_url))
@@ -79,7 +78,7 @@ def test_ready_recovers_and_uow_returns_failed_connections(disposable_url, postg
 
 
 def test_constraints_and_project_deletion_cascades(disposable_url):
-    replay_drizzle(disposable_url)
+    prepare_alembic(disposable_url)
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
     try:
         with engine.begin() as connection:

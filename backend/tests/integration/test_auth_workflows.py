@@ -4,7 +4,7 @@ import time
 import httpx
 import pytest
 from fastapi import Request
-from integration.support import replay_drizzle
+from integration.support import prepare_alembic
 from pydantic import SecretStr
 from sqlalchemy import delete, func, select
 
@@ -18,7 +18,7 @@ pytestmark = pytest.mark.integration
 
 
 def test_register_race_login_me_logout_deleted_user(disposable_url):
-    replay_drizzle(disposable_url)
+    prepare_alembic(disposable_url)
 
     async def run():
         app = create_app(

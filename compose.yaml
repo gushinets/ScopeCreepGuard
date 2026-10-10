@@ -14,23 +14,25 @@ services:
     extends: {file: compose.services.yaml, service: migrate}
     profiles: [app]
     environment:
-      DATABASE_URL: *database-url
+      SCOPE_GUARD_DATABASE_URL: *database-url
+      SCOPE_GUARD_ADOPT_LEGACY: ${SCOPE_GUARD_ADOPT_LEGACY:-false}
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        if [ "$${SCOPE_GUARD_ADOPT_LEGACY}" = "true" ]; then set -- --adopt-legacy; fi;
+        python -m scope_guard.infrastructure.database.cli migrate
+        --database-url-env SCOPE_GUARD_DATABASE_URL "$$@"
 
   app:
     extends: {file: compose.services.yaml, service: app}
     profiles: [app]
-    build:
-      args:
-        DATABASE_URL: *database-url
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     env_file:
-      - {path: .env, required: false}
-      - {path: .env.local, required: false}
       - {path: frontend/.env, required: false}
       - {path: frontend/.env.local, required: false}
     environment:
-      DATABASE_URL: *database-url
       SCOPE_GUARD_ALLOWED_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3000}","http://127.0.0.1:${FRONTEND_PORT:-3000}"]'
       SCOPE_GUARD_API_ORIGIN: http://backend:8000
       OPENAI_API_KEY: ""

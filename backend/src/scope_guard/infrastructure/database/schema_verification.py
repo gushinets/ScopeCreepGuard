@@ -127,5 +127,22 @@ def verify_baseline(connection: Connection) -> None:
         Path(__file__).with_name("baseline_schema.json").read_text(encoding="utf-8")
     )
     differences = compare_schema(inspect_schema(connection), expected["schema"])
+    public_objects = set(
+        connection.exec_driver_sql("""
+            SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+            WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S')
+        """).scalars()
+    )
+    allowed_objects = set(TABLES) | {"alembic_version"}
+    for name in sorted(public_objects - allowed_objects):
+        differences.append(SchemaDifference("schema.unexpected_public_object." + name))
+    public_enums = set(
+        connection.exec_driver_sql("""
+            SELECT t.typname FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
+            WHERE n.nspname='public' AND t.typtype='e'
+        """).scalars()
+    )
+    for name in sorted(public_enums - set(ENUMS)):
+        differences.append(SchemaDifference("schema.unexpected_public_enum." + name))
     if differences:
         raise SchemaCompatibilityError(differences)

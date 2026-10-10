@@ -18,28 +18,28 @@ GET /health/ready performs a bounded connectivity check: available PostgreSQL
 returns 200; missing/invalid/unavailable PostgreSQL returns sanitized 503. It
 performs no schema writes and is separate from exact schema verification.
 
-Integration requires Docker and installed frontend dependencies, replaying the
-real Drizzle migrator on a volume-free, harness-owned PostgreSQL 17 container.
+Integration requires Docker and uses volume-free, harness-owned PostgreSQL 17
+containers. Ordinary databases are initialized through Alembic; immutable SQL
+fixtures recreate the retired Drizzle state only for legacy-adoption tests.
 Tests never use application configuration; Docker failures fail the run. Select
 tests/unit and tests/api without --require-integration for checks without Docker.
 The selector event-loop factory above supports Psycopg on Windows.
 
-Drizzle remains the application migration owner. No automatic migration exists.
-Read the specification at docs/architecture/any-639-data-model-and-contracts.md
-from the repository root. Explicit read-only preflight:
+SQLAlchemy models and Alembic are the sole migration source. Application startup
+does not mutate schema. Run the guarded operational command with an explicitly
+selected environment variable:
 
 ```sh
-uv run python -m scope_guard.infrastructure.database.cli check --database-url-env EXPLICIT_PREFLIGHT_URL
+uv run python -m scope_guard.infrastructure.database.cli migrate --database-url-env SCOPE_GUARD_DATABASE_URL
 ```
 
-Preparation mutations require a harness-owned disposable target, the
-SCOPE_GUARD_TEST_DATABASE_URL variable and --disposable, using upgrade-empty or
-adopt-baseline in place of check. Never relabel application credentials to bypass
-the guard. Exact mismatch/unexpected revision rejects; direct Alembic mutation
-and destructive baseline downgrade are refused. Production ownership transfer
-requires a separately approved task and migration freeze.
+For a verified legacy database, add `--adopt-legacy` during the one reviewed
+cutover. The command validates schema and the historical ledger before stamping.
+Exact mismatch or an unexpected revision rejects; direct Alembic mutation and
+destructive baseline downgrade are refused. The old `check`, `upgrade-empty`, and
+`adopt-baseline` operations remain test/preflight tools with disposable guards.
 
 Installations use committed uv.lock; `.venv` and caches are ignored. API transport
 lives in api/routes; core owns configuration/logging. Future module, infrastructure
 and service boundaries are documented in place. See root README for Docker,
-generated OpenAPI and the current Next.js/Drizzle ownership boundary.
+generated OpenAPI and the current frontend/backend ownership boundary.

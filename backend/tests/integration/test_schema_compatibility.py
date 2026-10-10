@@ -36,6 +36,7 @@ def test_current_drizzle_matches_frozen_manifest(disposable_url):
         "KEY(history_entry_id) REFERENCES history_entries(id) ON DELETE SET "
         "NULL",
         "ALTER TABLE drafts ADD COLUMN unexpected text",
+        "CREATE TABLE unexpected_table(id integer)",
         "DROP TABLE evaluation_cases",
         "ALTER TABLE drafts ENABLE ROW LEVEL SECURITY",
     ],

@@ -2,7 +2,6 @@ import { createServer } from 'node:http'
 import { afterEach, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
-vi.mock('@/lib/db', () => { throw new Error('Migrated authentication must not import the TypeScript database') })
 
 afterEach(() => vi.unstubAllEnvs())
 

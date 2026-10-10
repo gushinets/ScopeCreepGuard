@@ -123,3 +123,86 @@ def test_partial_schema_cannot_be_upgraded(disposable_url):
             )
     finally:
         engine.dispose()
+
+
+def test_guarded_migrate_initializes_empty_database_and_is_idempotent(disposable_url):
+    from scope_guard.infrastructure.database.migrations import BASELINE, migrate
+
+    engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
+    try:
+        with engine.begin() as connection:
+            migrate(connection)
+            migrate(connection)
+            assert (
+                connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar()
+                == BASELINE
+            )
+    finally:
+        engine.dispose()
+
+
+def test_guarded_migrate_requires_explicit_legacy_adoption(disposable_url):
+    from scope_guard.infrastructure.database.migrations import BASELINE, migrate
+    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+
+    replay_drizzle(disposable_url)
+    engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
+    try:
+        with engine.begin() as connection:
+            with pytest.raises(SchemaCompatibilityError, match="legacy_adoption_required"):
+                migrate(connection)
+            assert (
+                connection.exec_driver_sql("SELECT to_regclass('public.alembic_version')").scalar()
+                is None
+            )
+        with engine.begin() as connection:
+            migrate(connection, adopt_legacy=True)
+            migrate(connection)
+            assert (
+                connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar()
+                == BASELINE
+            )
+    finally:
+        engine.dispose()
+
+
+def test_guarded_migrate_rejects_unknown_non_public_schema(disposable_url):
+    from scope_guard.infrastructure.database.migrations import migrate
+    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+
+    engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
+    try:
+        with engine.begin() as connection:
+            connection.exec_driver_sql("CREATE SCHEMA unknown")
+            connection.exec_driver_sql("CREATE TABLE unknown.data(id integer)")
+        with engine.begin() as connection:
+            with pytest.raises(SchemaCompatibilityError, match="legacy_adoption_required"):
+                migrate(connection)
+            assert (
+                connection.exec_driver_sql("SELECT to_regclass('public.alembic_version')").scalar()
+                is None
+            )
+    finally:
+        engine.dispose()
+
+
+def test_guarded_migrate_rejects_legacy_ledger_hash_drift(disposable_url):
+    from scope_guard.infrastructure.database.migrations import migrate
+    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+
+    replay_drizzle(disposable_url)
+    engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
+    try:
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "UPDATE drizzle.__drizzle_migrations SET hash=repeat('0',64) WHERE id=1"
+            )
+        with engine.begin() as connection:
+            with pytest.raises(SchemaCompatibilityError, match="legacy_ledger_provenance"):
+                migrate(connection, adopt_legacy=True)
+            assert (
+                connection.exec_driver_sql("SELECT to_regclass('public.alembic_version')").scalar()
+                is None
+            )
+    finally:
+        engine.dispose()

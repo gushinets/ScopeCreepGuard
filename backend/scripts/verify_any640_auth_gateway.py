@@ -11,12 +11,12 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 import psycopg
-from verify_any640 import ROOT, DisposablePostgres, auth_server, replay_drizzle
+from verify_any640 import ROOT, DisposablePostgres, auth_server, prepare_alembic
 
 
 def main(generation=False, drafts=False):
     with DisposablePostgres() as server, server.database() as url:
-        replay_drizzle(url)
+        prepare_alembic(url)
         env = dict(os.environ)
         env.update(
             DATABASE_URL=url,

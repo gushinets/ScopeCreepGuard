@@ -1,6 +1,7 @@
 """Owned ephemeral infrastructure and journal replay, never production configuration."""
 
 import hashlib
+import json
 import subprocess
 import time
 from contextlib import contextmanager
@@ -9,6 +10,7 @@ from uuid import uuid4
 
 import psycopg
 from psycopg import sql
+from sqlalchemy import create_engine
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -88,22 +90,39 @@ class DisposablePostgres:
 
 
 def replay_drizzle(url):
-    """Invoke the installed production migrator against the owned disposable target."""
-    script = """
-      import postgres from 'postgres';
-      import {drizzle} from 'drizzle-orm/postgres-js';
-      import {migrate} from 'drizzle-orm/postgres-js/migrator';
-      const sql = postgres(process.argv[1], {max: 1, onnotice: () => {}});
-      try { await migrate(drizzle(sql), {migrationsFolder: 'drizzle'}); }
-      finally { await sql.end(); }
-    """
-    subprocess.run(
-        ["node", "--input-type=module", "--eval", script, url],
-        cwd=ROOT / "frontend",
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    """Replay immutable historical SQL without retaining an active Drizzle runtime."""
+    fixture = ROOT / "backend/tests/fixtures/legacy_drizzle"
+    journal = json.loads((fixture / "_journal.json").read_text(encoding="utf-8"))
+    with psycopg.connect(url) as connection:
+        connection.execute("CREATE SCHEMA drizzle")
+        connection.execute("""
+            CREATE TABLE drizzle.__drizzle_migrations (
+                id serial PRIMARY KEY,
+                hash text NOT NULL,
+                created_at bigint
+            )
+        """)
+        for item in journal["entries"]:
+            content = (fixture / f"{item['tag']}.sql").read_bytes().replace(b"\r\n", b"\n")
+            for statement in content.decode("utf-8").split("--> statement-breakpoint"):
+                if statement.strip():
+                    connection.execute(statement)
+            connection.execute(
+                "INSERT INTO drizzle.__drizzle_migrations(hash, created_at) VALUES (%s, %s)",
+                (hashlib.sha256(content).hexdigest(), item["when"]),
+            )
+
+
+def prepare_alembic(url):
+    """Initialize an owned disposable database through the active migration authority."""
+    from scope_guard.infrastructure.database.migrations import migrate
+
+    engine = create_engine(url.replace("postgresql://", "postgresql+psycopg://"))
+    try:
+        with engine.begin() as connection:
+            migrate(connection)
+    finally:
+        engine.dispose()
 
 
 def rows(connection):

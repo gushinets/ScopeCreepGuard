@@ -1,7 +1,7 @@
 import asyncio
 
 import pytest
-from integration.support import replay_drizzle
+from integration.support import prepare_alembic
 from sqlalchemy import text
 
 pytestmark = pytest.mark.integration
@@ -11,7 +11,7 @@ def test_commit_rollback_reuse_and_pool_return(disposable_url):
     from scope_guard.core.config import Settings
     from scope_guard.infrastructure.database.session import create_database
 
-    replay_drizzle(disposable_url)
+    prepare_alembic(disposable_url)
 
     async def exercise():
         database = create_database(Settings(_env_file=None, database_url=disposable_url))
