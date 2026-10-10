@@ -50,4 +50,6 @@ def test_openapi_describes_the_liveness_response():
         "/api/replies/regenerate",
         "/api/client-materials/language",
         "/api/change-orders/estimate",
+        "/api/drafts",
+        "/api/drafts/{id}",
     ]

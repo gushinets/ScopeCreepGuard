@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from scope_guard.api.contracts import ErrorResponse
+from scope_guard.api.draft_cache import DraftReadCacheMiddleware
 from scope_guard.api.errors import (
     ErrorCode,
     UnhandledErrorMiddleware,
@@ -14,6 +15,7 @@ from scope_guard.api.errors import (
 )
 from scope_guard.api.origin import OriginMiddleware
 from scope_guard.api.routes.auth import router as auth_router
+from scope_guard.api.routes.drafts import router as drafts_router
 from scope_guard.api.routes.generation import router as generation_router
 from scope_guard.api.routes.health import router as health_router
 from scope_guard.api.routes.projects import router as projects_router
@@ -59,10 +61,12 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     install_error_handlers(application)
     application.add_middleware(UnhandledErrorMiddleware)
     application.add_middleware(OriginMiddleware, allowed_origins=settings.allowed_origins)
+    application.add_middleware(DraftReadCacheMiddleware)
     application.include_router(health_router)
     application.include_router(auth_router)
     application.include_router(projects_router)
     application.include_router(generation_router)
+    application.include_router(drafts_router)
 
     @application.exception_handler(AuthError)
     async def auth_error(_request, error: AuthError):

@@ -1,4 +1,4 @@
-"""Production four-route gateway and transitional saver acceptance."""
+"""Production four-route gateway and Python draft persistence acceptance."""
 
 from verify_any640_auth_gateway import main
 

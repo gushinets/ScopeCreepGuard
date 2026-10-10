@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCreateDraft, parseDraftDocument } from './validation'
+import { parseCreateDraft, parseDraftDocument } from '@/tests/draft-validation-reference'
 import { analysisFixture, documentFixture, projectSnapshotFixture } from './fixtures'
 
 const claims = { userId: 'owner', projectId: '10000000-0000-4000-8000-000000000001', request: 'Add another page', locale: 'en' as const, analysisSnapshot: analysisFixture, projectSnapshot: projectSnapshotFixture }

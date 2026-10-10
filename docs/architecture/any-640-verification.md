@@ -1,11 +1,14 @@
-# ANY-640 — slices A, B, C and D verification and handoff
+# ANY-640 — slices A through E verification and handoff
 
-Current working-tree checkpoint: Slice D implementation is ready for review,
-with container verification blocked by npm registry download timeouts. See the
-Slice D record at the end. Nothing has been staged, committed or published.
-The earlier Slice C publication record below remains historical.
+Current completed implementation: Slice E draft persistence. Python owns all
+four draft operations; Next forwards through the backend gateway. Final backend
+344 tests, frontend 336 tests/44 files plus 19 contracts, gateway journeys and
+both container images/10 smoke checks passed. Slice D's container gate is closed.
+See the Slice E record at the end for exact commands, review and limitations.
+The user authorized one Slice E commit and push on the existing branch; earlier
+slice checkpoints below are historical records.
 
-Current checkpoint: Slice C is complete, including the immutable-value correction.
+Historical Slice C checkpoint: complete, including the immutable-value correction.
 The user authorized publication on the same child branch, from pre-publication
 HEAD `0249a0bed2d1d182e9580031195ed70e0d22d12e` (published slices A/B) and the
 exact ANY-639 parent recorded below. Final staged checks are recorded at the end. Python
@@ -545,3 +548,126 @@ configuration with the same admission/drain procedure.
 Unrelated `.gitignore`, dev.sh, docker-compose.override.yml, pnpm-workspace.yaml
 and test_openai.mjs were preserved. AGENT.md remains ignored. No Git mutations,
 deployment, migrations or production database operations occurred.
+
+## Slice E — draft persistence, 2026-10-10
+
+Approved/executed plan:
+`plans/2026-10-10-any-640-slice-e-draft-persistence.md`.
+Starting/current HEAD `a474d0ec57b5143aca9b8de296dffb6b99f5eccf` is committed
+Slice D. Branch remains `codex/any-640-fastapi-business-workflows`; index empty,
+Slice E uncommitted. The pre-existing .gitignore and four untracked local files
+were not edited. AGENT.md remains ignored and its stale Slice D checkpoint is
+corrected. No worktree, staging, commit, push, PR, deployment, migration or
+application database operations were performed.
+
+### Ownership and implementation
+
+Python owns GET/POST `/api/drafts` and GET/PUT `/api/drafts/{id}`, including
+authentication, ordered validation, existing Slice D proof verification,
+owner-filtered access, retries, persistence and serialization. Next's two routes
+forward once through the established gateway; production TS draft persistence
+is deleted and TS proof/parser compatibility references are test-only. History
+POST, evaluations and locale remain TS-owned. Drizzle remains sole migration
+authority; tables and migrations are unchanged.
+
+The Next proxy passes draft API paths through after Origin protection, retaining
+page guards while delegating all draft session decisions to Python. This also
+lets unauthenticated GET errors/outages receive the private cache policy.
+
+API: `api/draft_input.py`, `api/draft_cache.py`, `api/routes/drafts.py`, dependencies
+and route registration. Domain: `modules/drafts/{values,serialization,repository,
+use_cases,schemas}.py`. Adapter: `infrastructure/database/repositories/
+draft_persistence.py`, using the existing SQLAlchemy UoW. All port values are
+frozen/slotted, nested collections immutable; historical JSON is recursively
+typed/frozen and serialization allocates detached JSON. Core JS compatibility
+adds legacy date vectors. Existing Slice D historical generation reader remains.
+
+POST validates the complete envelope/proof/document before write work, locks the
+owned project, then checks `(projectId,idempotencyKey)`. One transaction inserts
+history/draft and updates lastChecked; one clock instant supplies all dates.
+Concurrent requests return 201/200 and one pair. Valid changed-document retries
+return the original; expired/invalid proofs fail before lookup. PUT reads ownership
+before body parsing, changes only editable data/permitted metadata/updatedAt,
+reloads then commits once. Snapshots/history/context stay immutable. Exceptions,
+deferred commit failures and cancellation roll back through inherited UoW.
+Draft operations make zero provider calls. All draft GET outcomes carry
+`Cache-Control: private, no-store`, including auth/resource/DB/gateway errors.
+
+### Commands and observed results
+
+Backend commands run in backend; frontend commands in frontend; harness/Compose/
+Git commands at root. Backend runs set `UV_CACHE_DIR` to the repository-owned
+`backend/.pytest_cache/uv` (relative `.pytest_cache/uv` in backend). Unit runs add
+an owned basetemp because Windows denies inherited global temp/cache access.
+Harnesses sanitize environment, use deterministic provider doubles and owned
+disposable PostgreSQL replaying Drizzle migrations. Frontend build uses synthetic
+credentials and unreachable loopback database, with no live provider key.
+
+| Exact command | Result |
+| --- | --- |
+| `uv run --no-sync pytest tests/unit tests/api --basetemp .pytest_cache/any640_e_unit_final -q` | 317 passed, 35.51s |
+| `uv run --no-sync pytest tests/integration --require-integration --basetemp .pytest_cache/any640_e_integration -q` | 27 passed, 69.67s; subsequent cancellation/PUT failure additions covered by final full run |
+| `uv run --no-sync pytest --require-integration --basetemp .pytest_cache/any640_e_final -q` | 338 passed, 89s before review boundary fixes |
+| Final `uv run --no-sync pytest --require-integration --basetemp .pytest_cache/any640_e_review_final -q` | 344 passed, 87.37s; one upstream Starlette/httpx deprecation warning |
+| `uv run --no-sync ruff check .` | Passed |
+| `uv run --no-sync ruff format --check .` | Passed, 138 files formatted |
+| `uv run --no-sync mypy src/scope_guard` | Passed, 72 sources; four inherited untyped-body notes |
+| `uv run --no-sync python scripts/export_openapi.py --check ../contracts/openapi.json` | Passed |
+| `corepack pnpm api:types:check` | Passed, regenerated types fresh |
+| `corepack pnpm exec next typegen` | Passed |
+| `corepack pnpm exec tsc --noEmit` | Passed before and after final build |
+| `corepack pnpm lint` | Passed, zero errors; one existing unused `_s` warning in lib/llm/schema.test.ts |
+| `corepack pnpm build` followed by `corepack pnpm exec tsc --noEmit` | Passed after final proxy correction; Next 16.3 Turbopack compiled in 6.3s, all 19 pages generated |
+| `node --test scripts/docker-entrypoint.test.mjs` | 3 passed |
+| `node scripts/verify-any640.mjs --suite frontend` | Final isolated 336 tests / 44 files, 18.02s; 19 Python contracts, 0.66s |
+| `node scripts/verify-any640.mjs --suite contracts` | Original 21-operation corpus unchanged/passed; frontend 1 test passed; Python 19 passed |
+| `node scripts/verify-any640.mjs --suite drafts-gateway` | Passed production four-method forwarding/dedup/edit/reload/history/ownership/zero-provider journey; 15 auth and 14 project checks |
+| `node scripts/verify-any640.mjs --suite generation-gateway` | Passed four-owner generation/Python proof/Python persistence/historical context/shared limit; 15 auth and 14 project checks |
+| `node scripts/verify-any640.mjs --suite containers` | Both images built and 10 production HTTP smoke checks passed; owned containers removed; closes prior Slice D gate |
+| `docker compose -f compose.yaml --profile app config --quiet` | Passed |
+| `docker compose -f docker-compose.yml --profile app config --quiet` | Passed |
+| `docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet` | Passed |
+| `git diff --check`, `git diff --cached --check` | Passed; Windows line-ending advisories only |
+| `git diff --cached --stat`, `git rev-parse HEAD`, `git check-ignore AGENT.md`, `git status --short --branch` | Index empty; required HEAD/branch; handoff ignored; only Slice E and named unrelated files |
+
+Tests cover two-owner isolation, malformed/missing/foreign resources, private
+headers, exact error/validation precedence, all proof claims/key/algorithm/expiry
+and session-proof rejection, UTF8/UTF16 limits, omitted/null values, unknown-field
+sizing, nested language/label/document restrictions, snapshots/metadata precedence,
+concurrent 201/200, changed-document retry, tied list ordering, legacy/null
+snapshots, rollback after inserts/project update/deferred commit and cancellation,
+immutable PUT and provider-call isolation. Frontend retains editor/history/stale
+response/deep-link/lost-response regression coverage. Shared new draft vectors
+freeze the retired TS parser's behavior separately from the unchanged corpus.
+
+Read-only independent review found legacy date acceptance, encoded slash-ID
+routing and deeply nested JSON error gaps. Regression tests preceded fixes;
+OpenAPI now also documents cache headers and omittable/non-null editor fields.
+Reviewer reran 33 focused tests and reported no remaining Critical/Important
+findings. Initial backend run encountered inherited temp access failures and a
+stale route inventory; initial frontend run found a moved reference import. These
+were fixed and full final suites passed. Vite emits its inherited config-loader
+warning; no warning is silently treated as a failed assertion.
+
+The first container rerun built both images after 11 minutes of registry
+downloads, then failed an inherited smoke assertion expecting unauthenticated
+generation to return 503. Reproduction showed 401/authRequired from the existing
+page/API proxy guard. The harness now checks that behavior separately and checks
+two draft GET outages for 503/private cache. Investigation also found the draft
+proxy interception gap; a failing then passing regression covers all four methods,
+and the proxy delegates draft authentication to Python. The final read-only review
+found no Important/Critical issue; its independent test launch hit sandbox spawn
+EPERM, while our escalated regression run passed. A concurrent frontend rerun
+passed 335 tests but timed out the existing five-second proof-interop test;
+isolated final rerun passed all 336 tests/44 files and 19 contracts, including
+proof interoperability. No timeout or product change was needed.
+
+### Rollout and remaining limits
+
+Deploy compatible backend first, drain draft writes, switch all four frontend
+draft operations together. Rollback to prior compatible image pair; existing rows
+remain readable without schema reversal or per-request fallback. Record only
+sanitized status/error/latency, never documents, requests, cookies or proofs.
+Deployment, live-provider testing and full Slice G browser journeys remain outside
+this task. The app-scoped generation limiter's single-worker/replica constraint
+from Slice D remains. Container outcome and any infrastructure limit follow below.
