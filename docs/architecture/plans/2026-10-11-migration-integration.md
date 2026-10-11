@@ -1,0 +1,21 @@
+# Verified migration integration — 2026-10-11
+
+- Checkout: current local checkout only; branch `codex/any-641-python-services`, initial HEAD `900bed01a250228e7dd9585319e4a55fd2df641a`.
+- Base: `origin/main` / merge base `753c88af7f2b647e3bc52f750db4d5b5d17aa03e`; initially 15 commits ahead, zero behind.
+- Commit groups: retain existing foundation, contracts, business workflow, Alembic and technical-service commits as coherent dependency groups; add this integration record after audit. No implementation edits currently pending.
+- Exclude: dev.sh, docker-compose.override.yml, pnpm-workspace.yaml, test_openai.mjs, kaspersky-root-ca.crt, output/, ignored root AGENT.md, environments, secrets, certificates, logs, caches and personal configuration.
+- Audit: staged/unstaged diffs, all untracked files (redacted inspection), tracked lineage, workflows/Docker/dependencies/contracts/fonts/docs/backend/frontend, retired helper callers, migration authority, secret/local-artifact scan and required backend/frontend checks. Do not use application databases; integration tests own disposable PostgreSQL.
+- Conflicts: inspect both sides and preserve verified behavior; rerun affected checks. Abort rebase if safe resolution is uncertain; never discard unrelated files or force push.
+- Merge: commit reviewed integration record on feature branch; fetch origin; rebase onto latest origin/main; recheck; switch main; pull --ff-only origin main; fast-forward feature; push main; verify local and remote SHAs.
+- Evidence/results: to be completed before publication. Ignored AGENT.md records final ownership, verification, lineage and merge outcome.
+
+## Verification and audit evidence
+
+- Initial index and tracked working tree were clean. All four initial untracked files inspected without exposing values and preserved. `.gitignore` excludes root AGENT.md, environments, certificates, output and caches. No prohibited tracked paths found.
+- Reviewed workflow, Docker/build contexts, dependency changes and locks, OpenAPI/type generation, packaged licensed Noto assets, documentation, Python routes/services/process isolation and frontend proxy/client/UI boundaries. Deleted frontend PDF/scope modules are intentionally replaced by Python services. Removed one stale deleted-PDF-module mock from draft tests; no runtime behavior changed.
+- FastAPI owns saved/unsaved PDF and temporary scope extraction; Next proxies once and retains UI/editor/download interaction. OpenAPI and generated types are fresh. Alembic is the only active migration authority; legacy Drizzle material is inert test provenance.
+- Secret scan of changed text files found only example/synthetic/template database URLs in examples and test infrastructure; no private keys/provider tokens/personal paths detected. Local launchers, overrides, root workspace configuration, provider test script, certificate and output remain excluded.
+- Backend: requested five-module focused pytest command passed, 34 tests; `tests/integration/test_document_workflows.py -q --require-integration` passed, 1 test on owned disposable PostgreSQL. Both used unique `--basetemp` and cache paths under ignored `.pytest_cache` to avoid existing Windows ACL issues. `uv run ruff check .`, `uv run ruff format --check .` (173 files), `uv run mypy src/scope_guard` (94 sources), and OpenAPI export `--check` all passed.
+- Frontend: `node scripts/api-types.mjs --check` passed. Direct installed Vitest entry point, `run lib/api lib/change-order components/scope-guard/project-form.test.tsx components/scope-guard/drafts.test.tsx components/scope-guard/change-order.test.tsx --maxWorkers=2`: 80 tests / 13 files passed. Direct installed TypeScript entry point `--noEmit` passed. Direct entry points avoid unavailable local command shims.
+- Repository: `git diff --check` passed. Initial sandbox attempts failed on UV cache ACL, pytest temporary files/child process access and Vitest spawn EPERM; authorized unsandboxed test reruns passed. No checks weakened. Existing Starlette deprecation, Vite configuration warning and Mypy untyped-body notes remain.
+- Scope: no application data, deployment or live-provider operations; no new image build or full browser journey in this integration run. Historical broader verification remains in the issue evidence documents.

@@ -14,7 +14,6 @@ import type { Project } from '@/lib/types'
 
 const navigation = vi.hoisted(() => ({ router: { replace: vi.fn() } }))
 vi.mock('next/navigation', () => ({ useRouter: () => navigation.router }))
-vi.mock('@/lib/change-order/pdf', () => ({ createChangeOrderPdf: vi.fn() }))
 const project: Project = { id: 'p1', name: 'Website', industry: 'Development', scope: 'Build five pages. Additional pages are outside the agreed scope and cost extra.', startDate: '2026-01-01', pricingModel: 'hourly', currency: 'EUR', hourlyRate: '100', fixedPrice: null, history: [] }
 const projectSnapshot = { version: 1 as const, name: 'Original Website', industry: 'Development' as const, scope: 'Original scope: five pages only.', startDate: '2026-01-01', endDate: '2026-12-01', pricingModel: 'hourly' as const, currency: 'EUR' as const, hourlyRate: '100', fixedPrice: null, documentLanguage: null }
 const saved = { projectSnapshot, id: 'd1', projectId: 'p1', historyEntryId: 'h1', status: 'draft', createdAt: '2026-10-06T12:00:00.000Z', updatedAt: '2026-10-06T12:00:00.000Z', locale: 'en', requestLanguage: 'en', clientMaterialLanguage: 'en', analysisSnapshot: analysisFixture, draftDocument: documentFixture, request: 'Add another page' }
