@@ -124,3 +124,19 @@ ANY-642 remaining runtime reassessment: measure parser/render admission and memo
 deployment load; reassess single-worker/replica limiter assumptions and proxy topology;
 run complete interactive production journeys; choose operational timeout/observability
 budgets. OCR, queues, persistent uploads, pricing/rates and deployment remain out of scope.
+
+## CI platform typing correction, 2026-10-11
+
+CI exposed Windows-only attributes that the initial Windows-host Mypy run could see
+but Linux typeshed could not. Reproduced both errors with
+`.venv/Scripts/python.exe -m mypy --platform linux src/scope_guard` before the fix.
+Technical operations now select Windows creation flags in a `sys.platform` branch;
+Windows Job Object access has an explicit platform guard. No type ignores or
+runtime fallback were added. CI also checks `mypy --platform win32 src/scope_guard`.
+
+Verification: Mypy passes for both Linux and Windows targets, 94 sources each.
+The exact CI command `uv run mypy src/scope_guard` also passed inside a disposable
+`python:3.12-slim` Linux container with locked development dependencies and a
+read-only backend mount copied into container-local storage. Existing untyped-body
+notes remain. Ruff check/format pass for technical infrastructure; process-isolation
+tests pass (4 tests, 4.24s). No database was used for this correction.
