@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Copy, Download, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,12 +8,14 @@ import { readProjectDetails } from '@/lib/projects/browser-details'
 import { buildChangeOrderText, formatDocumentDate, makeChangeOrderReference, type EditableDraft } from '@/lib/change-order/document'
 import { readChangeOrder, writeChangeOrder } from '@/lib/change-order/draft-storage'
 import { mergeEstimate } from '@/lib/change-order/merge-estimate'
-import { createChangeOrderPdf } from '@/lib/change-order/pdf'
+import { downloadChangeOrder } from '@/lib/api/services'
+import { ApiClientError } from '@/lib/api/client'
+import { ERROR_CODES, type ErrorCode } from '@/lib/api/errors'
 import type { AnalysisResult, Currency } from '@/lib/types'
 import { ChangeOrderDocumentPreview } from './change-order-document-preview'
 import { supportedClientLanguage } from '@/lib/client-language'
 
-export function ChangeOrder({ result, projectName, projectId, historyId, userId, initialDraft, documentLanguage, refreshEstimate = false, draft: controlledDraft, onDraftChange, disabled = false }: {
+export function ChangeOrder({ result, projectName, projectId, historyId, userId, initialDraft, documentLanguage, refreshEstimate = false, draft: controlledDraft, onDraftChange, disabled = false, draftId, savedUnchanged = false }: {
   result?: AnalysisResult
   projectName: string
   projectId: string
@@ -25,8 +27,11 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
   draft?: EditableDraft
   onDraftChange?: (draft: EditableDraft) => void
   disabled?: boolean
+  draftId?: string | null
+  savedUnchanged?: boolean
 }) {
   const t = useTranslations('changeOrder')
+  const messages = useTranslations()
   const locale = useLocale()
   const [original] = useState<EditableDraft>(() => {
     const createdAt = initialDraft?.createdAt ?? result?.draftCreatedAt ?? new Date().toISOString()
@@ -61,6 +66,10 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
   })
   const draft = controlledDraft ?? localDraft
   const [status, setStatus] = useState<'copied' | 'downloaded' | 'error' | 'pdfLanguageUnsupported' | ''>('')
+  const [downloading, setDownloading] = useState(false)
+  const [exportError, setExportError] = useState<ErrorCode | ''>('')
+  const downloadController = useRef<AbortController | null>(null)
+  useEffect(() => () => downloadController.current?.abort(), [])
 
   useEffect(() => {
     if (!controlledDraft) writeChangeOrder(userId, projectId, historyId, draft)
@@ -93,19 +102,30 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
   }
 
   async function download() {
+    if (downloadController.current) return
+    const controller = new AbortController()
+    downloadController.current = controller
+    setDownloading(true)
+    setExportError('')
+    setStatus('')
     try {
-      const [regularResponse, boldResponse] = await Promise.all([fetch('/noto-sans.ttf'), fetch('/noto-sans-bold.ttf')])
-      if (!regularResponse.ok || !boldResponse.ok) throw new Error('font')
-      const bytes = await createChangeOrderPdf(draft, new Uint8Array(await regularResponse.arrayBuffer()), new Uint8Array(await boldResponse.arrayBuffer()))
-      const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
+      const { blob, filename } = await downloadChangeOrder({ draft, projectId, draftId, savedUnchanged }, controller.signal)
+      if (controller.signal.aborted) return
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = url
-      anchor.download = `change-order-${projectId}.pdf`
+      anchor.download = filename
       anchor.click()
       window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
       setStatus('downloaded')
-    } catch (error) { setStatus(error instanceof Error && error.message.startsWith('unsupported_pdf_') ? 'pdfLanguageUnsupported' : 'error') }
+    } catch (error) {
+      if (!controller.signal.aborted) setExportError(error instanceof ApiClientError ? error.code : ERROR_CODES.pdfExportFailed)
+    } finally {
+      if (downloadController.current === controller) {
+        downloadController.current = null
+        setDownloading(false)
+      }
+    }
   }
 
   return <section aria-labelledby="change-order-heading" className="rounded-lg border border-border bg-card p-4">
@@ -121,7 +141,9 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
     <details className="mt-4 rounded-lg border border-border px-3 py-2"><summary className="cursor-pointer text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring">{t('additionalParameters')}</summary><div className="mt-3 grid gap-3">{field('rationale', t('rationaleLabel'), 2)}{field('note', t('noteLabel'), 2)}{field('additionalTerms', t('additionalTerms'), 2)}<div className="grid gap-3 sm:grid-cols-2">{field('providerName', t('providerName'))}{field('clientName', t('clientName'))}{field('clientEmail', t('clientEmail'))}{field('endDate', t('endDate'))}{field('clientApproverName', t('approvedBy'))}{field('approvalDate', t('approvalDate'))}</div></div></details>
     <div className="mt-6"><p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('preview')}</p><ChangeOrderDocumentPreview draft={draft} /></div>
     {!supportedClientLanguage(draft.language) && <p role="alert" className="mt-3 text-sm">{t('pdfLanguageUnsupported')}</p>}
-    <div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => void copy()}><Copy aria-hidden="true" />{t('copy')}</Button><Button type="button" variant="outline" disabled={!supportedClientLanguage(draft.language)} onClick={() => void download()}><Download aria-hidden="true" />{t('downloadPdf')}</Button></div>
+    <div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => void copy()}><Copy aria-hidden="true" />{t('copy')}</Button><Button type="button" variant="outline" disabled={disabled || downloading || !supportedClientLanguage(draft.language)} onClick={() => void download()}><Download aria-hidden="true" />{t(downloading ? 'downloading' : 'downloadPdf')}</Button>{downloading && <Button type="button" variant="ghost" onClick={() => downloadController.current?.abort()}>{t('cancelDownload')}</Button>}</div>
+    {downloading && <p role="status" className="mt-2 text-xs">{t('downloading')}</p>}
+    {exportError && <p role="alert" className="mt-2 text-xs">{messages(exportError)}</p>}
     {status && <p role="status" className="mt-2 text-xs text-muted-foreground">{t(status)}</p>}
   </section>
 }

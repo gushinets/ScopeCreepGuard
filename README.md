@@ -2,8 +2,8 @@
 
 Scope Creep Guard runs as a Next.js frontend, a FastAPI backend, and PostgreSQL.
 Runtime data flows `frontend -> backend API -> PostgreSQL`. Next.js owns the UI,
-localization, page guards, browser PDF/extraction/currency helpers, and the
-same-origin gateway. FastAPI owns all 21 public API operations and database access.
+localization, page guards, editable document state, and the same-origin gateway.
+FastAPI owns all 24 public API operations, PDF export, scope extraction, and database access.
 Backend SQLAlchemy models and Alembic are the only active migration authority.
 
 Implementation plans live in [docs/architecture/plans/](docs/architecture/plans/README.md).
@@ -120,6 +120,9 @@ Dokploy uses `docker-compose.dokploy.yml` by itself. Configure its public domain
 for the `app` service on port 3000; FastAPI stays internal on 8000 behind the
 Next.js gateway.
 
-ANY-641 still owns PDF export redesign, scope extraction migration, and currency
-service migration. Later runtime work may reassess proxy topology, integrated
-journeys, and production hardening.
+PDF export supports saved drafts and unsaved edits without implicit saving. Scope
+uploads accept TXT, Markdown and text PDFs up to 5 MiB, 200 pages and 100,000 UTF-16
+units; extracted text remains editable before saving. Monetary strings retain their
+entered precision; changing currency performs no conversion or rate lookup.
+See [ANY-641 verification](docs/architecture/any-641-verification.md). ANY-642 can
+reassess proxy topology, integrated journeys and production resource budgets.

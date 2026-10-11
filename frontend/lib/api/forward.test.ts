@@ -23,6 +23,43 @@ async function backend(handler: RequestListener) {
 }
 
 describe('one-owner backend transport', () => {
+  it('preserves binary PDF response, filename and private caching', async () => {
+    const origin = await backend((_request, response) => {
+      response.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="change-order-test.pdf"', 'Cache-Control': 'private, no-store' })
+      response.end(Buffer.from([37, 80, 68, 70, 45, 0, 255]))
+    })
+    vi.stubEnv('SCOPE_GUARD_API_ORIGIN', origin)
+    const response = await forwardToBackend(new Request('https://app.test/api/drafts/test/pdf'))
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([37, 80, 68, 70, 45, 0, 255]))
+    expect(response.headers.get('content-disposition')).toBe('attachment; filename="change-order-test.pdf"')
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+  })
+
+  it('rejects excessive multipart bytes before contacting the backend', async () => {
+    const call = vi.fn()
+    vi.stubEnv('SCOPE_GUARD_API_ORIGIN', await backend(call))
+    const response = await forwardToBackend(new Request('https://app.test/api/scope/extract', { method: 'POST', body: new Uint8Array(5 * 1024 * 1024 + 65537), headers: { 'content-type': 'multipart/form-data; boundary=test' } }))
+    expect(response.status).toBe(413)
+    expect(await response.json()).toEqual({ error: 'errors.scopeFileTooLarge' })
+    expect(call).not.toHaveBeenCalled()
+  })
+
+  it('forwards multipart bytes and boundary exactly once', async () => {
+    let calls = 0
+    const body = '--test\r\nContent-Disposition: form-data; name="file"; filename="a.txt"\r\n\r\nScope\r\n--test--\r\n'
+    vi.stubEnv('SCOPE_GUARD_API_ORIGIN', await backend(async (request, response) => {
+      calls += 1
+      expect(request.headers['content-type']).toBe('multipart/form-data; boundary=test')
+      let actual = ''
+      for await (const chunk of request) actual += chunk
+      expect(actual).toBe(body)
+      response.writeHead(200, { 'Content-Type': 'application/json' })
+      response.end('{"text":"Scope","warnings":[]}')
+    }))
+    const result = await forwardToBackend(new Request('https://app.test/api/scope/extract', { method: 'POST', body, headers: { 'content-type': 'multipart/form-data; boundary=test' } }))
+    expect(result.status).toBe(200)
+    expect(calls).toBe(1)
+  })
   it('forwards exact method/query/body/cookies and preserves response plus separate cookies', async () => {
     let calls = 0
     const origin = await backend(async (request, response) => {

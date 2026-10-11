@@ -1,6 +1,16 @@
 # Transitional ownership
 
-Next.js under frontend owns UI/localization, page guards and the same-origin gateway. All 21 current `/api/*` operations forward to FastAPI once, preserving cookies and headers without retries or fallback. Browser PDF/extraction/currency helpers remain unchanged. The frontend has no PostgreSQL or migration responsibility.
+Next.js under frontend owns UI/localization, page guards and the same-origin gateway. The 21 inherited `/api/*` operations and three ANY-641 technical operations forward to FastAPI once, preserving cookies and headers without retries or fallback. Python owns PDF export and scope extraction. The frontend has no PostgreSQL or migration responsibility.
+
+ANY-641 adds GET `/api/drafts/{draftId}/pdf`, POST `/api/change-orders/pdf`
+(unsaved editable preview, no implicit save), and POST `/api/scope/extract`.
+Document use cases load owner-filtered saved editor data and immutable snapshots;
+services never substitute current project commercial terms or generate analysis.
+Extraction returns editable text/warnings without updating projects. Rendering
+and parsing run in bounded local child processes with packaged Noto fonts,
+temporary-file cleanup, no inherited application/provider secrets and no queue.
+Frontend retains local editor/preview/clipboard helpers and typed API clients.
+Currency selection retains original values without conversion or rate requests.
 
 Python under backend owns startup/configuration/logging, health endpoints, all public API operations, SQLAlchemy persistence, and Alembic migrations. Application startup never mutates schema. A backend-owned one-shot migration job validates and migrates PostgreSQL before FastAPI becomes ready. See any-639-data-model-and-contracts.md for schema invariants and the ANY-642 handover plan for operational boundaries.
 
@@ -12,7 +22,7 @@ values and tuples of immutable history entries. HTTP input/output conversion
 stays in api/project_input.py and api/project_output.py; serializers allocate new
 JSON structures and never expose internal state.
 
-ANY-639 designed contracts/data and prepared SQLAlchemy/Alembic. ANY-640 migrated existing business/auth operations and routing. ANY-642 transfers migration authority exclusively to Alembic. ANY-641 remains responsible for PDF/extraction/currency services. Root contracts are generated from implemented Python routes; frontend/lib/api is the shared browser/forwarding boundary.
+ANY-639 designed contracts/data and prepared SQLAlchemy/Alembic. ANY-640 migrated existing business/auth operations and routing. ANY-642 transfers migration authority exclusively to Alembic. ANY-641 moves PDF/extraction into Python; currency selection retains original amounts without conversion. Root contracts are generated from implemented Python routes; frontend/lib/api is the shared browser/forwarding boundary.
 
 Empty databases are created through Alembic. Legacy Drizzle databases require an
 explicit adoption flag and must pass full catalog and historical-ledger validation

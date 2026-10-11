@@ -25,9 +25,34 @@ export async function forwardToBackend(request: Request, path?: string): Promise
       const value = request.headers.get(key)
       if (value !== null) headers.set(key, value)
     }
+    const bodyLimit = target.pathname === '/api/scope/extract' ? 5 * 1024 * 1024 + 64 * 1024
+      : target.pathname === '/api/change-orders/pdf' ? 1_000_000 : undefined
+    let body: ArrayBuffer | Uint8Array | undefined
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      if (bodyLimit !== undefined && request.body) {
+        const reader = request.body.getReader()
+        const chunks: Uint8Array[] = []
+        let length = 0
+        try {
+          while (true) {
+            const { value, done } = await reader.read()
+            if (done) break
+            length += value.byteLength
+            if (length > bodyLimit) {
+              await reader.cancel()
+              return Response.json({ error: target.pathname === '/api/scope/extract' ? ERROR_CODES.scopeFileTooLarge : ERROR_CODES.pdfInputTooLarge }, { status: 413, headers: { 'Cache-Control': 'private, no-store' } })
+            }
+            chunks.push(value)
+          }
+        } finally { reader.releaseLock() }
+        body = new Uint8Array(length)
+        let offset = 0
+        for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength }
+      } else body = await request.arrayBuffer()
+    }
     const upstream = await upstreamFetch(target, {
       method: request.method, headers,
-      ...(request.method === 'GET' || request.method === 'HEAD' ? {} : { body: await request.arrayBuffer() }),
+      ...(body === undefined ? {} : { body }),
       signal: request.signal, redirect: 'manual', cache: 'no-store', dispatcher,
     })
     const outputHeaders = new Headers()

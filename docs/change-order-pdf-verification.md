@@ -1,6 +1,6 @@
 # Change Order PDF visual verification
 
-Run `corepack pnpm verify:change-order-pdf` from `frontend/`. The command creates normal Russian, long multi-page Russian, English, Spanish, and German PDFs and renders every page to PNG in a fresh `frontend/output/pdf/verification-any-635-<timestamp>/` directory. Existing artifacts are preserved.
+Run `uv run python scripts/verify_any641_pdf.py --output ../output/pdf/verification-<unique-name>` from `backend/`. The command creates English, Russian, Spanish and German PDFs, long documents, missing commercial values and oversized metadata/approval rows, then renders every page to PNG. Use a fresh output directory for each inspection.
 
 Inspect the PNG files for readable text and commercial terms, visible approval lines, page-bounded signatures, and unobstructed footers and page numbers. The explicit verification command requires Poppler's `pdftoppm`; normal unit tests do not generate these artifacts or require Poppler.
 

@@ -76,7 +76,7 @@
     "scopePlaceholder": "Paste the deliverables, revision rounds, and exclusions here…",
     "scopeTip": "Tip: paste directly from your contract, proposal, or SOW. Include both what's delivered and what's excluded for the sharpest verdicts.",
     "uploadScope": "Upload scope file",
-    "uploadHint": "Accepts .txt, .md, or .pdf up to 5 MB. Text is copied into the field below; the file is not stored.",
+    "uploadHint": "Accepts .txt, .md, or text-based .pdf up to 5 MB and 200 PDF pages. Extracted text is limited to 100,000 characters and stays editable; files are not stored.",
     "saving": "Saving...",
     "save": "Save project",
     "cancel": "Cancel",
@@ -86,7 +86,11 @@
     "deleteDescription": "This permanently deletes the project, saved drafts, history, and evaluations. This cannot be undone.",
     "deleting": "Deleting…",
     "deleteFailed": "Could not delete the project. Please try again.",
-    "termsChanged": "Project terms changed. Run the scope check again to create a new analysis and draft."
+    "termsChanged": "Project terms changed. Run the scope check again to create a new analysis and draft.",
+    "extracting": "Extracting text…",
+    "cancelExtraction": "Cancel extraction",
+    "pagesWithoutText": "No text was found on pages: {pages}. Review the extracted scope.",
+    "nulRemoved": "Null characters were removed. Review the extracted text."
   },
   "history": {
     "title": "History",
@@ -204,7 +208,9 @@
     "timelineImpact": "Timeline impact",
     "additionalCost": "Additional cost",
     "note": "Note",
-    "pdfLanguageUnsupported": "PDF export supports Latin, Cyrillic and Greek text. Choose a supported client language or replace unsupported characters before exporting."
+    "pdfLanguageUnsupported": "PDF export supports Latin, Cyrillic and Greek text. Choose a supported client language or replace unsupported characters before exporting.",
+    "downloading": "Preparing PDF…",
+    "cancelDownload": "Cancel export"
   },
   "verdict": {
     "in_scope": "In scope",
@@ -272,7 +278,26 @@
     "draftNotFound": "Draft not found.",
     "draftSaveFailed": "Could not save the draft. Your edits are still available; try again.",
     "draftLoadFailed": "Could not load drafts. Try again.",
-    "draftProofInvalid": "The analysis proof is invalid or expired. Run the scope check again before creating a draft."
+    "draftProofInvalid": "The analysis proof is invalid or expired. Run the scope check again before creating a draft.",
+    "pdfDocumentMissing": "This draft has no Change Order to export.",
+    "pdfDocumentInvalid": "The document cannot be exported. Review its fields.",
+    "pdfLanguageUnsupported": "PDF export does not support this document language.",
+    "pdfGlyphUnsupported": "Some characters are not supported by the PDF fonts.",
+    "pdfLabelsMissing": "Translated document labels are missing.",
+    "pdfExportFailed": "Could not export the PDF. Your edits were retained.",
+    "pdfExportTimeout": "PDF export timed out. Try again.",
+    "pdfInputTooLarge": "The document is too large to export (maximum 1 MB).",
+    "pdfResourceLimit": "The document exceeds PDF processing limits.",
+    "scopeFileEncoding": "Use a text file encoded as UTF-8.",
+    "scopePdfInvalid": "The PDF is corrupt or unreadable.",
+    "scopePdfEncrypted": "Password-protected PDFs are not supported.",
+    "scopePdfNoText": "This PDF has no extractable text. Scanned PDFs require OCR, which is not supported.",
+    "scopePdfTooManyPages": "Use a PDF with no more than 200 pages.",
+    "scopeTextTooLarge": "Extracted text exceeds 100,000 characters. Use a shorter file.",
+    "scopeResourceLimit": "The file exceeds extraction resource limits.",
+    "scopeExtractTimeout": "Text extraction timed out. Try a smaller file.",
+    "scopeExtractFailed": "Could not extract text. Your existing scope was retained.",
+    "technicalBusy": "Document processing is busy. Try again shortly."
   },
   "drafts": {
     "title": "My drafts",
