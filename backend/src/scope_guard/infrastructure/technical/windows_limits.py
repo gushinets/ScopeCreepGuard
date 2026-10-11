@@ -1,10 +1,13 @@
 """Windows per-process memory cap; the handle also kills children when closed."""
 
 import ctypes
+import sys
 from ctypes import wintypes
 
 
 def attach_job(process_handle: int, memory: int):
+    if sys.platform != "win32":
+        raise OSError("windows_job_unsupported_platform")
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
 
     class Basic(ctypes.Structure):

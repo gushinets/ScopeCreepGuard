@@ -48,6 +48,9 @@ class TechnicalOperations:
                     for key, value in os.environ.items()
                     if key.upper() in {"SYSTEMROOT", "WINDIR", "TEMP", "TMP", "LANG", "LC_ALL"}
                 }
+                creation_flags = 0
+                if sys.platform == "win32":
+                    creation_flags = subprocess.CREATE_NO_WINDOW
                 process = subprocess.Popen(
                     [sys.executable, "-I", str(self.entry), mode, str(source), str(target)],
                     cwd=folder,
@@ -55,10 +58,10 @@ class TechnicalOperations:
                     stdin=subprocess.DEVNULL,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
-                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+                    creationflags=creation_flags,
                 )
                 try:
-                    if os.name == "nt":
+                    if sys.platform == "win32":
                         from scope_guard.infrastructure.technical.windows_limits import attach_job
 
                         close_job = attach_job(
