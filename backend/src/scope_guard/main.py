@@ -21,11 +21,13 @@ from scope_guard.api.routes.generation import router as generation_router
 from scope_guard.api.routes.health import router as health_router
 from scope_guard.api.routes.locale import router as locale_router
 from scope_guard.api.routes.projects import router as projects_router
+from scope_guard.api.routes.technical import router as technical_router
 from scope_guard.core.config import Settings
 from scope_guard.core.logging import configure_logging
 from scope_guard.infrastructure.database.session import create_database
 from scope_guard.infrastructure.llm.openai import OpenAIGeneration
 from scope_guard.infrastructure.llm.rate_limit import GenerationLimiter
+from scope_guard.infrastructure.technical.operations import TechnicalOperations
 from scope_guard.modules.auth.use_cases import AuthError
 from scope_guard.modules.evaluations.use_cases import EvaluationError
 from scope_guard.modules.projects.use_cases import ProjectError
@@ -59,6 +61,7 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
         settings.openai_api_key.get_secret_value() if settings.openai_api_key else ""
     )
     application.state.generation_limiter = GenerationLimiter()
+    application.state.technical_operations = TechnicalOperations()
     for name in ("openai", "httpx", "httpcore"):
         logging.getLogger(name).setLevel(logging.CRITICAL)
     install_error_handlers(application)
@@ -69,6 +72,7 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     application.include_router(auth_router)
     application.include_router(projects_router)
     application.include_router(generation_router)
+    application.include_router(technical_router)
     application.include_router(drafts_router)
     application.include_router(locale_router)
     application.include_router(evaluations_router)

@@ -14,14 +14,12 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "verify:change-order-pdf": "vitest run --config vitest.visual.config.ts",
     "db:up": "docker compose -f ../compose.yaml up -d postgres",
     "docker:up": "docker compose -f ../compose.yaml --profile app up --build -d",
     "docker:down": "docker compose -f ../compose.yaml --profile app down"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
-    "@pdf-lib/fontkit": "^1.1.1",
     "@vercel/analytics": "1.6.1",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
@@ -30,8 +28,6 @@
     "lucide-react": "^1.16.0",
     "next": "16.3.0",
     "next-intl": "^4.13.6",
-    "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^6.2.108",
     "react": "^19",
     "react-dom": "^19",
     "server-only": "^0.0.1",

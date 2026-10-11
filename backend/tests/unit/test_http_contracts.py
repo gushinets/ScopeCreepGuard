@@ -47,7 +47,14 @@ def test_error_envelopes_keep_existing_localization_codes():
     from scope_guard.api.contracts import ErrorResponse
     from scope_guard.api.errors import ErrorCode
 
-    assert set(ErrorCode) <= set(corpus()["errorCodes"])
+    # The frozen ANY-640 corpus remains immutable; new service errors must also
+    # be represented in both current frontend localization catalogs.
+    for language in ("en", "ru"):
+        messages = json.loads(
+            (ROOT / f"frontend/messages/{language}.json").read_text(encoding="utf-8")
+        )
+        assert set(ErrorCode) <= {f"errors.{key}" for key in messages["errors"]}
+        assert set(corpus()["errorCodes"]) <= {f"errors.{key}" for key in messages["errors"]}
     for failure in corpus()["errors"]:
         assert ErrorResponse.model_validate(failure["body"]).to_wire() == failure["body"]
 

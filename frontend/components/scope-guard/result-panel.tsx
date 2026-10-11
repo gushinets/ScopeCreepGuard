@@ -287,7 +287,7 @@ function ResultState() {
         </Button>
       )}
       {hasAdditionalWork && (showChangeOrder && (termsComplete || !!currentDraftId) && user && draftDocument?.changeOrder ? (
-        <ChangeOrder result={material} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId ?? draftSessionId} userId={user.id} draft={draftDocument.changeOrder} onDraftChange={updateChangeOrder} disabled={isSavingDraft || generating} />
+        <ChangeOrder result={material} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId ?? draftSessionId} userId={user.id} draft={draftDocument.changeOrder} onDraftChange={updateChangeOrder} disabled={isSavingDraft || generating} draftId={currentDraftId} savedUnchanged={!isDraftDirty} />
       ) : (
         <Button
           type="button"

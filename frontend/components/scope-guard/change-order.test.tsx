@@ -4,9 +4,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { EditableDraft } from '@/lib/change-order/document'
 import { ChangeOrder } from './change-order'
 import { germanLabels } from '@/lib/change-order/german-fixture'
+import { ApiClientError } from '@/lib/api/client'
+import { ERROR_CODES } from '@/lib/api/errors'
 
 const pdfMock = vi.hoisted(() => vi.fn())
-vi.mock('@/lib/change-order/pdf', () => ({ createChangeOrderPdf: pdfMock }))
+vi.mock('@/lib/api/services', () => ({ downloadChangeOrder: pdfMock }))
 vi.mock('next-intl', () => ({ useLocale: () => 'en', useTranslations: () => (key: string) => key }))
 
 const original: EditableDraft = {
@@ -18,7 +20,7 @@ const original: EditableDraft = {
 
 beforeEach(() => {
   localStorage.clear()
-  pdfMock.mockResolvedValue(new Uint8Array([37, 80, 68, 70, 45]))
+  pdfMock.mockResolvedValue({ blob: new Blob(['%PDF-'], { type: 'application/pdf' }), filename: 'change-order.pdf' })
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) }))
   Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:pdf') })
   Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
@@ -38,7 +40,7 @@ it('retains supplied German labels in preview, copied content, export and storag
   await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('ÄNDERUNGSAUFTRAG — ENTWURF')))
   expect(vi.mocked(navigator.clipboard.writeText).mock.calls[0][0]).toContain('Geänderte Größe')
   fireEvent.click(screen.getByRole('button', { name: 'downloadPdf' }))
-  await waitFor(() => expect(pdfMock).toHaveBeenCalledWith(expect.objectContaining({ language: 'de', changeOrderLabels: germanLabels, description: 'Geänderte Größe' }), expect.any(Uint8Array), expect.any(Uint8Array)))
+  await waitFor(() => expect(pdfMock).toHaveBeenCalledWith(expect.objectContaining({ draft: expect.objectContaining({ language: 'de', changeOrderLabels: germanLabels, description: 'Geänderte Größe' }) }), expect.any(AbortSignal)))
   expect(JSON.parse(localStorage.getItem('scg:change-order:u1:p1:h1')!).changeOrderLabels).toEqual(germanLabels)
 })
 
@@ -50,7 +52,7 @@ it('copies and exports the current edited draft', async () => {
   await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('850 USD')))
   expect(vi.mocked(navigator.clipboard.writeText).mock.calls[0][0]).toContain('Add three posts')
   fireEvent.click(screen.getByRole('button', { name: 'downloadPdf' }))
-  await waitFor(() => expect(pdfMock).toHaveBeenCalledWith(expect.objectContaining({ description: 'Add three posts', additionalCost: '850', reference: 'CO-20261005-H1' }), expect.any(Uint8Array), expect.any(Uint8Array)))
+  await waitFor(() => expect(pdfMock).toHaveBeenCalledWith(expect.objectContaining({ draft: expect.objectContaining({ description: 'Add three posts', additionalCost: '850', reference: 'CO-20261005-H1' }) }), expect.any(AbortSignal)))
   expect(localStorage.getItem('scg:change-order:u1:p1:h1')).toContain('Add three posts')
 })
 
@@ -115,9 +117,9 @@ it('makes no-charge work explicit and restores the paid amount when switched bac
 })
 
 it('shows localized feedback instead of downloading unsupported glyphs', async () => {
-  pdfMock.mockRejectedValue(new Error('unsupported_pdf_glyph'))
+  pdfMock.mockRejectedValue(new ApiClientError(ERROR_CODES.pdfGlyphUnsupported, 400))
   render(<ChangeOrder initialDraft={original} projectName="Website" projectId="p1" historyId="h1" userId="u1" />)
   fireEvent.click(screen.getByRole('button', { name: 'downloadPdf' }))
-  await screen.findByText('pdfLanguageUnsupported')
+  await screen.findByText('errors.pdfGlyphUnsupported')
   expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled()
 })

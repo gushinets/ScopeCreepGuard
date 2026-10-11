@@ -18,9 +18,10 @@ function isStaticAsset(pathname: string) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const technical = pathname === '/api/scope/extract' || pathname === '/api/change-orders/pdf' || /^\/api\/drafts\/[^/]+\/pdf$/.test(pathname)
 
   if (!allowsApiOrigin(request)) {
-    return NextResponse.json({ error: ERROR_CODES.requestFailed }, { status: 403 })
+    return NextResponse.json({ error: ERROR_CODES.requestFailed }, { status: 403, ...(technical ? { headers: { 'Cache-Control': 'private, no-store' } } : {}) })
   }
 
   if (isStaticAsset(pathname)) {
@@ -31,7 +32,7 @@ export async function proxy(request: NextRequest) {
   const pythonOwnedApi = pathname === '/api/drafts' || pathname.startsWith('/api/drafts/') ||
     pathname === '/api/evaluations' || pathname === '/api/evaluations/export' ||
     /^\/api\/projects\/[^/]+\/history$/.test(pathname)
-  if (pythonOwnedApi) {
+  if (pythonOwnedApi || technical) {
     return NextResponse.next()
   }
 

@@ -1,11 +1,13 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { assertErrorCode, type ErrorCode } from '@/lib/api/errors'
-import { readScopeFile } from '@/lib/scope/read-file'
+import { extractScope, type ExtractedScope } from '@/lib/api/services'
+import { ApiClientError } from '@/lib/api/client'
+import { ERROR_CODES } from '@/lib/api/errors'
 import { projectFieldErrors, validISODate } from '@/lib/projects/validation'
 import { readProjectDetails, writeProjectDetails, type ProjectDetails } from '@/lib/projects/browser-details'
 import type { Currency, Industry, PricingModel } from '@/lib/types'
@@ -30,11 +32,22 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<ErrorCode | ''>('')
   const [uploadError, setUploadError] = useState<ErrorCode | ''>('')
+  const [extracting, setExtracting] = useState(false)
+  const [uploadWarnings, setUploadWarnings] = useState<ExtractedScope['warnings']>([])
+  const extraction = useRef<AbortController | null>(null)
+  useEffect(() => () => extraction.current?.abort(), [])
   const fileInput = useRef<HTMLInputElement>(null)
   const form = useRef<HTMLFormElement>(null)
 
   function change<K extends keyof Fields>(key: K, value: Fields[K]) {
     setFields((current) => ({ ...current, [key]: value }))
+  }
+  function changeScope(value: string) {
+    extraction.current?.abort()
+    extraction.current = null
+    setExtracting(false)
+    setUploadWarnings([])
+    change('scope', value)
   }
   function optional<K extends keyof ProjectDetails>(key: K, value: string) {
     setDetails((current) => ({ ...current, [key]: value }))
@@ -48,9 +61,25 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
+    extraction.current?.abort()
+    const controller = new AbortController()
+    extraction.current = controller
+    setExtracting(true)
     setUploadError('')
-    try { change('scope', await readScopeFile(file)) }
-    catch (error) { setUploadError(assertErrorCode(error instanceof Error ? error.message : '')) }
+    setUploadWarnings([])
+    try {
+      const result = await extractScope(file, controller.signal)
+      if (extraction.current !== controller || controller.signal.aborted) return
+      setFields((current) => ({ ...current, scope: result.text }))
+      setUploadWarnings(result.warnings)
+    } catch (error) {
+      if (!controller.signal.aborted) setUploadError(error instanceof ApiClientError ? error.code : ERROR_CODES.scopeExtractFailed)
+    } finally {
+      if (extraction.current === controller) {
+        extraction.current = null
+        setExtracting(false)
+      }
+    }
   }
 
   async function submit(event: React.FormEvent) {
@@ -95,7 +124,7 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
       </div>
       <div>
         <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2"><label htmlFor="project-scope" className="text-sm font-medium">{t('projects.scopeLabel')} <span className="font-normal text-muted-foreground">{t('projects.required')}</span></label><Button type="button" variant="outline" className="h-8 text-xs" onClick={() => fileInput.current?.click()}>{t('projects.uploadScope')}</Button><input ref={fileInput} type="file" accept=".txt,.md,.pdf,text/plain,application/pdf" className="hidden" onChange={upload} /></div>
-        <textarea id="project-scope" name="scope" value={fields.scope} onChange={(e) => change('scope', e.target.value)} rows={8} placeholder={t('projects.scopePlaceholder')} aria-invalid={!!errors.scope} aria-describedby={errors.scope ? 'project-scope-error' : undefined} className="w-full resize-y rounded-lg border border-input bg-background p-3 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-ring" />
+        <textarea id="project-scope" name="scope" value={fields.scope} onChange={(e) => changeScope(e.target.value)} rows={8} placeholder={t('projects.scopePlaceholder')} aria-invalid={!!errors.scope} aria-describedby={errors.scope ? 'project-scope-error' : undefined} className="w-full resize-y rounded-lg border border-input bg-background p-3 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-ring" />
         {errors.scope && <p id="project-scope-error" className="text-xs text-outscope-text" role="alert">{t(errors.scope)}</p>}
         <p className="mt-1 text-xs text-muted-foreground">{t('projects.uploadHint')}</p>
       </div>
@@ -113,8 +142,10 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
         {field('clientEmail', t('projects.clientEmail'), details.clientEmail, (v) => optional('clientEmail', v), { optional: true, type: 'email', error: attempted && emailInvalid ? t('errors.invalidEmail') : '' })}
       </div>
       {uploadError && <p role="alert" className="text-sm text-outscope-text">{t(uploadError)}</p>}
+      {extracting && <div role="status"><p>{t('projects.extracting')}</p><Button type="button" variant="ghost" onClick={() => { extraction.current?.abort(); extraction.current = null; setExtracting(false) }}>{t('projects.cancelExtraction')}</Button></div>}
+      {uploadWarnings.map((warning) => <p role="status" key={warning.code}>{warning.code === 'pages_without_text' ? t('projects.pagesWithoutText', { pages: warning.pageNumbers.join(', ') }) : t('projects.nulRemoved')}</p>)}
       {saveError && <p role="alert" className="text-sm text-outscope-text">{t(saveError)}</p>}
-      <div className="flex gap-2"><Button type="submit" disabled={saving}>{saving ? t('projects.saving') : t('projects.save')}</Button><Button type="button" variant="ghost" onClick={() => setView('projects')}>{t('projects.cancel')}</Button></div>
+      <div className="flex gap-2"><Button type="submit" disabled={saving || extracting}>{saving ? t('projects.saving') : t('projects.save')}</Button><Button type="button" variant="ghost" onClick={() => setView('projects')}>{t('projects.cancel')}</Button></div>
     </form>
     {project && <div className="mt-8 border-t border-border pt-5"><DeleteProjectAction project={project} disabled={saving} /></div>}
   </div>

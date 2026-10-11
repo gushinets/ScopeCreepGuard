@@ -9,10 +9,12 @@ class DraftReadCacheMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         path = scope.get("path", "")
-        private = (
-            scope["type"] == "http"
-            and scope["method"] == "GET"
-            and (path == "/api/drafts" or path.startswith("/api/drafts/"))
+        private = scope["type"] == "http" and (
+            (
+                scope["method"] == "GET"
+                and (path == "/api/drafts" or path.startswith("/api/drafts/"))
+            )
+            or path in ("/api/change-orders/pdf", "/api/scope/extract")
         )
 
         async def output(message: Message) -> None:

@@ -60,3 +60,14 @@ def generation_service(request: Request):
         state.generation_limiter,
         state.clock,
     )
+
+
+def document_use_cases(request: Request):
+    from scope_guard.infrastructure.database.repositories.draft_persistence import DraftUnitOfWork
+    from scope_guard.modules.change_orders.documents import DocumentUseCases
+
+    database = request.app.state.database
+    return DocumentUseCases(
+        lambda: DraftUnitOfWork(database.new_uow()),
+        lambda: ProjectUnitOfWork(database.new_uow()),
+    )
