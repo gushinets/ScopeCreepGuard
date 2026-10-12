@@ -10,19 +10,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     restart: unless-stopped
 
-  migrate:
-    extends: {file: compose.services.yaml, service: migrate}
-    environment:
-      SCOPE_GUARD_DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      SCOPE_GUARD_ADOPT_LEGACY: ${SCOPE_GUARD_ADOPT_LEGACY:-false}
-    command:
-      - /bin/sh
-      - -c
-      - >-
-        if [ "$${SCOPE_GUARD_ADOPT_LEGACY}" = "true" ]; then set -- --adopt-legacy; fi;
-        python -m scope_guard.infrastructure.database.cli migrate
-        --database-url-env SCOPE_GUARD_DATABASE_URL "$$@"
-
   app:
     extends: {file: compose.services.yaml, service: app}
     environment:
@@ -45,6 +32,7 @@ services:
       SCOPE_GUARD_PRODUCTION: "true"
       SCOPE_GUARD_LOG_LEVEL: ${SCOPE_GUARD_LOG_LEVEL:-INFO}
       SCOPE_GUARD_DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      SCOPE_GUARD_ADOPT_LEGACY: ${SCOPE_GUARD_ADOPT_LEGACY:-false}
       SCOPE_GUARD_ALLOWED_ORIGINS: ${SCOPE_GUARD_ALLOWED_ORIGINS:?Public origin JSON allowlist is required}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       HTTPS_PROXY: ${HTTPS_PROXY:-}

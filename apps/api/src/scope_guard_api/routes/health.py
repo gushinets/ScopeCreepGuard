@@ -1,8 +1,9 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from scope_guard.services.health.service import HealthService
 
 from scope_guard_api.dependencies import health_service
 
@@ -26,8 +27,8 @@ class ReadinessResponse(BaseModel):
 @router.get(
     "/ready", response_model=ReadinessResponse, responses={503: {"model": ReadinessResponse}}
 )
-async def ready(request: Request) -> JSONResponse:
-    available = await health_service(request).ready()
+async def ready(service: Annotated[HealthService, Depends(health_service)]) -> JSONResponse:
+    available = await service.ready()
     status = "ok" if available else "unavailable"
     return JSONResponse(
         {"status": status, "database": status},

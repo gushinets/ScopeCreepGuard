@@ -6,6 +6,8 @@ from alembic.script import ScriptDirectory
 from sqlalchemy.engine import Connection
 
 from alembic import command
+from scope_guard.database.migration_lock import MIGRATION_LOCK_ID as MIGRATION_LOCK_ID
+from scope_guard.database.migration_lock import acquire_migration_lock
 from scope_guard.database.schema_verification import (
     TABLES,
     SchemaCompatibilityError,
@@ -18,7 +20,6 @@ from scope_guard.database.schema_verification import (
 
 
 BASELINE = "0001_existing_drizzle_schema"
-MIGRATION_LOCK_ID = 642_000_001
 LEGACY_PROVENANCE = (
     (
         1786610877676,
@@ -220,8 +221,7 @@ def verify_legacy_ledger(connection: Connection) -> None:
 
 def migrate(connection: Connection, *, adopt_legacy: bool = False) -> None:
     """Upgrade an empty or managed database, or explicitly adopt a verified legacy one."""
-    connection.exec_driver_sql("SET LOCAL lock_timeout='10s'")
-    connection.exec_driver_sql("SELECT pg_advisory_xact_lock(%s)", (MIGRATION_LOCK_ID,))
+    acquire_migration_lock(connection)
     revision = current_revision(connection)
     if revision is not None:
         head = current_head(connection)

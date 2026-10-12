@@ -1,79 +1,58 @@
-# Transitional ownership
+# Application ownership
 
-Next.js under frontend owns UI/localization, page guards and the same-origin gateway. The 21 inherited `/api/*` operations and three ANY-641 technical operations forward to FastAPI once, preserving cookies and headers without retries or fallback. Python owns PDF export and scope extraction. The frontend has no PostgreSQL or migration responsibility.
+`frontend` owns UI/localization, browser/editor state, page guards and the
+same-origin gateway. It forwards all 24 public API operations once, preserving
+headers/cookies/cancellation without retries or fallback. It has no database,
+provider-key or migration responsibility.
 
-ANY-641 adds GET `/api/drafts/{draftId}/pdf`, POST `/api/change-orders/pdf`
-(unsaved editable preview, no implicit save), and POST `/api/scope/extract`.
-Document use cases load owner-filtered saved editor data and immutable snapshots;
-services never substitute current project commercial terms or generate analysis.
-Extraction returns editable text/warnings without updating projects. Rendering
-and parsing run in bounded local child processes with packaged Noto fonts,
-temporary-file cleanup, no inherited application/provider secrets and no queue.
-Frontend retains local editor/preview/clipboard helpers and typed API clients.
-Currency selection retains original values without conversion or rate requests.
+`apps/api` is the deployable FastAPI composition root: routes, request/response
+schemas, transport parsing, dependency injection, authentication extraction,
+error mapping, OpenAPI and bootstrap. Routes call backend services; concrete
+adapter construction is confined to bootstrap. Health routes use a service.
 
-Python under backend owns startup/configuration/logging, health endpoints, all public API operations, SQLAlchemy persistence, and Alembic migrations. Application startup never mutates schema. A backend-owned one-shot migration job validates and migrates PostgreSQL before FastAPI becomes ready. See any-639-data-model-and-contracts.md for schema invariants and the ANY-642 handover plan for operational boundaries.
+`backend/domain` owns immutable business values, validation, classification,
+draft/Change Order/project rules and explicit repository contracts. It imports
+no API, ORM, migrations or integrations. Pure BCP47 and JavaScript compatibility
+utilities preserve existing language/number/date/null behavior.
 
-Python also owns GET/POST /api/projects and GET/PATCH/DELETE /api/projects/{id}. Routes handle transport and dependencies; project use cases orchestrate the inherited Unit of Work; repository ports separate workflows from SQLAlchemy adapters. Owned history reads include existing draft links. Project changes preserve saved snapshots; deletion uses existing database cascades. TS single-project helpers remain for pending workflows. No schema or migration ownership changes accompany this cutover.
+`backend/services` owns use cases and transactions, using domain types and
+stable ports. Every write commits explicitly through a UoW; failures roll back.
+Read-only work closes before provider calls. Lists/history/export use named query
+ports and existing detached ProjectDetail, DraftSummary and EvaluationExport
+read DTOs; no ORM objects cross this boundary.
 
-Project cards use nested frozen value objects for agreed scope, dates, optional
-client and pricing. Repository ports and application inputs/outputs carry these
-values and tuples of immutable history entries. HTTP input/output conversion
-stays in api/project_input.py and api/project_output.py; serializers allocate new
-JSON structures and never expose internal state.
+`backend/database` owns SQLAlchemy mappings, repositories, optimized read SQL,
+sessions/UoWs and guarded Alembic support. All table names, enum values, precision,
+foreign keys, indexes, cascades and migration provenance remain unchanged.
 
-ANY-639 designed contracts/data and prepared SQLAlchemy/Alembic. ANY-640 migrated existing business/auth operations and routing. ANY-642 transfers migration authority exclusively to Alembic. ANY-641 moves PDF/extraction into Python; currency selection retains original amounts without conversion. Root contracts are generated from implemented Python routes; frontend/lib/api is the shared browser/forwarding boundary.
+`backend/integrations` owns OpenAI/prompts, auth adapters, PDF/localization/fonts,
+scope readers and bounded isolated child processes. Services depend on ports.
+Isolated processes import backend validation, never API. Limits, Unicode fonts,
+sanitized environments, cancellation and temporary cleanup remain intact.
 
-Empty databases are created through Alembic. Legacy Drizzle databases require an
-explicit adoption flag and must pass full catalog and historical-ledger validation
-before the baseline can be stamped. Unknown or incompatible schemas are rejected
-without mutation. The historical Drizzle ledger remains inert provenance.
+The API container is the migration composition root. PostgreSQL health precedes
+entrypoint startup; entrypoint waits for connectivity and runs the guarded runner
+under transaction advisory lock 642000001. Replicas wait, then revalidate committed
+state. Commit/rollback releases the lock. Only successful migration starts API;
+API readiness gates frontend. Import/OpenAPI generation never migrates. No
+separate migrate service or required Compose profile remains.
 
-Slice D transfers POST /api/analyze, /api/replies/regenerate,
-/api/client-materials/language and /api/change-orders/estimate together. Routes
-parse and map errors; analysis and change-order use cases orchestrate immutable
-values and read-only repository ports. The inherited UoW rolls back/closes before
-the OpenAI adapter runs. Generation never writes drafts, history or projects.
-The Responses adapter owns the only retry layer, using the original model,
-prompts, schemas, reasoning and per-attempt timeout. One app-scoped limiter admits
-ten operations/user/rolling minute; production must use one worker and one replica.
+Draft creation retains proof expiry/binding and atomic history/draft/lastChecked
+updates under the owned-project lock and creation key. Saved snapshots stay
+immutable; legacy absent/null context remains readable. Evaluation upsert and
+owner-filtered JSONL preserve existing semantics. PDFs use saved/editor values,
+never rerun analysis or recalculate original money. Scope extraction remains
+temporary and editable; no currency conversion or rate provider is introduced.
 
-Python issues and verifies the existing signed draft-proof format. TypeScript
-proof verification and draft persistence validation now exist only in tests;
-production TypeScript draft persistence is retired. Shared pure serialization allocates
-fresh JSON for both infrastructure signing/prompt construction and the HTTP output
-boundary. Provider schemas remain separate from permissive runtime normalization.
-The frontend OpenAI SDK/key is retired; backend configuration owns the key and
-outbound provider proxies. Deployment and rollback use a matching image pair,
-with generation admission stopped/drained and a rolling-minute quiet window.
+Runtime dependencies: frontend -> API -> services/domain; bootstrap -> concrete
+database/integration adapters; adapters -> service ports/domain; database ->
+PostgreSQL. Backend never imports API/frontend. The root uv lock pins both Python
+distributions; API owns FastAPI/Uvicorn/multipart dependencies.
 
-Root tests/e2e covers complete user journeys; deploy/proxy records future routing. Frontend feature folders document future ownership without changing imports or presentation behavior. Historical documents under docs/superpowers and root product documents retain original paths as historical context; use README.md for current setup.
-
-Slice E transfers GET/POST /api/drafts and GET/PUT /api/drafts/{id}. Python
-routes own ordered parsing, proof validation, error mapping and fresh JSON output.
-Frozen/slotted nested draft values and recursively typed immutable JSON preserve
-historical missing/null snapshots without normalizing reads. Repository ports
-return detached domain values; SQLAlchemy adapters own joins, ownership predicates
-and mutations; the inherited UoW owns commit/rollback/close. No schema change.
-
-Creation validates the complete envelope/proof/document before write work, locks
-the owned project then checks its creation key, atomically inserts one linked
-history/draft pair and updates lastChecked. Valid retries return stored state
-unchanged; expired proofs fail even for an existing key. PUT changes document,
-client-material language, labels and updatedAt only. No draft operation calls LLM.
-All draft GET responses, including errors and gateway outages, are private,no-store.
-Deployment is a grouped four-operation cutover after backend availability and
-draft-write draining; rollback uses the previous compatible image pair and keeps
-persisted data. No request-level fallback or migration reversal.
-
-Slice F transfers POST `/api/projects/{id}/history`, POST `/api/evaluations`,
-GET `/api/evaluations/export` and POST `/api/locale`. Manual history uses the
-project UoW to insert one entry and update `lastChecked` atomically, without a
-draft, evaluation, snapshot change or provider call. Evaluation use cases resolve
-the three accuracy labels from owned stored history; the SQLAlchemy adapter keeps
-one evaluation per history entry and captures its required historical context.
-Export is owner-filtered, ordered by creation time and ID, and serialized as the
-legacy compact UTF-8 JSONL contract. Locale is public and writes only the existing
-one-year cookie. Routes own parsing, response headers, cookies and error mapping;
-repositories return frozen detached values. No table, migration or UI behavior
-changes accompany this final API cutover.
+`apps/worker/README.md` records future service-only/outbox possibilities. There is
+no worker container, queue or jobs table. Generation admission remains local to
+one production API worker/replica. Migration locking alone does not enable
+multi-replica production generation. Deploy/rollback matching application image
+pairs without destructive migration reversal. Historical migration verification
+documents remain historical evidence; the application-boundaries record captures
+current verification.

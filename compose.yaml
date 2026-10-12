@@ -10,23 +10,8 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
 
-  migrate:
-    extends: {file: compose.services.yaml, service: migrate}
-    profiles: [app]
-    environment:
-      SCOPE_GUARD_DATABASE_URL: *database-url
-      SCOPE_GUARD_ADOPT_LEGACY: ${SCOPE_GUARD_ADOPT_LEGACY:-false}
-    command:
-      - /bin/sh
-      - -c
-      - >-
-        if [ "$${SCOPE_GUARD_ADOPT_LEGACY}" = "true" ]; then set -- --adopt-legacy; fi;
-        python -m scope_guard.infrastructure.database.cli migrate
-        --database-url-env SCOPE_GUARD_DATABASE_URL "$$@"
-
   app:
     extends: {file: compose.services.yaml, service: app}
-    profiles: [app]
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     env_file:
@@ -40,7 +25,6 @@ services:
 
   backend:
     extends: {file: compose.services.yaml, service: backend}
-    profiles: [app]
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     env_file:
@@ -51,6 +35,7 @@ services:
       SCOPE_GUARD_PRODUCTION: "true"
       SCOPE_GUARD_LOG_LEVEL: ${SCOPE_GUARD_LOG_LEVEL:-INFO}
       SCOPE_GUARD_DATABASE_URL: *database-url
+      SCOPE_GUARD_ADOPT_LEGACY: ${SCOPE_GUARD_ADOPT_LEGACY:-false}
       SCOPE_GUARD_ALLOWED_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3000}","http://127.0.0.1:${FRONTEND_PORT:-3000}"]'
 
 volumes:

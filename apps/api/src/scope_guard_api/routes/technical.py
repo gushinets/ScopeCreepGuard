@@ -5,8 +5,10 @@ from fastapi import APIRouter, Depends, Request
 from scope_guard.domain.drafts.values import freeze_object
 from scope_guard.services.documents.models import DocumentError, DocumentSource
 from scope_guard.services.documents.ports import TechnicalError
+from scope_guard.services.documents.rendering import DocumentRendering
 from scope_guard.services.documents.use_cases import DocumentUseCases
 from scope_guard.services.drafts.use_cases import DraftError
+from scope_guard.services.scope_extraction.use_cases import ExtractionService
 from starlette.responses import Response
 
 from scope_guard_api.cancellation import run_connected
@@ -34,6 +36,8 @@ router = APIRouter(
 )
 Owner = Annotated[dict[str, str], Depends(current_owner)]
 Documents = Annotated[DocumentUseCases, Depends(document_use_cases)]
+Renderer = Annotated[DocumentRendering, Depends(document_renderer)]
+Extraction = Annotated[ExtractionService, Depends(extraction_service)]
 
 
 class PreviewBody(WireModel):
@@ -54,9 +58,11 @@ PDF_RESPONSE: dict[int | str, dict[str, Any]] = {
 }
 
 
-async def render(request: Request, source: DocumentSource, key: UUID) -> Response:
+async def render(
+    request: Request, source: DocumentSource, key: UUID, renderer: DocumentRendering
+) -> Response:
     try:
-        result = await run_connected(request, document_renderer(request).render(source))
+        result = await run_connected(request, renderer.render(source))
     except (TechnicalError, DocumentError) as error:
         raise ApiError(ErrorCode("errors." + error.code), error.status) from None
     return Response(
@@ -70,14 +76,16 @@ async def render(request: Request, source: DocumentSource, key: UUID) -> Respons
 
 
 @router.get("/api/drafts/{draftId}/pdf", response_class=Response, responses=PDF_RESPONSE)
-async def saved_pdf(draftId: str, request: Request, owner: Owner, documents: Documents):
+async def saved_pdf(
+    draftId: str, request: Request, owner: Owner, documents: Documents, renderer: Renderer
+):
     key = identifier(draftId)
     try:
         editor = await documents.saved(UUID(owner["id"]), key)
     except (DraftError, DocumentError) as error:
         code = error.code if error.code.startswith("errors.") else "errors." + error.code
         raise ApiError(ErrorCode(code), error.status) from None
-    return await render(request, editor, key)
+    return await render(request, editor, key, renderer)
 
 
 @router.post(
@@ -86,7 +94,7 @@ async def saved_pdf(draftId: str, request: Request, owner: Owner, documents: Doc
     responses=PDF_RESPONSE,
     openapi_extra=body_contract(PreviewBody),
 )
-async def preview_pdf(request: Request, owner: Owner, documents: Documents):
+async def preview_pdf(request: Request, owner: Owner, documents: Documents, renderer: Renderer):
     body = await preview_body(request)
     try:
         project = UUID(body["projectId"])
@@ -99,7 +107,7 @@ async def preview_pdf(request: Request, owner: Owner, documents: Documents):
         editor = await documents.preview(UUID(owner["id"]), project, draft, freeze_object(editor))
     except DraftError as error:
         raise ApiError(ErrorCode(error.code), error.status) from None
-    return await render(request, editor, draft or project)
+    return await render(request, editor, draft or project, renderer)
 
 
 @router.post(
@@ -121,10 +129,10 @@ async def preview_pdf(request: Request, owner: Owner, documents: Documents):
         }
     },
 )
-async def scope_extract(request: Request, owner: Owner):
+async def scope_extract(request: Request, owner: Owner, service: Extraction):
     name, mime, data = await scope_upload(request)
     try:
-        result = await run_connected(request, extraction_service(request).extract(name, mime, data))
+        result = await run_connected(request, service.extract(name, mime, data))
     except TechnicalError as error:
         raise ApiError(ErrorCode("errors." + error.code), error.status) from None
     return Response(

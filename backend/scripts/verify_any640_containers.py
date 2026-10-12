@@ -33,7 +33,11 @@ def container(image, port, environment):
     ]
     for key, value in environment.items():
         arguments += ["-e", f"{key}={value}"]
-    identifier = docker(*arguments, image)
+    command = []
+    if port == 8000:
+        arguments += ["--entrypoint", "uvicorn"]
+        command = ["scope_guard_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    identifier = docker(*arguments, image, *command)
     try:
         published = docker("port", identifier, f"{port}/tcp").rsplit(":", 1)[1]
         yield "http://127.0.0.1:" + published
@@ -78,7 +82,7 @@ def wait_ready(url):
 
 def main():
     for name, args in (
-        ("backend", ["-f", "backend/Dockerfile", "."]),
+        ("backend", ["-f", "apps/api/Dockerfile", "."]),
         (
             "frontend",
             ["--target", "runner", "frontend"],
