@@ -7,11 +7,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from scope_guard.core.config import Settings
 from scope_guard.database.unit_of_work import SqlAlchemyUnitOfWork
-
-
-class DatabaseUnavailableError(Exception):
-    def __init__(self):
-        super().__init__("database_unavailable")
+from scope_guard.services.health.ports import DatabaseUnavailableError as DatabaseUnavailableError
 
 
 def normalize_url(value: str) -> URL:

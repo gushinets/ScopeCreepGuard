@@ -15,7 +15,7 @@ def fixture():
 
 
 def test_project_input_normalizes_prices_and_ignores_browser_details():
-    from scope_guard.modules.projects.schemas import CreateProjectRequest
+    from scope_guard_api.schemas.projects import CreateProjectRequest
 
     card = CreateProjectRequest.model_validate(fixture()["projectInput"])
     assert card.hourly_rate == "125.00"
@@ -26,14 +26,14 @@ def test_project_input_normalizes_prices_and_ignores_browser_details():
 
 @pytest.mark.parametrize("amount", [True, "0", "-1", "1.234", "1e2", "1000000000000"])
 def test_project_rejects_invalid_active_money(amount):
-    from scope_guard.modules.projects.schemas import CreateProjectRequest
+    from scope_guard_api.schemas.projects import CreateProjectRequest
 
     with pytest.raises(ValidationError):
         CreateProjectRequest.model_validate({**fixture()["projectInput"], "hourlyRate": amount})
 
 
 def test_full_card_update_preserves_client_omission_and_null():
-    from scope_guard.modules.projects.schemas import UpdateProjectRequest
+    from scope_guard_api.schemas.projects import UpdateProjectRequest
 
     card = fixture()["projectInput"]
     card.pop("clientName")
@@ -46,7 +46,7 @@ def test_full_card_update_preserves_client_omission_and_null():
 
 
 def test_legacy_project_response_keeps_nulls_and_omits_last_checked():
-    from scope_guard.modules.projects.schemas import ProjectResponse
+    from scope_guard_api.schemas.projects import ProjectResponse
 
     result = ProjectResponse.model_validate(fixture()["legacyProject"]).to_wire()
     assert result["hourlyRate"] is None
@@ -56,7 +56,7 @@ def test_legacy_project_response_keeps_nulls_and_omits_last_checked():
 
 
 def test_saved_document_round_trip_keeps_editable_values_and_optional_snapshot_client():
-    from scope_guard.modules.drafts.schemas import DraftDocument, ProjectSnapshot
+    from scope_guard_api.schemas.drafts import DraftDocument, ProjectSnapshot
 
     document = DraftDocument.model_validate(fixture()["document"])
     assert document.to_wire() == fixture()["document"]
@@ -70,7 +70,7 @@ def test_saved_document_round_trip_keeps_editable_values_and_optional_snapshot_c
 
 @pytest.mark.parametrize("path,value", [("version", 2), ("reply.tone", "aggressive")])
 def test_document_rejects_unsupported_version_or_tone(path, value):
-    from scope_guard.modules.drafts.schemas import DraftDocument
+    from scope_guard_api.schemas.drafts import DraftDocument
 
     document = copy.deepcopy(fixture()["document"])
     target = document
@@ -83,7 +83,7 @@ def test_document_rejects_unsupported_version_or_tone(path, value):
 
 
 def test_document_size_counts_utf8_and_rejects_oversize_before_normalizing():
-    from scope_guard.modules.drafts.schemas import DraftDocument
+    from scope_guard_api.schemas.drafts import DraftDocument
 
     document = copy.deepcopy(fixture()["document"])
     document["padding"] = "я" * 500_000
@@ -92,7 +92,7 @@ def test_document_size_counts_utf8_and_rejects_oversize_before_normalizing():
 
 
 def test_label_requires_human_verdict_only_for_wrong():
-    from scope_guard.modules.evaluations.schemas import EvaluationLabelRequest
+    from scope_guard_api.schemas.evaluations import EvaluationLabelRequest
 
     body = {
         "historyEntryId": "11111111-1111-4111-8111-111111111111",
@@ -107,7 +107,7 @@ def test_label_requires_human_verdict_only_for_wrong():
 
 
 def test_contract_primitives_do_not_coerce_invalid_types():
-    from scope_guard.modules.projects.schemas import CreateProjectRequest
+    from scope_guard_api.schemas.projects import CreateProjectRequest
 
     with pytest.raises(ValidationError):
         CreateProjectRequest.model_validate({**fixture()["projectInput"], "name": 123})

@@ -30,7 +30,7 @@ def test_reference_provenance_matches_committed_journal():
 
 def test_ready_recovers_and_uow_returns_failed_connections(disposable_url, postgres_server):
     from scope_guard.core.config import Settings
-    from scope_guard.main import create_app
+    from scope_guard_api.main import create_app
 
     prepare_alembic(disposable_url)
 

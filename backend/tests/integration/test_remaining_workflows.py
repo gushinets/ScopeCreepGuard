@@ -7,7 +7,7 @@ from pydantic import SecretStr
 from sqlalchemy import text
 
 from scope_guard.core.config import Settings
-from scope_guard.main import create_app
+from scope_guard_api.main import create_app
 
 pytestmark = pytest.mark.integration
 SECRET = "slice-f-secret-at-least-32-characters"

@@ -12,7 +12,7 @@ def test_liveness_requires_no_integrations(monkeypatch, integration_value):
         else:
             monkeypatch.setenv(name, integration_value)
 
-    from scope_guard.main import create_app
+    from scope_guard_api.main import create_app
 
     async def request_health():
         application = create_app()
@@ -30,7 +30,7 @@ def test_liveness_requires_no_integrations(monkeypatch, integration_value):
 
 
 def test_openapi_describes_the_liveness_response():
-    from scope_guard.main import create_app
+    from scope_guard_api.main import create_app
 
     schema = create_app().openapi()
     response = schema["paths"]["/health/live"]["get"]["responses"]["200"]

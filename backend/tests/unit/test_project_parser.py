@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from scope_guard.api.project_input import parse_project
+from scope_guard_api.project_input import parse_project
 from scope_guard.services.projects.use_cases import ProjectError
 
 

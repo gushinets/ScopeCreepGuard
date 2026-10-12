@@ -8,7 +8,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from scope_guard.api.draft_input import parse_editor
+from scope_guard_api.draft_input import parse_editor
 from scope_guard.integrations.documents.renderer import render_pdf
 from scope_guard.integrations.documents.preparation import prepare_document
 

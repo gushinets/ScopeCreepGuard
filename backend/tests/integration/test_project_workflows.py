@@ -8,10 +8,10 @@ from integration.support import prepare_alembic
 from pydantic import SecretStr
 from sqlalchemy import text
 
-from scope_guard.api.project_output import project_to_wire
+from scope_guard_api.project_output import project_to_wire
 from scope_guard.core.config import Settings
 from scope_guard.database.repositories.projects import ProjectUnitOfWork
-from scope_guard.main import create_app
+from scope_guard_api.main import create_app
 from scope_guard.services.projects.use_cases import ProjectService
 
 pytestmark = pytest.mark.integration

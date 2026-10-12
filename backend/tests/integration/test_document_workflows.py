@@ -14,7 +14,7 @@ from sqlalchemy import text
 
 from scope_guard.core.config import Settings
 from scope_guard.integrations.auth.draft_proofs import DraftProofs
-from scope_guard.main import create_app
+from scope_guard_api.main import create_app
 from scope_guard.domain.analysis.domain import DraftProofBinding, DraftProofClaims, freeze
 from scope_guard.domain.analysis.normalization import parse_snapshot
 

@@ -12,7 +12,8 @@ services:
 
   migrate:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
       target: migration
     depends_on:
       postgres:
@@ -42,7 +43,8 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     init: true
     depends_on:
       postgres:

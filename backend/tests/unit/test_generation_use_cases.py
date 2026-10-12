@@ -6,7 +6,7 @@ from uuid import UUID
 
 import pytest
 
-from scope_guard.core.contracts import Industry
+from scope_guard_api.schemas.shared import Industry
 from scope_guard.domain.analysis.domain import AnalyzeCommand, GenerationError, LocaleResolution
 from scope_guard.domain.analysis.normalization import parse_analysis
 from scope_guard.domain.projects.domain import (

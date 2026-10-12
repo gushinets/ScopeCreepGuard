@@ -145,3 +145,5 @@ docs/architecture/application-boundaries-verification.md. Keep AGENT.md ignored.
 - Domain separation: 375 existing unit/API tests passed; pure domain import gate passed. Temporary bridges preserve the existing runtime until API cutover. Backend standalone lock retained temporarily to keep the old Docker build valid.
 
 - Services/adapters: 375 existing unit/API tests passed; read-port follow-up 48 passed. Domain/service architecture checks and Mypy passed. Models retain exact metadata; read SQL extracted without schema changes.
+
+- API composition: all four architectural gates passed; full backend suite 424 passed on disposable PostgreSQL. OpenAPI equality, both-package Mypy and root-context API image build passed. Docker is available outside the sandbox.

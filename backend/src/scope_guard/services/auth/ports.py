@@ -9,3 +9,7 @@ class PasswordPort(Protocol):
 class SessionPort(Protocol):
     def issue(self, user: dict[str, str]) -> str: ...
     def verify(self, token: str) -> dict[str, str] | None: ...
+
+
+SESSION_COOKIE_NAME = "scg_session"
+SESSION_MAX_AGE_SECONDS = 604800

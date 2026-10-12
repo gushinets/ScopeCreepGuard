@@ -78,7 +78,7 @@ def wait_ready(url):
 
 def main():
     for name, args in (
-        ("backend", ["backend"]),
+        ("backend", ["-f", "backend/Dockerfile", "."]),
         (
             "frontend",
             ["--target", "runner", "frontend"],
