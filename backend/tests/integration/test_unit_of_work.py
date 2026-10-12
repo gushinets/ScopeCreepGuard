@@ -9,7 +9,7 @@ pytestmark = pytest.mark.integration
 
 def test_commit_rollback_reuse_and_pool_return(disposable_url):
     from scope_guard.core.config import Settings
-    from scope_guard.infrastructure.database.session import create_database
+    from scope_guard.database.session import create_database
 
     prepare_alembic(disposable_url)
 

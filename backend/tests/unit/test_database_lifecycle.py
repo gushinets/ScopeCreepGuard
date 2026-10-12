@@ -14,7 +14,7 @@ def test_url_alias_priority_and_secret_representation(monkeypatch):
 
 
 def test_normalization_rejects_other_drivers_without_credentials():
-    from scope_guard.infrastructure.database.session import normalize_url
+    from scope_guard.database.session import normalize_url
 
     assert normalize_url("postgres://user:secret@localhost/test").drivername == "postgresql+psycopg"
     with pytest.raises(ValueError, match="unsupported_database_url") as failure:
@@ -24,14 +24,14 @@ def test_normalization_rejects_other_drivers_without_credentials():
 
 def test_missing_database_does_not_create_pool():
     from scope_guard.core.config import Settings
-    from scope_guard.infrastructure.database.session import create_database
+    from scope_guard.database.session import create_database
 
     assert create_database(Settings(_env_file=None, database_url=None)) is None
 
 
 def test_configured_unreachable_database_is_lazy_and_can_close():
     from scope_guard.core.config import Settings
-    from scope_guard.infrastructure.database.session import create_database
+    from scope_guard.database.session import create_database
 
     async def exercise():
         database = create_database(
@@ -45,13 +45,13 @@ def test_configured_unreachable_database_is_lazy_and_can_close():
 
 def test_invalid_database_configuration_preserves_independent_liveness():
     from scope_guard.core.config import Settings
-    from scope_guard.infrastructure.database.session import create_database
+    from scope_guard.database.session import create_database
 
     assert create_database(Settings(_env_file=None, database_url="unavailable")) is None
 
 
 def test_documented_loop_factory_is_psycopg_compatible():
-    from scope_guard.infrastructure.database.session import event_loop
+    from scope_guard.database.session import event_loop
 
     loop = event_loop()
     try:

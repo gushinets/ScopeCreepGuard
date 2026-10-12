@@ -7,7 +7,7 @@ FIXTURE = Path(__file__).parents[3] / "contracts/compatibility/any-640/generatio
 
 
 def test_proof_roundtrip_binding_and_expiry():
-    from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
+    from scope_guard.integrations.auth.draft_proofs import DraftProofs
     from scope_guard.domain.analysis.domain import DraftProofBinding, DraftProofClaims, freeze
     from scope_guard.domain.analysis.normalization import parse_snapshot
 
@@ -30,7 +30,7 @@ def test_proof_roundtrip_binding_and_expiry():
 
 
 def test_shared_rolling_window():
-    from scope_guard.infrastructure.llm.rate_limit import GenerationLimiter
+    from scope_guard.integrations.llm.rate_limit import GenerationLimiter
 
     limiter = GenerationLimiter()
     assert all(limiter.allow("user", 1000) for _ in range(10))

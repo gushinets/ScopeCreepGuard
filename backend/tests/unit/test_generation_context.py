@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from scope_guard.modules.analysis.context import historical_context
+from scope_guard.services.analysis.context import historical_context
 from scope_guard.domain.analysis.domain import (
     ABSENT,
     GenerationContext,

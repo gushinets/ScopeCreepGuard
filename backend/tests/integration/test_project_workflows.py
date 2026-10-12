@@ -10,9 +10,9 @@ from sqlalchemy import text
 
 from scope_guard.api.project_output import project_to_wire
 from scope_guard.core.config import Settings
-from scope_guard.infrastructure.database.repositories.projects import ProjectUnitOfWork
+from scope_guard.database.repositories.projects import ProjectUnitOfWork
 from scope_guard.main import create_app
-from scope_guard.modules.projects.use_cases import ProjectService
+from scope_guard.services.projects.use_cases import ProjectService
 
 pytestmark = pytest.mark.integration
 CARD = {

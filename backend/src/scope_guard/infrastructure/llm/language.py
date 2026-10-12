@@ -1,3 +1,3 @@
-"""Temporary relocation bridge; removed at API cutover."""
+"""Temporary relocation bridge."""
 
-from scope_guard.domain.shared.language import *  # noqa: F403
+from scope_guard.integrations.llm.language import *  # noqa: F403

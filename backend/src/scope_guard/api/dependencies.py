@@ -1,11 +1,11 @@
 from fastapi import Request
 
-from scope_guard.infrastructure.auth.passwords import Passwords
-from scope_guard.infrastructure.auth.sessions import Sessions
-from scope_guard.infrastructure.database.repositories.projects import ProjectUnitOfWork
-from scope_guard.infrastructure.database.repositories.users import AuthUnitOfWork
-from scope_guard.modules.auth.use_cases import AuthService
-from scope_guard.modules.projects.use_cases import ProjectService
+from scope_guard.database.repositories.projects import ProjectUnitOfWork
+from scope_guard.database.repositories.users import AuthUnitOfWork
+from scope_guard.integrations.auth.passwords import Passwords
+from scope_guard.integrations.auth.sessions import Sessions
+from scope_guard.services.auth.use_cases import AuthService
+from scope_guard.services.projects.use_cases import ProjectService
 
 
 def auth_service(request: Request) -> AuthService:
@@ -21,7 +21,7 @@ def auth_service(request: Request) -> AuthService:
 
 
 async def current_owner(request: Request) -> dict[str, str]:
-    from scope_guard.infrastructure.auth.sessions import SESSION_COOKIE_NAME
+    from scope_guard.integrations.auth.sessions import SESSION_COOKIE_NAME
 
     return await auth_service(request).me(request.cookies.get(SESSION_COOKIE_NAME))
 
@@ -31,8 +31,8 @@ def project_service(request: Request) -> ProjectService:
 
 
 def draft_service(request: Request):
-    from scope_guard.infrastructure.database.repositories.draft_persistence import DraftUnitOfWork
-    from scope_guard.modules.drafts.use_cases import DraftService
+    from scope_guard.database.repositories.draft_persistence import DraftUnitOfWork
+    from scope_guard.services.drafts.use_cases import DraftService
 
     return DraftService(
         lambda: DraftUnitOfWork(request.app.state.database.new_uow()), request.app.state.clock
@@ -40,16 +40,16 @@ def draft_service(request: Request):
 
 
 def evaluation_service(request: Request):
-    from scope_guard.infrastructure.database.repositories.evaluations import EvaluationUnitOfWork
-    from scope_guard.modules.evaluations.use_cases import EvaluationService
+    from scope_guard.database.repositories.evaluations import EvaluationUnitOfWork
+    from scope_guard.services.evaluations.use_cases import EvaluationService
 
     return EvaluationService(lambda: EvaluationUnitOfWork(request.app.state.database.new_uow()))
 
 
 def generation_service(request: Request):
-    from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
-    from scope_guard.infrastructure.database.repositories.generation import GenerationReadWork
-    from scope_guard.modules.analysis.use_cases import GenerationUseCases
+    from scope_guard.database.repositories.generation import GenerationReadWork
+    from scope_guard.integrations.auth.draft_proofs import DraftProofs
+    from scope_guard.services.analysis.use_cases import GenerationUseCases
 
     state = request.app.state
     secret = state.settings.auth_secret.get_secret_value() if state.settings.auth_secret else ""
@@ -63,8 +63,8 @@ def generation_service(request: Request):
 
 
 def document_use_cases(request: Request):
-    from scope_guard.infrastructure.database.repositories.draft_persistence import DraftUnitOfWork
-    from scope_guard.modules.change_orders.documents import DocumentUseCases
+    from scope_guard.database.repositories.draft_persistence import DraftUnitOfWork
+    from scope_guard.services.documents.use_cases import DocumentUseCases
 
     database = request.app.state.database
     return DocumentUseCases(

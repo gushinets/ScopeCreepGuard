@@ -10,7 +10,7 @@ import pytest
 
 from scope_guard.core.contracts import Industry
 from scope_guard.domain.shared.language import normalize_language, supported_language
-from scope_guard.infrastructure.llm.openai import OpenAIGeneration
+from scope_guard.integrations.llm.openai import OpenAIGeneration
 from scope_guard.domain.analysis.domain import AnalysisInput, GenerationContext, GenerationError
 from scope_guard.domain.analysis.normalization import parse_analysis
 from scope_guard.domain.projects.domain import (
@@ -37,9 +37,9 @@ INPUT = AnalysisInput(
 
 
 def materials_workflow():
-    from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
-    from scope_guard.infrastructure.llm.rate_limit import GenerationLimiter
-    from scope_guard.modules.analysis.use_cases import GenerationUseCases
+    from scope_guard.integrations.auth.draft_proofs import DraftProofs
+    from scope_guard.integrations.llm.rate_limit import GenerationLimiter
+    from scope_guard.services.analysis.use_cases import GenerationUseCases
 
     class Work:
         active = False
@@ -147,7 +147,7 @@ def test_huge_submitted_material_number_is_body_error_before_provider(field):
 def test_limiter_concurrent_admission_is_atomic():
     from concurrent.futures import ThreadPoolExecutor
 
-    from scope_guard.infrastructure.llm.rate_limit import GenerationLimiter
+    from scope_guard.integrations.llm.rate_limit import GenerationLimiter
 
     limiter = GenerationLimiter()
     with ThreadPoolExecutor(max_workers=20) as workers:
@@ -164,7 +164,7 @@ def test_lone_surrogate_http_response():
 
 
 def test_lone_surrogate_reaches_official_sdk_transport():
-    from scope_guard.infrastructure.llm.openai import GenerationOpenAI
+    from scope_guard.integrations.llm.openai import GenerationOpenAI
 
     calls = []
 

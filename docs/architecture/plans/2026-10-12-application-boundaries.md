@@ -143,3 +143,5 @@ docs/architecture/application-boundaries-verification.md. Keep AGENT.md ignored.
   preserved. No prerequisite commits needed; main contains equivalent changes.
 
 - Domain separation: 375 existing unit/API tests passed; pure domain import gate passed. Temporary bridges preserve the existing runtime until API cutover. Backend standalone lock retained temporarily to keep the old Docker build valid.
+
+- Services/adapters: 375 existing unit/API tests passed; read-port follow-up 48 passed. Domain/service architecture checks and Mypy passed. Models retain exact metadata; read SQL extracted without schema changes.

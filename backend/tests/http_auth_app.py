@@ -73,5 +73,5 @@ if __name__ == "__main__":
         app,
         host="127.0.0.1",
         port=int(sys.argv[1]),
-        loop="scope_guard.infrastructure.database.session:event_loop",
+        loop="scope_guard.database.session:event_loop",
     )

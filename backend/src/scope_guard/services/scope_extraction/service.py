@@ -1,13 +1,12 @@
 from pathlib import PurePath
 
 from scope_guard.domain.shared.js_compat import utf16_length
-from scope_guard.infrastructure.scope_readers.pdf import read_pdf
-from scope_guard.infrastructure.scope_readers.text import read_text
 from scope_guard.services.scope_extraction.models import (
     ExtractionError,
     ExtractionResult,
     NulRemoved,
 )
+from scope_guard.services.scope_extraction.ports import ScopeReaders
 
 MAX_FILE_BYTES = 5 * 1024 * 1024
 MAX_BODY_BYTES = MAX_FILE_BYTES + 64 * 1024
@@ -18,7 +17,9 @@ ACCEPTED = {
 }
 
 
-def extract(name: str, content_type: str, data: bytes) -> ExtractionResult:
+def extract(
+    name: str, content_type: str, data: bytes, *, readers: ScopeReaders
+) -> ExtractionResult:
     if len(data) > MAX_FILE_BYTES:
         raise ExtractionError("scopeFileTooLarge", 413)
     extension = PurePath(name).suffix.lower()
@@ -30,12 +31,12 @@ def extract(name: str, content_type: str, data: bytes) -> ExtractionResult:
         raise ExtractionError("scopeFileUnsupported", 415)
     warnings: tuple = ()
     if extension == ".pdf":
-        text, warnings = read_pdf(data)
+        text, warnings = readers.read_pdf(data)
     else:
         # Do not interpret a mislabelled PDF as plaintext under an ambiguous MIME.
         if data.startswith(b"%PDF-"):
             raise ExtractionError("scopeFileUnsupported", 415)
-        text = read_text(data)
+        text = readers.read_text(data)
     if "\x00" in text:
         warnings += (NulRemoved(),)
     text = text.replace("\x00", "").replace("\r\n", "\n").replace("\r", "\n").strip()

@@ -21,7 +21,7 @@ INPUT = AnalysisInput(
 
 
 def test_one_adapter_operation_and_parameters():
-    from scope_guard.infrastructure.llm.openai import OpenAIGeneration
+    from scope_guard.integrations.llm.openai import OpenAIGeneration
 
     class Responses:
         calls = []
@@ -51,7 +51,7 @@ def test_one_adapter_operation_and_parameters():
     ],
 )
 def test_output_failures(status, text, code):
-    from scope_guard.infrastructure.llm.openai import OpenAIGeneration
+    from scope_guard.integrations.llm.openai import OpenAIGeneration
 
     class Responses:
         async def create(self, **kwargs):
@@ -68,7 +68,7 @@ def test_output_failures(status, text, code):
 def test_retry_has_one_owner_and_honors_server_delays():
     import openai
 
-    from scope_guard.infrastructure.llm.retry import invoke
+    from scope_guard.integrations.llm.retry import invoke
 
     calls, delays = [], []
 
@@ -92,7 +92,7 @@ def test_retry_has_one_owner_and_honors_server_delays():
 
 @pytest.mark.parametrize("tone", ["warm", "neutral", "firm"])
 def test_reply_uses_high_reasoning_and_selected_tone(tone):
-    from scope_guard.infrastructure.llm.openai import OpenAIGeneration
+    from scope_guard.integrations.llm.openai import OpenAIGeneration
     from scope_guard.domain.analysis.domain import ReplyInput
 
     calls = []
@@ -116,7 +116,7 @@ def test_reply_uses_high_reasoning_and_selected_tone(tone):
 
 
 def test_missing_key_and_provider_error_are_distinct_and_logs_are_private(caplog):
-    from scope_guard.infrastructure.llm.openai import OpenAIGeneration
+    from scope_guard.integrations.llm.openai import OpenAIGeneration
 
     with pytest.raises(GenerationError, match="analysisUnavailable"):
         asyncio.run(OpenAIGeneration(" \ufeff ").analyze(INPUT))
@@ -155,7 +155,7 @@ def test_missing_key_and_provider_error_are_distinct_and_logs_are_private(caplog
     ],
 )
 def test_material_output_and_applicability_failures(status, text):
-    from scope_guard.infrastructure.llm.openai import OpenAIGeneration
+    from scope_guard.integrations.llm.openai import OpenAIGeneration
     from scope_guard.domain.analysis.domain import MaterialInput
     from scope_guard.domain.analysis.normalization import parse_analysis
 
@@ -175,7 +175,7 @@ def test_material_output_and_applicability_failures(status, text):
 
 
 def test_retry_cancellation_does_not_replay():
-    from scope_guard.infrastructure.llm.retry import invoke
+    from scope_guard.integrations.llm.retry import invoke
 
     async def run():
         entered = asyncio.Event()
@@ -214,7 +214,7 @@ def test_retry_cancellation_does_not_replay():
 def test_retry_classification(status, override, expected):
     import openai
 
-    from scope_guard.infrastructure.llm.retry import should_retry
+    from scope_guard.integrations.llm.retry import should_retry
 
     response = httpx.Response(
         status,
@@ -236,7 +236,7 @@ def test_retry_classification(status, override, expected):
     ],
 )
 def test_retry_delay_legacy_header_semantics(headers, expected):
-    from scope_guard.infrastructure.llm.retry import retry_delay
+    from scope_guard.integrations.llm.retry import retry_delay
 
     error = SimpleNamespace(response=SimpleNamespace(headers=headers))
     assert retry_delay(error, 0, random_value=lambda: 0) == expected
@@ -245,7 +245,7 @@ def test_retry_delay_legacy_header_semantics(headers, expected):
 def test_attempt_timeout_uses_600_seconds_and_only_three_attempts(monkeypatch):
     from contextlib import asynccontextmanager
 
-    from scope_guard.infrastructure.llm import retry
+    from scope_guard.integrations.llm import retry
 
     deadlines, attempts = [], []
 

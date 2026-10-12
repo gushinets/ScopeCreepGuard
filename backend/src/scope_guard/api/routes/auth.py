@@ -8,8 +8,8 @@ from starlette.responses import JSONResponse
 from scope_guard.api.contracts import AuthResponse, ErrorResponse, OkResponse
 from scope_guard.api.dependencies import auth_service
 from scope_guard.api.errors import read_json_object
-from scope_guard.infrastructure.auth.sessions import SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS
-from scope_guard.modules.auth.use_cases import AuthError, AuthService
+from scope_guard.integrations.auth.sessions import SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS
+from scope_guard.services.auth.use_cases import AuthError, AuthService
 
 router = APIRouter(
     prefix="/api/auth",

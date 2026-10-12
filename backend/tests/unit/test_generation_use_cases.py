@@ -28,9 +28,9 @@ FIXTURE = json.loads(
 
 
 def workflow():
-    from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
-    from scope_guard.infrastructure.llm.rate_limit import GenerationLimiter
-    from scope_guard.modules.analysis.use_cases import GenerationUseCases
+    from scope_guard.integrations.auth.draft_proofs import DraftProofs
+    from scope_guard.integrations.llm.rate_limit import GenerationLimiter
+    from scope_guard.services.analysis.use_cases import GenerationUseCases
 
     class Work:
         active = False

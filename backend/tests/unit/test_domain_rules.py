@@ -37,7 +37,7 @@ def test_evaluation_resolution_rejects_wrong_equal_to_ai():
     from scope_guard.core.contracts import Verdict
     from scope_guard.domain.evaluations.domain import EvaluationLabel
     from scope_guard.modules.evaluations.schemas import EvaluationLabelRequest
-    from scope_guard.modules.evaluations.use_cases import EvaluationError, resolve_human_verdict
+    from scope_guard.services.evaluations.use_cases import EvaluationError, resolve_human_verdict
 
     def parsed(value):
         return EvaluationLabel(**EvaluationLabelRequest.model_validate(value).model_dump())

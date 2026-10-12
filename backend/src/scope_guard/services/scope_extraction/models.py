@@ -1,9 +1,5 @@
 from dataclasses import dataclass
-from typing import Annotated, Literal
-
-from pydantic import Field
-
-from scope_guard.core.contracts import WireModel
+from typing import Literal
 
 
 class ExtractionError(Exception):
@@ -12,24 +8,32 @@ class ExtractionError(Exception):
         super().__init__(code)
 
 
-class PagesWithoutText(WireModel):
+@dataclass(frozen=True, slots=True)
+class PagesWithoutText:
+    page_numbers: tuple[int, ...]
     code: Literal["pages_without_text"] = "pages_without_text"
-    page_numbers: list[int]
+
+    def __post_init__(self):
+        object.__setattr__(self, "page_numbers", tuple(self.page_numbers))
 
 
-class NulRemoved(WireModel):
+@dataclass(frozen=True, slots=True)
+class NulRemoved:
     code: Literal["nul_removed"] = "nul_removed"
-
-
-Warning = Annotated[PagesWithoutText | NulRemoved, Field(discriminator="code")]
-
-
-class ExtractionResponse(WireModel):
-    text: str
-    warnings: list[Warning]
 
 
 @dataclass(frozen=True, slots=True)
 class ExtractionResult:
     text: str
     warnings: tuple[PagesWithoutText | NulRemoved, ...]
+
+    def to_dict(self) -> dict:
+        return {
+            "text": self.text,
+            "warnings": [
+                {"code": warning.code, "pageNumbers": list(warning.page_numbers)}
+                if isinstance(warning, PagesWithoutText)
+                else {"code": warning.code}
+                for warning in self.warnings
+            ],
+        }

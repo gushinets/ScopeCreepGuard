@@ -285,7 +285,7 @@ def test_manual_history_rolls_back_insert_and_last_checked_when_commit_fails(
             project = await client.post("/api/projects", json=CARD, headers={"cookie": cookie})
             project_id = project.json()["project"]["id"]
 
-            from scope_guard.infrastructure.database.unit_of_work import SqlAlchemyUnitOfWork
+            from scope_guard.database.unit_of_work import SqlAlchemyUnitOfWork
 
             async def fail_commit(_self):
                 raise RuntimeError("injected_commit_failure")

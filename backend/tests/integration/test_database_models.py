@@ -10,7 +10,7 @@ pytestmark = pytest.mark.integration
 def test_mapped_rows_round_trip_decimals_json_and_server_defaults(disposable_url):
     from sqlalchemy.orm import Session
 
-    from scope_guard.infrastructure.database.models import (
+    from scope_guard.database.models import (
         DraftRow,
         HistoryEntryRow,
         ProjectRow,

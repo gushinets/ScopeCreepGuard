@@ -6,7 +6,7 @@ from service_fixtures import editor
 
 
 def test_real_isolated_pdf_and_text_cleanup(tmp_path):
-    from scope_guard.infrastructure.technical.operations import TechnicalOperations
+    from scope_guard.integrations.documents.technical.operations import TechnicalOperations
 
     async def run():
         service = TechnicalOperations(temp_root=tmp_path)
@@ -26,7 +26,10 @@ def test_real_isolated_pdf_and_text_cleanup(tmp_path):
 
 
 def test_timeout_cancel_and_admission_always_clean(tmp_path):
-    from scope_guard.infrastructure.technical.operations import TechnicalError, TechnicalOperations
+    from scope_guard.integrations.documents.technical.operations import (
+        TechnicalError,
+        TechnicalOperations,
+    )
 
     script = tmp_path / "slow.py"
     script.write_text("import time; time.sleep(60)")
@@ -54,7 +57,7 @@ def test_timeout_cancel_and_admission_always_clean(tmp_path):
 
 
 def test_child_environment_excludes_secrets(tmp_path, monkeypatch):
-    from scope_guard.infrastructure.technical.operations import TechnicalOperations
+    from scope_guard.integrations.documents.technical.operations import TechnicalOperations
 
     monkeypatch.setenv("SCOPE_GUARD_DATABASE_URL", "secret")
     monkeypatch.setenv("OPENAI_API_KEY", "secret")
@@ -71,7 +74,10 @@ def test_child_environment_excludes_secrets(tmp_path, monkeypatch):
 
 
 def test_validation_and_parser_failure_remove_operation_files(tmp_path):
-    from scope_guard.infrastructure.technical.operations import TechnicalError, TechnicalOperations
+    from scope_guard.integrations.documents.technical.operations import (
+        TechnicalError,
+        TechnicalOperations,
+    )
 
     async def run():
         service = TechnicalOperations(temp_root=tmp_path)

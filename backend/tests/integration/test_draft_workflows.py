@@ -11,7 +11,7 @@ from pydantic import SecretStr
 from sqlalchemy import text
 
 from scope_guard.core.config import Settings
-from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
+from scope_guard.integrations.auth.draft_proofs import DraftProofs
 from scope_guard.main import create_app
 from scope_guard.domain.analysis.domain import DraftProofBinding, DraftProofClaims, freeze
 from scope_guard.domain.analysis.normalization import parse_snapshot
@@ -164,7 +164,7 @@ def test_draft_owner_concurrency_retry_updates_and_legacy(disposable_url, monkey
                 await connection.execute(text("DROP TRIGGER fail_edit ON drafts"))
                 await connection.execute(text("DROP FUNCTION fail_edit()"))
             # Cancel after history/draft flush, before project update or commit.
-            from scope_guard.infrastructure.database.repositories.draft_persistence import (
+            from scope_guard.database.repositories.draft_persistence import (
                 DraftRepository,
             )
 
