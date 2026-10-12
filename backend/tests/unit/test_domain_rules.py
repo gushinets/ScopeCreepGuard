@@ -6,8 +6,9 @@ from test_contracts import fixture
 
 
 def test_commercial_terms_uses_decimal_and_does_not_mirror_legacy_rows():
-    from scope_guard.domain.projects.domain import CommercialTerms
     from scope_guard_api.schemas.projects import CreateProjectRequest
+
+    from scope_guard.domain.projects.domain import CommercialTerms
 
     terms = CommercialTerms.from_project_input(
         CreateProjectRequest.model_validate(fixture()["projectInput"])
@@ -17,8 +18,9 @@ def test_commercial_terms_uses_decimal_and_does_not_mirror_legacy_rows():
 
 def test_edits_allow_document_money_but_protect_original_analysis():
     from scope_guard_api.schemas.analysis import AnalysisSnapshot
-    from scope_guard.domain.drafts.domain import validate_document_against_snapshot
     from scope_guard_api.schemas.drafts import DraftDocument
+
+    from scope_guard.domain.drafts.domain import validate_document_against_snapshot
 
     document = copy.deepcopy(fixture()["document"])
     document["changeOrder"]["additionalCost"] = "99"
@@ -34,9 +36,10 @@ def test_edits_allow_document_money_but_protect_original_analysis():
 
 
 def test_evaluation_resolution_rejects_wrong_equal_to_ai():
-    from scope_guard_api.schemas.shared import Verdict
-    from scope_guard.domain.evaluations.domain import EvaluationLabel
     from scope_guard_api.schemas.evaluations import EvaluationLabelRequest
+    from scope_guard_api.schemas.shared import Verdict
+
+    from scope_guard.domain.evaluations.domain import EvaluationLabel
     from scope_guard.services.evaluations.use_cases import EvaluationError, resolve_human_verdict
 
     def parsed(value):

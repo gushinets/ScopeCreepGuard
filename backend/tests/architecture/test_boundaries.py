@@ -8,6 +8,28 @@ BACKEND = ROOT / "backend/src/scope_guard"
 API = ROOT / "apps/api/src/scope_guard_api"
 
 
+def module_graph():
+    result = {}
+    for directory, prefix in [(BACKEND, "scope_guard"), (API, "scope_guard_api")]:
+        for path in directory.rglob("*.py"):
+            name = prefix + "." + ".".join(path.relative_to(directory).with_suffix("").parts)
+            name = name.removesuffix(".__init__")
+            result[name] = tuple(imports(path))
+    return result
+
+
+def reachable_dependencies(name, graph, stop=()):
+    seen, pending = set(), [name]
+    while pending:
+        current = pending.pop()
+        if current in seen:
+            continue
+        seen.add(current)
+        if current not in stop:
+            pending.extend(graph.get(current, ()))
+    return seen - {name}
+
+
 def imports(path):
     tree = ast.parse(path.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
@@ -59,6 +81,14 @@ def test_services_depend_on_ports():
         if name.startswith(banned)
     ]
     assert not violations, violations
+    graph = module_graph()
+    for name in graph:
+        if name.startswith("scope_guard.services."):
+            assert not [
+                dependency
+                for dependency in reachable_dependencies(name, graph)
+                if dependency.startswith(banned)
+            ], name
 
 
 def test_routes_use_services():
@@ -71,6 +101,16 @@ def test_routes_use_services():
         if name.startswith(banned)
     ]
     assert not violations, violations
+    graph = module_graph()
+    for name in graph:
+        if name.startswith("scope_guard_api.routes."):
+            assert not [
+                dependency
+                for dependency in reachable_dependencies(
+                    name, graph, stop=("scope_guard_api.dependencies",)
+                )
+                if dependency.startswith(banned)
+            ], name
     for path in (API / "routes").rglob("*.py"):
         source = path.read_text(encoding="utf-8")
         assert ".state.database" not in source, path
@@ -85,3 +125,5 @@ def test_backend_never_imports_api():
         if name.startswith("scope_guard_api")
     ]
     assert not violations, violations
+    assert not (BACKEND / "modules").exists()
+    assert not (BACKEND / "infrastructure").exists()

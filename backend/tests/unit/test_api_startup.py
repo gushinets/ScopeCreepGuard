@@ -108,3 +108,17 @@ def test_nonconnectivity_failure_is_not_retried(monkeypatch):
             startup.normalize_url("postgresql://user:x@localhost/test"),
             sleep=lambda _: pytest.fail("Invalid configuration must not retry"),
         )
+
+
+def test_app_and_openapi_do_not_run_startup_migrations(monkeypatch):
+    from scope_guard_api.main import create_app
+
+    from scope_guard.core.config import Settings
+    from scope_guard.database import migrations, startup
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Application construction/OpenAPI must not migrate")
+
+    monkeypatch.setattr(migrations, "migrate", forbidden)
+    monkeypatch.setattr(startup, "main", forbidden)
+    assert "/api/projects" in create_app(Settings(_env_file=None)).openapi()["paths"]

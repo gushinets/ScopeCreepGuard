@@ -5,8 +5,9 @@ import os
 import time
 from pathlib import Path
 
-from scope_guard.core.config import Settings
 from scope_guard_api.main import create_app
+
+from scope_guard.core.config import Settings
 
 app = create_app(
     Settings(_env_file=None),

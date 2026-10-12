@@ -4,7 +4,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from scope_guard.services.analysis.context import historical_context
 from scope_guard.domain.analysis.domain import (
     ABSENT,
     GenerationContext,
@@ -13,6 +12,7 @@ from scope_guard.domain.analysis.domain import (
     freeze,
 )
 from scope_guard.domain.drafts.generation_context import HistoricalGenerationDraft, from_draft
+from scope_guard.services.analysis.context import historical_context
 
 CURRENT = GenerationContext(
     "10000000-0000-4000-8000-000000000001",

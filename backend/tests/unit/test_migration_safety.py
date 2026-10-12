@@ -90,9 +90,8 @@ def test_operational_migrate_delegates_with_explicit_adoption(monkeypatch, capsy
 
 def test_draft_request_is_trimmed_and_must_not_be_blank():
     from pydantic import ValidationError
-    from test_contracts import fixture
-
     from scope_guard_api.schemas.drafts import CreateDraftRequest
+    from test_contracts import fixture
 
     body = {
         "projectId": "11111111-1111-4111-8111-111111111111",

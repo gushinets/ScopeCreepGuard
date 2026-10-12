@@ -12,6 +12,7 @@ def fixture():
 
 def test_document_is_immutable_detached_and_serializes_without_optional_nulls():
     from scope_guard_api.draft_input import parse_document
+
     from scope_guard.domain.drafts.serialization import document_to_wire
     from scope_guard.domain.drafts.values import freeze_object
 
@@ -29,6 +30,7 @@ def test_document_is_immutable_detached_and_serializes_without_optional_nulls():
 @pytest.mark.parametrize("field", ["verdict", "summary", "citations", "requestLanguage"])
 def test_protected_analysis_cannot_be_changed(field):
     from scope_guard_api.draft_input import parse_document
+
     from scope_guard.domain.drafts.values import freeze_object
 
     data = fixture()
@@ -39,6 +41,7 @@ def test_protected_analysis_cannot_be_changed(field):
 
 def test_document_utf16_text_limit_and_unknown_utf8_size_are_checked_before_discard():
     from scope_guard_api.draft_input import parse_document
+
     from scope_guard.domain.drafts.values import freeze_object
 
     data = fixture()
@@ -56,6 +59,7 @@ def test_document_utf16_text_limit_and_unknown_utf8_size_are_checked_before_disc
 
 def test_editable_empty_values_and_js_date_and_enum_coercion_are_preserved():
     from scope_guard_api.draft_input import parse_document
+
     from scope_guard.domain.drafts.serialization import document_to_wire
     from scope_guard.domain.drafts.values import freeze_object
 
@@ -69,6 +73,7 @@ def test_editable_empty_values_and_js_date_and_enum_coercion_are_preserved():
 
 def test_missing_and_null_are_distinct_and_legacy_payload_is_not_normalized():
     from scope_guard_api.draft_input import parse_document
+
     from scope_guard.domain.drafts.values import freeze_object, thaw_json
 
     data = fixture()
@@ -95,6 +100,7 @@ def test_preview_counts_utf16_and_can_split_a_surrogate_pair():
 
 def test_frozen_typescript_document_vectors():
     from scope_guard_api.draft_input import parse_document
+
     from scope_guard.domain.drafts.serialization import document_to_wire
     from scope_guard.domain.drafts.values import freeze_object
 
@@ -128,6 +134,7 @@ def test_frozen_typescript_document_vectors():
 
 def test_json_byte_limit_is_inclusive_and_counted_after_js_stringify():
     from scope_guard_api.draft_input import size
+
     from scope_guard.domain.shared.js_compat import stringify
 
     value = {"ignored": "x" * (1_000_000 - len(stringify({"ignored": ""}).encode()))}
@@ -140,6 +147,7 @@ def test_json_byte_limit_is_inclusive_and_counted_after_js_stringify():
 @pytest.mark.parametrize("value", ["10/10/26", "2026-10-10 09:00", "2026-10-10t09:00:00.000z"])
 def test_legacy_editor_dates_match_node_date_parse(value):
     from scope_guard_api.draft_input import parse_document
+
     from scope_guard.domain.drafts.values import freeze_object
 
     data = fixture()

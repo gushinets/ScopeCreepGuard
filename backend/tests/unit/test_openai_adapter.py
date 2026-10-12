@@ -92,8 +92,8 @@ def test_retry_has_one_owner_and_honors_server_delays():
 
 @pytest.mark.parametrize("tone", ["warm", "neutral", "firm"])
 def test_reply_uses_high_reasoning_and_selected_tone(tone):
-    from scope_guard.integrations.llm.openai import OpenAIGeneration
     from scope_guard.domain.analysis.domain import ReplyInput
+    from scope_guard.integrations.llm.openai import OpenAIGeneration
 
     calls = []
 
@@ -155,9 +155,9 @@ def test_missing_key_and_provider_error_are_distinct_and_logs_are_private(caplog
     ],
 )
 def test_material_output_and_applicability_failures(status, text):
-    from scope_guard.integrations.llm.openai import OpenAIGeneration
     from scope_guard.domain.analysis.domain import MaterialInput
     from scope_guard.domain.analysis.normalization import parse_analysis
+    from scope_guard.integrations.llm.openai import OpenAIGeneration
 
     class Responses:
         async def create(self, **kwargs):

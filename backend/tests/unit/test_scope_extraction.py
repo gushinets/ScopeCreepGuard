@@ -4,8 +4,8 @@ import pytest
 def test_pdf_limit_applies_after_trimming_empty_pages_and_nuls(monkeypatch):
     from types import SimpleNamespace
 
-    from scope_guard.integrations.documents.scope_readers import pdf
     from scope_guard.integrations.documents.extraction import extract
+    from scope_guard.integrations.documents.scope_readers import pdf
 
     monkeypatch.setattr(
         pdf,
@@ -44,8 +44,8 @@ def test_utf8_bom_newlines_and_nul_warning():
     ids=["extension", "mime", "encoding", "empty", "corrupt", "text_limit"],
 )
 def test_explicit_extraction_failures(name, mime, data, code, status):
-    from scope_guard.services.scope_extraction.models import ExtractionError
     from scope_guard.integrations.documents.extraction import extract
+    from scope_guard.services.scope_extraction.models import ExtractionError
 
     with pytest.raises(ExtractionError) as error:
         extract(name, mime, data)
@@ -57,8 +57,8 @@ def test_scanned_and_encrypted_pdfs():
 
     from pypdf import PdfWriter
 
-    from scope_guard.services.scope_extraction.models import ExtractionError
     from scope_guard.integrations.documents.extraction import extract
+    from scope_guard.services.scope_extraction.models import ExtractionError
 
     writer = PdfWriter()
     writer.add_blank_page(595, 842)
@@ -72,8 +72,8 @@ def test_scanned_and_encrypted_pdfs():
 
 
 def test_exact_text_and_upload_limits():
-    from scope_guard.services.scope_extraction.models import ExtractionError
     from scope_guard.integrations.documents.extraction import extract
+    from scope_guard.services.scope_extraction.models import ExtractionError
     from scope_guard.services.scope_extraction.service import MAX_FILE_BYTES
 
     assert len(extract("scope.txt", "", b"x" * 100_000).text) == 100_000
@@ -92,8 +92,8 @@ def test_mixed_pdf_and_page_limit():
     from pypdf import PdfReader, PdfWriter
     from reportlab.pdfgen.canvas import Canvas
 
-    from scope_guard.services.scope_extraction.models import ExtractionError
     from scope_guard.integrations.documents.extraction import extract
+    from scope_guard.services.scope_extraction.models import ExtractionError
 
     source = BytesIO()
     canvas = Canvas(source)

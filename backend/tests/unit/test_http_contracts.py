@@ -61,7 +61,6 @@ def test_error_envelopes_keep_existing_localization_codes():
 
 def test_public_request_models_accept_all_frozen_bodies_but_not_snake_aliases():
     from pydantic import ValidationError
-
     from scope_guard_api.requests import REQUEST_MODELS
 
     for operation in corpus()["operations"]:
@@ -85,7 +84,6 @@ def test_public_request_models_accept_all_frozen_bodies_but_not_snake_aliases():
 )
 def test_public_project_active_price_requires_camel_case(pricing, wire, snake):
     from pydantic import ValidationError
-
     from scope_guard_api.requests import ProjectBody, ProjectUpdateBody
 
     body = next(
@@ -103,7 +101,6 @@ def test_public_project_active_price_requires_camel_case(pricing, wire, snake):
 @pytest.mark.parametrize("bad_date", [0, 1, True, "2026-02-30", "2026-1-1", None])
 def test_generation_wire_dates_require_valid_iso_strings(bad_date):
     from pydantic import ValidationError
-
     from scope_guard_api.requests import AnalyzeBody, HistoricalBody
 
     for model in (AnalyzeBody, HistoricalBody):
@@ -134,8 +131,9 @@ def test_jsonl_contract_is_valid_unicode_and_exact_newline():
 
 
 def test_evaluation_openapi_distinguishes_all_accuracy_request_variants():
-    from scope_guard.core.config import Settings
     from scope_guard_api.main import create_app
+
+    from scope_guard.core.config import Settings
 
     schema = create_app(Settings(_env_file=None)).openapi()["paths"]["/api/evaluations"]["post"][
         "requestBody"
@@ -162,7 +160,6 @@ def test_evaluation_openapi_distinguishes_all_accuracy_request_variants():
 )
 def test_analysis_rejects_present_null_optional_fields_like_typescript(field):
     from pydantic import ValidationError
-
     from scope_guard_api.schemas.analysis import AnalysisSnapshot
 
     body = next(

@@ -8,7 +8,7 @@ from fontTools.varLib.instancer import instantiateVariableFont
 
 ROOT = Path(__file__).parents[1]
 SOURCE = ROOT / "assets/fonts"
-TARGET = ROOT / "src/scope_guard/infrastructure/documents/assets"
+TARGET = ROOT / "src/scope_guard/integrations/documents/assets"
 
 
 def main():

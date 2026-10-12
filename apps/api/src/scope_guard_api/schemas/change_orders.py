@@ -4,66 +4,10 @@ from typing import Literal
 
 from langcodes import Language
 from pydantic import StrictBool, StrictStr, field_validator, model_validator
+from scope_guard.domain.change_orders.constants import LABEL_KEYS as LABEL_KEYS
+from scope_guard.domain.change_orders.constants import SUPPORTED_LANGUAGES as SUPPORTED_LANGUAGES
 
 from scope_guard_api.schemas.shared import Currency, Text, WireModel, language_tag
-
-LABEL_KEYS = (
-    "title",
-    "draft",
-    "documentNumber",
-    "created",
-    "project",
-    "provider",
-    "client",
-    "clientEmail",
-    "requestedChange",
-    "commercialTerms",
-    "estimatedEffort",
-    "additionalFee",
-    "noAdditionalCharge",
-    "scheduleImpact",
-    "additionalTerms",
-    "approval",
-    "approvedBy",
-    "date",
-    "draftFooter",
-    "introduction",
-    "outsideScopeFree",
-    "endDate",
-    "rationale",
-    "terms",
-    "note",
-    "page",
-    "hours",
-)
-SUPPORTED_LANGUAGES = {
-    "ru",
-    "en",
-    "es",
-    "de",
-    "fr",
-    "it",
-    "nl",
-    "pl",
-    "pt",
-    "tr",
-    "uk",
-    "bg",
-    "el",
-    "cs",
-    "sk",
-    "hr",
-    "ro",
-    "hu",
-    "fi",
-    "sv",
-    "da",
-    "nb",
-    "et",
-    "lv",
-    "lt",
-    "id",
-}
 
 
 class LabelBase(WireModel):

@@ -6,10 +6,10 @@ import httpx
 import pytest
 from integration.support import prepare_alembic
 from pydantic import SecretStr
+from scope_guard_api.main import create_app
 from sqlalchemy import text
 
 from scope_guard.core.config import Settings
-from scope_guard_api.main import create_app
 from scope_guard.domain.analysis.normalization import parse_analysis, parse_materials
 
 pytestmark = pytest.mark.integration

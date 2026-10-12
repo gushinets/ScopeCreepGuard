@@ -3,9 +3,9 @@ import asyncio
 import httpx
 import pytest
 from fastapi import Body, Request
+from scope_guard_api.main import create_app
 
 from scope_guard.core.config import Settings
-from scope_guard_api.main import create_app
 
 
 def exercise(path, *, method="GET", content=None, headers=None, raise_app_exceptions=False):

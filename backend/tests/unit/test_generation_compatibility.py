@@ -9,6 +9,7 @@ FIXTURE = Path(__file__).resolve().parents[3] / "contracts/compatibility/any-640
 
 def test_runtime_normalization_is_immutable_and_serializes_fresh_json():
     from scope_guard_api.generation_output import analysis_to_wire
+
     from scope_guard.domain.analysis.normalization import parse_analysis
 
     fixture = json.loads(FIXTURE.read_text(encoding="utf8"))

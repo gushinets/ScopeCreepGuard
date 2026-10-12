@@ -6,13 +6,13 @@ import pytest
 from fastapi import Request
 from integration.support import prepare_alembic
 from pydantic import SecretStr
+from scope_guard_api.dependencies import auth_service
+from scope_guard_api.main import create_app
 from sqlalchemy import delete, func, select
 
-from scope_guard_api.dependencies import auth_service
 from scope_guard.core.config import Settings
-from scope_guard.integrations.auth.passwords import Passwords
 from scope_guard.database.models import UserRow
-from scope_guard_api.main import create_app
+from scope_guard.integrations.auth.passwords import Passwords
 
 pytestmark = pytest.mark.integration
 
