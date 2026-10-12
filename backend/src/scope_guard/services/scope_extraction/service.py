@@ -1,6 +1,6 @@
 from pathlib import PurePath
 
-from scope_guard.core.js_compat import utf16_length
+from scope_guard.domain.shared.js_compat import utf16_length
 from scope_guard.infrastructure.scope_readers.pdf import read_pdf
 from scope_guard.infrastructure.scope_readers.text import read_text
 from scope_guard.services.scope_extraction.models import (

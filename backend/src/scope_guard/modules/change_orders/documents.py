@@ -3,10 +3,10 @@
 from collections.abc import Callable
 from uuid import UUID
 
-from scope_guard.modules.drafts.repository import DraftWork
+from scope_guard.domain.drafts.repository import DraftWork
+from scope_guard.domain.drafts.values import JsonObject, JsonValue
+from scope_guard.domain.projects.repository import ProjectWork
 from scope_guard.modules.drafts.use_cases import DraftError
-from scope_guard.modules.drafts.values import JsonObject, JsonValue
-from scope_guard.modules.projects.repository import ProjectWork
 from scope_guard.modules.projects.use_cases import ProjectError
 from scope_guard.services.documents.models import DocumentError, DocumentSource
 

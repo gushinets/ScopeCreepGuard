@@ -30,7 +30,7 @@ class FixtureGenerator:
         pass
 
     async def analyze(self, value):
-        from scope_guard.modules.analysis.normalization import parse_analysis
+        from scope_guard.domain.analysis.normalization import parse_analysis
 
         self.calls += 1
         return parse_analysis(self.fixture["analysisFixture"], value.locale)
@@ -40,7 +40,7 @@ class FixtureGenerator:
         return self.fixture["analysisFixture"]["replies"][value.tone]
 
     async def translate_materials(self, value):
-        from scope_guard.modules.analysis.normalization import parse_materials
+        from scope_guard.domain.analysis.normalization import parse_materials
 
         self.calls += 1
         co = self.fixture["analysisFixture"]["changeOrder"]

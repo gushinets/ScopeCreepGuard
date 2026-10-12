@@ -8,8 +8,8 @@ FIXTURE = Path(__file__).parents[3] / "contracts/compatibility/any-640/generatio
 
 def test_proof_roundtrip_binding_and_expiry():
     from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
-    from scope_guard.modules.analysis.domain import DraftProofBinding, DraftProofClaims, freeze
-    from scope_guard.modules.analysis.normalization import parse_snapshot
+    from scope_guard.domain.analysis.domain import DraftProofBinding, DraftProofClaims, freeze
+    from scope_guard.domain.analysis.normalization import parse_snapshot
 
     fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
     binding = DraftProofBinding("user", "11111111-1111-4111-8111-111111111111", "request", "en")
@@ -41,7 +41,7 @@ def test_shared_rolling_window():
 
 def test_ordered_inputs_preserve_omission_and_null():
     from scope_guard.api.generation_input import parse_analyze, parse_materials
-    from scope_guard.modules.analysis.domain import ABSENT, GenerationError
+    from scope_guard.domain.analysis.domain import ABSENT, GenerationError
 
     with pytest.raises(GenerationError, match="clientLanguageUnsupported"):
         parse_analyze({"documentLanguage": None})

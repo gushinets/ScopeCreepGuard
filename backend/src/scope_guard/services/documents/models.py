@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from scope_guard.modules.drafts.values import JsonObject, JsonValue
+from scope_guard.domain.drafts.values import JsonObject, JsonValue
 
 
 class DocumentError(Exception):

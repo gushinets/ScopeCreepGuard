@@ -5,9 +5,7 @@ from uuid import UUID
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from scope_guard.infrastructure.database.models import DraftRow, HistoryEntryRow, ProjectRow
-from scope_guard.infrastructure.database.unit_of_work import SqlAlchemyUnitOfWork
-from scope_guard.modules.projects.domain import (
+from scope_guard.domain.projects.domain import (
     AgreedScope,
     ManualHistoryInput,
     OptionalClient,
@@ -18,6 +16,8 @@ from scope_guard.modules.projects.domain import (
     ProjectDates,
     ProjectHistoryEntry,
 )
+from scope_guard.infrastructure.database.models import DraftRow, HistoryEntryRow, ProjectRow
+from scope_guard.infrastructure.database.unit_of_work import SqlAlchemyUnitOfWork
 
 
 def project(row: ProjectRow) -> Project:

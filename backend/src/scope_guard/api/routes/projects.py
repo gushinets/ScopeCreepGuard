@@ -15,7 +15,7 @@ from scope_guard.api.errors import read_json_object
 from scope_guard.api.history_input import parse_history
 from scope_guard.api.project_input import parse_project
 from scope_guard.api.project_output import history_to_wire, project_to_wire
-from scope_guard.modules.projects.domain import ProjectCard
+from scope_guard.domain.projects.domain import ProjectCard
 from scope_guard.modules.projects.use_cases import ProjectService
 
 router = APIRouter(

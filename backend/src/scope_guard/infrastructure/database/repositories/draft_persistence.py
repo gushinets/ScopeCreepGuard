@@ -7,11 +7,9 @@ from uuid import UUID
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from scope_guard.infrastructure.database.models import DraftRow, HistoryEntryRow, ProjectRow
-from scope_guard.infrastructure.database.unit_of_work import SqlAlchemyUnitOfWork
-from scope_guard.modules.analysis.domain import ABSENT, Labels
-from scope_guard.modules.drafts.serialization import document_to_wire
-from scope_guard.modules.drafts.values import (
+from scope_guard.domain.analysis.domain import ABSENT, Labels
+from scope_guard.domain.drafts.serialization import document_to_wire
+from scope_guard.domain.drafts.values import (
     CreatedDraft,
     CreateDraft,
     DraftDocument,
@@ -23,6 +21,8 @@ from scope_guard.modules.drafts.values import (
     language_metadata,
     thaw_json,
 )
+from scope_guard.infrastructure.database.models import DraftRow, HistoryEntryRow, ProjectRow
+from scope_guard.infrastructure.database.unit_of_work import SqlAlchemyUnitOfWork
 
 
 def stored(row: DraftRow, request: str) -> StoredDraft:

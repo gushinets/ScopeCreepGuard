@@ -5,8 +5,8 @@ from importlib.resources import files
 from babel import Locale
 from babel.dates import format_date
 
-from scope_guard.infrastructure.llm.language import normalize_language
-from scope_guard.modules.analysis.domain import ABSENT, Labels
+from scope_guard.domain.analysis.domain import ABSENT, Labels
+from scope_guard.domain.shared.language import normalize_language
 from scope_guard.services.documents.models import DocumentError
 
 PDF_LANGUAGES = frozenset(

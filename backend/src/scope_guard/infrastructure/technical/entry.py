@@ -21,8 +21,8 @@ def main():
         raw = json.loads(Path(source).read_bytes())
         if mode == "pdf":
             from scope_guard.api.draft_input import parse_editor
+            from scope_guard.domain.drafts.values import freeze_json
             from scope_guard.infrastructure.documents.renderer import render_pdf
-            from scope_guard.modules.drafts.values import freeze_json
             from scope_guard.services.documents.service import prepare_document
 
             result = render_pdf(

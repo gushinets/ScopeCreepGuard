@@ -156,8 +156,8 @@ def test_wrong_evaluation_rejects_the_ai_verdict():
 
 
 def test_jsonl_serializer_has_exact_utf8_bytes_field_order_and_newline():
-    from scope_guard.modules.evaluations.domain import EvaluationExport
-    from scope_guard.modules.evaluations.serialization import serialize_jsonl
+    from scope_guard.domain.evaluations.domain import EvaluationExport
+    from scope_guard.domain.evaluations.serialization import serialize_jsonl
 
     row = EvaluationExport(
         scope="Сайт",

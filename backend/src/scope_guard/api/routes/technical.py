@@ -14,11 +14,11 @@ from scope_guard.api.errors import ApiError, ErrorCode
 from scope_guard.api.routes.drafts import body_contract, identifier
 from scope_guard.api.technical_input import preview_body, scope_upload
 from scope_guard.core.contracts import WireModel
+from scope_guard.domain.drafts.values import freeze_object, thaw_json
 from scope_guard.infrastructure.technical.operations import TechnicalError
 from scope_guard.modules.change_orders.documents import DocumentUseCases
 from scope_guard.modules.drafts.schemas import DraftEditableChangeOrder
 from scope_guard.modules.drafts.use_cases import DraftError
-from scope_guard.modules.drafts.values import freeze_object, thaw_json
 from scope_guard.services.documents.models import DocumentError, DocumentSource
 from scope_guard.services.scope_extraction.models import ExtractionResponse
 

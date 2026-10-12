@@ -3,9 +3,9 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from scope_guard.domain.analysis.domain import freeze
+from scope_guard.domain.drafts.generation_context import HistoricalGenerationDraft
 from scope_guard.infrastructure.database.models import DraftRow, HistoryEntryRow, ProjectRow
-from scope_guard.modules.analysis.domain import freeze
-from scope_guard.modules.drafts.generation_context import HistoricalGenerationDraft
 
 
 class Drafts:

@@ -2,8 +2,8 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from uuid import UUID
 
-from scope_guard.modules.drafts.repository import DraftWork
-from scope_guard.modules.drafts.values import (
+from scope_guard.domain.drafts.repository import DraftWork
+from scope_guard.domain.drafts.values import (
     CreatedDraft,
     CreateDraft,
     DraftDocument,

@@ -2,12 +2,12 @@ from collections.abc import Callable
 from uuid import UUID
 
 from scope_guard.core.contracts import Verdict
-from scope_guard.modules.evaluations.domain import (
+from scope_guard.domain.evaluations.domain import (
     EvaluationExport,
     EvaluationLabel,
     EvaluationResult,
 )
-from scope_guard.modules.evaluations.repository import EvaluationWork
+from scope_guard.domain.evaluations.repository import EvaluationWork
 
 
 class EvaluationError(Exception):

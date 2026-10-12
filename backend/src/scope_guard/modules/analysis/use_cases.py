@@ -4,9 +4,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
-from scope_guard.core.js_compat import trim, utf16_length
-from scope_guard.modules.analysis.context import historical_context, project_context
-from scope_guard.modules.analysis.domain import (
+from scope_guard.domain.analysis.domain import (
     ABSENT,
     AnalysisInput,
     AnalyzeCommand,
@@ -25,14 +23,16 @@ from scope_guard.modules.analysis.domain import (
     freeze,
     thaw,
 )
-from scope_guard.modules.analysis.normalization import parse_analysis
+from scope_guard.domain.analysis.normalization import parse_analysis
+from scope_guard.domain.change_orders.estimation import commercial_signature
+from scope_guard.domain.shared.js_compat import trim, utf16_length
+from scope_guard.modules.analysis.context import historical_context, project_context
 from scope_guard.modules.analysis.ports import (
     DraftProofPort,
     GenerationPort,
     LimiterPort,
     ReadWorkFactory,
 )
-from scope_guard.modules.change_orders.estimation import commercial_signature
 
 
 def interface_locale(value: LocaleResolution, *, analyze=False) -> str:
@@ -118,7 +118,7 @@ class GenerationUseCases:
         )
         snapshot = ProjectSnapshotV1(context, command.end_date, command.document_language)
         # Keep construction immutable; serialize only at the token infrastructure boundary.
-        from scope_guard.modules.analysis.serialization import snapshot_to_wire
+        from scope_guard.domain.analysis.serialization import snapshot_to_wire
 
         proof = self.proofs.issue(
             DraftProofClaims(
