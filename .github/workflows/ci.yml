@@ -46,7 +46,7 @@ jobs:
       - uses: ./ci/actions/setup-backend
       # The Python auth compatibility test invokes the frozen frontend jose and
       # bcryptjs fixture script; this is not frontend migration tooling.
-      - run: corepack pnpm --dir frontend install --frozen-lockfile
+      - run: pnpm --dir frontend install --frozen-lockfile
       - name: Backend integration, static analysis, contract, and PDF checks
         run: ci/scripts/check-backend.sh
 
