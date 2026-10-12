@@ -17,6 +17,7 @@ export SCOPE_GUARD_OPENAI_API_KEY=""
 export POSTGRES_PORT=0
 export BACKEND_PORT=0
 export FRONTEND_PORT=0
+response_headers="$(mktemp)"
 
 cleanup() {
   status=$?
@@ -25,6 +26,7 @@ cleanup() {
     docker compose -f compose.yaml logs --no-color postgres backend app || true
   fi
   docker compose -f compose.yaml down --volumes --remove-orphans || true
+  rm -f "$response_headers"
   exit "$status"
 }
 trap cleanup EXIT INT TERM
@@ -61,5 +63,16 @@ frontend_port="$(docker compose -f compose.yaml port app 3000 | sed 's/.*://')"
 curl --fail --silent --show-error "http://127.0.0.1:${backend_port}/health/live" >/dev/null
 curl --fail --silent --show-error "http://127.0.0.1:${backend_port}/health/ready" >/dev/null
 curl --fail --silent --show-error "http://127.0.0.1:${frontend_port}/login" >/dev/null
+curl --fail --silent --show-error --dump-header "$response_headers" \
+  --header "content-type: application/json" \
+  --data '{"email":"compose-smoke@example.test","password":"12345678"}' \
+  "http://127.0.0.1:${frontend_port}/api/auth/register" >/dev/null
+session_token="$(awk 'tolower($0) ~ /^set-cookie: scg_session=/ { sub(/\r$/, ""); sub(/^[^=]*=/, ""); sub(/;.*/, ""); print; exit }' "$response_headers")"
+if [[ -z "$session_token" ]]; then
+  echo "Registration did not issue a session cookie" >&2
+  exit 1
+fi
+curl --fail --silent --show-error --header "cookie: scg_session=${session_token}" \
+  "http://127.0.0.1:${frontend_port}/api/auth/me" >/dev/null
 
 echo "Compose smoke passed for $project."
