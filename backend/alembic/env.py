@@ -5,9 +5,7 @@ from scope_guard.database.models import Base
 
 connection = context.config.attributes.get("connection")
 if connection is None or not context.config.attributes.get("verified_operation"):
-    raise RuntimeError(
-        "Use scope_guard.database.cli; direct Alembic mutation is disabled"
-    )
+    raise RuntimeError("Use scope_guard.database.cli; direct Alembic mutation is disabled")
 context.configure(
     connection=connection,
     target_metadata=Base.metadata,

@@ -1,5 +1,9 @@
-Concrete document preparation and scope extraction services receive explicit
-validated inputs and return detached results. They never resolve HTTP cookies,
-current users or perform persistence writes. Infrastructure owns PDF rendering,
-fonts, file readers and bounded short-lived execution. Currency conversion has
-no current caller; export retains entered money/currency without rounding.
+Services own application use cases and explicit transaction boundaries. They use
+domain values, repository/UoW contracts, dedicated query ports and integration
+interfaces without importing HTTP objects, ORM types or concrete adapters.
+
+Document preparation and scope extraction receive explicit validated inputs and
+return detached results. Integrations own rendering, localization/fonts, readers
+and bounded isolated execution. Export preserves saved/editor money and currency
+without conversion or implicit recalculation. Read transactions close before LLM
+calls; failed writes roll back through Unit of Work cleanup.

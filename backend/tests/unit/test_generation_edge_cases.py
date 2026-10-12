@@ -6,8 +6,8 @@ from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
+from scope_guard_api.schemas.change_orders import LABEL_KEYS
 
-from scope_guard.integrations.auth.draft_proofs import DraftProofs, decode, encode
 from scope_guard.domain.analysis.domain import (
     ABSENT,
     DraftProofBinding,
@@ -16,7 +16,7 @@ from scope_guard.domain.analysis.domain import (
     thaw,
 )
 from scope_guard.domain.analysis.normalization import parse_analysis, parse_materials
-from scope_guard_api.schemas.change_orders import LABEL_KEYS
+from scope_guard.integrations.auth.draft_proofs import DraftProofs, decode, encode
 
 FIXTURE = json.loads(
     (Path(__file__).parents[3] / "contracts/compatibility/any-640/generation.json").read_text(

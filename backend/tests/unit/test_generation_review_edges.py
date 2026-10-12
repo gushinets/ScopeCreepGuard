@@ -7,10 +7,8 @@ from uuid import UUID
 
 import httpx
 import pytest
-
 from scope_guard_api.schemas.shared import Industry
-from scope_guard.domain.shared.language import normalize_language, supported_language
-from scope_guard.integrations.llm.openai import OpenAIGeneration
+
 from scope_guard.domain.analysis.domain import AnalysisInput, GenerationContext, GenerationError
 from scope_guard.domain.analysis.normalization import parse_analysis
 from scope_guard.domain.projects.domain import (
@@ -21,6 +19,8 @@ from scope_guard.domain.projects.domain import (
     ProjectCard,
     ProjectDates,
 )
+from scope_guard.domain.shared.language import normalize_language, supported_language
+from scope_guard.integrations.llm.openai import OpenAIGeneration
 
 OWNER = "11111111-1111-4111-8111-111111111111"
 PROJECT = "22222222-2222-4222-8222-222222222222"
@@ -131,6 +131,7 @@ def test_huge_model_number_is_invalid(field):
 @pytest.mark.parametrize("field", ["confidence", "estimatedHours"])
 def test_huge_submitted_material_number_is_body_error_before_provider(field):
     from scope_guard_api.generation_input import parse_materials
+
     from scope_guard.domain.analysis.domain import LocaleResolution
 
     raw = copy.deepcopy(FIXTURE["analysisFixture"])

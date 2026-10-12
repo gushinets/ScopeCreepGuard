@@ -26,7 +26,7 @@ if __name__ == "__main__":
         }
         for item in journal["entries"]
     ]
-    target = ROOT / "backend/src/scope_guard/infrastructure/database/baseline_schema.json"
+    target = ROOT / "backend/src/scope_guard/database/baseline_schema.json"
     target.write_text(
         json.dumps(
             {

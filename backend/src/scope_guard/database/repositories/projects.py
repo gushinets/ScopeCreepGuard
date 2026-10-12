@@ -8,38 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from scope_guard.database.models import HistoryEntryRow, ProjectRow
 from scope_guard.database.queries.history import HistoryQueries
 from scope_guard.database.queries.projects import ProjectQueries
+from scope_guard.database.queries.projects import project as project
 from scope_guard.database.unit_of_work import SqlAlchemyUnitOfWork
 from scope_guard.domain.projects.domain import (
-    AgreedScope,
     ManualHistoryInput,
-    OptionalClient,
-    PricingConfiguration,
     Project,
     ProjectCard,
-    ProjectDate,
-    ProjectDates,
     ProjectHistoryEntry,
 )
-
-
-def project(row: ProjectRow) -> Project:
-    card = ProjectCard(
-        name=row.name,
-        scope=AgreedScope(row.scope),
-        industry=row.industry,
-        dates=ProjectDates(
-            ProjectDate(row.start_date.isoformat()) if row.start_date else None,
-            row.last_checked,
-        ),
-        pricing=PricingConfiguration(
-            row.pricing_model,
-            row.currency,
-            row.hourly_rate,
-            row.fixed_price,
-        ),
-        client=OptionalClient(row.client),
-    )
-    return Project(row.id, card)
 
 
 def values(card: ProjectCard) -> dict:

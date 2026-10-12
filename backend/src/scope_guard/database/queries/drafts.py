@@ -5,29 +5,9 @@ from sqlalchemy import func, select
 from scope_guard.database.models import DraftRow, HistoryEntryRow, ProjectRow
 from scope_guard.domain.drafts.values import (
     DraftSummary,
-    StoredDraft,
-    freeze_json,
-    freeze_object,
 )
 
 """Owned persistence with no transaction lifecycle outside the inherited UoW."""
-
-
-def stored(row: DraftRow, request: str) -> StoredDraft:
-    return StoredDraft(
-        row.id,
-        row.project_id,
-        row.history_entry_id,
-        request,
-        row.created_at,
-        row.updated_at,
-        row.locale,
-        row.request_language,
-        row.client_material_language,
-        freeze_json(row.project_snapshot),
-        freeze_object(row.analysis_snapshot),
-        freeze_object(row.draft_document),
-    )
 
 
 class DraftQueries:

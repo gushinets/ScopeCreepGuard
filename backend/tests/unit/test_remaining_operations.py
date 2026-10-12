@@ -2,10 +2,10 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 from fastapi.testclient import TestClient
-
 from scope_guard_api.errors import ApiError
-from scope_guard.core.config import Settings
 from scope_guard_api.schemas.shared import Industry, Verdict
+
+from scope_guard.core.config import Settings
 
 HISTORY_ID = "11111111-1111-4111-8111-111111111111"
 
@@ -125,6 +125,7 @@ def test_evaluation_parser_preserves_legacy_validation_order(body, status, code)
 )
 def test_evaluation_resolution(accuracy, human, ai, resolved):
     from scope_guard_api.evaluation_input import parse_evaluation
+
     from scope_guard.services.evaluations.use_cases import resolve_human_verdict
 
     body = {
@@ -140,6 +141,7 @@ def test_evaluation_resolution(accuracy, human, ai, resolved):
 
 def test_wrong_evaluation_rejects_the_ai_verdict():
     from scope_guard_api.evaluation_input import parse_evaluation
+
     from scope_guard.services.evaluations.use_cases import EvaluationError, resolve_human_verdict
 
     label = parse_evaluation(

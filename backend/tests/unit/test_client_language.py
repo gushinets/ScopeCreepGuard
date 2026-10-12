@@ -1,6 +1,5 @@
 import pytest
 from pydantic import ValidationError
-
 from scope_guard_api.schemas.change_orders import LABEL_KEYS, ClientMaterials
 
 

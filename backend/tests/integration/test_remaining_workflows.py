@@ -4,10 +4,10 @@ import httpx
 import pytest
 from integration.support import prepare_alembic
 from pydantic import SecretStr
+from scope_guard_api.main import create_app
 from sqlalchemy import text
 
 from scope_guard.core.config import Settings
-from scope_guard_api.main import create_app
 
 pytestmark = pytest.mark.integration
 SECRET = "slice-f-secret-at-least-32-characters"

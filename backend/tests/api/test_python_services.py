@@ -4,11 +4,11 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from pypdf import PdfReader
+from scope_guard_api.dependencies import current_owner
+from scope_guard_api.main import create_app
 from service_fixtures import editor
 
-from scope_guard_api.dependencies import current_owner
 from scope_guard.core.config import Settings
-from scope_guard_api.main import create_app
 
 OWNER = "11111111-1111-4111-8111-111111111111"
 
