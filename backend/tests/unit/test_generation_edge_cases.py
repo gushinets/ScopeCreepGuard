@@ -8,14 +8,14 @@ from pathlib import Path
 import pytest
 
 from scope_guard.infrastructure.auth.draft_proofs import DraftProofs, decode, encode
-from scope_guard.modules.analysis.domain import (
+from scope_guard.domain.analysis.domain import (
     ABSENT,
     DraftProofBinding,
     DraftProofClaims,
     freeze,
     thaw,
 )
-from scope_guard.modules.analysis.normalization import parse_analysis, parse_materials
+from scope_guard.domain.analysis.normalization import parse_analysis, parse_materials
 from scope_guard.modules.change_orders.schemas import LABEL_KEYS
 
 FIXTURE = json.loads(
@@ -166,7 +166,7 @@ def test_proof_tampering_secret_and_detached_json():
 
 
 def test_year_zero_leap_utc_normalization():
-    from scope_guard.modules.change_orders.estimation import calendar_day, project_timing
+    from scope_guard.domain.change_orders.estimation import calendar_day, project_timing
 
     assert calendar_day("0000-02-29") == calendar_day("1900-03-01")
     assert project_timing("2024-02-28", "2024-03-01", "2024-02-29T23:00:00Z")["durationDays"] == 2
@@ -198,7 +198,7 @@ def test_disconnect_cancels_and_awaits_work():
 
 
 def test_legacy_timestamp_parsing_matches_frozen_javascript_vectors():
-    from scope_guard.core.js_compat import date_parse_finite
+    from scope_guard.domain.shared.js_compat import date_parse_finite
 
     vectors = json.loads(
         (

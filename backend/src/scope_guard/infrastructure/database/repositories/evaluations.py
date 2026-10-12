@@ -6,18 +6,18 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from scope_guard.core.contracts import Verdict
+from scope_guard.domain.evaluations.domain import (
+    EvaluationExport,
+    EvaluationLabel,
+    EvaluationResult,
+    OwnedHistoryContext,
+)
 from scope_guard.infrastructure.database.models import (
     EvaluationCaseRow,
     HistoryEntryRow,
     ProjectRow,
 )
 from scope_guard.infrastructure.database.unit_of_work import SqlAlchemyUnitOfWork
-from scope_guard.modules.evaluations.domain import (
-    EvaluationExport,
-    EvaluationLabel,
-    EvaluationResult,
-    OwnedHistoryContext,
-)
 
 
 class Evaluations:

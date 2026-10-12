@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 from scope_guard.core.config import Settings
 from scope_guard.main import create_app
-from scope_guard.modules.analysis.normalization import parse_analysis, parse_materials
+from scope_guard.domain.analysis.normalization import parse_analysis, parse_materials
 
 pytestmark = pytest.mark.integration
 FIXTURE = json.loads(

@@ -9,7 +9,7 @@ FIXTURE = Path(__file__).resolve().parents[3] / "contracts/compatibility/any-640
 
 def test_runtime_normalization_is_immutable_and_serializes_fresh_json():
     from scope_guard.api.generation_output import analysis_to_wire
-    from scope_guard.modules.analysis.normalization import parse_analysis
+    from scope_guard.domain.analysis.normalization import parse_analysis
 
     fixture = json.loads(FIXTURE.read_text(encoding="utf8"))
     result = parse_analysis(fixture["analysisFixture"], "en")
@@ -54,7 +54,7 @@ def test_exact_analysis_reply_and_material_prompt_vectors():
 
 
 def test_language_vectors_retain_broad_reply_support_and_pdf_restrictions():
-    from scope_guard.infrastructure.llm.language import normalize_language, supported_language
+    from scope_guard.domain.shared.language import normalize_language, supported_language
 
     fixture = json.loads(FIXTURE.read_text(encoding="utf8"))
     for case in fixture["languages"]:
@@ -63,7 +63,7 @@ def test_language_vectors_retain_broad_reply_support_and_pdf_restrictions():
 
 
 def test_js_units_and_serialization_keep_unicode_number_and_key_semantics():
-    from scope_guard.core.js_compat import stringify, trim, utf16_length
+    from scope_guard.domain.shared.js_compat import stringify, trim, utf16_length
 
     assert utf16_length("😀") == 2
     assert trim("\ufeff x \ufeff") == "x"

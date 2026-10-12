@@ -4,9 +4,9 @@ import json
 import sys
 
 from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
-from scope_guard.modules.analysis.domain import DraftProofBinding, DraftProofClaims, freeze, thaw
-from scope_guard.modules.analysis.normalization import parse_snapshot
-from scope_guard.modules.analysis.serialization import analysis_to_wire
+from scope_guard.domain.analysis.domain import DraftProofBinding, DraftProofClaims, freeze, thaw
+from scope_guard.domain.analysis.normalization import parse_snapshot
+from scope_guard.domain.analysis.serialization import analysis_to_wire
 
 data = json.loads(sys.stdin.buffer.read().decode("utf-8"))
 adapter = DraftProofs(data["secret"], lambda: data["now"])

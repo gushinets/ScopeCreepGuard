@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Protocol, Self
 from uuid import UUID
 
-from scope_guard.modules.analysis.domain import (
+from scope_guard.domain.analysis.domain import (
     AnalysisInput,
     AnalysisResult,
     ClientMaterials,
@@ -11,8 +11,8 @@ from scope_guard.modules.analysis.domain import (
     MaterialInput,
     ReplyInput,
 )
-from scope_guard.modules.drafts.generation_context import HistoricalGenerationDraft
-from scope_guard.modules.projects.domain import Project, ProjectHistoryEntry
+from scope_guard.domain.drafts.generation_context import HistoricalGenerationDraft
+from scope_guard.domain.projects.domain import Project, ProjectHistoryEntry
 
 
 class GenerationProjectRepository(Protocol):

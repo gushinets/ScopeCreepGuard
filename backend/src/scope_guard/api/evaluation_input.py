@@ -4,7 +4,7 @@ from uuid import UUID
 from scope_guard.api.errors import ApiError, ErrorCode
 from scope_guard.api.project_input import trim
 from scope_guard.core.contracts import EvaluationAccuracy, Verdict
-from scope_guard.modules.evaluations.domain import EvaluationLabel
+from scope_guard.domain.evaluations.domain import EvaluationLabel
 
 UUID_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 

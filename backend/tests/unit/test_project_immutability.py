@@ -10,7 +10,7 @@ from scope_guard.api.project_output import project_to_wire
 from scope_guard.core.contracts import Industry, Verdict
 from scope_guard.infrastructure.database.models import ProjectRow
 from scope_guard.infrastructure.database.repositories.projects import project
-from scope_guard.modules.projects.domain import ProjectDetail, ProjectHistoryEntry
+from scope_guard.domain.projects.domain import ProjectDetail, ProjectHistoryEntry
 from scope_guard.modules.projects.use_cases import ProjectService
 
 

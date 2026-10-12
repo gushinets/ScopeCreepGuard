@@ -22,9 +22,9 @@ from scope_guard.api.generation_input import (
 )
 from scope_guard.api.generation_output import analysis_to_wire, materials_to_wire, snapshot_to_wire
 from scope_guard.api.locale import resolve_locale
-from scope_guard.core.js_compat import stringify
+from scope_guard.domain.analysis.domain import GenerationError
+from scope_guard.domain.shared.js_compat import stringify
 from scope_guard.infrastructure.llm.openai import correlation_id, log_event
-from scope_guard.modules.analysis.domain import GenerationError
 from scope_guard.modules.change_orders.use_cases import EstimateChangeOrder
 
 router = APIRouter(

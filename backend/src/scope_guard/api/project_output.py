@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from scope_guard.modules.projects.domain import ProjectDetail, ProjectHistoryEntry
+from scope_guard.domain.projects.domain import ProjectDetail, ProjectHistoryEntry
 
 
 def amount(value: Decimal | None) -> str | None:

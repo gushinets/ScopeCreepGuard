@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scope_guard.core.js_compat import stringify
+from scope_guard.domain.shared.js_compat import stringify
 from scope_guard.infrastructure.llm.prompts.analysis_v1 import render
 
 TEMPLATE = Path(__file__).with_name("client-materials-v1.txt").read_text(encoding="utf8")

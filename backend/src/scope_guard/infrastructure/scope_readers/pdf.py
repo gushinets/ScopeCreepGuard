@@ -3,7 +3,7 @@ from io import BytesIO
 
 from pypdf import PdfReader
 
-from scope_guard.core.js_compat import utf16_length
+from scope_guard.domain.shared.js_compat import utf16_length
 from scope_guard.services.scope_extraction.models import ExtractionError, PagesWithoutText
 
 

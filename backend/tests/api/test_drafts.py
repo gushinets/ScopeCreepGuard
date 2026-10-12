@@ -10,8 +10,8 @@ from scope_guard.api.dependencies import current_owner, draft_service
 from scope_guard.core.config import Settings
 from scope_guard.infrastructure.auth.draft_proofs import DraftProofs, decode, encode
 from scope_guard.main import create_app
-from scope_guard.modules.analysis.domain import DraftProofBinding, DraftProofClaims, freeze
-from scope_guard.modules.analysis.normalization import parse_snapshot
+from scope_guard.domain.analysis.domain import DraftProofBinding, DraftProofClaims, freeze
+from scope_guard.domain.analysis.normalization import parse_snapshot
 from scope_guard.modules.drafts.use_cases import DraftError
 
 OWNER = "11111111-1111-4111-8111-111111111111"

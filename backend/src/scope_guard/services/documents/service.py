@@ -1,8 +1,8 @@
 import re
 from decimal import Decimal
 
-from scope_guard.core.js_compat import js_string
-from scope_guard.modules.drafts.values import EditableChangeOrder, JsonValue, thaw_json
+from scope_guard.domain.drafts.values import EditableChangeOrder, JsonValue, thaw_json
+from scope_guard.domain.shared.js_compat import js_string
 from scope_guard.services.documents.localization import (
     document_date,
     document_labels,

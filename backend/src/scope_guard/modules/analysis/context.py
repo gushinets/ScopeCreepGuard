@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from scope_guard.modules.analysis.domain import (
+from scope_guard.domain.analysis.domain import (
     ABSENT,
     DraftProofBinding,
     GenerationContext,
@@ -8,7 +8,7 @@ from scope_guard.modules.analysis.domain import (
     HistoricalSelector,
     thaw,
 )
-from scope_guard.modules.drafts.generation_context import from_draft, overlay
+from scope_guard.domain.drafts.generation_context import from_draft, overlay
 
 
 def project_context(project) -> GenerationContext:

@@ -1,10 +1,10 @@
 from dataclasses import replace
 
-from scope_guard.core.js_compat import trim
+from scope_guard.domain.analysis.domain import AnalysisInput, EstimateOutcome, GenerationError
+from scope_guard.domain.change_orders.estimation import commercial_signature
+from scope_guard.domain.shared.js_compat import trim
 from scope_guard.modules.analysis.context import historical_context
-from scope_guard.modules.analysis.domain import AnalysisInput, EstimateOutcome, GenerationError
 from scope_guard.modules.analysis.use_cases import interface_locale, size_guard
-from scope_guard.modules.change_orders.estimation import commercial_signature
 
 
 class EstimateChangeOrder:

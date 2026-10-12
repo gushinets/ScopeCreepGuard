@@ -6,10 +6,10 @@ import json
 import math
 import re
 
-from scope_guard.core.js_compat import stringify, utf16_length
-from scope_guard.modules.analysis.domain import DraftProofBinding, DraftProofClaims, freeze, thaw
-from scope_guard.modules.analysis.normalization import parse_snapshot
-from scope_guard.modules.analysis.serialization import analysis_to_wire
+from scope_guard.domain.analysis.domain import DraftProofBinding, DraftProofClaims, freeze, thaw
+from scope_guard.domain.analysis.normalization import parse_snapshot
+from scope_guard.domain.analysis.serialization import analysis_to_wire
+from scope_guard.domain.shared.js_compat import stringify, utf16_length
 
 VERSION = "scg-draft-proof-v1"
 UUID_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)

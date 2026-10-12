@@ -13,13 +13,13 @@ from scope_guard.api.contracts import (
 from scope_guard.api.dependencies import current_owner, draft_service
 from scope_guard.api.draft_input import parse_document, parse_envelope, verified_command
 from scope_guard.api.errors import ApiError, ErrorCode, log_unexpected, read_json_object
-from scope_guard.core.js_compat import stringify
+from scope_guard.domain.analysis.domain import DraftProofBinding
+from scope_guard.domain.drafts.serialization import created_to_wire, draft_to_wire, summary_to_wire
+from scope_guard.domain.drafts.values import StoredDraft
+from scope_guard.domain.shared.js_compat import stringify
 from scope_guard.infrastructure.auth.draft_proofs import UUID_PATTERN, DraftProofs
-from scope_guard.modules.analysis.domain import DraftProofBinding
 from scope_guard.modules.drafts.schemas import CreateDraftRequest, UpdateDraftRequest
-from scope_guard.modules.drafts.serialization import created_to_wire, draft_to_wire, summary_to_wire
 from scope_guard.modules.drafts.use_cases import DraftError, DraftService
-from scope_guard.modules.drafts.values import StoredDraft
 
 router = APIRouter(
     prefix="/api/drafts",

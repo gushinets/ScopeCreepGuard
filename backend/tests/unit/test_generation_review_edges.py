@@ -9,11 +9,11 @@ import httpx
 import pytest
 
 from scope_guard.core.contracts import Industry
-from scope_guard.infrastructure.llm.language import normalize_language, supported_language
+from scope_guard.domain.shared.language import normalize_language, supported_language
 from scope_guard.infrastructure.llm.openai import OpenAIGeneration
-from scope_guard.modules.analysis.domain import AnalysisInput, GenerationContext, GenerationError
-from scope_guard.modules.analysis.normalization import parse_analysis
-from scope_guard.modules.projects.domain import (
+from scope_guard.domain.analysis.domain import AnalysisInput, GenerationContext, GenerationError
+from scope_guard.domain.analysis.normalization import parse_analysis
+from scope_guard.domain.projects.domain import (
     AgreedScope,
     OptionalClient,
     PricingConfiguration,
@@ -131,7 +131,7 @@ def test_huge_model_number_is_invalid(field):
 @pytest.mark.parametrize("field", ["confidence", "estimatedHours"])
 def test_huge_submitted_material_number_is_body_error_before_provider(field):
     from scope_guard.api.generation_input import parse_materials
-    from scope_guard.modules.analysis.domain import LocaleResolution
+    from scope_guard.domain.analysis.domain import LocaleResolution
 
     raw = copy.deepcopy(FIXTURE["analysisFixture"])
     (raw if field == "confidence" else raw["changeOrder"])[field] = 10**400

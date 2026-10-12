@@ -7,7 +7,7 @@ from scope_guard.api.contracts import ErrorResponse, EvaluationEnvelope
 from scope_guard.api.dependencies import current_owner, evaluation_service
 from scope_guard.api.errors import read_json_object
 from scope_guard.api.evaluation_input import parse_evaluation
-from scope_guard.modules.evaluations.serialization import serialize_jsonl
+from scope_guard.domain.evaluations.serialization import serialize_jsonl
 from scope_guard.modules.evaluations.use_cases import EvaluationService
 
 router = APIRouter(

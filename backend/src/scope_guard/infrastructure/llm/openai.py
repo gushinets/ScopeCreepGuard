@@ -7,14 +7,14 @@ from contextvars import ContextVar
 
 from openai import AsyncOpenAI
 
-from scope_guard.core.js_compat import stringify, trim
+from scope_guard.domain.analysis.domain import ABSENT, GenerationError
+from scope_guard.domain.analysis.normalization import parse_analysis, parse_materials
+from scope_guard.domain.analysis.serialization import analysis_to_wire
+from scope_guard.domain.shared.js_compat import stringify, trim
 from scope_guard.infrastructure.llm.prompts.analysis_v1 import analysis_messages, reply_messages
 from scope_guard.infrastructure.llm.prompts.client_materials_v1 import material_messages
 from scope_guard.infrastructure.llm.retry import invoke
 from scope_guard.infrastructure.llm.schemas import ANALYSIS_SCHEMA, MATERIALS_SCHEMA
-from scope_guard.modules.analysis.domain import ABSENT, GenerationError
-from scope_guard.modules.analysis.normalization import parse_analysis, parse_materials
-from scope_guard.modules.analysis.serialization import analysis_to_wire
 
 correlation_id: ContextVar[str] = ContextVar("generation_correlation_id", default="")
 logger = logging.getLogger("scope_guard.generation")

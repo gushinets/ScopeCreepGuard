@@ -1,20 +1,15 @@
 from collections.abc import Awaitable, Callable
 from uuid import UUID
 
-from scope_guard.modules.projects.domain import (
+from scope_guard.domain.projects.domain import (
     ManualHistoryInput,
     Project,
     ProjectCard,
     ProjectDetail,
     ProjectHistoryEntry,
 )
-from scope_guard.modules.projects.repository import ProjectWork
-
-
-class ProjectError(Exception):
-    def __init__(self, code: str, status: int = 400):
-        self.code, self.status = "errors." + code, status
-        super().__init__(self.code)
+from scope_guard.domain.projects.errors import ProjectError
+from scope_guard.domain.projects.repository import ProjectWork
 
 
 def identifier(value: str) -> UUID:

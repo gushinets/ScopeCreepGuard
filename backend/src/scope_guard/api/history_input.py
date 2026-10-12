@@ -3,7 +3,7 @@ import re
 from scope_guard.api.errors import ApiError, ErrorCode
 from scope_guard.api.project_input import trim
 from scope_guard.core.contracts import Verdict
-from scope_guard.modules.projects.domain import ManualHistoryInput
+from scope_guard.domain.projects.domain import ManualHistoryInput
 
 
 def parse_history(body: dict) -> ManualHistoryInput:
