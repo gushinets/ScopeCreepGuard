@@ -31,7 +31,7 @@ operations and invalid null bodies. Per-slice gates add their own edge/failure
 and frontend-consumption evidence; this corpus does not replace those tests.
 
 ```text
-node scripts/verify-any640.mjs --suite contracts
+node ci/scripts/check-gateways.mjs --suite contracts
 ```
 
 Only an intentional reviewed baseline change uses `--update-fixtures`. Never

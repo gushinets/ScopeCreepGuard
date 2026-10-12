@@ -1,4 +1,8 @@
-openapi.json is generated from FastAPI, never manually authored. From backend run uv run python scripts/export_openapi.py --output ../contracts/openapi.json; use --check with the same path to verify freshness. All 24 public API operations are implemented by Python; Next.js handlers only forward them.
+The generated FastAPI OpenAPI snapshot lives at `../ci/contracts/openapi.json`,
+not in this compatibility-fixture directory. From `backend/`, run
+`uv run python scripts/export_openapi.py --output ../ci/contracts/openapi.json`;
+use `--check` with the same path to verify freshness. All 24 public API
+operations are implemented by Python; Next.js handlers only forward them.
 
 ANY-641 migration matrix:
 

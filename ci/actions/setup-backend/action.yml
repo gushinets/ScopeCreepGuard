@@ -1,0 +1,13 @@
+name: Setup backend
+description: Install the pinned Python and uv toolchain used by the backend checks.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - uses: astral-sh/setup-uv@v6
+      with:
+        version: "0.11.19"
+        enable-cache: true
+        cache-dependency-glob: uv.lock

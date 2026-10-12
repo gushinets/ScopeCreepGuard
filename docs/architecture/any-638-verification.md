@@ -40,7 +40,7 @@ always selected through Corepack at the manifest's pinned 10.34.1 version.
 | `uv run pytest -q --basetemp .pytest_cache/any638-<unique-id>` | 8 passed |
 | `uv run ruff check .` | Passed |
 | `uv run ruff format --check .` | Passed |
-| `uv run python scripts/export_openapi.py --check ../contracts/openapi.json` | Passed |
+| `uv run python scripts/export_openapi.py --check ../ci/contracts/openapi.json` | Passed |
 | Local/legacy/Dokploy Compose validation | Passed, including resolved contexts and migration dependencies |
 | Actual backend startup and HTTP liveness | 200 with exactly `{"status":"ok"}` |
 | Standalone frontend through existing entrypoint | Started and passed HTTP smoke checks |

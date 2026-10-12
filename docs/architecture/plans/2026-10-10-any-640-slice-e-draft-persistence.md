@@ -125,7 +125,7 @@ uv run --no-sync pytest --require-integration --basetemp .pytest_cache/any640_e_
 uv run --no-sync ruff check .
 uv run --no-sync ruff format --check .
 uv run --no-sync mypy src/scope_guard
-uv run --no-sync python scripts/export_openapi.py --check ../contracts/openapi.json
+uv run --no-sync python scripts/export_openapi.py --check ../ci/contracts/openapi.json
 ```
 Frontend cwd (synthetic configuration):
 ```text
@@ -139,11 +139,11 @@ node --test scripts/docker-entrypoint.test.mjs
 ```
 Root:
 ```text
-node scripts/verify-any640.mjs --suite frontend
-node scripts/verify-any640.mjs --suite contracts
-node scripts/verify-any640.mjs --suite drafts-gateway
-node scripts/verify-any640.mjs --suite generation-gateway
-node scripts/verify-any640.mjs --suite containers
+node ci/scripts/check-gateways.mjs --suite frontend
+node ci/scripts/check-gateways.mjs --suite contracts
+node ci/scripts/check-gateways.mjs --suite drafts-gateway
+node ci/scripts/check-gateways.mjs --suite generation-gateway
+node ci/scripts/check-gateways.mjs --suite containers
 docker compose -f compose.yaml --profile app config --quiet
 docker compose -f docker-compose.yml --profile app config --quiet
 docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet

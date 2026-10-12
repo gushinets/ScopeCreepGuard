@@ -44,9 +44,9 @@ Only owned disposable PostgreSQL containers/databases and temporary files were u
 | Review regression group | `.venv/Scripts/python.exe -m pytest tests/unit/test_document_service.py tests/unit/test_scope_extraction.py tests/api/test_python_services.py tests/unit/test_http_contracts.py -q --basetemp .pytest_cache/any641-review2 -p no:cacheprovider` (`backend`) | 48 passed, 9.66s |
 | Ruff | `.venv/Scripts/python.exe -m ruff check .` and `-m ruff format --check .` (`backend`) | Passed; 173 files formatted |
 | Mypy | `.venv/Scripts/python.exe -m mypy src/scope_guard` (`backend`) | Passed, 94 sources; inherited untyped-body notes |
-| OpenAPI | `.venv/Scripts/python.exe scripts/export_openapi.py --check ../contracts/openapi.json` (`backend`) | Passed |
+| OpenAPI | `.venv/Scripts/python.exe scripts/export_openapi.py --check ../ci/contracts/openapi.json` (`backend`) | Passed |
 | Affected frontend | `corepack pnpm exec vitest run components/scope-guard/project-form.test.tsx components/scope-guard/change-order.test.tsx lib/api/services.test.ts lib/api/forward.test.ts` (`frontend`) | 27 passed across 4 files, 5.83s |
-| Complete frontend + contracts | `$env:VITEST_MAX_WORKERS='2'; node scripts/verify-any640.mjs --suite frontend` (root) | 283 passed across 40 files, 31.37s; 20 Python compatibility tests passed, 3.19s |
+| Complete frontend + contracts | `$env:VITEST_MAX_WORKERS='2'; node ci/scripts/check-gateways.mjs --suite frontend` (root) | 283 passed across 40 files, 31.37s; 20 Python compatibility tests passed, 3.19s |
 | Generated frontend contracts | `corepack pnpm api:types:check` (`frontend`) | Passed |
 | Types | `corepack pnpm exec next typegen` then `corepack pnpm exec tsc --noEmit` (`frontend`) | Passed; separate type check is required because inherited build skips it |
 | Lint | `corepack pnpm lint` (`frontend`) | 0 errors; inherited unused `_s` warning in lib/llm/schema.test.ts |

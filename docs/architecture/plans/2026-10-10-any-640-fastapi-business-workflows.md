@@ -245,7 +245,7 @@ uv run pytest --require-integration
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy src/scope_guard
-uv run python scripts/export_openapi.py --check ../contracts/openapi.json
+uv run python scripts/export_openapi.py --check ../ci/contracts/openapi.json
 ```
 
 Add locked mypy dev dependency/configuration. Frontend commands (frontend cwd, owned disposable process config):
@@ -270,9 +270,9 @@ docker compose -f compose.yaml --profile app config --quiet
 docker compose -f docker-compose.yml --profile app config --quiet
 docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet
 docker build -t scope-guard-backend:any640 backend
-node scripts/verify-any640.mjs --suite contracts
-node scripts/verify-any640.mjs --suite containers
-node scripts/verify-any640.mjs --suite e2e
+node ci/scripts/check-gateways.mjs --suite contracts
+node ci/scripts/check-gateways.mjs --suite containers
+node ci/scripts/check-gateways.mjs --suite e2e
 git diff --check
 git diff --cached --check
 git status --short

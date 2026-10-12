@@ -12,7 +12,7 @@ uv run ruff check . ../apps/api
 uv run ruff format --check . ../apps/api
 uv run mypy src/scope_guard ../apps/api/src/scope_guard_api
 uv run mypy --platform win32 src/scope_guard ../apps/api/src/scope_guard_api
-uv run python scripts/export_openapi.py --check ../contracts/openapi.json
+uv run python scripts/export_openapi.py --check ../ci/contracts/openapi.json
 ```
 
 Domain contains immutable types/rules and explicit repository contracts. Services

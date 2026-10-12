@@ -36,9 +36,9 @@ unchanged. All third-party lockfile versions were compared and preserved.
 | Backend `uv run --no-sync pytest --require-integration -q --basetemp .pytest_cache/boundaries-final` | **447 passed**, one inherited Starlette deprecation warning; disposable PostgreSQL/Compose only |
 | Root `uv run --no-sync ruff check backend apps/api` and `ruff format --check backend apps/api` | Passed; 259 Python files formatted |
 | Root Mypy over `backend/src/scope_guard apps/api/src/scope_guard_api`, normal and `--platform win32` | Both passed, 167 sources; existing untyped-body notes retained |
-| Backend export_openapi.py `--check ../contracts/openapi.json` | Passed; no contract content changes |
+| Backend export_openapi.py `--check ../ci/contracts/openapi.json` | Passed; no contract content changes |
 | Frontend frozen pnpm install | Passed using pinned 10.34.1 |
-| Root `node scripts/verify-any640.mjs --suite frontend` | **283 frontend tests / 40 files plus 20 compatibility checks passed** |
+| Root `node ci/scripts/check-gateways.mjs --suite frontend` | **283 frontend tests / 40 files plus 20 compatibility checks passed** |
 | Frontend `pnpm lint` | Passed; one inherited unused-variable warning |
 | Frontend `pnpm api:types:check`, `pnpm exec next typegen`, `pnpm exec tsc --noEmit` | Passed; generated type content unchanged, canonical LF checkout declared |
 | Frontend `pnpm build` | Passed, all existing routes compiled/generated |

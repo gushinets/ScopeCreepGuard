@@ -93,7 +93,7 @@ TEST_DATABASE_URL unset for this review; use no local environment files.
 
 Backend commands from backend: `uv sync --locked`, `uv run pytest`,
 `uv run ruff check .`, `uv run ruff format --check .`, and
-`uv run python scripts/export_openapi.py --check ../contracts/openapi.json`.
+`uv run python scripts/export_openapi.py --check ../ci/contracts/openapi.json`.
 On this workstation pytest uses a unique `.pytest_cache/any638-review-<id>`
 basetemp. Current review observed 8 tests passing and Ruff checks passing;
 generated OpenAPI freshness passed. All three Compose definitions validated.

@@ -15,7 +15,7 @@ apps/api/          FastAPI composition root, Dockerfile and guarded entrypoint
 apps/worker/       Future service-only worker contract
 backend/           Pure domain, services, persistence, integrations and Alembic
 pyproject.toml     Python workspace; root uv.lock pins both packages
-contracts/         Generated FastAPI OpenAPI contract
+ci/contracts/      Generated FastAPI OpenAPI contract snapshot
 tests/e2e/         Full user-journey verification
 docs/architecture/ Architecture plans and verification records
 compose.yaml       Default PostgreSQL, API and frontend stack
@@ -112,7 +112,7 @@ uv run pytest --require-integration
 uv run ruff check . ../apps/api
 uv run ruff format --check . ../apps/api
 uv run mypy src/scope_guard ../apps/api/src/scope_guard_api
-uv run python scripts/export_openapi.py --check ../contracts/openapi.json
+uv run python scripts/export_openapi.py --check ../ci/contracts/openapi.json
 ```
 
 Integration tests provision owned PostgreSQL 17 containers and unique databases.
