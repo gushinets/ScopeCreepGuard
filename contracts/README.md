@@ -9,3 +9,7 @@ ANY-641 migration matrix:
 | POST /api/scope/extract | Authenticated bounded temporary TXT/Markdown/PDF extraction and structured warnings | Upload/cancel, localized feedback, editable result before save |
 
 Currency selection preserves entered amounts; there is no conversion endpoint or rate provider.
+
+OpenAPI is generated from apps/api scope_guard_api.main.create_app. Synchronize
+the root uv workspace first; generation imports the app without running startup
+migrations. Architecture relocation must preserve contract/type equality.

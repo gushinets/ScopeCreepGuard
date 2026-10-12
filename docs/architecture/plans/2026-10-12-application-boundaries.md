@@ -147,3 +147,5 @@ docs/architecture/application-boundaries-verification.md. Keep AGENT.md ignored.
 - Services/adapters: 375 existing unit/API tests passed; read-port follow-up 48 passed. Domain/service architecture checks and Mypy passed. Models retain exact metadata; read SQL extracted without schema changes.
 
 - API composition: all four architectural gates passed; full backend suite 424 passed on disposable PostgreSQL. OpenAPI equality, both-package Mypy and root-context API image build passed. Docker is available outside the sandbox.
+
+- Container startup: advisory-lock red/green proved waiting beyond ten seconds; rollback and process-death release passed. Startup unit tests, detached mapping and failed-write rollback passed. Isolated profile-free Compose startup/auth/restart/replicas/failure passed. SIGTERM and SIGINT cleanup passed after correcting inherited ignored SIGINT behavior. API service override regressions passed and OpenAPI remains unchanged. Frontend 283 plus 20 compatibility checks passed; lint/types/build/entrypoint checks passed after canonical LF type regeneration.

@@ -1,7 +1,7 @@
 SQLAlchemy models and Alembic metadata are the canonical schema source. Run the
 guarded migration command from `backend/` with an explicitly named URL variable:
 
-`python -m scope_guard.infrastructure.database.cli migrate --database-url-env SCOPE_GUARD_DATABASE_URL`
+`python -m scope_guard.database.cli migrate --database-url-env SCOPE_GUARD_DATABASE_URL`
 
 The command initializes empty databases, discovers known Alembic revisions from
 the local script lineage, upgrades them to the configured head, and validates
@@ -15,5 +15,5 @@ A compatible legacy Drizzle database has no `alembic_version` table and
 additionally requires `--adopt-legacy`; ledger and immutable baseline validation
 occur before and after table locks and before the baseline stamp commits. Unknown
 schemas, ledgers, malformed/multiple/foreign/unknown Alembic revisions fail
-without a stamp. Repeated runs at head are safe. Application startup never runs
-migrations or `create_all`, and destructive baseline downgrade is refused.
+without a stamp. Repeated runs at head are safe. Application import/lifespan never runs
+migrations or `create_all`; the API container entrypoint runs guarded migrations, and destructive baseline downgrade is refused.

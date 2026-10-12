@@ -16,13 +16,12 @@ RUN useradd --system --uid 10001 --create-home scopeguard
 COPY --from=builder --chown=scopeguard:scopeguard /app/.venv /app/.venv
 COPY --chown=scopeguard:scopeguard backend/alembic.ini ./alembic.ini
 COPY --chown=scopeguard:scopeguard backend/alembic ./alembic
+COPY --chown=scopeguard:scopeguard apps/api/entrypoint.sh /app/entrypoint.sh
 USER scopeguard
-
-FROM runtime AS migration
-CMD ["python", "-m", "scope_guard.database.cli", "migrate", "--database-url-env", "SCOPE_GUARD_DATABASE_URL"]
 
 FROM runtime AS runner
 EXPOSE 8000
-HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=10s --timeout=5s --start-period=24h --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3)"
+ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
 CMD ["uvicorn", "scope_guard_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
