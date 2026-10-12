@@ -6,7 +6,7 @@ pytestmark = pytest.mark.integration
 
 
 def test_current_drizzle_matches_frozen_manifest(disposable_url):
-    from scope_guard.infrastructure.database.schema_verification import verify_baseline
+    from scope_guard.database.schema_verification import verify_baseline
 
     replay_drizzle(disposable_url)
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
@@ -42,8 +42,8 @@ def test_current_drizzle_matches_frozen_manifest(disposable_url):
     ],
 )
 def test_schema_drift_rejects_adoption_without_ledger_changes(disposable_url, ddl):
-    from scope_guard.infrastructure.database.migrations import adopt_baseline
-    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+    from scope_guard.database.migrations import adopt_baseline
+    from scope_guard.database.schema_verification import SchemaCompatibilityError
 
     replay_drizzle(disposable_url)
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))

@@ -12,7 +12,7 @@ import pytest
     ],
 )
 def test_url_target_overrides_are_rejected(query):
-    from scope_guard.infrastructure.database.session import normalize_url
+    from scope_guard.database.session import normalize_url
 
     with pytest.raises(ValueError, match="unsupported_database_url"):
         normalize_url("postgresql://scg_test:x@127.0.0.1/scg_test_safe?" + query)
@@ -20,7 +20,7 @@ def test_url_target_overrides_are_rejected(query):
 
 @pytest.mark.parametrize("operation", ["upgrade-empty", "adopt-baseline"])
 def test_mutation_never_implicitly_uses_application_configuration(monkeypatch, capsys, operation):
-    from scope_guard.infrastructure.database.cli import main
+    from scope_guard.database.cli import main
 
     monkeypatch.setenv("DATABASE_URL", "postgresql://owner:secret@remote/production")
     assert main([operation, "--database-url-env", "DATABASE_URL", "--disposable"]) == 1
@@ -28,7 +28,7 @@ def test_mutation_never_implicitly_uses_application_configuration(monkeypatch, c
 
 
 def test_operational_migrate_requires_explicit_url_environment(monkeypatch, capsys):
-    from scope_guard.infrastructure.database.cli import main
+    from scope_guard.database.cli import main
 
     monkeypatch.delenv("SCOPE_GUARD_DATABASE_URL", raising=False)
     assert main(["migrate", "--database-url-env", "SCOPE_GUARD_DATABASE_URL"]) == 1
@@ -36,7 +36,7 @@ def test_operational_migrate_requires_explicit_url_environment(monkeypatch, caps
 
 
 def test_operational_migrate_delegates_with_explicit_adoption(monkeypatch, capsys):
-    from scope_guard.infrastructure.database import cli
+    from scope_guard.database import cli
 
     monkeypatch.setenv(
         "SCOPE_GUARD_DATABASE_URL", "postgresql://scopeguard:x@postgres/scope_creep_guard"
@@ -110,7 +110,7 @@ def test_draft_request_is_trimmed_and_must_not_be_blank():
 @pytest.mark.parametrize("operation", ["upgrade-empty", "adopt-baseline"])
 @pytest.mark.parametrize("port", ["", ":5432"])
 def test_inherited_pgport_is_rejected_before_engine_creation(monkeypatch, capsys, operation, port):
-    from scope_guard.infrastructure.database import cli
+    from scope_guard.database import cli
 
     monkeypatch.setenv(
         "SCOPE_GUARD_TEST_DATABASE_URL", f"postgresql://scg_test:x@localhost{port}/scg_test_safe"

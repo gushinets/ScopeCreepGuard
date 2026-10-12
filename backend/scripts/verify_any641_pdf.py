@@ -9,8 +9,8 @@ from pathlib import Path
 from pypdf import PdfReader
 
 from scope_guard.api.draft_input import parse_editor
-from scope_guard.infrastructure.documents.renderer import render_pdf
-from scope_guard.services.documents.service import prepare_document
+from scope_guard.integrations.documents.renderer import render_pdf
+from scope_guard.integrations.documents.preparation import prepare_document
 
 ROOT = Path(__file__).parents[2]
 

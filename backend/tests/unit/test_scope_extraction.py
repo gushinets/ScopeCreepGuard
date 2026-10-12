@@ -4,8 +4,8 @@ import pytest
 def test_pdf_limit_applies_after_trimming_empty_pages_and_nuls(monkeypatch):
     from types import SimpleNamespace
 
-    from scope_guard.infrastructure.scope_readers import pdf
-    from scope_guard.services.scope_extraction.service import extract
+    from scope_guard.integrations.documents.scope_readers import pdf
+    from scope_guard.integrations.documents.extraction import extract
 
     monkeypatch.setattr(
         pdf,
@@ -24,7 +24,7 @@ def test_pdf_limit_applies_after_trimming_empty_pages_and_nuls(monkeypatch):
 
 
 def test_utf8_bom_newlines_and_nul_warning():
-    from scope_guard.services.scope_extraction.service import extract
+    from scope_guard.integrations.documents.extraction import extract
 
     result = extract("scope.MD", "text/markdown", b"\xef\xbb\xbfHello\r\nworld\x00 ")
     assert result.text == "Hello\nworld"
@@ -45,7 +45,7 @@ def test_utf8_bom_newlines_and_nul_warning():
 )
 def test_explicit_extraction_failures(name, mime, data, code, status):
     from scope_guard.services.scope_extraction.models import ExtractionError
-    from scope_guard.services.scope_extraction.service import extract
+    from scope_guard.integrations.documents.extraction import extract
 
     with pytest.raises(ExtractionError) as error:
         extract(name, mime, data)
@@ -58,7 +58,7 @@ def test_scanned_and_encrypted_pdfs():
     from pypdf import PdfWriter
 
     from scope_guard.services.scope_extraction.models import ExtractionError
-    from scope_guard.services.scope_extraction.service import extract
+    from scope_guard.integrations.documents.extraction import extract
 
     writer = PdfWriter()
     writer.add_blank_page(595, 842)
@@ -73,7 +73,8 @@ def test_scanned_and_encrypted_pdfs():
 
 def test_exact_text_and_upload_limits():
     from scope_guard.services.scope_extraction.models import ExtractionError
-    from scope_guard.services.scope_extraction.service import MAX_FILE_BYTES, extract
+    from scope_guard.integrations.documents.extraction import extract
+    from scope_guard.services.scope_extraction.service import MAX_FILE_BYTES
 
     assert len(extract("scope.txt", "", b"x" * 100_000).text) == 100_000
     assert extract("scope.md", "application/octet-stream", b"\xef\xbb\xbftext").text == "text"
@@ -92,7 +93,7 @@ def test_mixed_pdf_and_page_limit():
     from reportlab.pdfgen.canvas import Canvas
 
     from scope_guard.services.scope_extraction.models import ExtractionError
-    from scope_guard.services.scope_extraction.service import extract
+    from scope_guard.integrations.documents.extraction import extract
 
     source = BytesIO()
     canvas = Canvas(source)
@@ -105,7 +106,7 @@ def test_mixed_pdf_and_page_limit():
     writer.write(output)
     result = extract("scope.pdf", "application/pdf", output.getvalue())
     assert "Editable scope" in result.text
-    assert result.warnings[0].page_numbers == [2]
+    assert result.warnings[0].page_numbers == (2,)
     for _ in range(199):
         writer.add_blank_page(595, 842)
     output = BytesIO()

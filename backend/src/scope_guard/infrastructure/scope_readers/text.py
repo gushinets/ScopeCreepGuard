@@ -1,8 +1,3 @@
-from scope_guard.services.scope_extraction.models import ExtractionError
+"""Temporary relocation bridge."""
 
-
-def read_text(data: bytes) -> str:
-    try:
-        return data.decode("utf-8-sig")
-    except UnicodeError:
-        raise ExtractionError("scopeFileEncoding") from None
+from scope_guard.integrations.documents.scope_readers.text import *  # noqa: F403

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from scope_guard.infrastructure.database.session import DatabaseUnavailableError
+from scope_guard.database.session import DatabaseUnavailableError
 
 router = APIRouter(prefix="/health", tags=["health"])
 

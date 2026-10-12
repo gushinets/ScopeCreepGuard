@@ -10,9 +10,9 @@ pytestmark = pytest.mark.integration
 
 
 def test_empty_upgrade_matches_drizzle_and_metadata(disposable_url, postgres_server):
-    from scope_guard.infrastructure.database.migrations import upgrade_empty
-    from scope_guard.infrastructure.database.models import Base
-    from scope_guard.infrastructure.database.schema_verification import (
+    from scope_guard.database.migrations import upgrade_empty
+    from scope_guard.database.models import Base
+    from scope_guard.database.schema_verification import (
         inspect_schema,
         verify_baseline,
     )
@@ -39,7 +39,7 @@ def test_empty_upgrade_matches_drizzle_and_metadata(disposable_url, postgres_ser
 
 
 def test_populated_adoption_preserves_every_row_and_old_ledger(disposable_url):
-    from scope_guard.infrastructure.database.migrations import adopt_baseline
+    from scope_guard.database.migrations import adopt_baseline
 
     replay_drizzle(disposable_url)
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
@@ -112,8 +112,8 @@ def test_populated_adoption_preserves_every_row_and_old_ledger(disposable_url):
 
 
 def test_partial_schema_cannot_be_upgraded(disposable_url):
-    from scope_guard.infrastructure.database.migrations import upgrade_empty
-    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+    from scope_guard.database.migrations import upgrade_empty
+    from scope_guard.database.schema_verification import SchemaCompatibilityError
 
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
     try:
@@ -130,7 +130,7 @@ def test_partial_schema_cannot_be_upgraded(disposable_url):
 
 
 def test_guarded_migrate_initializes_empty_database_and_is_idempotent(disposable_url):
-    from scope_guard.infrastructure.database.migrations import BASELINE, migrate
+    from scope_guard.database.migrations import BASELINE, migrate
 
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
     try:
@@ -149,7 +149,7 @@ def test_guarded_migrate_upgrades_known_baseline_to_test_only_future_head(
     disposable_url, monkeypatch, tmp_path
 ):
     """A known baseline must advance through local descendants, not be rejected."""
-    from scope_guard.infrastructure.database import migrations
+    from scope_guard.database import migrations
 
     root = Path(__file__).resolve().parents[2]
     future_alembic = tmp_path / "alembic"
@@ -194,8 +194,8 @@ def test_guarded_migrate_upgrades_known_baseline_to_test_only_future_head(
 )
 def test_guarded_migrate_rejects_invalid_alembic_version_state(disposable_url, revisions, reason):
     """Invalid version ledgers must fail before the guarded runner upgrades anything."""
-    from scope_guard.infrastructure.database.migrations import migrate
-    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+    from scope_guard.database.migrations import migrate
+    from scope_guard.database.schema_verification import SchemaCompatibilityError
 
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
     try:
@@ -218,8 +218,8 @@ def test_guarded_migrate_rejects_invalid_alembic_version_state(disposable_url, r
 
 
 def test_guarded_migrate_requires_explicit_legacy_adoption(disposable_url):
-    from scope_guard.infrastructure.database.migrations import BASELINE, migrate
-    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+    from scope_guard.database.migrations import BASELINE, migrate
+    from scope_guard.database.schema_verification import SchemaCompatibilityError
 
     replay_drizzle(disposable_url)
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
@@ -243,8 +243,8 @@ def test_guarded_migrate_requires_explicit_legacy_adoption(disposable_url):
 
 
 def test_guarded_migrate_rejects_unknown_non_public_schema(disposable_url):
-    from scope_guard.infrastructure.database.migrations import migrate
-    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+    from scope_guard.database.migrations import migrate
+    from scope_guard.database.schema_verification import SchemaCompatibilityError
 
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
     try:
@@ -281,8 +281,8 @@ def test_guarded_migrate_rejects_all_user_defined_objects_before_empty_initializ
     disposable_url, statements
 ):
     """Unknown catalog objects must never be classified as an empty database."""
-    from scope_guard.infrastructure.database.migrations import migrate
-    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+    from scope_guard.database.migrations import migrate
+    from scope_guard.database.schema_verification import SchemaCompatibilityError
 
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
     try:
@@ -301,8 +301,8 @@ def test_guarded_migrate_rejects_all_user_defined_objects_before_empty_initializ
 
 
 def test_guarded_migrate_rejects_legacy_ledger_hash_drift(disposable_url):
-    from scope_guard.infrastructure.database.migrations import migrate
-    from scope_guard.infrastructure.database.schema_verification import SchemaCompatibilityError
+    from scope_guard.database.migrations import migrate
+    from scope_guard.database.schema_verification import SchemaCompatibilityError
 
     replay_drizzle(disposable_url)
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))

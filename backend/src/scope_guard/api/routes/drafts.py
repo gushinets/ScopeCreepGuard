@@ -17,9 +17,9 @@ from scope_guard.domain.analysis.domain import DraftProofBinding
 from scope_guard.domain.drafts.serialization import created_to_wire, draft_to_wire, summary_to_wire
 from scope_guard.domain.drafts.values import StoredDraft
 from scope_guard.domain.shared.js_compat import stringify
-from scope_guard.infrastructure.auth.draft_proofs import UUID_PATTERN, DraftProofs
+from scope_guard.integrations.auth.draft_proofs import UUID_PATTERN, DraftProofs
 from scope_guard.modules.drafts.schemas import CreateDraftRequest, UpdateDraftRequest
-from scope_guard.modules.drafts.use_cases import DraftError, DraftService
+from scope_guard.services.drafts.use_cases import DraftError, DraftService
 
 router = APIRouter(
     prefix="/api/drafts",

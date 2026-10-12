@@ -10,8 +10,8 @@ from sqlalchemy import delete, func, select
 
 from scope_guard.api.dependencies import auth_service
 from scope_guard.core.config import Settings
-from scope_guard.infrastructure.auth.passwords import Passwords
-from scope_guard.infrastructure.database.models import UserRow
+from scope_guard.integrations.auth.passwords import Passwords
+from scope_guard.database.models import UserRow
 from scope_guard.main import create_app
 
 pytestmark = pytest.mark.integration

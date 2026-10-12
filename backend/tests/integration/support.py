@@ -115,7 +115,7 @@ def replay_drizzle(url):
 
 def prepare_alembic(url):
     """Initialize an owned disposable database through the active migration authority."""
-    from scope_guard.infrastructure.database.migrations import migrate
+    from scope_guard.database.migrations import migrate
 
     engine = create_engine(url.replace("postgresql://", "postgresql+psycopg://"))
     try:

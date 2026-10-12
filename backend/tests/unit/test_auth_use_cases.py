@@ -1,6 +1,6 @@
 import pytest
 
-from scope_guard.modules.auth.use_cases import AuthError, credentials
+from scope_guard.services.auth.use_cases import AuthError, credentials
 
 
 def test_credentials_match_javascript_whitespace_utf16_and_untrimmed_password():

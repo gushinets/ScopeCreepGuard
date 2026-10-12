@@ -18,7 +18,7 @@ import httpx
 from pypdf import PdfReader
 from verify_any640 import DisposablePostgres, auth_server
 
-from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
+from scope_guard.integrations.auth.draft_proofs import DraftProofs
 from scope_guard.domain.analysis.domain import DraftProofBinding, DraftProofClaims, freeze
 from scope_guard.domain.analysis.normalization import parse_snapshot
 

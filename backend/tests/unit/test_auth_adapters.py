@@ -12,8 +12,8 @@ FIXTURE = ROOT / "contracts/compatibility/any-640/auth.json"
 
 
 def test_bidirectional_jose_session_and_bcryptjs_hashes():
-    from scope_guard.infrastructure.auth.passwords import Passwords
-    from scope_guard.infrastructure.auth.sessions import Sessions
+    from scope_guard.integrations.auth.passwords import Passwords
+    from scope_guard.integrations.auth.sessions import Sessions
 
     fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
     codec = Sessions(
@@ -48,13 +48,13 @@ def test_bidirectional_jose_session_and_bcryptjs_hashes():
 
 @pytest.mark.parametrize("token", ["", "broken", "a.b.c", "eyJhbGciOiJub25lIn0.e30."])
 def test_sessions_reject_malformed_tokens(token):
-    from scope_guard.infrastructure.auth.sessions import Sessions
+    from scope_guard.integrations.auth.sessions import Sessions
 
     assert Sessions("synthetic-secret", lambda: 100).verify(token) is None
 
 
 def test_session_expiry_and_tampering():
-    from scope_guard.infrastructure.auth.sessions import Sessions
+    from scope_guard.integrations.auth.sessions import Sessions
 
     fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
     key = "any640-synthetic-contract-secret-at-least-32-characters"
@@ -81,7 +81,7 @@ def test_session_expiry_and_tampering():
     ],
 )
 def test_signed_invalid_session_claims_and_headers(header, claims):
-    from scope_guard.infrastructure.auth.sessions import Sessions, encode
+    from scope_guard.integrations.auth.sessions import Sessions, encode
 
     signing_input = ".".join(encode(json.dumps(value).encode()) for value in (header, claims))
     token = (

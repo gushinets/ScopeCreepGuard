@@ -23,9 +23,9 @@ def test_runtime_normalization_is_immutable_and_serializes_fresh_json():
 
 
 def test_exact_analysis_reply_and_material_prompt_vectors():
-    from scope_guard.infrastructure.llm.prompts.analysis_v1 import analysis_messages, reply_messages
-    from scope_guard.infrastructure.llm.prompts.client_materials_v1 import material_messages
-    from scope_guard.infrastructure.llm.schemas import ANALYSIS_SCHEMA, MATERIALS_SCHEMA
+    from scope_guard.integrations.llm.prompts.analysis_v1 import analysis_messages, reply_messages
+    from scope_guard.integrations.llm.prompts.client_materials_v1 import material_messages
+    from scope_guard.integrations.llm.schemas import ANALYSIS_SCHEMA, MATERIALS_SCHEMA
 
     fixture = json.loads(FIXTURE.read_text(encoding="utf8"))
     for case in fixture["cases"]:

@@ -3,7 +3,7 @@
 import json
 import sys
 
-from scope_guard.infrastructure.auth.draft_proofs import DraftProofs
+from scope_guard.integrations.auth.draft_proofs import DraftProofs
 from scope_guard.domain.analysis.domain import DraftProofBinding, DraftProofClaims, freeze, thaw
 from scope_guard.domain.analysis.normalization import parse_snapshot
 from scope_guard.domain.analysis.serialization import analysis_to_wire

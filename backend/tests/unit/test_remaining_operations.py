@@ -125,7 +125,7 @@ def test_evaluation_parser_preserves_legacy_validation_order(body, status, code)
 )
 def test_evaluation_resolution(accuracy, human, ai, resolved):
     from scope_guard.api.evaluation_input import parse_evaluation
-    from scope_guard.modules.evaluations.use_cases import resolve_human_verdict
+    from scope_guard.services.evaluations.use_cases import resolve_human_verdict
 
     body = {
         "historyEntryId": HISTORY_ID,
@@ -140,7 +140,7 @@ def test_evaluation_resolution(accuracy, human, ai, resolved):
 
 def test_wrong_evaluation_rejects_the_ai_verdict():
     from scope_guard.api.evaluation_input import parse_evaluation
-    from scope_guard.modules.evaluations.use_cases import EvaluationError, resolve_human_verdict
+    from scope_guard.services.evaluations.use_cases import EvaluationError, resolve_human_verdict
 
     label = parse_evaluation(
         {

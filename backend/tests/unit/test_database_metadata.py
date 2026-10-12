@@ -3,7 +3,7 @@ from sqlalchemy.schema import CreateTable
 
 
 def test_metadata_preserves_all_tables_and_commercial_storage():
-    from scope_guard.infrastructure.database.models import Base, ProjectRow
+    from scope_guard.database.models import Base, ProjectRow
 
     assert set(Base.metadata.tables) == {
         "users",
@@ -20,7 +20,7 @@ def test_metadata_preserves_all_tables_and_commercial_storage():
 
 
 def test_metadata_uses_database_enum_values_and_preserves_cascades():
-    from scope_guard.infrastructure.database.models import DraftRow, EvaluationCaseRow
+    from scope_guard.database.models import DraftRow, EvaluationCaseRow
 
     accuracy = EvaluationCaseRow.__table__.c.accuracy.type
     assert accuracy.enums == ["correct", "wrong", "debatable"]

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from scope_guard.infrastructure.auth.draft_proofs import DraftProofs, decode, encode
+from scope_guard.integrations.auth.draft_proofs import DraftProofs, decode, encode
 from scope_guard.domain.analysis.domain import (
     ABSENT,
     DraftProofBinding,

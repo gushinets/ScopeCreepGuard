@@ -5,7 +5,7 @@ import json
 from sqlalchemy import create_engine
 from support import ROOT, DisposablePostgres, migration_digest, replay_drizzle
 
-from scope_guard.infrastructure.database.schema_verification import inspect_schema
+from scope_guard.database.schema_verification import inspect_schema
 
 if __name__ == "__main__":
     fixture = ROOT / "backend/tests/fixtures/legacy_drizzle"

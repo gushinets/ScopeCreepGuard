@@ -24,13 +24,13 @@ from scope_guard.api.routes.projects import router as projects_router
 from scope_guard.api.routes.technical import router as technical_router
 from scope_guard.core.config import Settings
 from scope_guard.core.logging import configure_logging
-from scope_guard.infrastructure.database.session import create_database
-from scope_guard.infrastructure.llm.openai import OpenAIGeneration
-from scope_guard.infrastructure.llm.rate_limit import GenerationLimiter
-from scope_guard.infrastructure.technical.operations import TechnicalOperations
-from scope_guard.modules.auth.use_cases import AuthError
-from scope_guard.modules.evaluations.use_cases import EvaluationError
-from scope_guard.modules.projects.use_cases import ProjectError
+from scope_guard.database.session import create_database
+from scope_guard.integrations.documents.technical.operations import TechnicalOperations
+from scope_guard.integrations.llm.openai import OpenAIGeneration
+from scope_guard.integrations.llm.rate_limit import GenerationLimiter
+from scope_guard.services.auth.use_cases import AuthError
+from scope_guard.services.evaluations.use_cases import EvaluationError
+from scope_guard.services.projects.use_cases import ProjectError
 
 
 def create_app(settings: Settings | None = None, clock: Callable[[], float] = time.time) -> FastAPI:
