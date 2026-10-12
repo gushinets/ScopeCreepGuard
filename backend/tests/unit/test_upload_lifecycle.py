@@ -4,8 +4,8 @@ from tempfile import SpooledTemporaryFile
 import pytest
 from starlette.requests import Request
 
-from scope_guard.api.errors import ApiError
-from scope_guard.api.technical_input import scope_upload
+from scope_guard_api.errors import ApiError
+from scope_guard_api.technical_input import scope_upload
 
 
 def test_bounded_chunked_upload_closes_spool(monkeypatch):

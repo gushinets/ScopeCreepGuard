@@ -5,7 +5,7 @@ import httpx
 
 def test_missing_or_unreachable_database_returns_sanitized_503():
     from scope_guard.core.config import Settings
-    from scope_guard.main import create_app
+    from scope_guard_api.main import create_app
 
     async def exercise(url):
         app = create_app(Settings(_env_file=None, database_url=url))

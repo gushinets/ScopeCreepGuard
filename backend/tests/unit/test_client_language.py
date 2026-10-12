@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from scope_guard.modules.change_orders.schemas import LABEL_KEYS, ClientMaterials
+from scope_guard_api.schemas.change_orders import LABEL_KEYS, ClientMaterials
 
 
 @pytest.mark.parametrize(

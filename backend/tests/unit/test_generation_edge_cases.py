@@ -16,7 +16,7 @@ from scope_guard.domain.analysis.domain import (
     thaw,
 )
 from scope_guard.domain.analysis.normalization import parse_analysis, parse_materials
-from scope_guard.modules.change_orders.schemas import LABEL_KEYS
+from scope_guard_api.schemas.change_orders import LABEL_KEYS
 
 FIXTURE = json.loads(
     (Path(__file__).parents[3] / "contracts/compatibility/any-640/generation.json").read_text(
@@ -173,7 +173,7 @@ def test_year_zero_leap_utc_normalization():
 
 
 def test_disconnect_cancels_and_awaits_work():
-    from scope_guard.api.cancellation import run_connected
+    from scope_guard_api.cancellation import run_connected
 
     async def run():
         entered, cleaned = asyncio.Event(), asyncio.Event()

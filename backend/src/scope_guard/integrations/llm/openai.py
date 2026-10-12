@@ -1,12 +1,11 @@
-"""Async Responses infrastructure. Logs contain only allowlisted metadata."""
+"""Async Responses adapter; logs contain allowlisted metadata."""
 
 import json
-import logging
 import time
-from contextvars import ContextVar
 
 from openai import AsyncOpenAI
 
+from scope_guard.core.telemetry import correlation_id, log_event
 from scope_guard.domain.analysis.domain import ABSENT, GenerationError
 from scope_guard.domain.analysis.normalization import parse_analysis, parse_materials
 from scope_guard.domain.analysis.serialization import analysis_to_wire
@@ -15,9 +14,6 @@ from scope_guard.integrations.llm.prompts.analysis_v1 import analysis_messages, 
 from scope_guard.integrations.llm.prompts.client_materials_v1 import material_messages
 from scope_guard.integrations.llm.retry import invoke
 from scope_guard.integrations.llm.schemas import ANALYSIS_SCHEMA, MATERIALS_SCHEMA
-
-correlation_id: ContextVar[str] = ContextVar("generation_correlation_id", default="")
-logger = logging.getLogger("scope_guard.generation")
 
 
 class GenerationOpenAI(AsyncOpenAI):
@@ -29,16 +25,6 @@ class GenerationOpenAI(AsyncOpenAI):
                 update={"json_data": stringify(options.json_data).encode("utf-8")}
             )
         return super()._build_request(options, retries_taken=retries_taken)
-
-
-def log_event(event: str, **fields):
-    # Callers supply internal operation names and numeric/bounded metadata only.
-    logger.info(
-        json.dumps(
-            {"event": event, "correlation_id": correlation_id.get(), **fields},
-            separators=(",", ":"),
-        )
-    )
 
 
 def analysis_fields(value, *, reply=False):

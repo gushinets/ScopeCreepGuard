@@ -40,7 +40,7 @@ def test_shared_rolling_window():
 
 
 def test_ordered_inputs_preserve_omission_and_null():
-    from scope_guard.api.generation_input import parse_analyze, parse_materials
+    from scope_guard_api.generation_input import parse_analyze, parse_materials
     from scope_guard.domain.analysis.domain import ABSENT, GenerationError
 
     with pytest.raises(GenerationError, match="clientLanguageUnsupported"):

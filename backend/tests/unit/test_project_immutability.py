@@ -5,9 +5,9 @@ from uuid import UUID
 
 import pytest
 
-from scope_guard.api.project_input import parse_project
-from scope_guard.api.project_output import project_to_wire
-from scope_guard.core.contracts import Industry, Verdict
+from scope_guard_api.project_input import parse_project
+from scope_guard_api.project_output import project_to_wire
+from scope_guard_api.schemas.shared import Industry, Verdict
 from scope_guard.database.models import ProjectRow
 from scope_guard.database.repositories.projects import project
 from scope_guard.domain.projects.domain import ProjectDetail, ProjectHistoryEntry

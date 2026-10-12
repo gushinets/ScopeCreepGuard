@@ -2,10 +2,10 @@
 
 from pathlib import Path
 
+from scope_guard.domain.change_orders.constants import LABEL_KEYS
 from scope_guard.domain.change_orders.estimation import project_timing
 from scope_guard.domain.shared.js_compat import stringify
 from scope_guard.domain.shared.language import normalize_language
-from scope_guard.modules.change_orders.schemas import LABEL_KEYS
 
 SYSTEM = Path(__file__).with_name("analysis-system-v1.txt").read_text(encoding="utf8")
 USER = Path(__file__).with_name("analysis-user-v1.txt").read_text(encoding="utf8")

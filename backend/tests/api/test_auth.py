@@ -5,7 +5,7 @@ import pytest
 from pydantic import SecretStr
 
 from scope_guard.core.config import Settings
-from scope_guard.main import create_app
+from scope_guard_api.main import create_app
 
 
 @pytest.mark.parametrize(

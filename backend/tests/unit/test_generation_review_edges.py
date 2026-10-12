@@ -8,7 +8,7 @@ from uuid import UUID
 import httpx
 import pytest
 
-from scope_guard.core.contracts import Industry
+from scope_guard_api.schemas.shared import Industry
 from scope_guard.domain.shared.language import normalize_language, supported_language
 from scope_guard.integrations.llm.openai import OpenAIGeneration
 from scope_guard.domain.analysis.domain import AnalysisInput, GenerationContext, GenerationError
@@ -130,7 +130,7 @@ def test_huge_model_number_is_invalid(field):
 
 @pytest.mark.parametrize("field", ["confidence", "estimatedHours"])
 def test_huge_submitted_material_number_is_body_error_before_provider(field):
-    from scope_guard.api.generation_input import parse_materials
+    from scope_guard_api.generation_input import parse_materials
     from scope_guard.domain.analysis.domain import LocaleResolution
 
     raw = copy.deepcopy(FIXTURE["analysisFixture"])
@@ -156,7 +156,7 @@ def test_limiter_concurrent_admission_is_atomic():
 
 
 def test_lone_surrogate_http_response():
-    from scope_guard.api.routes.generation import GenerationJSONResponse
+    from scope_guard_api.routes.generation import GenerationJSONResponse
 
     response = GenerationJSONResponse({"reply": "\ud800"})
     assert json.loads(response.body) == {"reply": "\ud800"}

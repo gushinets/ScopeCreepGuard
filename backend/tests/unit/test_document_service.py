@@ -15,7 +15,7 @@ def test_document_dates(language, expected):
 
 
 def test_preparation_retains_overrides_and_missing_commercial_values():
-    from scope_guard.api.draft_input import parse_editor
+    from scope_guard_api.draft_input import parse_editor
     from scope_guard.integrations.documents.preparation import prepare_document
 
     document = prepare_document(parse_editor(editor(additionalCost="1.005", currency="USD")))
@@ -40,7 +40,7 @@ def test_renderer_embeds_cyrillic_and_keeps_long_values():
 
     from pypdf import PdfReader
 
-    from scope_guard.api.draft_input import parse_editor
+    from scope_guard_api.draft_input import parse_editor
     from scope_guard.integrations.documents.renderer import render_pdf
     from scope_guard.integrations.documents.preparation import prepare_document
 
@@ -63,7 +63,7 @@ def test_renderer_embeds_cyrillic_and_keeps_long_values():
 
 
 def test_unsupported_glyph_is_not_silently_replaced():
-    from scope_guard.api.draft_input import parse_editor
+    from scope_guard_api.draft_input import parse_editor
     from scope_guard.integrations.documents.renderer import render_pdf
     from scope_guard.services.documents.models import DocumentError
     from scope_guard.integrations.documents.preparation import prepare_document

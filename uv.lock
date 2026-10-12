@@ -677,17 +677,14 @@ dependencies = [
     { name = "alembic" },
     { name = "babel" },
     { name = "bcrypt" },
-    { name = "fastapi" },
     { name = "langcodes" },
     { name = "openai" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pypdf" },
-    { name = "python-multipart" },
     { name = "reportlab" },
     { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -705,17 +702,14 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.16,<2" },
     { name = "babel", specifier = ">=2.17,<3" },
     { name = "bcrypt", specifier = ">=4.3,<6" },
-    { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "langcodes", specifier = ">=3.5,<4" },
     { name = "openai", specifier = ">=2,<3" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },
     { name = "pydantic", specifier = ">=2.6,<3" },
     { name = "pydantic-settings", specifier = ">=2.6,<3" },
     { name = "pypdf", specifier = ">=6,<7" },
-    { name = "python-multipart", specifier = ">=0.0.20,<1" },
     { name = "reportlab", specifier = ">=4.4,<5" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0,<2.1" },
-    { name = "uvicorn", specifier = ">=0.36,<1" },
 ]
 
 [package.metadata.requires-dev]

@@ -9,7 +9,7 @@ from pydantic import SecretStr
 from sqlalchemy import text
 
 from scope_guard.core.config import Settings
-from scope_guard.main import create_app
+from scope_guard_api.main import create_app
 from scope_guard.domain.analysis.normalization import parse_analysis, parse_materials
 
 pytestmark = pytest.mark.integration

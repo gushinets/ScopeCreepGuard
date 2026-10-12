@@ -6,9 +6,9 @@ from fastapi.testclient import TestClient
 from pypdf import PdfReader
 from service_fixtures import editor
 
-from scope_guard.api.dependencies import current_owner
+from scope_guard_api.dependencies import current_owner
 from scope_guard.core.config import Settings
-from scope_guard.main import create_app
+from scope_guard_api.main import create_app
 
 OWNER = "11111111-1111-4111-8111-111111111111"
 
@@ -49,7 +49,7 @@ def test_scope_multipart_contract_and_validation():
 
 @pytest.mark.parametrize("optional_draft", [{}, {"draftId": None}])
 def test_unsaved_export_has_no_save_proof_or_llm(optional_draft):
-    from scope_guard.api.dependencies import document_use_cases
+    from scope_guard_api.dependencies import document_use_cases
 
     class UseCases:
         async def preview(self, owner, project, draft, change_order):

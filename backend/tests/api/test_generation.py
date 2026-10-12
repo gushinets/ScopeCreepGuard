@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 
-from scope_guard.api.dependencies import current_owner
+from scope_guard_api.dependencies import current_owner
 from scope_guard.core.config import Settings
-from scope_guard.main import create_app
+from scope_guard_api.main import create_app
 
 PATHS = (
     "/api/analyze",
