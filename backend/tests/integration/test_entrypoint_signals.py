@@ -28,6 +28,8 @@ def test_entrypoint_terminates_migration_child_without_starting_server(tmp_path,
     docker("build", "-f", "apps/api/Dockerfile", "--target", "runner", "-t", image, ".")
     binary = tmp_path / "bin"
     binary.mkdir()
+    os.chmod(tmp_path, 0o755)
+    os.chmod(binary, 0o755)
     fake_python = binary / "python"
     fake_python.write_text(
         "#!/bin/sh\necho migration_started\nexec sleep 120\n", encoding="utf-8", newline="\n"
