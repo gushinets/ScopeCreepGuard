@@ -1,3 +1,4 @@
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -27,9 +28,11 @@ def test_entrypoint_terminates_migration_child_without_starting_server(tmp_path,
     docker("build", "-f", "apps/api/Dockerfile", "--target", "runner", "-t", image, ".")
     binary = tmp_path / "bin"
     binary.mkdir()
-    (binary / "python").write_text(
+    fake_python = binary / "python"
+    fake_python.write_text(
         "#!/bin/sh\necho migration_started\nexec sleep 120\n", encoding="utf-8", newline="\n"
     )
+    os.chmod(fake_python, 0o755)
     identifier = docker(
         "run",
         "-d",
@@ -42,7 +45,7 @@ def test_entrypoint_terminates_migration_child_without_starting_server(tmp_path,
         "/bin/sh",
         image,
         "-c",
-        "chmod +x /test/bin/python; export PATH=/test/bin:/usr/bin:/bin; "
+        "export PATH=/test/bin:/usr/bin:/bin; "
         "exec /bin/sh /app/entrypoint.sh /bin/sh -c 'echo server_started'",
     ).stdout.strip()
     try:
