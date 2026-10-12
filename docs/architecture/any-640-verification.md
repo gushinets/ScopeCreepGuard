@@ -66,13 +66,13 @@ containers. Application integration variables were cleared for verification.
 
 | Command | Observed result |
 |---|---|
-| `node scripts/verify-any640.mjs --suite frontend` | Follow-up exit 0; 44 files, 391 frontend tests passed, including real persistence and characterization; then 19 Python contract tests passed |
-| `node scripts/verify-any640.mjs --suite contracts` | Exit 0; real-handler corpus matched unchanged with `NextRequest`; 1 frontend characterization test and 19 Python contract tests passed |
+| `node ci/scripts/check-gateways.mjs --suite frontend` | Follow-up exit 0; 44 files, 391 frontend tests passed, including real persistence and characterization; then 19 Python contract tests passed |
+| `node ci/scripts/check-gateways.mjs --suite contracts` | Exit 0; real-handler corpus matched unchanged with `NextRequest`; 1 frontend characterization test and 19 Python contract tests passed |
 | Backend: `uv run --no-sync pytest --require-integration -q --basetemp=.pytest_cache/any640-ci-followup` | Follow-up exit 0; 136 unit/API/PostgreSQL integration tests passed |
 | Backend: `uv run --no-sync ruff check .` | Follow-up exit 0, all checks passed |
 | Backend: `uv run --no-sync ruff format --check .` | Follow-up exit 0; all 66 files formatted |
 | Backend: `uv run --no-sync mypy src/scope_guard` | Exit 0; no issues in 25 source files |
-| Backend: `uv run --no-sync python scripts/export_openapi.py --check ../contracts/openapi.json` | Exit 0; generated contract fresh; business paths remain absent |
+| Backend: `uv run --no-sync python scripts/export_openapi.py --check ../ci/contracts/openapi.json` | Exit 0; generated contract fresh; business paths remain absent |
 | Frontend: `corepack pnpm exec tsc --noEmit` | Exit 0 |
 | Frontend: `corepack pnpm exec next typegen` | Follow-up exit 0; route types generated |
 | Frontend: `corepack pnpm build`, followed by `corepack pnpm exec tsc --noEmit` | Follow-up exit 0; production build and independent post-build typing passed with synthetic configuration |
@@ -84,7 +84,7 @@ containers. Application integration variables were cleared for verification.
 | `docker compose -f docker-compose.yml --profile app config --quiet` | Follow-up exit 0; legacy entry point valid, no services started |
 | `docker compose -f docker-compose.dokploy.yml config --quiet` | Exit 0 with synthetic process configuration; no services started |
 | `docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet` | Follow-up exit 0; production entry point valid, no services started |
-| `node scripts/verify-any640.mjs --suite containers` | Exit 0; both final production images built; eight production HTTP checks passed; owned containers removed |
+| `node ci/scripts/check-gateways.mjs --suite containers` | Exit 0; both final production images built; eight production HTTP checks passed; owned containers removed |
 | `git diff --check` | Exit 0; only Git line-ending notices |
 
 ## Slice A follow-up — CI and current handoff
@@ -94,7 +94,7 @@ and planning sections. Its backend ownership description includes inherited
 ANY-639 models/lifecycle/baseline while retaining TypeScript business ownership.
 No branch switch, commit, push or business cutover occurred.
 
-`.github/workflows/checks.yml` now triggers for PRs into `main`, the current
+`.github/workflows/ci.yml` now triggers for PRs into `main`, the current
 ANY-639 parent, and the retained ANY-638 parent. Push checks include `main`,
 ANY-639 and the current ANY-640 child. The separate rebase workflow remains
 main-only, so stacked PRs do not need an incorrect rebase onto main.
@@ -143,7 +143,7 @@ relative to the parent. No application migration, CORS addition, microservice,
 staging, commit, push or Slice B work occurred. Disposable test fixture setup is
 the only database mutation used for verification.
 
-Container verification command: `node scripts/verify-any640.mjs --suite containers`.
+Container verification command: `node ci/scripts/check-gateways.mjs --suite containers`.
 It builds both production images (frontend build includes `pnpm build`), then
 checks eight HTTP outcomes: Python liveness and foreign-Origin rejection; frontend
 foreign-Origin rejection on three public/protected write paths; successful locale
@@ -241,16 +241,16 @@ deadline; ordinary workflow forwarding retains incoming cancellation only.
 | Command | Observed result |
 |---|---|
 | Backend: `uv run --no-sync pytest --require-integration --basetemp .pytest_cache/any640_b -q` | Exit 0; 166 tests passed in 62.12s, including owned PostgreSQL and cross-runtime Node checks |
-| `node scripts/verify-any640.mjs --suite frontend` | Exit 0; 395 tests across 45 files passed, then 19 Python contract tests passed |
-| `node scripts/verify-any640.mjs --suite contracts` | Exit 0; original 21-operation corpus unchanged with real Python auth HTTP and TS remaining workflows; then 19 contract tests passed |
+| `node ci/scripts/check-gateways.mjs --suite frontend` | Exit 0; 395 tests across 45 files passed, then 19 Python contract tests passed |
+| `node ci/scripts/check-gateways.mjs --suite contracts` | Exit 0; original 21-operation corpus unchanged with real Python auth HTTP and TS remaining workflows; then 19 contract tests passed |
 | Frontend: `node node_modules/vitest/vitest.mjs run tests/auth-boundary.test.ts tests/auth-gateway.test.ts lib/api/origin.test.ts` | Exit 0; 21 tests passed |
 | Backend: `uv run --no-sync ruff check .`; `uv run --no-sync ruff format --check .`; `uv run --no-sync mypy src/scope_guard` | All exit 0; 79 files formatted, 32 source files typed |
-| Backend: `uv run --no-sync python scripts/export_openapi.py --output ../contracts/openapi.json`, then `--check ../contracts/openapi.json` | Exit 0; six implemented paths, four auth operations and their request bodies documented |
+| Backend: `uv run --no-sync python scripts/export_openapi.py --output ../ci/contracts/openapi.json`, then `--check ../ci/contracts/openapi.json` | Exit 0; six implemented paths, four auth operations and their request bodies documented |
 | Frontend: `node scripts/api-types.mjs`; `corepack pnpm api:types:check` | Exit 0; generated auth types fresh |
 | Frontend: `node node_modules/next/dist/bin/next typegen`; `node node_modules/typescript/bin/tsc --noEmit`; `node node_modules/next/dist/bin/next build`; post-build `node node_modules/typescript/bin/tsc --noEmit` | All exit 0; production build with synthetic unreachable DB, explicit type checks passed |
 | Frontend: `node node_modules/eslint/bin/eslint.js .`; `node --test scripts/docker-entrypoint.test.mjs` | Exit 0; two inherited lint warnings; 3 entrypoint tests passed |
-| `node scripts/verify-any640.mjs --suite auth-gateway` | Exit 0; 15 checks through production Next.js, FastAPI and owned PostgreSQL, including deleted-owner page recovery and Python session accepted by TS projects; rerun passed after review clock fix |
-| `node scripts/verify-any640.mjs --suite containers` | Exit 0; both production images built; 8 HTTP deployment smoke checks passed; owned containers removed |
+| `node ci/scripts/check-gateways.mjs --suite auth-gateway` | Exit 0; 15 checks through production Next.js, FastAPI and owned PostgreSQL, including deleted-owner page recovery and Python session accepted by TS projects; rerun passed after review clock fix |
+| `node ci/scripts/check-gateways.mjs --suite containers` | Exit 0; both production images built; 8 HTTP deployment smoke checks passed; owned containers removed |
 | `docker compose -f compose.yaml --profile app config --quiet`; `docker compose -f docker-compose.yml --profile app config --quiet`; `docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet` | All exit 0; no application services or databases modified |
 | `docker run --rm -v 'D:/Devpy/ScopeCreepGuard:/repo:ro' -w /repo rhysd/actionlint:latest`; `git diff --check` | Both exit 0; CI workflow valid; only Git line-ending notices |
 
@@ -290,12 +290,12 @@ No implementation changes were made during publication preparation.
 | Final command | Observed result |
 |---|---|
 | Backend: `uv run --no-sync pytest --require-integration --basetemp .pytest_cache/any640_publish -q` | Exit 0; 166 passed in 79.84s |
-| Backend: `uv run --no-sync ruff check .`; `uv run --no-sync ruff format --check .`; `uv run --no-sync mypy src/scope_guard`; `uv run --no-sync python scripts/export_openapi.py --check ../contracts/openapi.json` | All exit 0; 79 files formatted, 32 sources typed, OpenAPI fresh |
-| `node scripts/verify-any640.mjs --suite frontend` | Exit 0; 395 passed across 45 files in 30.36s; then 19 Python contract checks passed |
+| Backend: `uv run --no-sync ruff check .`; `uv run --no-sync ruff format --check .`; `uv run --no-sync mypy src/scope_guard`; `uv run --no-sync python scripts/export_openapi.py --check ../ci/contracts/openapi.json` | All exit 0; 79 files formatted, 32 sources typed, OpenAPI fresh |
+| `node ci/scripts/check-gateways.mjs --suite frontend` | Exit 0; 395 passed across 45 files in 30.36s; then 19 Python contract checks passed |
 | Frontend: `corepack pnpm api:types:check`; `corepack pnpm exec next typegen`; `corepack pnpm exec tsc --noEmit`; `corepack pnpm build`; post-build `corepack pnpm exec tsc --noEmit` | All exit 0; synthetic unreachable build database; generated types and explicit typing passed |
 | Frontend: `node --test scripts/docker-entrypoint.test.mjs`; `corepack pnpm lint` | Both exit 0; 3 entrypoint tests passed; two inherited unused-variable warnings |
-| `node scripts/verify-any640.mjs --suite auth-gateway` | Exit 0; 15 production-server auth journey checks passed |
-| `node scripts/verify-any640.mjs --suite containers` | Exit 0; both production images built; 8 smoke checks passed; owned containers removed |
+| `node ci/scripts/check-gateways.mjs --suite auth-gateway` | Exit 0; 15 production-server auth journey checks passed |
+| `node ci/scripts/check-gateways.mjs --suite containers` | Exit 0; both production images built; 8 smoke checks passed; owned containers removed |
 | `docker compose -f compose.yaml --profile app config --quiet`; `docker compose -f docker-compose.yml --profile app config --quiet`; `docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet` | All exit 0 |
 | `docker run --rm -v 'D:/Devpy/ScopeCreepGuard:/repo:ro' -w /repo rhysd/actionlint:latest` | Exit 0; CI workflow valid |
 | `git diff --cached --check` and staged-path audit | Exit 0; only ANY-640 paths in index, no migration files |
@@ -327,13 +327,13 @@ for the frontend count changing from 395 to 386 across the same 45 files.
 |---|---|
 | Backend: `uv run --no-sync pytest --require-integration --basetemp .pytest_cache/any640_c_final -q` | Exit 0; 176 passed in 58.87s, including owned PostgreSQL and cross-runtime tests |
 | Backend: `uv run --no-sync ruff check .`; `uv run --no-sync ruff format --check .`; `uv run --no-sync mypy src/scope_guard` | All exit 0; 86 files formatted, 36 sources typed |
-| Backend: `uv run --no-sync python scripts/export_openapi.py --output ../contracts/openapi.json`, then `--check ../contracts/openapi.json` | Exit 0; eight implemented paths, nine API operations plus health; fresh |
-| `node scripts/verify-any640.mjs --suite contracts` | Exit 0; frozen 21-operation corpus unchanged through nine Python operations; 19 Python contract checks passed |
-| `node scripts/verify-any640.mjs --suite frontend` | Exit 0; 386 tests/45 files in 13.46s, then 19 Python contract checks passed |
+| Backend: `uv run --no-sync python scripts/export_openapi.py --output ../ci/contracts/openapi.json`, then `--check ../ci/contracts/openapi.json` | Exit 0; eight implemented paths, nine API operations plus health; fresh |
+| `node ci/scripts/check-gateways.mjs --suite contracts` | Exit 0; frozen 21-operation corpus unchanged through nine Python operations; 19 Python contract checks passed |
+| `node ci/scripts/check-gateways.mjs --suite frontend` | Exit 0; 386 tests/45 files in 13.46s, then 19 Python contract checks passed |
 | Frontend: `node scripts/api-types.mjs`; `corepack pnpm api:types:check`; `corepack pnpm exec next typegen`; `corepack pnpm exec tsc --noEmit`; `corepack pnpm build`; post-build `corepack pnpm exec tsc --noEmit` | All exit 0; synthetic unreachable build database, fresh types and production build |
 | Frontend: `corepack pnpm lint`; root: `node --test frontend/scripts/docker-entrypoint.test.mjs` | Exit 0; two inherited unused-variable warnings; 3 entrypoint tests passed |
-| `node scripts/verify-any640.mjs --suite auth-gateway` | Exit 0; 15 auth and 14 project checks through production Next/FastAPI and disposable PostgreSQL; owned resources removed |
-| `node scripts/verify-any640.mjs --suite containers` | Exit 0; both production images built, 8 deployment HTTP smoke checks passed; owned containers removed |
+| `node ci/scripts/check-gateways.mjs --suite auth-gateway` | Exit 0; 15 auth and 14 project checks through production Next/FastAPI and disposable PostgreSQL; owned resources removed |
+| `node ci/scripts/check-gateways.mjs --suite containers` | Exit 0; both production images built, 8 deployment HTTP smoke checks passed; owned containers removed |
 | `docker compose -f compose.yaml --profile app config --quiet`; `docker compose -f docker-compose.yml --profile app config --quiet`; `docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet` | All exit 0; tracked configuration only |
 | `docker run --rm -v 'D:/Devpy/ScopeCreepGuard:/repo:ro' -w /repo rhysd/actionlint:latest` | Exit 0; CI valid, including main and stacked parent targets |
 | `git diff --check`; `git diff --cached --check`; index/migration-path audit | Exit 0; index empty, no Drizzle/schema changes; unrelated files preserved |
@@ -396,9 +396,9 @@ project-card containers remain in the application interfaces.
 | Backend: `uv run --no-sync pytest tests/unit/test_project_immutability.py tests/unit/test_project_parser.py tests/api/test_projects.py --basetemp .pytest_cache/immutable_green -q` | Exit 0; initial 12 focused checks passed |
 | Backend: `uv run --no-sync pytest --require-integration --basetemp .pytest_cache/immutable_final -q` | Exit 0; 181 passed in 72.37s, including disposable PostgreSQL and real repository/application mutation assertions |
 | Backend: `uv run --no-sync ruff check .`; `uv run --no-sync ruff format --check .`; `uv run --no-sync mypy src/scope_guard` | All exit 0; 89 files formatted, 38 sources typed |
-| Backend: `uv run --no-sync python scripts/export_openapi.py --check ../contracts/openapi.json` | Exit 0; existing Slice C OpenAPI unchanged/fresh |
-| Root: `node scripts/verify-any640.mjs --suite frontend` | Exit 0; 386 tests/45 files passed in 25.14s, then 19 Python contract checks passed in 0.90s |
-| Root: `node scripts/verify-any640.mjs --suite contracts` | Exit 0; frozen 21-operation corpus unchanged (one corpus test), then 19 Python contract checks in 0.91s |
+| Backend: `uv run --no-sync python scripts/export_openapi.py --check ../ci/contracts/openapi.json` | Exit 0; existing Slice C OpenAPI unchanged/fresh |
+| Root: `node ci/scripts/check-gateways.mjs --suite frontend` | Exit 0; 386 tests/45 files passed in 25.14s, then 19 Python contract checks passed in 0.90s |
+| Root: `node ci/scripts/check-gateways.mjs --suite contracts` | Exit 0; frozen 21-operation corpus unchanged (one corpus test), then 19 Python contract checks in 0.91s |
 | Frontend: `corepack pnpm api:types:check`; `corepack pnpm exec next typegen`; `corepack pnpm exec tsc --noEmit`; `corepack pnpm lint` | All exit 0; generated types fresh; two inherited unused-variable lint warnings |
 | Root: `git diff --check`; `git diff --cached --check`; `git check-ignore AGENT.md`; migration/index audit | Exit 0; ignored handoff, empty index and unchanged Drizzle/schema paths |
 
@@ -432,12 +432,12 @@ pnpm-workspace.yaml/test_openai.mjs remain excluded, as do migrations and secret
 | Final command | Observed result |
 |---|---|
 | Backend: `uv run --no-sync pytest --require-integration --basetemp .pytest_cache/any640_c_publish -q` | Exit 0; 181 passed in 78.93s |
-| Backend: `uv run --no-sync ruff check .`; `uv run --no-sync ruff format --check .`; `uv run --no-sync mypy src/scope_guard`; `uv run --no-sync python scripts/export_openapi.py --check ../contracts/openapi.json` | All exit 0; 89 files formatted, 38 sources typed; OpenAPI fresh |
-| Root: `node scripts/verify-any640.mjs --suite frontend` | Final exit 0; 386 tests/45 files passed in 12.54s; then 19 Python contract checks in 0.60s; frozen corpus unchanged |
+| Backend: `uv run --no-sync ruff check .`; `uv run --no-sync ruff format --check .`; `uv run --no-sync mypy src/scope_guard`; `uv run --no-sync python scripts/export_openapi.py --check ../ci/contracts/openapi.json` | All exit 0; 89 files formatted, 38 sources typed; OpenAPI fresh |
+| Root: `node ci/scripts/check-gateways.mjs --suite frontend` | Final exit 0; 386 tests/45 files passed in 12.54s; then 19 Python contract checks in 0.60s; frozen corpus unchanged |
 | Frontend: `corepack pnpm api:types:check`; `corepack pnpm exec next typegen`; `corepack pnpm exec tsc --noEmit`; `corepack pnpm build`; post-build `corepack pnpm exec tsc --noEmit` | All exit 0; synthetic unreachable build database; fresh types and production build |
 | Frontend: `corepack pnpm lint`; `node --test scripts/docker-entrypoint.test.mjs` | Both exit 0; two inherited warnings, 3 entrypoint tests passed |
-| Root: `node scripts/verify-any640.mjs --suite auth-gateway` | Exit 0; 15 auth and 14 project journey checks passed; owned resources removed |
-| Root: `node scripts/verify-any640.mjs --suite containers` | Exit 0; both images built and 8 HTTP deployment checks passed; owned containers removed |
+| Root: `node ci/scripts/check-gateways.mjs --suite auth-gateway` | Exit 0; 15 auth and 14 project journey checks passed; owned resources removed |
+| Root: `node ci/scripts/check-gateways.mjs --suite containers` | Exit 0; both images built and 8 HTTP deployment checks passed; owned containers removed |
 | `docker compose -f compose.yaml --profile app config --quiet`; `docker compose -f docker-compose.yml --profile app config --quiet`; `docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet`; `docker run --rm -v 'D:/Devpy/ScopeCreepGuard:/repo:ro' -w /repo rhysd/actionlint:latest` | All exit 0 |
 | `git diff --cached --check`; `git diff --check`; staged-path/migration audit | Passed; only 34 intended files staged, no schema/migrations or unrelated files |
 
@@ -491,13 +491,13 @@ test used owned disposable PostgreSQL; no application DB or live provider calls.
 | `python -m pytest --require-integration --basetemp .pytest_cache/any640_d_final1 -q -p no:cacheprovider` (backend venv) | 300 passed, 108.23s; one upstream Starlette/httpx deprecation warning |
 | Final pre-commit `python -m pytest --require-integration --basetemp .pytest_cache/any640_d_commit -q -p no:cacheprovider` | 307 passed, 91.18s; one upstream Starlette/httpx deprecation warning; includes the collection-safe review-edge tests |
 | `python -m pytest tests/unit/test_generation_review_edges.py tests/unit/test_generation_compatibility.py -q -p no:cacheprovider` | Final language fixes: 23 passed, 3.90s |
-| `node scripts/verify-any640.mjs --suite frontend` | 341 tests / 42 files passed; 19 Python contracts passed |
-| Final pre-commit `node scripts/verify-any640.mjs --suite frontend` | 341 tests / 42 files passed in 15.82s; 19 Python contracts passed in 0.84s |
-| `node scripts/verify-any640.mjs --suite contracts` | Existing frozen 21-operation corpus passed; 19 Python contracts passed |
-| `node scripts/verify-any640.mjs --suite generation-gateway` | Four generation routes, zero writes, Python proof → TS saver, concurrent dedup/reload, historical context and shared limiter passed; 15 auth / 14 project journey checks passed |
+| `node ci/scripts/check-gateways.mjs --suite frontend` | 341 tests / 42 files passed; 19 Python contracts passed |
+| Final pre-commit `node ci/scripts/check-gateways.mjs --suite frontend` | 341 tests / 42 files passed in 15.82s; 19 Python contracts passed in 0.84s |
+| `node ci/scripts/check-gateways.mjs --suite contracts` | Existing frozen 21-operation corpus passed; 19 Python contracts passed |
+| `node ci/scripts/check-gateways.mjs --suite generation-gateway` | Four generation routes, zero writes, Python proof → TS saver, concurrent dedup/reload, historical context and shared limiter passed; 15 auth / 14 project journey checks passed |
 | `python -m ruff check .` / `python -m ruff format --check .` | Passed; 126 files formatted |
 | `python -m mypy src/scope_guard` | Passed, 64 source files; notes about pre-existing/untyped constructor body checking remain |
-| `python scripts/export_openapi.py --check ../contracts/openapi.json` | Passed after final changes |
+| `python scripts/export_openapi.py --check ../ci/contracts/openapi.json` | Passed after final changes |
 | `corepack pnpm api:types:check`, `exec next typegen`, `exec tsc --noEmit`, `build` | Passed for the cutover; final static/focused recheck recorded below |
 | Final `corepack pnpm lint`, `exec tsc --noEmit`, `api:types:check` | Passed; one existing unused-variable lint warning in schema.test.ts |
 | Final `vitest run tests/generation-baseline.test.ts tests/generation-gateway.test.ts tests/draft-proof-interop.test.ts` | 4 tests / 3 files passed, 2.28s |
@@ -528,7 +528,7 @@ response parsing and sole retry ownership. Recheck this hook on SDK upgrades.
 
 ### Remaining verification gate and rollout
 
-`node scripts/verify-any640.mjs --suite containers` failed twice while installing
+`node ci/scripts/check-gateways.mjs --suite containers` failed twice while installing
 frontend dependencies: npm registry socket timeouts (postgres, then postcss).
 Backend image built; frontend image did not build, so the eight container smoke
 checks did not execute. This gate failed rather than being skipped. The existing
@@ -612,18 +612,18 @@ credentials and unreachable loopback database, with no live provider key.
 | `uv run --no-sync ruff check .` | Passed |
 | `uv run --no-sync ruff format --check .` | Passed, 138 files formatted |
 | `uv run --no-sync mypy src/scope_guard` | Passed, 72 sources; four inherited untyped-body notes |
-| `uv run --no-sync python scripts/export_openapi.py --check ../contracts/openapi.json` | Passed |
+| `uv run --no-sync python scripts/export_openapi.py --check ../ci/contracts/openapi.json` | Passed |
 | `corepack pnpm api:types:check` | Passed, regenerated types fresh |
 | `corepack pnpm exec next typegen` | Passed |
 | `corepack pnpm exec tsc --noEmit` | Passed before and after final build |
 | `corepack pnpm lint` | Passed, zero errors; one existing unused `_s` warning in lib/llm/schema.test.ts |
 | `corepack pnpm build` followed by `corepack pnpm exec tsc --noEmit` | Passed after final proxy correction; Next 16.3 Turbopack compiled in 6.3s, all 19 pages generated |
 | `node --test scripts/docker-entrypoint.test.mjs` | 3 passed |
-| `node scripts/verify-any640.mjs --suite frontend` | Final isolated 336 tests / 44 files, 18.02s; 19 Python contracts, 0.66s |
-| `node scripts/verify-any640.mjs --suite contracts` | Original 21-operation corpus unchanged/passed; frontend 1 test passed; Python 19 passed |
-| `node scripts/verify-any640.mjs --suite drafts-gateway` | Passed production four-method forwarding/dedup/edit/reload/history/ownership/zero-provider journey; 15 auth and 14 project checks |
-| `node scripts/verify-any640.mjs --suite generation-gateway` | Passed four-owner generation/Python proof/Python persistence/historical context/shared limit; 15 auth and 14 project checks |
-| `node scripts/verify-any640.mjs --suite containers` | Both images built and 10 production HTTP smoke checks passed; owned containers removed; closes prior Slice D gate |
+| `node ci/scripts/check-gateways.mjs --suite frontend` | Final isolated 336 tests / 44 files, 18.02s; 19 Python contracts, 0.66s |
+| `node ci/scripts/check-gateways.mjs --suite contracts` | Original 21-operation corpus unchanged/passed; frontend 1 test passed; Python 19 passed |
+| `node ci/scripts/check-gateways.mjs --suite drafts-gateway` | Passed production four-method forwarding/dedup/edit/reload/history/ownership/zero-provider journey; 15 auth and 14 project checks |
+| `node ci/scripts/check-gateways.mjs --suite generation-gateway` | Passed four-owner generation/Python proof/Python persistence/historical context/shared limit; 15 auth and 14 project checks |
+| `node ci/scripts/check-gateways.mjs --suite containers` | Both images built and 10 production HTTP smoke checks passed; owned containers removed; closes prior Slice D gate |
 | `docker compose -f compose.yaml --profile app config --quiet` | Passed |
 | `docker compose -f docker-compose.yml --profile app config --quiet` | Passed |
 | `docker compose -f docker-compose.dokploy.yml config --no-interpolate --no-env-resolution --quiet` | Passed |
@@ -721,15 +721,15 @@ Integration and compatibility suites created only disposable PostgreSQL database
 | Final `python -m pytest --require-integration ... backend/tests/integration/test_remaining_workflows.py` | 2 passed, 12.89s after adding the valid-missing-history parity assertion |
 | `python -m ruff check .`; `python -m ruff format --check .` | Passed; 148 files formatted at the full check boundary; changed container verifier formatted and linted again |
 | `python -m mypy src/scope_guard` | Passed, 80 source files; four inherited untyped-body notes |
-| `python scripts/export_openapi.py --check ../contracts/openapi.json` | Passed |
+| `python scripts/export_openapi.py --check ../ci/contracts/openapi.json` | Passed |
 | `corepack pnpm api:types:check`; `corepack pnpm exec next typegen`; `corepack pnpm exec tsc --noEmit` | Passed |
 | Focused remaining-gateway/auth tests | 17 passed |
-| `node scripts/verify-any640.mjs --suite frontend` | 341 tests / 45 files passed; 19 Python contract checks passed |
-| `node scripts/verify-any640.mjs --suite contracts` | Frontend frozen corpus passed; 19 Python contract checks passed |
+| `node ci/scripts/check-gateways.mjs --suite frontend` | 341 tests / 45 files passed; 19 Python contract checks passed |
+| `node ci/scripts/check-gateways.mjs --suite contracts` | Frontend frozen corpus passed; 19 Python contract checks passed |
 | `corepack pnpm lint` | Passed with one inherited unused `_s` warning in `lib/llm/schema.test.ts` |
 | `corepack pnpm build` followed by `corepack pnpm exec tsc --noEmit` | Passed; all 19 pages generated and post-build types passed |
 | `node --test scripts/docker-entrypoint.test.mjs` | 3 passed |
-| `node scripts/verify-any640.mjs --suite containers` | Both images built; 11 connected/outage production HTTP smoke checks passed; owned containers removed |
+| `node ci/scripts/check-gateways.mjs --suite containers` | Both images built; 11 connected/outage production HTTP smoke checks passed; owned containers removed |
 | Three Compose `config --quiet` checks for current, legacy and Dokploy files | All exited 0; no services started |
 | `git diff --check` | Passed at the implementation boundary; final audit recorded below |
 

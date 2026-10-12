@@ -110,7 +110,7 @@ architecture, specification and task plan on 2026-10-09, then authorized executi
 - [x] Package Alembic/manifest in backend Docker image, pass explicit prefixed
   DB configuration in supported Compose entrypoints, preserve Drizzle runner
   and Next business routing. Backend has no migration startup hook.
-- [x] Generate contracts/openapi.json (only new Python route is health/ready).
+- [x] Generate ci/contracts/openapi.json (only new Python route is health/ready).
 - [x] Write data dictionary/ER/contracts/validation, operations and factual
   verification docs; update ownership/backend READMEs and ignored AGENT.md.
 - [x] Verify pytest, Ruff, generated OpenAPI, existing frontend tests/lint/type/

@@ -1,0 +1,61 @@
+name: Application checks
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  rebase:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.number }}/head
+          fetch-depth: 0
+      - name: Verify branch is rebased on main
+        run: ci/scripts/require-rebase.sh main
+
+  frontend:
+    runs-on: ubuntu-latest
+    env:
+      AUTH_SECRET: ci-disposable-auth-secret-at-least-32-characters
+      NEXT_TELEMETRY_DISABLED: "1"
+      OPENAI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./ci/actions/setup-frontend
+      - uses: ./ci/actions/setup-backend
+      - name: Frontend, gateway, type, and build checks
+        run: ci/scripts/check-frontend.sh
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./ci/actions/setup-frontend
+      - uses: ./ci/actions/setup-backend
+      # The Python auth compatibility test invokes the frozen frontend jose and
+      # bcryptjs fixture script; this is not frontend migration tooling.
+      - run: corepack pnpm --dir frontend install --frozen-lockfile
+      - name: Backend integration, static analysis, contract, and PDF checks
+        run: ci/scripts/check-backend.sh
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./ci/actions/setup-backend
+      - name: Compose configuration and image-level runtime checks
+        run: ci/scripts/check-containers.sh
+      - name: Full disposable Compose stack smoke test
+        run: ci/scripts/smoke-compose.sh

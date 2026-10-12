@@ -4,10 +4,10 @@ import { fileURLToPath } from 'node:url'
 const args = process.argv.slice(2)
 if (args[0] !== '--suite' || !['contracts', 'frontend', 'containers', 'auth-gateway', 'generation-gateway', 'drafts-gateway'].includes(args[1]) ||
   args.slice(2).some((argument) => argument !== '--update-fixtures')) {
-  console.error('Usage: node scripts/verify-any640.mjs --suite contracts|frontend|containers|auth-gateway|generation-gateway|drafts-gateway [--update-fixtures]')
+  console.error('Usage: node ci/scripts/check-gateways.mjs --suite contracts|frontend|containers|auth-gateway|generation-gateway|drafts-gateway [--update-fixtures]')
   process.exit(2)
 }
-const root = fileURLToPath(new URL('../', import.meta.url))
+const root = fileURLToPath(new URL('../../', import.meta.url))
 const env = { ...process.env }
 for (const name of Object.keys(env)) {
   if (/^(SCOPE_GUARD_|SCG_|PG)/.test(name) || ['DATABASE_URL', 'TEST_DATABASE_URL', 'AUTH_SECRET', 'OPENAI_API_KEY'].includes(name)) delete env[name]

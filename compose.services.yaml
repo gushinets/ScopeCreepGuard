@@ -16,6 +16,7 @@ services:
       target: runner
     environment:
       NODE_ENV: production
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET must be set}
     depends_on:
       backend:
         condition: service_healthy
