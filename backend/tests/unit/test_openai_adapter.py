@@ -121,7 +121,11 @@ def test_missing_key_and_provider_error_are_distinct_and_logs_are_private(caplog
     with caplog.at_level("INFO", logger="scope_guard.generation"):
         with pytest.raises(GenerationError, match="analysisUnavailable"):
             asyncio.run(OpenAIGeneration(" \ufeff ").analyze(INPUT))
-    unavailable = [json.loads(record.message) for record in caplog.records if "provider_unavailable" in record.message]
+    unavailable = [
+        json.loads(record.message)
+        for record in caplog.records
+        if "provider_unavailable" in record.message
+    ]
     assert unavailable == [
         {
             "event": "provider_unavailable",
