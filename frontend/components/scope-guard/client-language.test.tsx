@@ -72,7 +72,7 @@ async function analyze() {
   return view
 }
 async function override() {
-  fireEvent.change(screen.getByLabelText('result.documentLanguage'), { target: { value: 'DE' } })
+  fireEvent.change(screen.getByLabelText('result.documentLanguage'), { target: { value: 'de' } })
   fireEvent.click(screen.getByRole('button', { name: 'result.applyClientLanguage' }))
   await screen.findByText('Zusätzliche Arbeiten')
 }
@@ -112,13 +112,12 @@ it('restores explicitly created client materials from the server after reload', 
   expect(fetchMock.mock.calls.filter(([url]) => url === '/api/analyze')).toHaveLength(1)
 })
 
-it('rejects unsupported scripts accessibly before sending a generation request', async () => {
+it('offers understandable supported language names without unsupported scripts', async () => {
   await analyze()
   const input = screen.getByLabelText('result.documentLanguage')
-  fireEvent.change(input, { target: { value: 'ar' } })
-  expect(input.getAttribute('aria-invalid')).toBe('true')
-  expect(screen.getByRole('alert').textContent).toBe('errors.clientLanguageUnsupported')
-  expect((screen.getByRole('button', { name: 'result.applyClientLanguage' }) as HTMLButtonElement).disabled).toBe(true)
+  expect(input.tagName).toBe('SELECT')
+  expect(screen.getByRole('option', { name: /немецкий/i })).toBeTruthy()
+  expect([...input.querySelectorAll('option')].some(option => option.value === 'ar')).toBe(false)
   expect(fetchMock.mock.calls.some(([url]) => url === '/api/client-materials/language')).toBe(false)
 })
 

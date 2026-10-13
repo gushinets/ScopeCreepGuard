@@ -2,8 +2,8 @@ import 'server-only'
 import { Agent, fetch as upstreamFetch } from 'undici'
 import { ERROR_CODES } from './errors'
 
-const requestHeaders = ['cookie', 'origin', 'content-type', 'accept', 'x-request-id']
-const responseHeaders = ['content-type', 'cache-control', 'content-disposition', 'location', 'retry-after', 'x-request-id']
+const requestHeaders = ['cookie', 'origin', 'content-type', 'accept', 'x-request-id', 'idempotency-key']
+const responseHeaders = ['content-type', 'cache-control', 'content-disposition', 'location', 'retry-after', 'x-request-id', 'idempotency-key']
 // Cancellation belongs to the incoming request. No shorter proxy deadline than LLM retries.
 const dispatcher = new Agent({ headersTimeout: 0, bodyTimeout: 0 })
 

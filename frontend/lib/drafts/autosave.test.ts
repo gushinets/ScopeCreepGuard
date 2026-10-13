@@ -1,5 +1,28 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DraftAutosave, parseRecoveryBuffer } from './autosave'
+import type { WorkingDraft } from './workflow-types'
+
+it('keeps the server override reset while preserving edits made during a request save', async () => {
+  const original: WorkingDraft = draft()
+  original.draftDocument.languageSelection = { language: 'en', confidence: .99, status: 'detected', selectedLanguage: 'en', override: true, version: 'v1', requestHash: 'old' }
+  let release!: () => void
+  const wait = new Promise<void>(resolve => { release = resolve })
+  let started = false
+  let revision = 1
+  const saver = new DraftAutosave(original, async body => {
+    started = true; await wait
+    if (revision > 1) expect(body.changes.draftDocument.languageSelection?.override).toBe(false)
+    return { ...original, ...body.changes, revision: String(++revision), draftDocument: { ...body.changes.draftDocument, languageSelection: { ...original.draftDocument.languageSelection!, override: false } } }
+  })
+  saver.edit({ requestText: 'new request' })
+  const saving = saver.flush()
+  await vi.waitFor(() => expect(started).toBe(true))
+  saver.edit({ draftDocument: { ...original.draftDocument, reply: { ...original.draftDocument.reply, text: 'my concurrent edit' } } })
+  release(); await saving
+  expect(saver.local.draftDocument.languageSelection?.override).toBe(false)
+  expect(saver.local.draftDocument.reply.text).toBe('my concurrent edit')
+  saver.dispose()
+})
 
 const draft = () => ({ id: 'draft', projectId: 'project', revision: '1', requestText: '', analysisIsStale: true, lastAnalysisRunId: null, draftDocument: { version: 2 as const, reply: { text: '', tone: 'neutral' as const, language: 'en', generated: { warm: '', neutral: '', firm: '' } }, changeOrder: null }, createdAt: '', updatedAt: '', analysisRun: null })
 

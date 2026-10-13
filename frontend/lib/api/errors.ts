@@ -1,4 +1,16 @@
 export const ERROR_CODES = {
+  providerBudgetUnavailable: 'errors.providerBudgetUnavailable',
+  operationBudgetExceeded: 'errors.operationBudgetExceeded',
+  operationDeadlineExceeded: 'errors.operationDeadlineExceeded',
+  semanticAttemptsExhausted: 'errors.semanticAttemptsExhausted',
+  transportAttemptsExhausted: 'errors.transportAttemptsExhausted',
+  providerOutcomeUnknown: 'errors.providerOutcomeUnknown',
+  providerTransportFailed: 'errors.providerTransportFailed',
+  providerOutputIncomplete: 'errors.providerOutputIncomplete',
+  operationLeaseLost: 'errors.operationLeaseLost',
+  workflowVersionUnavailable: 'errors.workflowVersionUnavailable',
+  providerModelMismatch: 'errors.providerModelMismatch',
+  attemptSequenceInvalid: 'errors.attemptSequenceInvalid',
   draftConflict: 'errors.draftConflict',
   analysisStale: 'errors.analysisStale',
   operationMismatch: 'errors.operationMismatch',
@@ -94,8 +106,8 @@ export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES]
 
 const errorCodeValues = new Set<string>(Object.values(ERROR_CODES))
 
-export function isErrorCode(value: string): value is ErrorCode {
-  return errorCodeValues.has(value)
+export function isErrorCode(value: unknown): value is ErrorCode {
+  return typeof value === 'string' && errorCodeValues.has(value)
 }
 
 export function assertErrorCode(value: string): ErrorCode {

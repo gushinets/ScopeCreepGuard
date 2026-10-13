@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { WorkflowOperations } from '@/lib/drafts/operations'
 import { DraftAutosave, parseRecoveryBuffer, type RecoveryBuffer } from '@/lib/drafts/autosave'
 import { WorkflowApiError, workflowApi } from '@/lib/drafts/workflow-client'
@@ -18,6 +18,7 @@ const errorCode = (error: unknown) => error instanceof WorkflowApiError ? error.
 export function PersistentStoreProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const locale = useLocale()
+  const t = useTranslations()
   const [user, setUser] = useState<{ id: string; email: string } | null>(null)
   const [projects, setProjects] = useState<PersistentProject[]>([])
   const [selectedProjectId, setProjectId] = useState<string | null>(null)
@@ -110,6 +111,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
         if (!me.ok) throw new Error('session unavailable')
         const identity = (await me.json()).user
         owner.current = identity.id
+        operations.current.setOwner(identity.id)
         const loaded = await workflowApi<{ projects: PersistentProject[] }>('projects')
         if (!active) return
         setUser(identity)
@@ -130,6 +132,14 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
           const data = await workflowApi<{ draft: WorkingDraft }>(`projects/${first.id}/draft`)
           if (active) install(data.draft)
         } else if (active) install(null)
+        const current = controller.current
+        if (active && current) {
+          const resumed = await operations.current.resume<{ draft?: WorkingDraft | null }>(`drafts/${current.confirmed.id}/`)
+          if (active && controller.current === current && resumed.length) {
+            const refreshed = await workflowApi<{ draft: WorkingDraft }>(`drafts/${current.confirmed.id}`)
+            if (active && controller.current === current && current.status === 'saved') install(refreshed.draft)
+          }
+        }
       } catch (error) { if (active) setProjectError(errorCode(error)) }
       finally { if (active) setLoading(false) }
     }
@@ -154,6 +164,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
   const draftDocument: DraftDocument | null = snapshot && result ? {
     version: 1, result, clientMaterials: null, changeOrder: snapshot.draftDocument.changeOrder,
     reply: snapshot.draftDocument.reply,
+    languageSelection: snapshot.draftDocument.languageSelection,
     projectDetails: { clientName: selectedProject?.clientName ?? '', clientEmail: selectedProject?.clientEmail ?? '', endDate: selectedProject?.endDate ?? '' },
   } : null
 
@@ -246,11 +257,16 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
       if (!current || run !== navigation.current || current !== controller.current) return
       const edits = current.editToken
       setStatus('loading')
-      const response = await operations.current.run<{ draft: WorkingDraft | null; analysisRun: WorkingDraft['analysisRun']; applied: boolean }>(`drafts/${saved.id}/analyses`, { expectedRevision: saved.revision, locale: locale === 'ru' ? 'ru' : 'en', documentLanguage: saved.draftDocument.reply.language })
+      const response = await operations.current.run<{ draft: WorkingDraft | null; analysisRun: WorkingDraft['analysisRun']; applied: boolean; historyEntryId?: string }>(`drafts/${saved.id}/analyses`, { expectedRevision: saved.revision, locale: locale === 'ru' ? 'ru' : 'en', ...(saved.draftDocument.languageSelection?.override ? { documentLanguage: saved.draftDocument.reply.language } : {}) })
       if (run !== navigation.current || current !== controller.current) return
       if (!response.applied || !response.draft) {
         if (BigInt(current.confirmed.revision) <= BigInt(saved.revision)) current.markConflict(new WorkflowApiError(ERROR_CODES.draftConflict, 409))
       } else if (applyOperationResponse(current, edits, response.draft, saved.revision)) {
+        if (response.historyEntryId) {
+          setHistoryId(response.historyEntryId)
+          const refreshed = await workflowApi<{ projects: PersistentProject[] }>('projects')
+          setProjects(refreshed.projects)
+        }
         // install() has already set status for an unchanged Draft. A rebased
         // response keeps this controller and needs the status update here.
         if (controller.current === current) setStatus(current.local.analysisRun?.resultSnapshot ? 'result' : 'idle')
@@ -271,6 +287,11 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
   }
   async function regenerate() { await applyAction(async saved => (await operations.current.run<{ draft: WorkingDraft }>(`drafts/${saved.id}/regenerate`, { expectedRevision: saved.revision })).draft) }
   async function changeClientLanguage(language: string) {
+    const document = controller.current?.local.draftDocument
+    const order = document?.changeOrder
+    const edited = document && (document.reply.text !== document.reply.generated[document.reply.tone] ||
+      order && (['description', 'timelineImpact', 'rationale', 'note'] as const).some(field => order[field] !== order.aiValues?.[field]) || !!order?.additionalTerms)
+    if (edited && !window.confirm(t('result.confirmClientLanguage'))) return true
     await applyAction(async saved => (await operations.current.run<{ draft: WorkingDraft }>(`drafts/${saved.id}/translate`, { expectedRevision: saved.revision, language })).draft)
     return false
   }
@@ -344,6 +365,13 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     submitEvaluation: async feedback => { if (!snapshot?.lastAnalysisRunId) throw new Error('No analysis'); await workflowApi(`analyses/${snapshot.lastAnalysisRunId}/evaluation`, feedback) },
     downloadEvaluationsExport,
     workflow: {
+      openHistory: async identifier => {
+        if (!window.confirm(t('workflow.confirmReopen'))) return
+        const saved = await flush()
+        const run = navigation.current
+        const restored = await operations.current.run<{ draft: WorkingDraft }>(`history/${identifier}/restore`, { expectedRevision: saved.revision })
+        if (run === navigation.current) { install(restored.draft); setHistoryId(identifier); changeView('check') }
+      },
       status: saveStatus, stale: snapshot?.analysisIsStale ?? true, recovery,
       acceptRecovery: () => {
         if (!recovery) return

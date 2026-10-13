@@ -63,6 +63,7 @@ export interface NewProjectInput {
 
 export interface StoreValue {
   workflow?: {
+    openHistory?: (identifier: string) => Promise<void>
     status: import('@/lib/drafts/autosave').SaveStatus
     stale: boolean
     recovery: import('@/lib/drafts/autosave').RecoveryBuffer | null
