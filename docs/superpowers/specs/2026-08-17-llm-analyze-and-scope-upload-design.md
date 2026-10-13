@@ -1,7 +1,7 @@
 # Design: LLM Analyze + Scope File Upload
 
 Date: 2026-08-17  
-Source: `idea-006-scope-creep-guard-2026-05-25.md`, `scope-creep-guard-prd.md`  
+Source: [idea](../../product/idea-006-scope-creep-guard-2026-05-25.md), [PRD](../../product/scope-creep-guard-prd.md)
 Slice: A — web prototype improvements (not Chrome Extension / full product)
 
 ## Goal
