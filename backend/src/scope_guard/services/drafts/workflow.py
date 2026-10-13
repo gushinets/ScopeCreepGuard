@@ -230,6 +230,8 @@ class WorkflowService:
             draft = await work.workflow.draft(owner, identifier, lock=True)
             project = await work.workflow.project(owner, UUID(draft["projectId"]))
             active(project)
+            if int(draft["revision"]) != revision:
+                raise WorkflowError("draftConflict", 409)
             if "requestText" in changes and not trusted:
                 if (
                     not isinstance(changes["requestText"], str)
