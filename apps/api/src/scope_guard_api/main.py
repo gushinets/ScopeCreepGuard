@@ -25,6 +25,8 @@ from scope_guard_api.routes.health import router as health_router
 from scope_guard_api.routes.locale import router as locale_router
 from scope_guard_api.routes.projects import router as projects_router
 from scope_guard_api.routes.technical import router as technical_router
+from scope_guard_api.routes.workflow import router as workflow_router
+from scope_guard_api.workflow_boundary import WorkflowBoundary
 
 
 def create_app(settings: Settings | None = None, clock: Callable[[], float] = time.time) -> FastAPI:
@@ -43,6 +45,7 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     application.add_middleware(UnhandledErrorMiddleware)
     application.add_middleware(OriginMiddleware, allowed_origins=settings.allowed_origins)
     application.add_middleware(DraftReadCacheMiddleware)
+    application.add_middleware(WorkflowBoundary, enabled=settings.workflow_v2)
     application.include_router(health_router)
     application.include_router(auth_router)
     application.include_router(projects_router)
@@ -51,6 +54,16 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     application.include_router(drafts_router)
     application.include_router(locale_router)
     application.include_router(evaluations_router)
+    application.include_router(workflow_router)
+
+    from scope_guard.domain.drafts.workflow import WorkflowError
+    from starlette.responses import JSONResponse
+
+    @application.exception_handler(WorkflowError)
+    async def workflow_error(_request, error: WorkflowError):
+        return JSONResponse(
+            {"error": error.code}, error.status, headers={"Cache-Control": "private, no-store"}
+        )
 
     @application.exception_handler(AuthError)
     async def auth_error(_request, error: AuthError):

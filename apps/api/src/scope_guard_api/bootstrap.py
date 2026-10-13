@@ -110,6 +110,7 @@ def lifespan(settings):
 
 
 def configure_app(application, settings):
+    application.state.export_storage = object_storage(settings)
     application.state.generator = OpenAIGeneration(
         settings.openai_api_key.get_secret_value() if settings.openai_api_key else ""
     )
@@ -144,3 +145,34 @@ def draft_proof_service(request: Request):
     state = request.app.state
     secret = state.settings.auth_secret.get_secret_value() if state.settings.auth_secret else ""
     return DraftProofService(lambda: DraftProofs(secret, state.clock))
+
+
+def object_storage(settings):
+    if not settings.export_bucket:
+        return None
+    from scope_guard.integrations.storage.s3 import S3ObjectStorage
+
+    return S3ObjectStorage(
+        settings.export_bucket,
+        endpoint=settings.export_endpoint or None,
+        region=settings.export_region,
+        access_key=settings.export_access_key.get_secret_value()
+        if settings.export_access_key
+        else None,
+        secret_key=settings.export_secret_key.get_secret_value()
+        if settings.export_secret_key
+        else None,
+    )
+
+
+def workflow_service(request: Request):
+    from scope_guard.database.repositories.workflow import WorkflowUnitOfWork
+    from scope_guard.services.drafts.workflow import WorkflowService
+
+    state = request.app.state
+    return WorkflowService(
+        lambda: WorkflowUnitOfWork(state.database.new_uow()),
+        state.generator,
+        state.generation_limiter,
+        state.export_storage,
+    )

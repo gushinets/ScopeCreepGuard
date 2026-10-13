@@ -45,3 +45,7 @@ def health_service(request: Request):
 
 def draft_proof_service(request: Request):
     return bootstrap.draft_proof_service(request)
+
+
+def workflow_service(request: Request):
+    return bootstrap.workflow_service(request)
