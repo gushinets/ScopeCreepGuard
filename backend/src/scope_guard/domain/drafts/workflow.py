@@ -90,7 +90,7 @@ def validate_document(value: dict) -> dict:
     if (
         not isinstance(value, dict)
         or not {"version", "reply", "changeOrder"} <= value.keys()
-        or value.keys() - {"version", "reply", "changeOrder", "estimate"}
+        or value.keys() - {"version", "reply", "changeOrder", "estimate", "languageSelection"}
         or type(value["version"]) is not int
         or value["version"] != 2
     ):
@@ -105,6 +105,25 @@ def validate_document(value: dict) -> dict:
     ):
         raise WorkflowError("documentInvalid")
     generated = reply["generated"]
+    selection = value.get("languageSelection")
+    if selection is not None and (
+        not isinstance(selection, dict)
+        or set(selection)
+        != {
+            "language",
+            "confidence",
+            "status",
+            "selectedLanguage",
+            "override",
+            "version",
+            "requestHash",
+        }
+        or selection["selectedLanguage"] != reply["language"]
+        or type(selection["override"]) is not bool
+        or selection["status"] not in ("detected", "uncertain")
+        or not isinstance(selection["requestHash"], str)
+    ):
+        raise WorkflowError("documentInvalid")
     if (
         not isinstance(generated, dict)
         or set(generated) != {"warm", "neutral", "firm"}

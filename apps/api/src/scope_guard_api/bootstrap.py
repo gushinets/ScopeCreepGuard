@@ -100,6 +100,13 @@ def lifespan(settings):
         database = create_database(settings)
         app.state.database = database
         try:
+            if settings.llm_workflow:
+                from scope_guard.database.schema_verification import verify_llm_schema
+
+                if database is None:
+                    raise RuntimeError("LLM workflow requires the compatible database schema")
+                async with database.engine.begin() as connection:
+                    await connection.run_sync(verify_llm_schema)
             yield
         finally:
             await app.state.generator.close()
@@ -177,3 +184,81 @@ def workflow_service(request: Request):
         state.generation_limiter,
         state.export_storage,
     )
+
+
+def llm_operations_service(request: Request):
+    if not request.app.state.settings.llm_workflow:
+        return None
+    from scope_guard.database.repositories.llm import LlmSQLStore
+    from scope_guard.database.repositories.workflow import WorkflowUnitOfWork
+    from scope_guard.integrations.llm.detection import select
+    from scope_guard.integrations.llm.policy import policy
+    from scope_guard.services.llm.operations import LlmOperations
+
+    state = request.app.state
+    return LlmOperations(
+        lambda: WorkflowUnitOfWork(state.database.new_uow()),
+        LlmSQLStore(state.database.new_uow),
+        policy(state.settings),
+        state.generation_limiter,
+        language_selector=select,
+    )
+
+
+def legacy_llm_result(request, owner, style, value):
+    if style == "workflow":
+        return value
+    if style == "analyze":
+        from scope_guard.domain.analysis.domain import DraftProofBinding, DraftProofClaims, freeze
+        from scope_guard.domain.analysis.normalization import parse_snapshot
+        from scope_guard.integrations.auth.draft_proofs import DraftProofs
+
+        run = value["analysisRun"]
+        snapshot = {
+            **run["projectSnapshot"],
+            "version": 1,
+            "documentLanguage": run["requestedDocumentLanguage"],
+        }
+        proof = DraftProofs(
+            request.app.state.settings.auth_secret.get_secret_value(), request.app.state.clock
+        ).issue(
+            DraftProofClaims(
+                DraftProofBinding(
+                    str(owner), run["projectId"], run["requestText"], run["interfaceLocale"]
+                ),
+                parse_snapshot(run["resultSnapshot"], run["interfaceLocale"]),
+                freeze(snapshot),
+            )
+        )
+        return {"result": run["resultSnapshot"], "projectSnapshot": snapshot, "proof": proof}
+    document = value["draft"]["draftDocument"]
+    if style == "reply":
+        return {"reply": document["reply"]["text"]}
+    if style == "materials":
+        order = document["changeOrder"]
+        return {
+            "materials": {
+                "clientLanguage": document["reply"]["language"],
+                "replies": document["reply"]["generated"],
+                "changeOrder": None
+                if order is None
+                else {k: order[k] for k in ("description", "timelineImpact", "rationale", "note")},
+                **({"changeOrderLabels": order["changeOrderLabels"]} if order else {}),
+            }
+        }
+    result = {
+        **value["analysisRun"]["resultSnapshot"],
+        "changeOrder": {
+            k: document["changeOrder"][k]
+            for k in (
+                "description",
+                "estimatedHours",
+                "additionalCost",
+                "currency",
+                "timelineImpact",
+                "rationale",
+                "note",
+            )
+        },
+    }
+    return {"result": result}

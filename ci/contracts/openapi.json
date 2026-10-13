@@ -1130,34 +1130,6 @@
         ],
         "summary": "Analyze",
         "operationId": "analyze_api_analyze_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "projectId": {
-                    "type": "string"
-                  },
-                  "request": {
-                    "type": "string"
-                  },
-                  "documentLanguage": {
-                    "type": "string"
-                  },
-                  "endDate": {
-                    "type": "string"
-                  }
-                },
-                "type": "object",
-                "required": [
-                  "projectId",
-                  "request"
-                ]
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1180,81 +1152,163 @@
             }
           },
           "400": {
-            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Bad Request"
           },
           "401": {
-            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Unauthorized"
           },
           "403": {
-            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Forbidden"
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "409": {
-            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Conflict"
+          },
+          "426": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upgrade Required"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Precondition Required"
           },
           "429": {
-            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Too Many Requests"
           },
           "502": {
-            "description": "Bad Gateway",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Bad Gateway"
           },
           "503": {
-            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingLlmOperation"
+                }
+              }
+            },
+            "description": "Accepted"
+          }
+        },
+        "description": "With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "projectId",
+                  "request"
+                ],
+                "properties": {
+                  "projectId": {
+                    "type": "string"
+                  },
+                  "request": {
+                    "type": "string"
+                  },
+                  "documentLanguage": {
+                    "type": "string"
+                  },
+                  "endDate": {
+                    "type": "string"
+                  },
+                  "draftId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "operationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "expectedRevision": {
+                    "type": "string",
+                    "pattern": "^[1-9][0-9]*$"
+                  }
                 }
               }
             }
@@ -1269,10 +1323,162 @@
         ],
         "summary": "Reply",
         "operationId": "reply_api_replies_regenerate_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplyResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "426": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upgrade Required"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Precondition Required"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingLlmOperation"
+                }
+              }
+            },
+            "description": "Accepted"
+          }
+        },
+        "description": "With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
+                "type": "object",
+                "required": [
+                  "projectId",
+                  "request",
+                  "tone",
+                  "previousReply"
+                ],
                 "properties": {
                   "projectId": {
                     "type": "string"
@@ -1296,117 +1502,19 @@
                   },
                   "previousReply": {
                     "type": "string"
+                  },
+                  "draftId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "operationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "expectedRevision": {
+                    "type": "string",
+                    "pattern": "^[1-9][0-9]*$"
                   }
-                },
-                "type": "object",
-                "required": [
-                  "projectId",
-                  "request",
-                  "tone",
-                  "previousReply"
-                ]
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReplyResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected request failure",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too Many Requests",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1421,54 +1529,6 @@
         ],
         "summary": "Materials",
         "operationId": "materials_api_client_materials_language_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "projectId": {
-                    "type": "string"
-                  },
-                  "request": {
-                    "type": "string"
-                  },
-                  "documentLanguage": {
-                    "type": "string"
-                  },
-                  "endDate": {
-                    "type": "string"
-                  },
-                  "draftId": {
-                    "type": "string"
-                  },
-                  "proof": {
-                    "type": "string"
-                  },
-                  "locale": {
-                    "type": "string"
-                  },
-                  "historyId": {
-                    "type": "string"
-                  },
-                  "clientLanguage": {
-                    "type": "string"
-                  },
-                  "analysis": {
-                    "type": "object"
-                  }
-                },
-                "type": "object",
-                "required": [
-                  "projectId",
-                  "request",
-                  "clientLanguage",
-                  "analysis"
-                ]
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1491,99 +1551,140 @@
             }
           },
           "400": {
-            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Bad Request"
           },
           "401": {
-            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Unauthorized"
           },
           "403": {
-            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Forbidden"
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "409": {
-            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Conflict"
+          },
+          "426": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upgrade Required"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Precondition Required"
           },
           "429": {
-            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Too Many Requests"
           },
           "502": {
-            "description": "Bad Gateway",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Bad Gateway"
           },
           "503": {
-            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
+            },
+            "description": "Service Unavailable"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingLlmOperation"
+                }
+              }
+            },
+            "description": "Accepted"
+          }
+        },
+        "description": "With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
-        }
-      }
-    },
-    "/api/change-orders/estimate": {
-      "post": {
-        "tags": [
-          "generation"
         ],
-        "summary": "Estimate",
-        "operationId": "estimate_api_change_orders_estimate_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
+                "type": "object",
+                "required": [
+                  "projectId",
+                  "request",
+                  "clientLanguage",
+                  "analysis"
+                ],
                 "properties": {
                   "projectId": {
                     "type": "string"
@@ -1598,25 +1699,46 @@
                     "type": "string"
                   },
                   "draftId": {
-                    "type": "string"
+                    "type": "string",
+                    "format": "uuid"
                   },
                   "proof": {
                     "type": "string"
                   },
                   "locale": {
                     "type": "string"
+                  },
+                  "historyId": {
+                    "type": "string"
+                  },
+                  "clientLanguage": {
+                    "type": "string"
+                  },
+                  "analysis": {
+                    "type": "object"
+                  },
+                  "operationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "expectedRevision": {
+                    "type": "string",
+                    "pattern": "^[1-9][0-9]*$"
                   }
-                },
-                "type": "object",
-                "required": [
-                  "projectId",
-                  "request"
-                ]
+                }
               }
             }
-          },
-          "required": true
-        },
+          }
+        }
+      }
+    },
+    "/api/change-orders/estimate": {
+      "post": {
+        "tags": [
+          "generation"
+        ],
+        "summary": "Estimate",
+        "operationId": "estimate_api_change_orders_estimate_post",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1639,81 +1761,169 @@
             }
           },
           "400": {
-            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Bad Request"
           },
           "401": {
-            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Unauthorized"
           },
           "403": {
-            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Forbidden"
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "409": {
-            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Conflict"
+          },
+          "426": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upgrade Required"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Precondition Required"
           },
           "429": {
-            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Too Many Requests"
           },
           "502": {
-            "description": "Bad Gateway",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Bad Gateway"
           },
           "503": {
-            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingLlmOperation"
+                }
+              }
+            },
+            "description": "Accepted"
+          }
+        },
+        "description": "With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "projectId",
+                  "request"
+                ],
+                "properties": {
+                  "projectId": {
+                    "type": "string"
+                  },
+                  "request": {
+                    "type": "string"
+                  },
+                  "documentLanguage": {
+                    "type": "string"
+                  },
+                  "endDate": {
+                    "type": "string"
+                  },
+                  "draftId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "proof": {
+                    "type": "string"
+                  },
+                  "locale": {
+                    "type": "string"
+                  },
+                  "operationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "expectedRevision": {
+                    "type": "string",
+                    "pattern": "^[1-9][0-9]*$"
+                  }
                 }
               }
             }
@@ -5988,6 +6198,16 @@
               }
             }
           },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingLlmOperation"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -6101,6 +6321,16 @@
                 }
               }
             }
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingLlmOperation"
+                }
+              }
+            },
+            "description": "Accepted"
           },
           "422": {
             "description": "Validation Error",
@@ -6218,6 +6448,16 @@
               }
             }
           },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingLlmOperation"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -6267,6 +6507,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__DraftResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingLlmOperation"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/llm-operations/{identifier}": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Llm Status",
+        "operationId": "llm_status_api_v2_llm_operations__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmOperationStatus"
                 }
               }
             }
@@ -6436,6 +6739,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__HistoryResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/history/{identifier}/restore": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Reopen History",
+        "operationId": "reopen_history_api_v2_history__identifier__restore_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionedOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__DraftResponse"
                 }
               }
             }
@@ -7267,6 +7633,18 @@
             "type": "boolean",
             "title": "Conflict",
             "default": false
+          },
+          "historyEntryId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Historyentryid"
           }
         },
         "type": "object",
@@ -8137,6 +8515,18 @@
       "ErrorCode": {
         "type": "string",
         "enum": [
+          "errors.providerBudgetUnavailable",
+          "errors.operationBudgetExceeded",
+          "errors.operationDeadlineExceeded",
+          "errors.semanticAttemptsExhausted",
+          "errors.transportAttemptsExhausted",
+          "errors.providerOutcomeUnknown",
+          "errors.providerTransportFailed",
+          "errors.providerOutputIncomplete",
+          "errors.operationLeaseLost",
+          "errors.workflowVersionUnavailable",
+          "errors.providerModelMismatch",
+          "errors.attemptSequenceInvalid",
           "errors.requestBodyInvalid",
           "errors.requestFailed",
           "errors.authRequired",
@@ -8794,6 +9184,81 @@
         "type": "object",
         "title": "LivenessResponse"
       },
+      "LlmOperationStatus": {
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operationid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "statusUrl": {
+            "type": "string",
+            "title": "Statusurl"
+          },
+          "deadlineAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Deadlineat"
+          },
+          "stages": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Stages"
+          },
+          "responseFormat": {
+            "type": "string",
+            "title": "Responseformat"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operationId",
+          "status",
+          "statusUrl",
+          "deadlineAt",
+          "stages",
+          "responseFormat",
+          "result",
+          "error"
+        ],
+        "title": "LlmOperationStatus"
+      },
       "MaterialsResponse": {
         "properties": {
           "materials": {
@@ -8868,6 +9333,42 @@
           "pageNumbers"
         ],
         "title": "PagesWithoutText"
+      },
+      "PendingLlmOperation": {
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operationid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "statusUrl": {
+            "type": "string",
+            "title": "Statusurl"
+          },
+          "deadlineAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Deadlineat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operationId",
+          "status",
+          "statusUrl",
+          "deadlineAt"
+        ],
+        "title": "PendingLlmOperation"
       },
       "PricingModel": {
         "type": "string",
@@ -9870,6 +10371,18 @@
                 "type": "null"
               }
             ]
+          },
+          "languageSelection": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Languageselection"
           }
         },
         "additionalProperties": false,

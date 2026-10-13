@@ -157,7 +157,10 @@ def test_guarded_migrate_upgrades_known_baseline_to_test_only_future_head(
         root / "alembic",
         future_alembic,
         ignore=shutil.ignore_patterns(
-            "0002_workflow_expand.py", "0003_workflow_constraints.py", "0004_workflow_retire.py"
+            "0002_workflow_expand.py",
+            "0003_workflow_constraints.py",
+            "0004_workflow_retire.py",
+            "0005_llm_workflow.py",
         ),
     )
     shutil.copy(

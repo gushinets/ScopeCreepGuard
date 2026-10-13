@@ -49,3 +49,11 @@ def draft_proof_service(request: Request):
 
 def workflow_service(request: Request):
     return bootstrap.workflow_service(request)
+
+
+def llm_operations_service(request: Request):
+    return bootstrap.llm_operations_service(request)
+
+
+def legacy_llm_result(request, owner, style, value):
+    return bootstrap.legacy_llm_result(request, owner, style, value)
