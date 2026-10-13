@@ -185,36 +185,44 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     }
     changeView('projects')
   }
-  async function applyAction(action: (saved: WorkingDraft) => Promise<WorkingDraft>) {
-    const saved = await flush()
-    const current = controller.current!
-    const run = navigation.current
-    const response = await action(saved)
-    if (run !== navigation.current || controller.current !== current) return
-    if (current.status !== 'saved') {
-      setDraftError(ERROR_CODES.draftConflict)
-      setSaveStatus('conflict')
-      return
+  function applyOperationResponse(current: DraftAutosave, edits: symbol, response: WorkingDraft) {
+    if (BigInt(response.revision) <= BigInt(current.confirmed.revision)) return false
+    if (current.editToken !== edits || current.status !== 'saved') {
+      current.markConflict(new WorkflowApiError(ERROR_CODES.draftConflict, 409))
+      return false
     }
     install(response)
+    return true
+  }
+  async function applyAction(action: (saved: WorkingDraft) => Promise<WorkingDraft>) {
+    const current = controller.current!
+    const run = navigation.current
+    const saved = await flush()
+    if (run !== navigation.current || controller.current !== current) return
+    const edits = current.editToken
+    const response = await action(saved)
+    if (run !== navigation.current || controller.current !== current) return
+    applyOperationResponse(current, edits, response)
   }
   async function runAnalysis() {
+    const current = controller.current
+    const run = navigation.current
     setAnalysisError('')
     try {
       const saved = await flush()
-      const current = controller.current!
-      const run = navigation.current
+      if (!current || run !== navigation.current || current !== controller.current) return
+      const edits = current.editToken
       setStatus('loading')
       const response = await operations.current.run<{ draft: WorkingDraft | null; analysisRun: WorkingDraft['analysisRun']; applied: boolean }>(`drafts/${saved.id}/analyses`, { expectedRevision: saved.revision, locale: locale === 'ru' ? 'ru' : 'en', documentLanguage: saved.draftDocument.reply.language })
       if (run !== navigation.current || current !== controller.current) return
-      if (!response.applied || !response.draft || current.status !== 'saved') {
-        setDraftError(ERROR_CODES.draftConflict)
-        setSaveStatus('conflict')
-        setStatus(current.local.analysisRun?.resultSnapshot ? 'result' : 'idle')
-        return
-      }
-      install(response.draft)
-    } catch (error) { setAnalysisError(errorCode(error)); setStatus('error') }
+      if (!response.applied || !response.draft) {
+        if (BigInt(current.confirmed.revision) <= BigInt(saved.revision)) current.markConflict(new WorkflowApiError(ERROR_CODES.draftConflict, 409))
+      } else if (applyOperationResponse(current, edits, response.draft)) return
+      setStatus(current.local.analysisRun?.resultSnapshot ? 'result' : 'idle')
+    } catch (error) {
+      if (run !== navigation.current || current !== controller.current) return
+      setAnalysisError(errorCode(error)); setStatus('error')
+    }
   }
   async function saveDraft() {
     if (!controller.current) return
