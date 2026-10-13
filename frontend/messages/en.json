@@ -302,6 +302,7 @@
     "analysisStale": "Run a fresh analysis first.",
     "operationMismatch": "This operation was retried with different parameters.",
     "documentInvalid": "Check the document fields and decimal amounts.",
+    "documentTooLarge": "This draft is too large to save. Shorten the text and try again.",
     "exportStorageUnavailable": "Private export storage is not configured.",
     "legacyProvenanceMissing": "This legacy check lacks verified completion details.",
     "agreementAlreadyFinalized": "Void the active agreement before creating a replacement.",

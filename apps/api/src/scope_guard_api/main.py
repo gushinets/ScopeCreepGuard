@@ -3,6 +3,7 @@ from collections.abc import Callable
 
 from fastapi import FastAPI
 from scope_guard.core.config import Settings
+from scope_guard.domain.analysis.domain import GenerationError
 from scope_guard.services.auth.use_cases import AuthError
 from scope_guard.services.evaluations.use_cases import EvaluationError
 from scope_guard.services.projects.use_cases import ProjectError
@@ -61,6 +62,12 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
 
     @application.exception_handler(WorkflowError)
     async def workflow_error(_request, error: WorkflowError):
+        return JSONResponse(
+            {"error": error.code}, error.status, headers={"Cache-Control": "private, no-store"}
+        )
+
+    @application.exception_handler(GenerationError)
+    async def generation_error(_request, error: GenerationError):
         return JSONResponse(
             {"error": error.code}, error.status, headers={"Cache-Control": "private, no-store"}
         )
