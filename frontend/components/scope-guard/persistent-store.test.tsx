@@ -283,6 +283,25 @@ it('retries the failed autosave payload without adding an empty edit', async () 
   expect(saved.requestText).toBe('Retry this exact edit')
 })
 
+it('logs an autosave conflict without exposing its document content', async () => {
+  const originalFetch = vi.mocked(fetch).getMockImplementation()!
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (String(input) === '/api/v2/drafts/d1' && init?.method === 'PUT') return Response.json({ error: 'errors.draftConflict' }, { status: 409 })
+    return originalFetch(input, init)
+  })
+  try {
+    const hook = renderHook(() => useStore(), { wrapper })
+    await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+    act(() => hook.result.current.setRequestText('Do not log this request text'))
+    await act(async () => { await expect(hook.result.current.workflow?.complete()).rejects.toThrow('errors.draftConflict') })
+    await waitFor(() => expect(log).toHaveBeenCalled())
+    const event = JSON.parse(String(log.mock.calls.find(([entry]) => String(entry).includes('draft_autosave_conflict'))?.[0]))
+    expect(event).toMatchObject({ event: 'draft_autosave_conflict', draftId: 'd1', projectId: 'p1', revision: '3', error: 'errors.draftConflict' })
+    expect(JSON.stringify(event)).not.toContain('Do not log this request text')
+  } finally { log.mockRestore() }
+})
+
 it('offers recovery without automatically replacing the saved request', async () => {
   const sourceKey = 'scg:unconfirmed:u1:d1:other-tab'
   localStorage.setItem(sourceKey, JSON.stringify({ version: 1, draftId: 'd1', baseRevision: '3', changes: { requestText: 'Unconfirmed text', draftDocument: saved.draftDocument }, attempt: null }))

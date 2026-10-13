@@ -40,6 +40,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
   const navigation = useRef(0)
   const tab = useRef('')
   const recoverySource = useRef('')
+  const reportedSaveIssue = useRef('')
   const recoveryKey = useCallback((id: string) => {
     if (!tab.current) {
       try { tab.current = sessionStorage.getItem('scg:recovery-tab') ?? crypto.randomUUID(); sessionStorage.setItem('scg:recovery-tab', tab.current) }
@@ -71,6 +72,14 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
       setSnapshot({ ...next.local })
       setSaveStatus(next.status)
       setDraftError(next.error ? errorCode(next.error) : '')
+      if (next.status === 'conflict' || next.status === 'failed') {
+        const event = `draft_autosave_${next.status}`
+        const issue = `${event}:${next.confirmed.id}:${next.confirmed.revision}`
+        if (reportedSaveIssue.current !== issue) {
+          reportedSaveIssue.current = issue
+          console.error(JSON.stringify({ event, draftId: next.confirmed.id, projectId: next.confirmed.projectId, revision: next.confirmed.revision, error: next.error ? errorCode(next.error) : null }))
+        }
+      } else reportedSaveIssue.current = ''
     }, recoveryKey(draft.id))
     controller.current = next
     setSnapshot(draft)
@@ -86,7 +95,9 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
       const candidates = [recoveryKey(draft.id), ...Object.keys(localStorage).filter(key => key === prefix || key.startsWith(prefix + ':'))]
       recoverySource.current = candidates.find(key => localStorage.getItem(key)) ?? ''
       const raw = JSON.parse(localStorage.getItem(recoverySource.current) ?? 'null') as RecoveryBuffer | null
-      setRecovery(parseRecoveryBuffer(raw, draft.id))
+      const buffer = parseRecoveryBuffer(raw, draft.id)
+      setRecovery(buffer)
+      if (buffer) console.error(JSON.stringify({ event: 'draft_recovery_buffer_available', draftId: draft.id, projectId: draft.projectId, baseRevision: buffer.baseRevision, hasPendingOperation: !!buffer.attempt }))
     } catch { setRecovery(null) }
   }, [recoveryKey, syncDraftUrl])
 
