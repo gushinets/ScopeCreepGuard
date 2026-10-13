@@ -112,7 +112,8 @@ def lifespan(settings):
 def configure_app(application, settings):
     application.state.export_storage = object_storage(settings)
     application.state.generator = OpenAIGeneration(
-        settings.openai_api_key.get_secret_value() if settings.openai_api_key else ""
+        settings.openai_api_key.get_secret_value() if settings.openai_api_key else "",
+        model=settings.openai_model,
     )
     application.state.generation_limiter = GenerationLimiter()
     application.state.technical_operations = TechnicalOperations()
