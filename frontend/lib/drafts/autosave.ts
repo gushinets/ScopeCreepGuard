@@ -58,6 +58,17 @@ export class DraftAutosave {
   private maximum: ReturnType<typeof setTimeout> | null = null
   private disposed = false
   private reason: SaveReason = 'autosave'
+  private edits = Symbol('edits')
+
+  get editToken() { return this.edits }
+
+  markConflict(error: unknown) {
+    this.error = error
+    this.status = 'conflict'
+    this.stopTimers()
+    this.persist()
+    if (!this.disposed) this.notify()
+  }
 
   constructor(
     draft: WorkingDraft,
@@ -71,6 +82,7 @@ export class DraftAutosave {
 
   edit(changes: Partial<SaveBody['changes']>, reason: SaveReason = 'autosave', immediate = false) {
     if (this.disposed) return
+    this.edits = Symbol('edits')
     this.local = { ...this.local, ...structuredClone(changes) }
     if (changes.requestText !== undefined && changes.requestText !== this.confirmed.requestText) this.local.analysisIsStale = true
     this.generation += 1
@@ -140,6 +152,7 @@ export class DraftAutosave {
   /** Explicit user choice: discard local changes, or reapply them to the reviewed server version. */
   resolve(server: WorkingDraft, keepLocal: boolean) {
     if (this.inFlight) throw new Error('save still in progress')
+    this.edits = Symbol('edits')
     const document = structuredClone(server.draftDocument)
     const local = this.local.draftDocument
     const base = this.confirmed.draftDocument

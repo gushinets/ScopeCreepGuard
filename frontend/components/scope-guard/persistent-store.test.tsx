@@ -25,7 +25,7 @@ beforeEach(() => {
     if (url === '/api/v2/projects/p1/draft' || url === '/api/v2/drafts/d1') {
       if (init?.method === 'PUT') {
         const body = JSON.parse(String(init.body))
-        saved = { ...saved, ...body.changes, revision: String(Number(saved.revision) + 1) }
+        saved = { ...saved, ...body.changes, revision: String(BigInt(saved.revision) + BigInt(1)) }
       }
       return Response.json({ draft: saved })
     }
@@ -34,6 +34,82 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 const wrapper = ({ children }: { children: ReactNode }) => <NextIntlClientProvider locale="en" messages={en}><PersistentStoreProvider>{children}</PersistentStoreProvider></NextIntlClientProvider>
+
+function analyzedDraft() {
+  saved.lastAnalysisRunId = 'analysis'
+  saved.analysisIsStale = false
+  saved.analysisRun = { id: 'analysis', projectId: saved.projectId, sourceDraftId: saved.id, sourceDraftRevision: saved.revision,
+    requestText: saved.requestText, projectSnapshot: { ...project, industry: 'Design', pricingModel: 'hourly', currency: 'EUR' },
+    interfaceLocale: 'en', status: 'succeeded', finishedAt: saved.updatedAt,
+    resultSnapshot: { verdict: 'in_scope', confidence: 90, summary: 'Summary', reasoning: 'Reason', citations: [], replies: saved.draftDocument.reply.generated,
+      changeOrder: { description: '', timelineImpact: '', additionalCost: '', note: '' } } }
+}
+
+it('shows the first successful analysis result after installing its response', async () => {
+  const initial = structuredClone(saved)
+  analyzedDraft()
+  const response = { ...structuredClone(saved), revision: '4' }
+  saved = initial
+  const originalFetch = vi.mocked(fetch).getMockImplementation()!
+  vi.mocked(fetch).mockImplementation(async (input, init) => String(input).endsWith('/analyses')
+    ? Response.json({ applied: true, draft: response, analysisRun: response.analysisRun }) : originalFetch(input, init))
+  const hook = renderHook(() => useStore(), { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  act(() => hook.result.current.runCheck())
+  await waitFor(() => expect(hook.result.current.status).toBe('result'))
+})
+
+for (const operation of ['regenerate', 'analysis'] as const) {
+  it.each(['normal', 'saved edits', 'pending edits', 'navigation', 'unapplied after saved edits'] as const)(`${operation}: protects state with %s during a delayed response`, async scenario => {
+    saved.revision = '9007199254740991'
+    analyzedDraft()
+    const initial = structuredClone(saved)
+    const response = structuredClone(initial)
+    response.revision = String(BigInt(initial.revision) + BigInt(1))
+    response.draftDocument.reply.text = 'Generated reply'
+    let release!: (value: Response) => void
+    const delayed = new Promise<Response>(resolve => { release = resolve })
+    const originalFetch = vi.mocked(fetch).getMockImplementation()!
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url === `/api/v2/drafts/d1/${operation === 'analysis' ? 'analyses' : 'regenerate'}`) return delayed
+      if (url === '/api/v2/drafts/d2') return Response.json({ draft: { ...initial, id: 'd2', projectId: 'p2', requestText: 'Other project' } })
+      return originalFetch(input, init)
+    })
+    const hook = renderHook(() => useStore(), { wrapper })
+    await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+    let running: Promise<void> | undefined
+    act(() => {
+      if (operation === 'analysis') hook.result.current.runCheck()
+      else running = hook.result.current.workflow!.regenerate()
+    })
+    await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith(operation === 'analysis' ? '/analyses' : '/regenerate'))).toBe(true))
+    if (scenario === 'saved edits' || scenario === 'pending edits' || scenario === 'unapplied after saved edits') {
+      act(() => hook.result.current.setRequestText('Newer local request'))
+      if (scenario !== 'pending edits') {
+        saved = structuredClone(response)
+        await act(async () => hook.result.current.saveDraft())
+      }
+    } else if (scenario === 'navigation') {
+      await act(async () => hook.result.current.openDraft('d2'))
+    }
+    await act(async () => {
+      release(Response.json(operation === 'analysis' ? { applied: scenario !== 'unapplied after saved edits', draft: scenario === 'unapplied after saved edits' ? null : response, analysisRun: response.analysisRun } : { draft: response }))
+      await running
+    })
+    if (scenario === 'normal') {
+      await waitFor(() => expect(hook.result.current.draftDocument?.reply.text).toBe('Generated reply'))
+      expect(hook.result.current.workflow?.status).toBe('saved')
+    } else if (scenario === 'navigation') {
+      expect(hook.result.current.currentDraftId).toBe('d2')
+      expect(hook.result.current.requestText).toBe('Other project')
+    } else {
+      expect(hook.result.current.requestText).toBe('Newer local request')
+      expect(hook.result.current.workflow?.status).toBe(scenario === 'pending edits' ? 'conflict' : 'saved')
+      if (scenario !== 'pending edits') expect(hook.result.current.draftError).toBe('')
+    }
+  })
+}
 
 it('does not create another project when opening its confirmed Draft temporarily fails', async () => {
   const originalFetch = vi.mocked(fetch).getMockImplementation()!
