@@ -24,6 +24,35 @@ def test_hash_is_order_independent_but_preserves_request_text():
     assert operation_hash({"request": " x"}) != operation_hash({"request": "x"})
 
 
+def test_working_entity_invalidates_changed_inputs_and_rejects_overflow():
+    from scope_guard.domain.drafts.workflow import DraftState, WorkflowError, empty_document
+
+    state = DraftState.from_snapshot(
+        {
+            "revision": "5",
+            "requestText": "original",
+            "lastAnalysisRunId": "run",
+            "analysisIsStale": False,
+            "draftDocument": empty_document(),
+        }
+    )
+    updated = state.apply(5, {"requestText": "changed", "analysisIsStale": False})
+    assert updated.revision == 6
+    assert updated.analysis_is_stale is True
+    with pytest.raises(WorkflowError):
+        state.apply(4, {})
+    with pytest.raises(WorkflowError):
+        DraftState.from_snapshot(
+            {
+                "revision": str(2**63 - 1),
+                "requestText": "",
+                "lastAnalysisRunId": None,
+                "analysisIsStale": True,
+                "draftDocument": empty_document(),
+            }
+        ).apply(2**63 - 1, {})
+
+
 def test_analysis_cannot_skip_running_or_change_terminal_state():
     from scope_guard.domain.drafts.workflow import WorkflowError, transition
 

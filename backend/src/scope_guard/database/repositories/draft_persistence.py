@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from scope_guard.database.legacy_boundary import require_legacy_schema
 from scope_guard.database.models import DraftRow, HistoryEntryRow, ProjectRow
 from scope_guard.database.queries.drafts import DraftQueries
 from scope_guard.database.unit_of_work import SqlAlchemyUnitOfWork
@@ -85,6 +86,7 @@ class DraftRepository(DraftQueries):
         )
 
     async def insert_history(self, owner: UUID, command: CreateDraft, day: date) -> UUID:
+        await require_legacy_schema(self.session)
         # The use case holds the owned project lock throughout all three writes.
         snapshot = thaw_json(command.analysis_snapshot)
         row = HistoryEntryRow(
@@ -101,6 +103,7 @@ class DraftRepository(DraftQueries):
     async def insert_draft(
         self, owner: UUID, command: CreateDraft, history: UUID, now: datetime
     ) -> StoredDraft:
+        await require_legacy_schema(self.session)
         metadata = language_metadata(command.document)
         request_language = command.analysis_snapshot.get("requestLanguage")
         row = DraftRow(
@@ -146,6 +149,7 @@ class DraftRepository(DraftQueries):
     async def update_document(
         self, owner: UUID, identifier: UUID, document: DraftDocument, now: datetime
     ) -> StoredDraft | None:
+        await require_legacy_schema(self.session)
         metadata = language_metadata(document)
         owned_projects = select(ProjectRow.id).where(ProjectRow.user_id == owner)
         key = await self.session.scalar(

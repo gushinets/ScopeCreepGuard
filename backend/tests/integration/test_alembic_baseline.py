@@ -153,7 +153,13 @@ def test_guarded_migrate_upgrades_known_baseline_to_test_only_future_head(
 
     root = Path(__file__).resolve().parents[2]
     future_alembic = tmp_path / "alembic"
-    shutil.copytree(root / "alembic", future_alembic)
+    shutil.copytree(
+        root / "alembic",
+        future_alembic,
+        ignore=shutil.ignore_patterns(
+            "0002_workflow_expand.py", "0003_workflow_constraints.py", "0004_workflow_retire.py"
+        ),
+    )
     shutil.copy(
         root / "tests/fixtures/alembic_future/0002_revision_probe.py",
         future_alembic / "versions/0002_revision_probe.py",
@@ -173,7 +179,7 @@ def test_guarded_migrate_upgrades_known_baseline_to_test_only_future_head(
             assert migrations.current_revision(connection) == migrations.BASELINE
         monkeypatch.setattr(migrations, "config", future_config)
         with engine.begin() as connection:
-            migrations.migrate(connection)
+            migrations.migrate(connection, target="head")
             assert migrations.current_revision(connection) == "0002_revision_probe"
             assert connection.exec_driver_sql(
                 "SELECT to_regclass('public.revision_probe')"

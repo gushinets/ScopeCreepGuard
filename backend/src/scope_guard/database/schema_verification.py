@@ -23,7 +23,7 @@ class SchemaCompatibilityError(Exception):
         super().__init__("schema_mismatch: " + ", ".join(item.path for item in differences))
 
 
-def inspect_schema(connection: Connection) -> dict:
+def inspect_schema(connection: Connection, table_names: tuple[str, ...] = TABLES) -> dict:
     connection.exec_driver_sql("SET LOCAL search_path TO pg_catalog, public")
     tables = {}
     for row in connection.execute(
@@ -32,7 +32,7 @@ def inspect_schema(connection: Connection) -> dict:
         FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
         WHERE n.nspname='public' AND c.relname=ANY(:tables) ORDER BY c.relname
     """),
-        {"tables": list(TABLES)},
+        {"tables": list(table_names)},
     ).mappings():
         oid = row["oid"]
         tables[row["relname"]] = {
@@ -186,10 +186,78 @@ def verify_current_head(connection: Connection) -> None:
 REVISION_VALIDATORS = {"0001_existing_drizzle_schema": verify_baseline}
 
 
+def verify_workflow_schema(connection: Connection, revision: str) -> None:
+    verify_managed_schema(connection)
+    for name in (
+        "analysis_runs",
+        "draft_revisions",
+        "change_orders",
+        "document_exports",
+        "activity_events",
+    ):
+        if connection.exec_driver_sql("SELECT to_regclass('public." + name + "')").scalar() is None:
+            raise SchemaCompatibilityError(
+                [SchemaDifference("schema.missing_public_object." + name)]
+            )
+    columns: dict[str, str] = dict(
+        connection.exec_driver_sql(
+            "SELECT column_name,is_nullable FROM information_schema.columns W"
+            "HERE table_schema='public' AND table_name='drafts'"
+        )
+        .tuples()
+        .all()
+    )
+    for name in ("request_text", "revision", "analysis_is_stale", "last_analysis_run_id"):
+        if name not in columns:
+            raise SchemaCompatibilityError([SchemaDifference("drafts.missing." + name)])
+    if (
+        revision in ("0003_workflow_constraints", "0004_workflow_retire")
+        and columns["revision"] != "NO"
+    ):
+        raise SchemaCompatibilityError([SchemaDifference("drafts.revision_nullable")])
+    if revision == "0004_workflow_retire" and "history_entry_id" in columns:
+        raise SchemaCompatibilityError([SchemaDifference("drafts.compatibility_not_retired")])
+    table_names = TABLES + (
+        "draft_revisions",
+        "analysis_runs",
+        "change_orders",
+        "document_exports",
+        "activity_events",
+    )
+    actual = inspect_schema(connection, table_names)
+    actual["functions"] = [
+        dict(row)
+        for row in connection.exec_driver_sql(
+            "SELECT p.proname AS name,p.prosrc AS source FROM pg_proc p JOIN pg_namespace n "
+            "ON n.oid=p.pronamespace WHERE n.nspname='public' AND LEFT(p.proname,9)='workflow_' "
+            "ORDER BY p.proname"
+        ).mappings()
+    ]
+    expected_schema = json.loads(
+        Path(__file__).with_name(revision + "_schema.json").read_text(encoding="utf-8")
+    )
+    differences = compare_schema(actual, expected_schema)
+    objects = set(
+        connection.exec_driver_sql(
+            "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
+            "WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S')"
+        ).scalars()
+    )
+    differences.extend(
+        SchemaDifference("schema.unexpected_public_object." + name)
+        for name in sorted(objects - set(table_names) - {"alembic_version"})
+    )
+    if differences:
+        raise SchemaCompatibilityError(differences)
+
+
 def verify_revision_schema(connection: Connection, *, revision: str | None, head: str) -> None:
-    """Validate a known Alembic state without applying legacy baseline rules to descendants."""
+    "Validate a known Alembic state without applying legacy baseline rules to descendants."
     if revision is None:
         raise SchemaCompatibilityError([SchemaDifference("missing_alembic_revision")])
+    if revision.startswith(("0002_workflow", "0003_workflow", "0004_workflow")):
+        verify_workflow_schema(connection, revision)
+        return
     validator = REVISION_VALIDATORS.get(revision)
     if validator is not None:
         validator(connection)

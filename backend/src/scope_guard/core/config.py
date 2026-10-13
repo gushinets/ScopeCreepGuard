@@ -21,6 +21,14 @@ class Settings(BaseSettings):
         default=None, validation_alias=AliasChoices("SCOPE_GUARD_AUTH_SECRET", "AUTH_SECRET")
     )
     production: bool = False
+    workflow_v2: bool = False
+    migration_target: str = "0001_existing_drizzle_schema"
+    export_bucket: str | None = None
+    export_endpoint: str | None = None
+    export_region: str = "us-east-1"
+    export_retention_days: int | None = Field(default=None, ge=1)
+    export_access_key: SecretStr | None = None
+    export_secret_key: SecretStr | None = None
     openai_api_key: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("SCOPE_GUARD_OPENAI_API_KEY", "OPENAI_API_KEY")
     )

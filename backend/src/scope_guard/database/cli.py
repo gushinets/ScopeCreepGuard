@@ -18,11 +18,20 @@ from scope_guard.database.session import normalize_url
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "operation", choices=("check", "upgrade-empty", "adopt-baseline", "migrate")
+        "operation",
+        choices=(
+            "check",
+            "upgrade-empty",
+            "adopt-baseline",
+            "migrate",
+            "workflow-backfill",
+            "workflow-check",
+        ),
     )
     parser.add_argument("--database-url-env", required=True)
     parser.add_argument("--disposable", action="store_true")
     parser.add_argument("--adopt-legacy", action="store_true")
+    parser.add_argument("--target", default="0001_existing_drizzle_schema")
     args = parser.parse_args(argv)
     engine = None
     try:
@@ -47,10 +56,26 @@ def main(argv=None) -> int:
         ):
             raise ValueError("database_target_override_rejected")
         engine = create_engine(url, hide_parameters=True, connect_args={"connect_timeout": 3})
+        if args.operation == "workflow-backfill":
+            from scope_guard.database.migrations import current_revision
+            from scope_guard.database.workflow_backfill import backfill
+
+            with engine.begin() as connection:
+                if current_revision(connection) != "0002_workflow_expand":
+                    raise ValueError("workflow_backfill_requires_expansion")
+            print("workflow_projects_imported=" + str(backfill(engine)))
+            return 0
         with engine.begin() as connection:
             connection.exec_driver_sql("SET LOCAL lock_timeout='3s'")
             if args.operation == "migrate":
-                migrate(connection, adopt_legacy=args.adopt_legacy)
+                if args.target == "0001_existing_drizzle_schema":
+                    migrate(connection, adopt_legacy=args.adopt_legacy)
+                else:
+                    migrate(connection, adopt_legacy=args.adopt_legacy, target=args.target)
+            elif args.operation == "workflow-check":
+                from scope_guard.database.workflow_backfill import verify_backfill
+
+                verify_backfill(connection)
             else:
                 {
                     "check": verify_baseline,
@@ -62,6 +87,7 @@ def main(argv=None) -> int:
             "migrate": "migration_complete",
             "upgrade-empty": "disposable_baseline_prepared",
             "adopt-baseline": "disposable_baseline_prepared",
+            "workflow-check": "workflow_backfill_verified",
         }
         print(messages[args.operation])
         return 0

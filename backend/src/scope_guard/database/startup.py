@@ -57,6 +57,9 @@ def main(argv=None) -> int:
     try:
         wait_for_database(target_url(args.database_url_env))
         command = ["migrate", "--database-url-env", args.database_url_env]
+        target = os.environ.get("SCOPE_GUARD_MIGRATION_TARGET")
+        if target:
+            command.extend(["--target", target])
         if os.environ.get("SCOPE_GUARD_ADOPT_LEGACY", "false") == "true":
             command.append("--adopt-legacy")
         return migrate_main(command)
