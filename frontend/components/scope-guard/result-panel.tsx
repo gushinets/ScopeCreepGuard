@@ -11,7 +11,7 @@ import {
   ShieldQuestion,
   TriangleAlert,
 } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { commercialSignature } from '@/lib/change-order/commercial-signature'
 import { Button } from '@/components/ui/button'
 import { VerdictBanner } from './verdict'
@@ -21,14 +21,14 @@ import { VerdictFeedback } from './verdict-feedback'
 import { useStore } from './store'
 
 export function ResultPanel() {
-  const { status, result, runCheck, analysisProject: selectedProject, draftSessionId } = useStore()
+  const { status, result, runCheck, analysisProject: selectedProject, draftSessionId, draftDocument } = useStore()
 
   if (status === 'idle') return <EmptyState />
   if (status === 'loading') return <LoadingState />
   if (status === 'error') return <ErrorState onRetry={runCheck} />
   if (status === 'short_scope') return <ShortScopeState />
   if (status === 'result' && result && selectedProject) {
-    return <ResultState key={draftSessionId} />
+    return <ResultState key={`${draftSessionId}:${result.clientLanguage}:${draftDocument?.languageSelection?.requestHash ?? ''}`} />
   }
   return <EmptyState />
 }
@@ -141,9 +141,11 @@ function ShortScopeState() {
 }
 
 function ResultState() {
-  const { result, analysisProject: selectedProject, projectSnapshot, currentHistoryEntryId, analyzedRequest, user, setView, createEstimate, clientMaterials, changeClientLanguage, draftDocument, currentDraftId, draftSessionId, updateReply, updateChangeOrder, saveDraft, isSavingDraft, draftError, isDraftDirty, workflow } =
+  const { result, analysisProject: selectedProject, selectedProject: currentProject, projectSnapshot, currentHistoryEntryId, analyzedRequest, user, setView, createEstimate, clientMaterials, changeClientLanguage, draftDocument, currentDraftId, draftSessionId, updateReply, updateChangeOrder, saveDraft, isSavingDraft, draftError, isDraftDirty, workflow } =
     useStore()
   const t = useTranslations()
+  const locale = useLocale()
+  const languageName = (code: string) => new Intl.DisplayNames([locale], { type: 'language' }).of(code) ?? code
   const [showChangeOrder, setShowChangeOrder] = useState(!!currentDraftId && !!draftDocument?.changeOrder)
   const [documentLanguage, setDocumentLanguage] = useState(clientMaterials?.clientLanguage ?? result?.clientLanguage ?? '')
   const languageError = documentLanguage && !supportedClientLanguage(documentLanguage) ? t('errors.clientLanguageUnsupported') : ''
@@ -157,7 +159,7 @@ function ResultState() {
   const material = clientMaterials ? applyClientMaterials(result, clientMaterials) : result
 
   const endDate = workflow ? draftDocument?.changeOrder?.endDate || selectedProject.endDate || '' : draftDocument?.changeOrder?.endDate ?? draftDocument?.projectDetails.endDate ?? ''
-  const needsEstimate = !material.estimateValid || material.commercialSignature !== commercialSignature(selectedProject, endDate)
+  const needsEstimate = !material.estimateValid || material.commercialSignature !== commercialSignature(workflow ? currentProject ?? selectedProject : selectedProject, endDate)
 
   async function openChangeOrder() {
     if (!result || !selectedProject || !termsComplete) { setView('edit_project'); return }
@@ -177,8 +179,8 @@ function ResultState() {
     setGenerating(true)
     setEstimateError('')
     try {
-      await changeClientLanguage(code)
-      setDocumentLanguage(code)
+      const cancelled = await changeClientLanguage(code)
+      setDocumentLanguage(workflow && cancelled ? material.clientLanguage ?? '' : code)
     } catch { setEstimateError(t('result.clientLanguageError')) }
     finally { setGenerating(false) }
   }
@@ -272,14 +274,6 @@ function ResultState() {
         request={analyzedRequest ?? ''}
       />
 
-      <details className="rounded-lg border border-border p-3"><summary className="cursor-pointer text-sm">{t('result.documentLanguage')}</summary>
-        <p className="mt-2 text-xs text-muted-foreground">{t('result.clientLanguageHint', { language: material.clientLanguage ?? '' })}</p>
-        <div className="mt-2 flex gap-2"><input id="co-document-language" aria-label={t('result.documentLanguage')} aria-invalid={!!languageError} aria-describedby="client-language-feedback" disabled={generating || isSavingDraft} list="client-languages" value={documentLanguage} onChange={(e) => setDocumentLanguage(e.target.value)} placeholder="de, pt, pt-BR..." maxLength={100} className="min-w-0 rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-          <datalist id="client-languages">{[...PDF_CLIENT_LANGUAGES, 'pt-BR'].map((code) => <option key={code} value={code} />)}</datalist>
-          <Button type="button" variant="outline" disabled={generating || isSavingDraft || !supportedClientLanguage(documentLanguage)} onClick={() => void applyClientLanguage()}>{generating ? t('result.generatingClientMaterials') : t('result.applyClientLanguage')}</Button>
-        </div>
-        <p id="client-language-feedback" role={languageError ? 'alert' : undefined} className="mt-2 text-xs text-muted-foreground">{languageError || t('result.supportedClientLanguages')}</p>
-      </details>
       {estimateError && <p role="alert" className="text-sm text-outscope-text">{estimateError}</p>}
 
       {hasAdditionalWork && showChangeOrder && needsEstimate && (
@@ -301,6 +295,17 @@ function ResultState() {
           {generating ? t('result.generatingChangeOrder') : termsComplete ? t('result.createChangeOrder') : t('result.completeProjectTerms')}
         </Button>
       ))}
+      <section className="rounded-lg border border-border p-3">
+        <label htmlFor="co-document-language" className="text-sm font-medium">{t('result.documentLanguage')}</label>
+        <p className="mt-2 text-xs text-muted-foreground">{draftDocument?.languageSelection?.status === 'uncertain' ? t('result.clientLanguageUncertain') : t('result.clientLanguageHint', { language: languageName(draftDocument?.languageSelection?.language ?? material.clientLanguage ?? 'en') })}</p>
+        <div className="mt-2 flex gap-2">
+          <select id="co-document-language" aria-invalid={!!languageError} aria-describedby="client-language-feedback" disabled={generating || isSavingDraft || !!workflow?.archived} value={documentLanguage} onChange={(e) => setDocumentLanguage(e.target.value)} className="min-w-0 rounded-lg border border-input bg-background px-3 py-2 text-sm">
+            {[...new Set<string>([...PDF_CLIENT_LANGUAGES, 'pt-BR', ...(supportedClientLanguage(documentLanguage) ? [documentLanguage] : [])])].map(code => <option key={code} value={code}>{languageName(code)}</option>)}
+          </select>
+          <Button type="button" variant="outline" disabled={generating || isSavingDraft || !!workflow?.archived || !supportedClientLanguage(documentLanguage)} onClick={() => void applyClientLanguage()}>{generating ? t('result.generatingClientMaterials') : t('result.applyClientLanguage')}</Button>
+        </div>
+        <p id="client-language-feedback" role={languageError ? 'alert' : undefined} className="mt-2 text-xs text-muted-foreground">{languageError || t('result.supportedClientLanguages')}</p>
+      </section>
     </div>
   )
 }

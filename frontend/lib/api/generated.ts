@@ -164,7 +164,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Analyze */
+        /**
+         * Analyze
+         * @description With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
+         */
         post: operations["analyze_api_analyze_post"];
         delete?: never;
         options?: never;
@@ -181,7 +184,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reply */
+        /**
+         * Reply
+         * @description With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
+         */
         post: operations["reply_api_replies_regenerate_post"];
         delete?: never;
         options?: never;
@@ -198,7 +204,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Materials */
+        /**
+         * Materials
+         * @description With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
+         */
         post: operations["materials_api_client_materials_language_post"];
         delete?: never;
         options?: never;
@@ -215,7 +224,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Estimate */
+        /**
+         * Estimate
+         * @description With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
+         */
         post: operations["estimate_api_change_orders_estimate_post"];
         delete?: never;
         options?: never;
@@ -603,6 +615,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/llm-operations/{identifier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Llm Status */
+        get: operations["llm_status_api_v2_llm_operations__identifier__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/drafts/{identifier}/history": {
         parameters: {
             query?: never;
@@ -648,6 +677,23 @@ export interface paths {
         get: operations["history_api_v2_history__identifier__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/history/{identifier}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reopen History */
+        post: operations["reopen_history_api_v2_history__identifier__restore_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -892,6 +938,8 @@ export interface components {
              * @default false
              */
             conflict: boolean;
+            /** Historyentryid */
+            historyEntryId?: string | null;
         };
         /** AnalysisRunDTO */
         AnalysisRunDTO: {
@@ -1185,7 +1233,7 @@ export interface components {
          * ErrorCode
          * @enum {string}
          */
-        ErrorCode: "errors.requestBodyInvalid" | "errors.requestFailed" | "errors.authRequired" | "errors.emailRequired" | "errors.passwordRequired" | "errors.invalidEmail" | "errors.passwordTooShort" | "errors.duplicateEmail" | "errors.invalidCredentials" | "errors.projectNotFound" | "errors.projectNameRequired" | "errors.scopeRequired" | "errors.industryInvalid" | "errors.clientInvalid" | "errors.startDateInvalid" | "errors.pricingModelInvalid" | "errors.currencyInvalid" | "errors.hourlyRateInvalid" | "errors.fixedPriceInvalid" | "errors.historyDateInvalid" | "errors.requestRequired" | "errors.verdictInvalid" | "errors.summaryRequired" | "errors.localeInvalid" | "errors.clientLanguageUnsupported" | "errors.analysisUnavailable" | "errors.analysisFailed" | "errors.analysisInvalid" | "errors.analysisInputTooLarge" | "errors.analysisRateLimited" | "errors.draftProofInvalid" | "errors.draftNotFound" | "errors.draftSaveFailed" | "errors.draftLoadFailed" | "errors.evaluationReasoningRequired" | "errors.evaluationLabelInvalid" | "errors.evaluationHistoryNotFound" | "errors.pdfDocumentMissing" | "errors.pdfDocumentInvalid" | "errors.pdfLanguageUnsupported" | "errors.pdfGlyphUnsupported" | "errors.pdfLabelsMissing" | "errors.pdfExportFailed" | "errors.pdfExportTimeout" | "errors.pdfInputTooLarge" | "errors.pdfResourceLimit" | "errors.scopeFileTooLarge" | "errors.scopeFileUnsupported" | "errors.scopeFileEmpty" | "errors.scopeFileEncoding" | "errors.scopePdfInvalid" | "errors.scopePdfEncrypted" | "errors.scopePdfNoText" | "errors.scopePdfTooManyPages" | "errors.scopeTextTooLarge" | "errors.scopeResourceLimit" | "errors.scopeExtractTimeout" | "errors.scopeExtractFailed" | "errors.technicalBusy";
+        ErrorCode: "errors.providerBudgetUnavailable" | "errors.operationBudgetExceeded" | "errors.operationDeadlineExceeded" | "errors.semanticAttemptsExhausted" | "errors.transportAttemptsExhausted" | "errors.providerOutcomeUnknown" | "errors.providerTransportFailed" | "errors.providerOutputIncomplete" | "errors.operationLeaseLost" | "errors.workflowVersionUnavailable" | "errors.providerModelMismatch" | "errors.attemptSequenceInvalid" | "errors.requestBodyInvalid" | "errors.requestFailed" | "errors.authRequired" | "errors.emailRequired" | "errors.passwordRequired" | "errors.invalidEmail" | "errors.passwordTooShort" | "errors.duplicateEmail" | "errors.invalidCredentials" | "errors.projectNotFound" | "errors.projectNameRequired" | "errors.scopeRequired" | "errors.industryInvalid" | "errors.clientInvalid" | "errors.startDateInvalid" | "errors.pricingModelInvalid" | "errors.currencyInvalid" | "errors.hourlyRateInvalid" | "errors.fixedPriceInvalid" | "errors.historyDateInvalid" | "errors.requestRequired" | "errors.verdictInvalid" | "errors.summaryRequired" | "errors.localeInvalid" | "errors.clientLanguageUnsupported" | "errors.analysisUnavailable" | "errors.analysisFailed" | "errors.analysisInvalid" | "errors.analysisInputTooLarge" | "errors.analysisRateLimited" | "errors.draftProofInvalid" | "errors.draftNotFound" | "errors.draftSaveFailed" | "errors.draftLoadFailed" | "errors.evaluationReasoningRequired" | "errors.evaluationLabelInvalid" | "errors.evaluationHistoryNotFound" | "errors.pdfDocumentMissing" | "errors.pdfDocumentInvalid" | "errors.pdfLanguageUnsupported" | "errors.pdfGlyphUnsupported" | "errors.pdfLabelsMissing" | "errors.pdfExportFailed" | "errors.pdfExportTimeout" | "errors.pdfInputTooLarge" | "errors.pdfResourceLimit" | "errors.scopeFileTooLarge" | "errors.scopeFileUnsupported" | "errors.scopeFileEmpty" | "errors.scopeFileEncoding" | "errors.scopePdfInvalid" | "errors.scopePdfEncrypted" | "errors.scopePdfNoText" | "errors.scopePdfTooManyPages" | "errors.scopeTextTooLarge" | "errors.scopeResourceLimit" | "errors.scopeExtractTimeout" | "errors.scopeExtractFailed" | "errors.technicalBusy";
         /** ErrorResponse */
         ErrorResponse: {
             error: components["schemas"]["ErrorCode"];
@@ -1400,6 +1448,40 @@ export interface components {
              */
             status: "ok";
         };
+        /** LlmOperationStatus */
+        LlmOperationStatus: {
+            /**
+             * Operationid
+             * Format: uuid
+             */
+            operationId: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "succeeded" | "failed";
+            /** Statusurl */
+            statusUrl: string;
+            /**
+             * Deadlineat
+             * Format: date-time
+             */
+            deadlineAt: string;
+            /** Stages */
+            stages: {
+                [key: string]: string;
+            };
+            /** Responseformat */
+            responseFormat: string;
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            } | null;
+            /** Error */
+            error: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** MaterialsResponse */
         MaterialsResponse: {
             materials: components["schemas"]["ClientMaterials"];
@@ -1437,6 +1519,26 @@ export interface components {
             code: "pages_without_text";
             /** Pagenumbers */
             pageNumbers: number[];
+        };
+        /** PendingLlmOperation */
+        PendingLlmOperation: {
+            /**
+             * Operationid
+             * Format: uuid
+             */
+            operationId: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "succeeded" | "failed";
+            /** Statusurl */
+            statusUrl: string;
+            /**
+             * Deadlineat
+             * Format: date-time
+             */
+            deadlineAt: string;
         };
         /**
          * PricingModel
@@ -1784,6 +1886,10 @@ export interface components {
             reply: components["schemas"]["WorkingReply"];
             changeOrder: components["schemas"]["DraftEditableChangeOrder"] | null;
             estimate?: components["schemas"]["EstimateProvenance"] | null;
+            /** Languageselection */
+            languageSelection?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** WorkingDraftDTO */
         WorkingDraftDTO: {
@@ -2773,7 +2879,9 @@ export interface operations {
     analyze_api_analyze_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2784,6 +2892,11 @@ export interface operations {
                     request: string;
                     documentLanguage?: string;
                     endDate?: string;
+                    /** Format: uuid */
+                    draftId?: string;
+                    /** Format: uuid */
+                    operationId?: string;
+                    expectedRevision?: string;
                 };
             };
         };
@@ -2795,6 +2908,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyzeResponse"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingLlmOperation"];
                 };
             };
             /** @description Bad Request */
@@ -2835,6 +2957,24 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Upgrade Required */
+            426: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2883,7 +3023,9 @@ export interface operations {
     reply_api_replies_regenerate_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2897,6 +3039,11 @@ export interface operations {
                     /** @enum {string} */
                     tone: "warm" | "neutral" | "firm";
                     previousReply: string;
+                    /** Format: uuid */
+                    draftId?: string;
+                    /** Format: uuid */
+                    operationId?: string;
+                    expectedRevision?: string;
                 };
             };
         };
@@ -2908,6 +3055,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReplyResponse"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingLlmOperation"];
                 };
             };
             /** @description Bad Request */
@@ -2948,6 +3104,24 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Upgrade Required */
+            426: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2996,7 +3170,9 @@ export interface operations {
     materials_api_client_materials_language_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3007,12 +3183,16 @@ export interface operations {
                     request: string;
                     documentLanguage?: string;
                     endDate?: string;
+                    /** Format: uuid */
                     draftId?: string;
                     proof?: string;
                     locale?: string;
                     historyId?: string;
                     clientLanguage: string;
                     analysis: Record<string, never>;
+                    /** Format: uuid */
+                    operationId?: string;
+                    expectedRevision?: string;
                 };
             };
         };
@@ -3024,6 +3204,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MaterialsResponse"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingLlmOperation"];
                 };
             };
             /** @description Bad Request */
@@ -3064,6 +3253,24 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Upgrade Required */
+            426: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3112,7 +3319,9 @@ export interface operations {
     estimate_api_change_orders_estimate_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3123,9 +3332,13 @@ export interface operations {
                     request: string;
                     documentLanguage?: string;
                     endDate?: string;
+                    /** Format: uuid */
                     draftId?: string;
                     proof?: string;
                     locale?: string;
+                    /** Format: uuid */
+                    operationId?: string;
+                    expectedRevision?: string;
                 };
             };
         };
@@ -3137,6 +3350,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EstimateResponse"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingLlmOperation"];
                 };
             };
             /** @description Bad Request */
@@ -3177,6 +3399,24 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Upgrade Required */
+            426: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5363,6 +5603,15 @@ export interface operations {
                     "application/json": components["schemas"]["AnalysisResponse"];
                 };
             };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingLlmOperation"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -5445,6 +5694,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalysisResponse"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingLlmOperation"];
                 };
             };
             /** @description Validation Error */
@@ -5531,6 +5789,15 @@ export interface operations {
                     "application/json": components["schemas"]["scope_guard_api__schemas__workflow__DraftResponse"];
                 };
             };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingLlmOperation"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -5573,6 +5840,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["scope_guard_api__schemas__workflow__DraftResponse"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingLlmOperation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    llm_status_api_v2_llm_operations__identifier__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmOperationStatus"];
                 };
             };
             /** @description Validation Error */
@@ -5697,6 +6013,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["scope_guard_api__schemas__workflow__HistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reopen_history_api_v2_history__identifier__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionedOperation"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["scope_guard_api__schemas__workflow__DraftResponse"];
                 };
             };
             /** @description Validation Error */

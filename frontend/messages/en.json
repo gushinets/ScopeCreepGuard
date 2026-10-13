@@ -139,11 +139,13 @@
     "documentLanguage": "Client material language",
     "chooseLanguage": "Choose a language",
     "confidence": "Confidence",
-    "clientLanguageHint": "Detected: {language}. Use a language code to correct all replies and the Change Order.",
+    "clientLanguageHint": "Detected: {language}. Choose the language for replies and the Change Order.",
+    "clientLanguageUncertain": "The request language is unclear. We used your interface language; choose the client language if needed.",
+    "confirmClientLanguage": "Changing the language will translate and replace your edited client materials. Continue?",
     "applyClientLanguage": "Apply",
     "generatingClientMaterials": "Updating client materials…",
     "clientLanguageError": "Could not update client materials. Your analysis and estimate are unchanged.",
-    "supportedClientLanguages": "PDF languages: RU, EN, ES, DE, FR, IT, NL, PL, PT, TR, UK, BG, EL, CS, SK, HR, RO, HU, FI, SV, DA, NB, ET, LV, LT, ID. Regional variants such as pt-BR are supported.",
+    "supportedClientLanguages": "The language applies to all replies and the Change Order. The analysis stays in your interface language.",
     "clientLanguageStorageWarning": "The language was updated, but browser storage is unavailable. It cannot be restored after a refresh."
   },
   "feedback": {
@@ -236,6 +238,18 @@
     "footer": "Scope Creep Guard stores projects and history in your authenticated workspace. Scope analysis uses OpenAI. Verdicts are AI-assisted suggestions, not legal advice."
   },
   "errors": {
+    "providerBudgetUnavailable": "A safe provider cost limit is unavailable. Please contact the administrator.",
+    "operationBudgetExceeded": "The generation limit was reached. Your saved materials are unchanged.",
+    "operationDeadlineExceeded": "Generation took too long. Retry to check its saved status.",
+    "semanticAttemptsExhausted": "Generated text could not be validated. Your saved materials are unchanged.",
+    "transportAttemptsExhausted": "The provider could not finish within the retry limit.",
+    "providerOutcomeUnknown": "The provider response could not be confirmed. Your saved materials are unchanged.",
+    "providerTransportFailed": "The provider request failed. Please try again.",
+    "providerOutputIncomplete": "The provider returned an incomplete result. Please try again.",
+    "operationLeaseLost": "Generation was interrupted. Retry to check its saved status.",
+    "workflowVersionUnavailable": "This operation needs its original workflow version. Please contact the administrator.",
+    "providerModelMismatch": "The configured model changed. Please retry with a new check.",
+    "attemptSequenceInvalid": "Generation could not safely resume. Please contact the administrator.",
     "requestBodyInvalid": "Request body must be a JSON object.",
     "emailRequired": "Email is required.",
     "passwordRequired": "Password is required.",
@@ -352,6 +366,8 @@
     "legacyContext": "This older draft has no saved project context. Current project terms have not been substituted."
   },
   "workflow": {
+    "reopen": "Reopen in Draft",
+    "confirmReopen": "Reopening this saved check will replace the current request and Draft. Continue?",
     "workingState": "Working Draft",
     "saved": "Saved",
     "dirty": "Unsaved changes",

@@ -187,7 +187,7 @@ export class DraftAutosave {
       this.confirmed = response
       this.acknowledged = attempt.generation
       if (this.generation === attempt.generation) this.local = structuredClone(response)
-      else this.local = { ...response, requestText: this.local.requestText, draftDocument: this.local.draftDocument, analysisIsStale: response.analysisIsStale || this.local.requestText !== response.requestText }
+      else this.local = { ...response, requestText: this.local.requestText, draftDocument: { ...this.local.draftDocument, languageSelection: response.draftDocument.languageSelection }, analysisIsStale: response.analysisIsStale || this.local.requestText !== response.requestText }
       this.attempt = null
       this.status = this.acknowledged === this.generation ? 'saved' : 'dirty'
       this.persist()

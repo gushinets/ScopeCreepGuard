@@ -16,6 +16,7 @@ export interface DraftDocument {
   changeOrder: EditableDraft | null
   reply: ReplyDocument
   projectDetails: ProjectDetails
+  languageSelection?: import('./workflow-types').LanguageSelection | null
 }
 export interface ProjectSnapshot extends Pick<Project, 'name' | 'industry' | 'scope' | 'startDate' | 'pricingModel' | 'currency' | 'hourlyRate' | 'fixedPrice'> {
   version: 1
