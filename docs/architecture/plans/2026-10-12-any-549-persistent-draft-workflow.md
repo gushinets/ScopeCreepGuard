@@ -58,14 +58,14 @@ No push, PR, merge, deployment, publication or real-data migration is authorized
 
 ## Ordered tasks
 
-- [ ] 1. Domain schemas/transitions/hashes and explicit ports; focused red/green tests.
-- [ ] 2. Alembic expansion, guarded staging, resumable lossless backfill and validators.
-- [ ] 3. Atomic project/Draft/revision/event persistence and ownership/concurrency tests.
-- [ ] 4. Persisted analysis and protected generation/regeneration/translation workflows.
-- [ ] 5. Explicit immutable History and analysis-derived evaluation feedback.
-- [ ] 6. Finalization/void, private durable exports, storage adapter and worker.
-- [ ] 7. Versioned API/gateway contracts and frontend autosave/user workflows.
-- [ ] 8. Tighten/retire compatibility; full review, required checks and documentation.
+- [x] 1. Domain schemas/transitions/hashes and explicit ports; focused red/green tests.
+- [x] 2. Alembic expansion, guarded staging, resumable lossless backfill and validators.
+- [x] 3. Atomic project/Draft/revision/event persistence and ownership/concurrency tests.
+- [x] 4. Persisted analysis and protected generation/regeneration/translation workflows.
+- [x] 5. Explicit immutable History and analysis-derived evaluation feedback.
+- [x] 6. Finalization/void, private durable exports, storage adapter and worker.
+- [x] 7. Versioned API/gateway contracts and frontend autosave/user workflows.
+- [x] 8. Tighten/retire compatibility; full review, required checks and documentation.
 
 Each task: write meaningful tests first; observe expected failure; implement;
 run relevant checks; inspect diff/staged files; explicitly stage task files;
@@ -108,3 +108,71 @@ database configuration. Existing generation remains single-production-replica.
 Update this record with actual commits, prepared/applied test migrations, check
 results, external settings and limitations. Final report distinguishes original
 checkout changes from implementation changes. No real database backfill is run.
+
+### Completion — 2026-10-13
+
+Implementation is complete on `codex/any-549-draft-workflow`, retained in the managed
+worktree. No push, PR, merge or deployment was performed. Commits:
+
+- `b484158`: approved plan, domain workflow rules and ports.
+- `610c344`: persistence, staged Alembic migration, lossless import and exact validators.
+- `16ae08d`: frozen analyses/generation, explicit History, evaluations, agreements,
+  private durable exports, versioned API and integration verification.
+- `78fcb03`: frontend restoration, autosave/queue/conflict/recovery, History and exports.
+- The final verification/documentation commit follows these; its hash is in Git history.
+
+Fresh verification evidence:
+
+| Gate | Actual result |
+| --- | --- |
+| Backend `pytest --require-integration` | 464 passed; one existing Starlette/httpx deprecation warning. Includes disposable Compose startup/restart, migrations, authorization, PDF and real S3 restart checks. |
+| Post-format migration/workflow suite | 7 passed after exact function manifest synchronization. |
+| Simultaneous Draft writes and retry hash regression | 1 passed: one committed save, one 409, no duplicate revision, different retry parameters rejected. |
+| Frontend Vitest | 43 files, 293 tests passed after all fixes. |
+| Ruff check and format | Passed for backend, API and worker. |
+| Linux and Windows mypy | Passed, 181 source files; existing untyped-function informational notes. |
+| ESLint and TypeScript | Passed; one pre-existing unused `_s` test warning. |
+| Next.js production build | Passed with persistent workflow enabled. |
+| OpenAPI and generated frontend types | Both drift checks passed. |
+| Workflow Compose configuration and worker image | Validated with synthetic values; worker image built locally. No deployment. |
+
+The independent read-only review found three important defects. Each was reproduced
+with a failing test and fixed: queued text behind an uncertain recovery save;
+History disappearing from the project-edit response; and conflict reapplication
+carrying stale generation provenance. All covering tests and final suites passed.
+Additional regressions cover matching restored context, cross-export operation keys,
+accepted recovery-buffer transfer and confirmed project writes followed by failed
+reads. There are no deferred review findings.
+
+Prepared migrations `0002_workflow_expand`, `0003_workflow_constraints` and
+`0004_workflow_retire` were applied only to owned disposable empty/legacy test
+databases. Existing baseline and legacy provenance fixtures are unchanged. UUIDs,
+raw imported states, History/evaluation links and unknown historical provenance
+were verified. No user/production database was migrated or backfilled.
+
+See [entity structure, rollout and runtime instructions](../draft-workflow.md).
+Operators own private bucket/credentials, worker deployment and a separately
+scheduled real-data maintenance conversion. Retention remains indefinite; physical
+deletion/retention changes require their own policy. Unsupported legacy editor
+conversion fails for review rather than rewriting terms. Generation tests use a
+deterministic provider; no billable live-model invocation was required. The existing
+single production API worker/replica generation limitation remains.
+
+### Execution rulings and costs
+
+- Native Windows progress bookkeeping replaced POSIX skill scripts; no product
+  behavior changed. Cost if wrong: bookkeeping repair only.
+- Default startup stays at the immutable baseline until explicit matched cutover.
+  Cost if activation is omitted: the new workflow remains disabled.
+- Legacy retirement verifies each UUID/raw envelope/digest before retiring its
+  transferred row. Cost if old data differs: conversion stops for review.
+- Existing HTTP 400 validation behavior was retained. Cost if clients expect 422:
+  they must follow the existing repository error contract.
+- Unsupported editor conversion rolls back the project for review. Cost: manual
+  resolution may be needed during real-data migration; original states are retained.
+- The branch/worktree is kept, following the user's prohibition on unauthorized
+  integration or publication. No further integration approval was requested.
+
+The original checkout's three pre-existing document deletions remain unrelated
+and untouched. Implementation changes are committed; ignored test artifacts are
+excluded from commits. Final Git state is checked in the completion report.
