@@ -1,0 +1,2485 @@
+{
+  "tables": {
+    "activity_events": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "actor_type",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "actor_user_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "analysis_run_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "change_order_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "document_export_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "draft_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "draft_revision_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "event_type",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "history_entry_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operation_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "payload",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "payload_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "activity_events_analysis_run_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (analysis_run_id, project_id) REFERENCES analysis_runs(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_change_order_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (change_order_id, project_id) REFERENCES change_orders(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_document_export_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (document_export_id, project_id) REFERENCES document_exports(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_draft_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (draft_id, project_id) REFERENCES drafts(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_draft_revision_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (draft_revision_id, project_id) REFERENCES draft_revisions(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_history_entry_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (history_entry_id, project_id) REFERENCES history_entries(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_project_id_actor_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id, actor_user_id) REFERENCES projects(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_project_id_operation_id_event_type_key",
+          "type": "u",
+          "definition": "UNIQUE (project_id, operation_id, event_type)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "activity_events_actor_user_id_idx",
+          "definition": "CREATE INDEX activity_events_actor_user_id_idx ON public.activity_events USING btree (actor_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_analysis_run_id_idx",
+          "definition": "CREATE INDEX activity_events_analysis_run_id_idx ON public.activity_events USING btree (analysis_run_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_change_order_id_idx",
+          "definition": "CREATE INDEX activity_events_change_order_id_idx ON public.activity_events USING btree (change_order_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_document_export_id_idx",
+          "definition": "CREATE INDEX activity_events_document_export_id_idx ON public.activity_events USING btree (document_export_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_draft_id_idx",
+          "definition": "CREATE INDEX activity_events_draft_id_idx ON public.activity_events USING btree (draft_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_draft_revision_id_idx",
+          "definition": "CREATE INDEX activity_events_draft_revision_id_idx ON public.activity_events USING btree (draft_revision_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_history_entry_id_idx",
+          "definition": "CREATE INDEX activity_events_history_entry_id_idx ON public.activity_events USING btree (history_entry_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_pkey",
+          "definition": "CREATE UNIQUE INDEX activity_events_pkey ON public.activity_events USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_project_id_operation_id_event_type_key",
+          "definition": "CREATE UNIQUE INDEX activity_events_project_id_operation_id_event_type_key ON public.activity_events USING btree (project_id, operation_id, event_type)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_project_date",
+          "definition": "CREATE INDEX activity_project_date ON public.activity_events USING btree (project_id, created_at DESC)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_events",
+          "definition": "CREATE TRIGGER immutable_events BEFORE DELETE OR UPDATE ON public.activity_events FOR EACH ROW EXECUTE FUNCTION workflow_immutable()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "analysis_runs": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "error_code",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "input_schema_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "interface_locale",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "model",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_snapshot",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "prompt_version",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_language",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_text",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "requested_by_user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "requested_document_language",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "result_schema_version",
+          "type": "integer",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "result_snapshot",
+          "type": "jsonb",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_draft_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_draft_revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "analysis_runs_check",
+          "type": "c",
+          "definition": "CHECK (((status <> 'succeeded'::text) OR ((result_snapshot IS NOT NULL) AND (result_schema_version IS NOT NULL) AND (finished_at IS NOT NULL))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_id_project_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_id_requested_by_user_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, requested_by_user_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_project_id_idempotency_key_key",
+          "type": "u",
+          "definition": "UNIQUE (project_id, idempotency_key)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_project_id_requested_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id, requested_by_user_id) REFERENCES projects(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_source_draft_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (source_draft_id, project_id) REFERENCES drafts(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_source_draft_id_source_draft_revision_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (source_draft_id, source_draft_revision) REFERENCES draft_revisions(draft_id, revision) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_source_draft_revision_check",
+          "type": "c",
+          "definition": "CHECK ((source_draft_revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_status_check",
+          "type": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'succeeded'::text, 'failed'::text, 'cancelled'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "analysis_runs_id_project_id_key",
+          "definition": "CREATE UNIQUE INDEX analysis_runs_id_project_id_key ON public.analysis_runs USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_id_requested_by_user_id_key",
+          "definition": "CREATE UNIQUE INDEX analysis_runs_id_requested_by_user_id_key ON public.analysis_runs USING btree (id, requested_by_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_pkey",
+          "definition": "CREATE UNIQUE INDEX analysis_runs_pkey ON public.analysis_runs USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_processing",
+          "definition": "CREATE INDEX analysis_runs_processing ON public.analysis_runs USING btree (status, started_at)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_project_id_idempotency_key_key",
+          "definition": "CREATE UNIQUE INDEX analysis_runs_project_id_idempotency_key_key ON public.analysis_runs USING btree (project_id, idempotency_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_project_id_idx",
+          "definition": "CREATE INDEX analysis_runs_project_id_idx ON public.analysis_runs USING btree (project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_requested_by_user_id_idx",
+          "definition": "CREATE INDEX analysis_runs_requested_by_user_id_idx ON public.analysis_runs USING btree (requested_by_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_source_draft_id_idx",
+          "definition": "CREATE INDEX analysis_runs_source_draft_id_idx ON public.analysis_runs USING btree (source_draft_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_analysis",
+          "definition": "CREATE TRIGGER immutable_analysis BEFORE DELETE OR UPDATE ON public.analysis_runs FOR EACH ROW EXECUTE FUNCTION workflow_analysis_guard()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "change_orders": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "content_snapshot",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "finalized_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "finalized_by_user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "history_entry_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reference",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "schema_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "voided_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "change_orders_check",
+          "type": "c",
+          "definition": "CHECK (((status = 'voided'::text) = (voided_at IS NOT NULL)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_history_entry_id_idempotency_key_key",
+          "type": "u",
+          "definition": "UNIQUE (history_entry_id, idempotency_key)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_history_entry_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (history_entry_id, project_id) REFERENCES history_entries(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_id_project_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_project_id_finalized_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id, finalized_by_user_id) REFERENCES projects(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_reference_key",
+          "type": "u",
+          "definition": "UNIQUE (reference)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_revision_check",
+          "type": "c",
+          "definition": "CHECK ((revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_status_check",
+          "type": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['finalized'::text, 'voided'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "change_orders_active",
+          "definition": "CREATE UNIQUE INDEX change_orders_active ON public.change_orders USING btree (history_entry_id) WHERE (status = 'finalized'::text)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_finalized_by_user_id_idx",
+          "definition": "CREATE INDEX change_orders_finalized_by_user_id_idx ON public.change_orders USING btree (finalized_by_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_history_entry_id_idempotency_key_key",
+          "definition": "CREATE UNIQUE INDEX change_orders_history_entry_id_idempotency_key_key ON public.change_orders USING btree (history_entry_id, idempotency_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_history_entry_id_idx",
+          "definition": "CREATE INDEX change_orders_history_entry_id_idx ON public.change_orders USING btree (history_entry_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_id_project_id_key",
+          "definition": "CREATE UNIQUE INDEX change_orders_id_project_id_key ON public.change_orders USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_pkey",
+          "definition": "CREATE UNIQUE INDEX change_orders_pkey ON public.change_orders USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_project_id_idx",
+          "definition": "CREATE INDEX change_orders_project_id_idx ON public.change_orders USING btree (project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_reference_key",
+          "definition": "CREATE UNIQUE INDEX change_orders_reference_key ON public.change_orders USING btree (reference)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_agreement",
+          "definition": "CREATE TRIGGER immutable_agreement BEFORE DELETE OR UPDATE ON public.change_orders FOR EACH ROW EXECUTE FUNCTION workflow_agreement_guard()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "document_exports": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "attempt_count",
+          "type": "integer",
+          "not_null": true,
+          "default": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "change_order_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "checksum",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "error_code",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "format",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "language",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "mime_type",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "object_key",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "renderer_version",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "requested_by_user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "size_bytes",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "template_version",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "document_exports_attempt_count_check",
+          "type": "c",
+          "definition": "CHECK ((attempt_count >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_change_order_id_idempotency_key_key",
+          "type": "u",
+          "definition": "UNIQUE (change_order_id, idempotency_key)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_change_order_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (change_order_id, project_id) REFERENCES change_orders(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_check",
+          "type": "c",
+          "definition": "CHECK (((status <> 'ready'::text) OR ((object_key IS NOT NULL) AND (checksum IS NOT NULL) AND (mime_type IS NOT NULL) AND (size_bytes IS NOT NULL) AND (finished_at IS NOT NULL))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_format_check",
+          "type": "c",
+          "definition": "CHECK ((format = 'pdf'::text))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_id_project_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_object_key_key",
+          "type": "u",
+          "definition": "UNIQUE (object_key)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_project_id_requested_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id, requested_by_user_id) REFERENCES projects(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_size_bytes_check",
+          "type": "c",
+          "definition": "CHECK ((size_bytes >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_status_check",
+          "type": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'processing'::text, 'ready'::text, 'failed'::text, 'expired'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "document_exports_change_order_id_idempotency_key_key",
+          "definition": "CREATE UNIQUE INDEX document_exports_change_order_id_idempotency_key_key ON public.document_exports USING btree (change_order_id, idempotency_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_change_order_id_idx",
+          "definition": "CREATE INDEX document_exports_change_order_id_idx ON public.document_exports USING btree (change_order_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_id_project_id_key",
+          "definition": "CREATE UNIQUE INDEX document_exports_id_project_id_key ON public.document_exports USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_object_key_key",
+          "definition": "CREATE UNIQUE INDEX document_exports_object_key_key ON public.document_exports USING btree (object_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_pending",
+          "definition": "CREATE INDEX document_exports_pending ON public.document_exports USING btree (status, lease_expires_at, created_at) WHERE (status = ANY (ARRAY['pending'::text, 'processing'::text, 'failed'::text]))",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_pkey",
+          "definition": "CREATE UNIQUE INDEX document_exports_pkey ON public.document_exports USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_project_id_idx",
+          "definition": "CREATE INDEX document_exports_project_id_idx ON public.document_exports USING btree (project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_requested_by_user_id_idx",
+          "definition": "CREATE INDEX document_exports_requested_by_user_id_idx ON public.document_exports USING btree (requested_by_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_ready_export",
+          "definition": "CREATE TRIGGER immutable_ready_export BEFORE DELETE OR UPDATE ON public.document_exports FOR EACH ROW EXECUTE FUNCTION workflow_export_guard()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "draft_revisions": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "actor_type",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "actor_user_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "draft_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operation_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "schema_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "state_snapshot",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "draft_revisions_actor_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_draft_id_operation_id_key",
+          "type": "u",
+          "definition": "UNIQUE (draft_id, operation_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_draft_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (draft_id, project_id) REFERENCES drafts(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_draft_id_revision_key",
+          "type": "u",
+          "definition": "UNIQUE (draft_id, revision)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_id_project_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_revision_check",
+          "type": "c",
+          "definition": "CHECK ((revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "draft_revisions_actor_user_id_idx",
+          "definition": "CREATE INDEX draft_revisions_actor_user_id_idx ON public.draft_revisions USING btree (actor_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "draft_revisions_draft_id_operation_id_key",
+          "definition": "CREATE UNIQUE INDEX draft_revisions_draft_id_operation_id_key ON public.draft_revisions USING btree (draft_id, operation_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "draft_revisions_draft_id_revision_key",
+          "definition": "CREATE UNIQUE INDEX draft_revisions_draft_id_revision_key ON public.draft_revisions USING btree (draft_id, revision)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "draft_revisions_id_project_id_key",
+          "definition": "CREATE UNIQUE INDEX draft_revisions_id_project_id_key ON public.draft_revisions USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "draft_revisions_pkey",
+          "definition": "CREATE UNIQUE INDEX draft_revisions_pkey ON public.draft_revisions USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "draft_revisions_project_id_idx",
+          "definition": "CREATE INDEX draft_revisions_project_id_idx ON public.draft_revisions USING btree (project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_revisions",
+          "definition": "CREATE TRIGGER immutable_revisions BEFORE DELETE OR UPDATE ON public.draft_revisions FOR EACH ROW EXECUTE FUNCTION workflow_immutable()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "drafts": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "analysis_is_stale",
+          "type": "boolean",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "analysis_snapshot",
+          "type": "jsonb",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "change_order_labels",
+          "type": "jsonb",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "client_material_language",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "draft_document",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "history_entry_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "last_analysis_run_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "locale",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_snapshot",
+          "type": "jsonb",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_language",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_text",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": "'draft'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "drafts_analysis_project_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (last_analysis_run_id, project_id) REFERENCES analysis_runs(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_history_entry_id_history_entries_id_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (history_entry_id) REFERENCES history_entries(id) ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_history_entry_id_unique",
+          "type": "u",
+          "definition": "UNIQUE (history_entry_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_id_project_unique",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_locale_valid",
+          "type": "c",
+          "definition": "CHECK ((locale = ANY (ARRAY['ru'::text, 'en'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_one_per_project",
+          "type": "u",
+          "definition": "UNIQUE (project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_positive_revision",
+          "type": "c",
+          "definition": "CHECK ((revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_project_id_projects_id_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_status_valid",
+          "type": "c",
+          "definition": "CHECK ((status = 'draft'::text))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "drafts_history_entry_id_unique",
+          "definition": "CREATE UNIQUE INDEX drafts_history_entry_id_unique ON public.drafts USING btree (history_entry_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "drafts_id_project_unique",
+          "definition": "CREATE UNIQUE INDEX drafts_id_project_unique ON public.drafts USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "drafts_one_per_project",
+          "definition": "CREATE UNIQUE INDEX drafts_one_per_project ON public.drafts USING btree (project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "drafts_pkey",
+          "definition": "CREATE UNIQUE INDEX drafts_pkey ON public.drafts USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "drafts_project_created_at_idx",
+          "definition": "CREATE INDEX drafts_project_created_at_idx ON public.drafts USING btree (project_id, created_at)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "drafts_project_creation_key_unique",
+          "definition": "CREATE UNIQUE INDEX drafts_project_creation_key_unique ON public.drafts USING btree (project_id, idempotency_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "drafts_working_project",
+          "definition": "CREATE UNIQUE INDEX drafts_working_project ON public.drafts USING btree (project_id) WHERE (revision IS NOT NULL)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "evaluation_cases": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "accuracy",
+          "type": "evaluation_accuracy",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ai_reasoning",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ai_verdict",
+          "type": "verdict",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "analysis_run_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "history_entry_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "human_verdict",
+          "type": "verdict",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "industry",
+          "type": "industry",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "scope",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "evaluation_analysis_owner_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (analysis_run_id, user_id) REFERENCES analysis_runs(id, requested_by_user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "evaluation_cases_accuracy_human_verdict",
+          "type": "c",
+          "definition": "CHECK ((((accuracy = 'debatable'::evaluation_accuracy) AND (human_verdict IS NULL)) OR ((accuracy = 'correct'::evaluation_accuracy) AND (human_verdict IS NOT NULL) AND (human_verdict = ai_verdict)) OR ((accuracy = 'wrong'::evaluation_accuracy) AND (human_verdict IS NOT NULL) AND (human_verdict <> ai_verdict))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "evaluation_cases_history_entry_id_history_entries_id_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (history_entry_id) REFERENCES history_entries(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "evaluation_cases_history_entry_id_unique",
+          "type": "u",
+          "definition": "UNIQUE (history_entry_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "evaluation_cases_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "evaluation_cases_user_id_users_id_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "evaluation_cases_history_entry_id_unique",
+          "definition": "CREATE UNIQUE INDEX evaluation_cases_history_entry_id_unique ON public.evaluation_cases USING btree (history_entry_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "evaluation_cases_pkey",
+          "definition": "CREATE UNIQUE INDEX evaluation_cases_pkey ON public.evaluation_cases USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "evaluations_analysis_user",
+          "definition": "CREATE UNIQUE INDEX evaluations_analysis_user ON public.evaluation_cases USING btree (analysis_run_id, user_id) WHERE (analysis_run_id IS NOT NULL)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "history_entries": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "analysis_run_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "check_snapshot",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "saved_by_user_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "schema_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_draft_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_draft_revision",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_kind",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "summary",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "verdict",
+          "type": "verdict",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "history_analysis_project_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (analysis_run_id, project_id) REFERENCES analysis_runs(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_entries_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_entries_project_id_projects_id_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_id_project_unique",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_provenance",
+          "type": "c",
+          "definition": "CHECK (((source_kind = 'legacy_unverified'::text) OR ((source_kind = 'explicit'::text) AND (source_draft_id IS NOT NULL) AND (source_draft_revision IS NOT NULL) AND (source_draft_revision > 0) AND (analysis_run_id IS NOT NULL) AND (saved_by_user_id IS NOT NULL) AND (completed_at IS NOT NULL) AND (idempotency_key IS NOT NULL) AND (request_hash IS NOT NULL))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_saving_owner_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id, saved_by_user_id) REFERENCES projects(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_source_project_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (source_draft_id, project_id) REFERENCES drafts(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_source_revision_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (source_draft_id, source_draft_revision) REFERENCES draft_revisions(draft_id, revision) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "history_entries_analysis_run_id_idx",
+          "definition": "CREATE INDEX history_entries_analysis_run_id_idx ON public.history_entries USING btree (analysis_run_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_entries_pkey",
+          "definition": "CREATE UNIQUE INDEX history_entries_pkey ON public.history_entries USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_entries_saved_by_user_id_idx",
+          "definition": "CREATE INDEX history_entries_saved_by_user_id_idx ON public.history_entries USING btree (saved_by_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_entries_source_draft_id_idx",
+          "definition": "CREATE INDEX history_entries_source_draft_id_idx ON public.history_entries USING btree (source_draft_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_id_project_unique",
+          "definition": "CREATE UNIQUE INDEX history_id_project_unique ON public.history_entries USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_operation",
+          "definition": "CREATE UNIQUE INDEX history_operation ON public.history_entries USING btree (project_id, idempotency_key) WHERE (idempotency_key IS NOT NULL)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_project_listing",
+          "definition": "CREATE INDEX history_project_listing ON public.history_entries USING btree (project_id, date DESC, id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_history",
+          "definition": "CREATE TRIGGER immutable_history BEFORE DELETE OR UPDATE ON public.history_entries FOR EACH ROW EXECUTE FUNCTION workflow_immutable()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "projects": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "client",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "client_email",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "creation_key",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "creation_request_hash",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "currency",
+          "type": "currency",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "fixed_price",
+          "type": "numeric(14,2)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "hourly_rate",
+          "type": "numeric(14,2)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "industry",
+          "type": "industry",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "last_checked",
+          "type": "date",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "pricing_model",
+          "type": "pricing_model",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "scope",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "projects_commercial_terms_consistent",
+          "type": "c",
+          "definition": "CHECK ((((start_date IS NULL) AND (pricing_model IS NULL) AND (currency IS NULL) AND (hourly_rate IS NULL) AND (fixed_price IS NULL)) OR ((start_date IS NOT NULL) AND (currency IS NOT NULL) AND (((pricing_model = 'hourly'::pricing_model) AND (hourly_rate > (0)::numeric) AND (fixed_price IS NULL)) OR ((pricing_model = 'fixed'::pricing_model) AND (fixed_price > (0)::numeric) AND (hourly_rate IS NULL))))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "projects_id_owner_unique",
+          "type": "u",
+          "definition": "UNIQUE (id, user_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "projects_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "projects_user_id_users_id_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "projects_id_owner_unique",
+          "definition": "CREATE UNIQUE INDEX projects_id_owner_unique ON public.projects USING btree (id, user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "projects_owner_creation_key",
+          "definition": "CREATE UNIQUE INDEX projects_owner_creation_key ON public.projects USING btree (user_id, creation_key) WHERE (creation_key IS NOT NULL)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "projects_owner_listing",
+          "definition": "CREATE INDEX projects_owner_listing ON public.projects USING btree (user_id, archived_at, created_at DESC)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "projects_pkey",
+          "definition": "CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "users": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "password_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "users_email_unique",
+          "type": "u",
+          "definition": "UNIQUE (email)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "users_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "users_email_unique",
+          "definition": "CREATE UNIQUE INDEX users_email_unique ON public.users USING btree (email)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "users_pkey",
+          "definition": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    }
+  },
+  "enums": {
+    "currency": [
+      "RUB",
+      "USD",
+      "EUR"
+    ],
+    "evaluation_accuracy": [
+      "correct",
+      "wrong",
+      "debatable"
+    ],
+    "industry": [
+      "Development",
+      "Design",
+      "Marketing"
+    ],
+    "pricing_model": [
+      "hourly",
+      "fixed"
+    ],
+    "verdict": [
+      "in_scope",
+      "borderline",
+      "out_of_scope"
+    ]
+  },
+  "functions": [
+    {
+      "name": "workflow_agreement_guard",
+      "source": "\n    BEGIN\n     IF TG_OP='DELETE' THEN RAISE EXCEPTION 'immutable agreement'; END IF;\n     IF (to_jsonb(NEW)-ARRAY['status','revision','voided_at','updated_at']) IS DISTINCT FROM\n(to_jsonb(OLD)-ARRAY['status','revision','voided_at','updated_at']) OR\n        OLD.status<>'finalized' OR NEW.status<>'voided' OR NEW.revision<>OLD.revision+1\n     THEN RAISE EXCEPTION 'immutable agreement or invalid transition' USING ERRCODE='23514'; END\n IF;\n     RETURN NEW;\n    END "
+    },
+    {
+      "name": "workflow_analysis_guard",
+      "source": "\n    BEGIN\n     IF TG_OP='DELETE' THEN RAISE EXCEPTION 'immutable analysis'; END IF;\n     IF\n(to_jsonb(NEW)-ARRAY['status','started_at','finished_at','result_snapshot','result_schema_version','request_language','error_code'])\n IS DISTINCT FROM\n\n(to_jsonb(OLD)-ARRAY['status','started_at','finished_at','result_snapshot','result_schema_version','request_language','error_code'])\n OR\n        OLD.status IN ('succeeded','failed','cancelled') OR NOT\n        ((OLD.status='pending' AND NEW.status='running') OR (OLD.status='running' AND NEW.status\n IN ('succeeded','failed','cancelled')))\n     THEN RAISE EXCEPTION 'immutable analysis or invalid transition' USING ERRCODE='23514'; END\nIF;\n     RETURN NEW;\n    END "
+    },
+    {
+      "name": "workflow_export_guard",
+      "source": "\n    BEGIN\n     IF TG_OP='DELETE' THEN RAISE EXCEPTION 'immutable export'; END IF;\n     IF OLD.status IN ('ready','expired') AND NOT (OLD.status='ready' AND NEW.status='expired'\nAND (to_jsonb(NEW)-'status')=(to_jsonb(OLD)-'status'))\n     THEN RAISE EXCEPTION 'immutable ready export' USING ERRCODE='23514'; END IF;\n     RETURN NEW;\n    END "
+    },
+    {
+      "name": "workflow_immutable",
+      "source": "\n    BEGIN RAISE EXCEPTION 'immutable workflow record' USING ERRCODE='23514'; END "
+    }
+  ]
+}

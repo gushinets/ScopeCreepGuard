@@ -122,7 +122,8 @@ def upgrade_empty(connection: Connection) -> None:
     if revision is not None:
         head = current_head(connection)
         verify_revision_schema(connection, revision=revision, head=head)
-        command.upgrade(config(connection), "head")
+        connection.exec_driver_sql("SET LOCAL search_path TO public")
+        command.upgrade(config(connection), BASELINE)
         verify_revision_schema(connection, revision=current_revision(connection), head=head)
         return
     objects = connection.exec_driver_sql("""
@@ -134,7 +135,7 @@ def upgrade_empty(connection: Connection) -> None:
     if objects is not None:
         raise SchemaCompatibilityError([SchemaDifference("database_not_empty")])
     connection.exec_driver_sql("SET LOCAL search_path TO public")
-    command.upgrade(config(connection), "head")
+    command.upgrade(config(connection), BASELINE)
     verify_revision_schema(
         connection, revision=current_revision(connection), head=current_head(connection)
     )
@@ -219,18 +220,23 @@ def verify_legacy_ledger(connection: Connection) -> None:
         raise SchemaCompatibilityError([SchemaDifference("legacy_ledger_provenance")])
 
 
-def migrate(connection: Connection, *, adopt_legacy: bool = False) -> None:
+def migrate(connection: Connection, *, adopt_legacy: bool = False, target: str = BASELINE) -> None:
     """Upgrade an empty or managed database, or explicitly adopt a verified legacy one."""
     acquire_migration_lock(connection)
+    _, lineage, _ = _lineage(connection)
+    if target not in lineage and target != "head":
+        raise ValueError("unknown_migration_target")
     revision = current_revision(connection)
     if revision is not None:
         head = current_head(connection)
         verify_revision_schema(connection, revision=revision, head=head)
-        command.upgrade(config(connection), "head")
+        connection.exec_driver_sql("SET LOCAL search_path TO public")
+        command.upgrade(config(connection), target)
         verify_revision_schema(connection, revision=current_revision(connection), head=head)
         return
     if not _has_database_objects(connection):
-        command.upgrade(config(connection), "head")
+        connection.exec_driver_sql("SET LOCAL search_path TO public")
+        command.upgrade(config(connection), target)
         verify_revision_schema(
             connection, revision=current_revision(connection), head=current_head(connection)
         )
@@ -239,7 +245,8 @@ def migrate(connection: Connection, *, adopt_legacy: bool = False) -> None:
         raise SchemaCompatibilityError([SchemaDifference("legacy_adoption_required")])
     verify_legacy_ledger(connection)
     adopt_baseline(connection)
-    command.upgrade(config(connection), "head")
+    connection.exec_driver_sql("SET LOCAL search_path TO public")
+    command.upgrade(config(connection), target)
     verify_revision_schema(
         connection, revision=current_revision(connection), head=current_head(connection)
     )

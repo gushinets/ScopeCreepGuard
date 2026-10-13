@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from scope_guard.database.legacy_boundary import require_legacy_schema
 from scope_guard.database.models import (
     EvaluationCaseRow,
 )
@@ -29,6 +30,7 @@ class Evaluations(EvaluationQueries):
         label: EvaluationLabel,
         human: Verdict | None,
     ) -> EvaluationResult:
+        await require_legacy_schema(self.session)
         statement = insert(EvaluationCaseRow).values(
             user_id=owner,
             history_entry_id=context.id,

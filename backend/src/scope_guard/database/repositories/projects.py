@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from scope_guard.database.legacy_boundary import require_legacy_schema
 from scope_guard.database.models import HistoryEntryRow, ProjectRow
 from scope_guard.database.queries.history import HistoryQueries
 from scope_guard.database.queries.projects import ProjectQueries
@@ -45,6 +46,7 @@ class Projects(ProjectQueries):
         return project(row) if row else None
 
     async def create(self, owner: UUID, card: ProjectCard) -> Project:
+        await require_legacy_schema(self.session)
         row = ProjectRow(user_id=owner, **values(card))
         self.session.add(row)
         await self.session.flush()
@@ -52,6 +54,7 @@ class Projects(ProjectQueries):
         return project(row)
 
     async def update(self, owner: UUID, identifier: UUID, card: ProjectCard) -> Project | None:
+        await require_legacy_schema(self.session)
         row = await self.session.scalar(
             update(ProjectRow)
             .where(ProjectRow.user_id == owner, ProjectRow.id == identifier)
@@ -61,6 +64,7 @@ class Projects(ProjectQueries):
         return project(row) if row else None
 
     async def delete(self, owner: UUID, identifier: UUID) -> bool:
+        await require_legacy_schema(self.session)
         return (
             await self.session.scalar(
                 delete(ProjectRow)
@@ -87,6 +91,7 @@ class History(HistoryQueries):
         self.session = session
 
     async def create(self, project: UUID, value: ManualHistoryInput) -> ProjectHistoryEntry:
+        await require_legacy_schema(self.session)
         row = HistoryEntryRow(
             project_id=project,
             date=date.fromisoformat(value.date),

@@ -4,9 +4,11 @@ import hashlib
 import json
 import re
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
+from scope_guard.domain.drafts.values import JsonObject, freeze_object, thaw_json
 from scope_guard.domain.shared.language import normalize_language
 
 
@@ -142,7 +144,7 @@ def validate_agreement(value: dict) -> dict:
     if not isinstance(value, dict) or not str(value.get("description", "")).strip():
         raise WorkflowError("documentInvalid")
     result = deepcopy(value)
-    result["estimatedHours"] = decimal_text(value.get("estimatedHours"))
+    result["estimatedHours"] = decimal_text(value.get("estimatedHours")) or ""
     if value.get("noAdditionalCharge") is True:
         result["additionalCost"] = "0.00"
     else:
@@ -191,3 +193,62 @@ SAVE_REASONS = {
     "analysis_apply",
     "project_change",
 }
+
+
+@dataclass(frozen=True, slots=True)
+class DraftState:
+    revision: int
+    request_text: str
+    analysis_run_id: str | None
+    analysis_is_stale: bool
+    document: JsonObject
+
+    def __post_init__(self):
+        if not 0 < self.revision < 2**63 or not isinstance(self.request_text, str):
+            raise WorkflowError("documentInvalid")
+
+    @classmethod
+    def from_snapshot(cls, value: dict) -> "DraftState":
+        return cls(
+            int(value["revision"]),
+            value["requestText"],
+            value["lastAnalysisRunId"],
+            value["analysisIsStale"],
+            freeze_object(value["draftDocument"]),
+        )
+
+    def apply(
+        self, expected_revision: int, changes: dict, *, restored_analysis_validated: bool = False
+    ) -> "DraftState":
+        if self.revision != expected_revision or self.revision == 2**63 - 1:
+            raise WorkflowError("draftConflict", 409)
+        if changes.keys() - {
+            "requestText",
+            "draftDocument",
+            "lastAnalysisRunId",
+            "analysisIsStale",
+        }:
+            raise WorkflowError("documentInvalid")
+        request = changes.get("requestText", self.request_text)
+        document = (
+            freeze_object(validate_document(changes["draftDocument"]))
+            if "draftDocument" in changes
+            else self.document
+        )
+        return DraftState(
+            self.revision + 1,
+            request,
+            changes.get("lastAnalysisRunId", self.analysis_run_id),
+            (request != self.request_text and not restored_analysis_validated)
+            or changes.get("analysisIsStale", self.analysis_is_stale),
+            document,
+        )
+
+    def snapshot(self) -> dict:
+        return {
+            "revision": str(self.revision),
+            "requestText": self.request_text,
+            "lastAnalysisRunId": self.analysis_run_id,
+            "analysisIsStale": self.analysis_is_stale,
+            "draftDocument": thaw_json(self.document),
+        }
