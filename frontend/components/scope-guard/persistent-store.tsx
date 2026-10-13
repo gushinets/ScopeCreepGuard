@@ -245,11 +245,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
       setAnalysisError(errorCode(error)); setStatus('error')
     }
   }
-  async function saveDraft() {
-    if (!controller.current) return
-    controller.current.edit({}, 'manual_save')
-    try { await flush() } catch (error) { report(error); throw error }
-  }
+  async function retrySave() { await flush() }
   async function complete() {
     const saved = await flush()
     const response = await operations.current.run<{ entry: ArchivedCheck }>(`drafts/${saved.id}/history`, { expectedRevision: saved.revision })
@@ -298,7 +294,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     view, requestText: snapshot?.requestText ?? '', analyzedRequest: snapshot?.analysisRun?.requestText ?? null,
     status, result, clientMaterials: null, draftDocument, currentDraftId: snapshot?.id ?? null,
     draftSessionId: snapshot?.id ?? '', isSavingDraft: saveStatus === 'saving', draftError,
-    isDraftDirty: saveStatus !== 'saved', saveDraft, openDraft, listDrafts,
+    isDraftDirty: saveStatus !== 'saved', saveDraft: retrySave, openDraft, listDrafts,
     updateReply: reply => {
       const current = controller.current?.local.draftDocument
       if (current) controller.current?.edit({ draftDocument: { ...current, reply: { ...current.reply, ...reply } } }, current.reply.tone === reply.tone ? 'autosave' : 'tone_change', current.reply.tone !== reply.tone)
@@ -343,7 +339,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
         setRecovery(null)
       },
       discardRecovery: () => { localStorage.removeItem(recoverySource.current); setRecovery(null) },
-      resolveConflict, complete, regenerate,
+      resolveConflict, complete, retrySave, regenerate,
       compareConflict: async () => {
         const draft = controller.current ? (await workflowApi<{ draft: WorkingDraft }>(`drafts/${controller.current.confirmed.id}`)).draft : null
         reviewedConflict.current = draft
@@ -352,8 +348,6 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
       legacyRevision, closeLegacy: () => { setLegacyRevision(null); syncDraftUrl(controller.current?.confirmed.id ?? null) },
       archivedProjects: async () => (await workflowApi<{ projects: PersistentProject[] }>('projects?archived=true')).projects,
       openArchived: async project => { setProjects(current => [...current.filter(item => item.id !== project.id), project]); await switchProject(project.id); changeView('history') },
-      revisions: async () => snapshot ? (await workflowApi<{ revisions: WorkingRevision[] }>(`drafts/${snapshot.id}/revisions`)).revisions : [],
-      restore: async revision => { await applyAction(async saved => (await operations.current.run<{ draft: WorkingDraft }>(`drafts/${saved.id}/revisions/${revision}/restore`, { expectedRevision: saved.revision })).draft) },
       archived: !!selectedProject?.archivedAt,
     },
   }

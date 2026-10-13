@@ -75,9 +75,8 @@ export interface StoreValue {
     archivedProjects: () => Promise<Project[]>
     openArchived: (project: Project) => Promise<void>
     complete: () => Promise<void>
+    retrySave: () => Promise<void>
     regenerate: () => Promise<void>
-    revisions: () => Promise<import('@/lib/drafts/workflow-types').WorkingRevision[]>
-    restore: (revision: string) => Promise<void>
     archived: boolean
   }
   user: AuthUser | null
