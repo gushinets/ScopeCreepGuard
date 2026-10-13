@@ -418,7 +418,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectsResponse"
+                  "$ref": "#/components/schemas/scope_guard_api__contracts__ProjectsResponse"
                 }
               }
             }
@@ -1019,7 +1019,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HistoryResponse"
+                  "$ref": "#/components/schemas/scope_guard_api__contracts__HistoryResponse"
                 }
               }
             }
@@ -5264,10 +5264,1897 @@
           }
         }
       }
+    },
+    "/api/v2/legacy-drafts/{identifier}": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Legacy Revision",
+        "operationId": "legacy_revision_api_v2_legacy_drafts__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/projects": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Projects",
+        "operationId": "projects_api_v2_projects_get",
+        "parameters": [
+          {
+            "name": "archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Archived"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__ProjectsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Create Project",
+        "operationId": "create_project_api_v2_projects_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__ProjectResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/projects/{identifier}": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Project",
+        "operationId": "project_api_v2_projects__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__ProjectResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Update Project",
+        "operationId": "update_project_api_v2_projects__identifier__patch",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__ProjectResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Archive Project",
+        "operationId": "archive_project_api_v2_projects__identifier__delete",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/projects/{identifier}/draft": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Project Draft",
+        "operationId": "project_draft_api_v2_projects__identifier__draft_get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__DraftResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/drafts/{identifier}": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Draft",
+        "operationId": "draft_api_v2_drafts__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__DraftResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Save Draft",
+        "operationId": "save_draft_api_v2_drafts__identifier__put",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveWorkingDraft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__DraftResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/drafts/{identifier}/clear": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Clear Draft",
+        "operationId": "clear_draft_api_v2_drafts__identifier__clear_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionedOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__DraftResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/drafts/{identifier}/revisions": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Revisions",
+        "operationId": "revisions_api_v2_drafts__identifier__revisions_get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/drafts/{identifier}/revisions/{number}/restore": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Restore",
+        "operationId": "restore_api_v2_drafts__identifier__revisions__number__restore_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionedOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__DraftResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/drafts/{identifier}/analyses": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Analyze",
+        "operationId": "analyze_api_v2_drafts__identifier__analyses_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunAnalysis"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/analyses/{identifier}": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Run",
+        "operationId": "run_api_v2_analyses__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/drafts/{identifier}/estimate": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Estimate",
+        "operationId": "estimate_api_v2_drafts__identifier__estimate_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionedOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/analyses/{identifier}/apply": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Apply",
+        "operationId": "apply_api_v2_analyses__identifier__apply_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/drafts/{identifier}/regenerate": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Regenerate",
+        "operationId": "regenerate_api_v2_drafts__identifier__regenerate_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionedOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__DraftResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/drafts/{identifier}/translate": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Translate",
+        "operationId": "translate_api_v2_drafts__identifier__translate_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslateWorkingDraft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__DraftResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/drafts/{identifier}/history": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Complete",
+        "operationId": "complete_api_v2_drafts__identifier__history_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionedOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__HistoryResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/projects/{identifier}/history": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Histories",
+        "operationId": "histories_api_v2_projects__identifier__history_get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoriesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/history/{identifier}": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v2_history__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__HistoryResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/history/{identifier}/change-orders": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Finalize",
+        "operationId": "finalize_api_v2_history__identifier__change_orders_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Operation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgreementResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Agreements",
+        "operationId": "agreements_api_v2_history__identifier__change_orders_get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgreementsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/change-orders/{identifier}": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Agreement",
+        "operationId": "agreement_api_v2_change_orders__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgreementResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/change-orders/{identifier}/void": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Void",
+        "operationId": "void_api_v2_change_orders__identifier__void_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionedOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgreementResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/change-orders/{identifier}/exports": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Create Export",
+        "operationId": "create_export_api_v2_change_orders__identifier__exports_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Exports",
+        "operationId": "exports_api_v2_change_orders__identifier__exports_get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/exports/{identifier}": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Export",
+        "operationId": "export_api_v2_exports__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/exports/{identifier}/retry": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Retry",
+        "operationId": "retry_api_v2_exports__identifier__retry_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Operation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/exports/{identifier}/download": {
+      "get": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Download",
+        "operationId": "download_api_v2_exports__identifier__download_get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/analyses/{identifier}/evaluation": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Evaluate",
+        "operationId": "evaluate_api_v2_analyses__identifier__evaluation_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Feedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AgreementDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Projectid"
+          },
+          "historyEntryId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Historyentryid"
+          },
+          "reference": {
+            "type": "string",
+            "title": "Reference"
+          },
+          "contentSnapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Contentsnapshot"
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "title": "Schemaversion"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "finalized",
+              "voided"
+            ],
+            "title": "Status"
+          },
+          "revision": {
+            "type": "string",
+            "maxLength": 19,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Revision"
+          },
+          "finalizedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Finalizedbyuserid"
+          },
+          "finalizedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Finalizedat"
+          },
+          "voidedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voidedat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "projectId",
+          "historyEntryId",
+          "reference",
+          "contentSnapshot",
+          "schemaVersion",
+          "status",
+          "revision",
+          "finalizedByUserId",
+          "finalizedAt",
+          "voidedAt",
+          "updatedAt"
+        ],
+        "title": "AgreementDTO"
+      },
+      "AgreementResponse": {
+        "properties": {
+          "changeOrder": {
+            "$ref": "#/components/schemas/AgreementDTO"
+          }
+        },
+        "type": "object",
+        "required": [
+          "changeOrder"
+        ],
+        "title": "AgreementResponse"
+      },
+      "AgreementsResponse": {
+        "properties": {
+          "changeOrders": {
+            "items": {
+              "$ref": "#/components/schemas/AgreementDTO"
+            },
+            "type": "array",
+            "title": "Changeorders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "changeOrders"
+        ],
+        "title": "AgreementsResponse"
+      },
       "AnalysisChangeOrder": {
         "properties": {
           "description": {
@@ -5356,6 +7243,204 @@
           "firm"
         ],
         "title": "AnalysisReplies"
+      },
+      "AnalysisResponse": {
+        "properties": {
+          "analysisRun": {
+            "$ref": "#/components/schemas/AnalysisRunDTO"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkingDraftDTO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "applied": {
+            "type": "boolean",
+            "title": "Applied"
+          },
+          "conflict": {
+            "type": "boolean",
+            "title": "Conflict",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "analysisRun",
+          "draft",
+          "applied"
+        ],
+        "title": "AnalysisResponse"
+      },
+      "AnalysisRunDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Projectid"
+          },
+          "sourceDraftId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sourcedraftid"
+          },
+          "sourceDraftRevision": {
+            "type": "string",
+            "maxLength": 19,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Sourcedraftrevision"
+          },
+          "requestText": {
+            "type": "string",
+            "title": "Requesttext"
+          },
+          "projectSnapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Projectsnapshot"
+          },
+          "interfaceLocale": {
+            "type": "string",
+            "title": "Interfacelocale"
+          },
+          "requestedDocumentLanguage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requesteddocumentlanguage"
+          },
+          "requestLanguage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestlanguage"
+          },
+          "resultSnapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalysisSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "analysis",
+              "estimate"
+            ],
+            "title": "Purpose",
+            "default": "analysis"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "promptVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promptversion"
+          },
+          "errorCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errorcode"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "projectId",
+          "sourceDraftId",
+          "sourceDraftRevision",
+          "requestText",
+          "projectSnapshot",
+          "interfaceLocale",
+          "status",
+          "createdAt"
+        ],
+        "title": "AnalysisRunDTO"
       },
       "AnalysisSnapshot": {
         "properties": {
@@ -5743,7 +7828,7 @@
       "CreatedDraftResponse": {
         "properties": {
           "draft": {
-            "$ref": "#/components/schemas/DraftResponse"
+            "$ref": "#/components/schemas/scope_guard_api__schemas__drafts__DraftResponse"
           },
           "entry": {
             "$ref": "#/components/schemas/CreatedHistoryEntry"
@@ -5817,10 +7902,174 @@
         ],
         "title": "Currency"
       },
+      "DraftEditableChangeOrder": {
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Createdat"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "projectName": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Projectname"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Description"
+          },
+          "estimatedHours": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Estimatedhours"
+          },
+          "additionalCost": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Additionalcost"
+          },
+          "timelineImpact": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Timelineimpact"
+          },
+          "rationale": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Rationale"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Note"
+          },
+          "providerName": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Providername"
+          },
+          "clientName": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Clientname"
+          },
+          "clientEmail": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Clientemail"
+          },
+          "endDate": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Enddate"
+          },
+          "additionalTerms": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Additionalterms"
+          },
+          "clientApproverName": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Clientapprovername"
+          },
+          "approvalDate": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Approvaldate"
+          },
+          "noAdditionalCharge": {
+            "type": "boolean",
+            "title": "Noadditionalcharge"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100000
+              }
+            ],
+            "title": "Reference"
+          },
+          "changeOrderLabels": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChangeOrderLabels"
+              }
+            ]
+          },
+          "aiValues": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string",
+                  "maxLength": 100000
+                },
+                "propertyNames": {
+                  "enum": [
+                    "description",
+                    "estimatedHours",
+                    "additionalCost",
+                    "currency",
+                    "timelineImpact",
+                    "rationale",
+                    "note"
+                  ]
+                },
+                "type": "object"
+              }
+            ],
+            "title": "Aivalues"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Currency"
+              },
+              {
+                "type": "string",
+                "const": ""
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
+            "title": "Currency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "createdAt",
+          "language",
+          "projectName",
+          "description",
+          "estimatedHours",
+          "additionalCost",
+          "timelineImpact",
+          "rationale",
+          "note",
+          "providerName",
+          "clientName",
+          "clientEmail",
+          "endDate",
+          "additionalTerms",
+          "clientApproverName",
+          "approvalDate",
+          "noAdditionalCharge",
+          "currency"
+        ],
+        "title": "DraftEditableChangeOrder"
+      },
       "DraftEnvelope": {
         "properties": {
           "draft": {
-            "$ref": "#/components/schemas/DraftResponse"
+            "$ref": "#/components/schemas/scope_guard_api__schemas__drafts__DraftResponse"
           }
         },
         "type": "object",
@@ -5868,112 +8117,6 @@
           "updatedAt"
         ],
         "title": "DraftListItem"
-      },
-      "DraftResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "projectId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Projectid"
-          },
-          "historyEntryId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Historyentryid"
-          },
-          "request": {
-            "type": "string",
-            "title": "Request"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Createdat"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updatedat"
-          },
-          "status": {
-            "type": "string",
-            "const": "draft",
-            "title": "Status"
-          },
-          "locale": {
-            "type": "string",
-            "enum": [
-              "en",
-              "ru"
-            ],
-            "title": "Locale"
-          },
-          "requestLanguage": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "ru",
-                  "en",
-                  "es",
-                  "other"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Requestlanguage"
-          },
-          "clientMaterialLanguage": {
-            "type": "string",
-            "title": "Clientmateriallanguage"
-          },
-          "projectSnapshot": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Projectsnapshot"
-          },
-          "analysisSnapshot": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Analysissnapshot"
-          },
-          "draftDocument": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Draftdocument"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "projectId",
-          "historyEntryId",
-          "request",
-          "createdAt",
-          "updatedAt",
-          "status",
-          "locale",
-          "requestLanguage",
-          "clientMaterialLanguage",
-          "projectSnapshot",
-          "analysisSnapshot",
-          "draftDocument"
-        ],
-        "title": "DraftResponse"
       },
       "DraftsResponse": {
         "properties": {
@@ -6130,6 +8273,185 @@
         ],
         "title": "EvaluationResponse"
       },
+      "ExportDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "changeOrderId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Changeorderid"
+          },
+          "format": {
+            "type": "string",
+            "const": "pdf",
+            "title": "Format"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "rendererVersion": {
+            "type": "string",
+            "title": "Rendererversion"
+          },
+          "templateVersion": {
+            "type": "string",
+            "title": "Templateversion"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "processing",
+              "ready",
+              "failed",
+              "expired"
+            ],
+            "title": "Status"
+          },
+          "checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum"
+          },
+          "mimeType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mimetype"
+          },
+          "sizeBytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sizebytes"
+          },
+          "errorCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errorcode"
+          },
+          "attemptCount": {
+            "type": "integer",
+            "title": "Attemptcount"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "changeOrderId",
+          "format",
+          "language",
+          "rendererVersion",
+          "templateVersion",
+          "status",
+          "checksum",
+          "mimeType",
+          "sizeBytes",
+          "errorCode",
+          "attemptCount",
+          "createdAt",
+          "finishedAt"
+        ],
+        "title": "ExportDTO"
+      },
+      "ExportRequest": {
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operationid"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operationId"
+        ],
+        "title": "ExportRequest"
+      },
+      "ExportResponse": {
+        "properties": {
+          "export": {
+            "$ref": "#/components/schemas/ExportDTO"
+          }
+        },
+        "type": "object",
+        "required": [
+          "export"
+        ],
+        "title": "ExportResponse"
+      },
+      "ExportsResponse": {
+        "properties": {
+          "exports": {
+            "items": {
+              "$ref": "#/components/schemas/ExportDTO"
+            },
+            "type": "array",
+            "title": "Exports"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exports"
+        ],
+        "title": "ExportsResponse"
+      },
       "ExtractionResponse": {
         "properties": {
           "text": {
@@ -6165,6 +8487,41 @@
         ],
         "title": "ExtractionResponse"
       },
+      "Feedback": {
+        "properties": {
+          "accuracy": {
+            "type": "string",
+            "enum": [
+              "correct",
+              "wrong",
+              "debatable"
+            ],
+            "title": "Accuracy"
+          },
+          "humanVerdict": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "in_scope",
+                  "borderline",
+                  "out_of_scope"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Humanverdict"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "accuracy"
+        ],
+        "title": "Feedback"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -6177,6 +8534,153 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HistoriesResponse": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryEntryDTO"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "title": "HistoriesResponse"
+      },
+      "HistoryEntryDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Projectid"
+          },
+          "sourceDraftId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcedraftid"
+          },
+          "sourceDraftRevision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 19,
+                "pattern": "^[1-9][0-9]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcedraftrevision"
+          },
+          "analysisRunId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysisrunid"
+          },
+          "checkSnapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Checksnapshot"
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "title": "Schemaversion"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "in_scope",
+              "borderline",
+              "out_of_scope"
+            ],
+            "title": "Verdict"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "request": {
+            "type": "string",
+            "title": "Request"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "completedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          },
+          "savedByUserId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Savedbyuserid"
+          },
+          "sourceKind": {
+            "type": "string",
+            "enum": [
+              "explicit",
+              "legacy_unverified"
+            ],
+            "title": "Sourcekind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "projectId",
+          "sourceDraftId",
+          "sourceDraftRevision",
+          "analysisRunId",
+          "checkSnapshot",
+          "schemaVersion",
+          "verdict",
+          "summary",
+          "request",
+          "date",
+          "completedAt",
+          "savedByUserId",
+          "sourceKind"
+        ],
+        "title": "HistoryEntryDTO"
       },
       "HistoryEntryResponse": {
         "properties": {
@@ -6223,18 +8727,6 @@
           "summary"
         ],
         "title": "HistoryEntryResponse"
-      },
-      "HistoryResponse": {
-        "properties": {
-          "entry": {
-            "$ref": "#/components/schemas/HistoryEntryResponse"
-          }
-        },
-        "type": "object",
-        "required": [
-          "entry"
-        ],
-        "title": "HistoryResponse"
       },
       "Industry": {
         "type": "string",
@@ -6295,6 +8787,21 @@
         ],
         "title": "OkResponse"
       },
+      "Operation": {
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operationid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operationId"
+        ],
+        "title": "Operation"
+      },
       "PagesWithoutText": {
         "properties": {
           "code": {
@@ -6328,7 +8835,7 @@
       "ProjectEnvelope": {
         "properties": {
           "project": {
-            "$ref": "#/components/schemas/ProjectResponse"
+            "$ref": "#/components/schemas/scope_guard_api__schemas__projects__ProjectResponse"
           }
         },
         "type": "object",
@@ -6336,124 +8843,6 @@
           "project"
         ],
         "title": "ProjectEnvelope"
-      },
-      "ProjectResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "clientName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Clientname"
-          },
-          "industry": {
-            "$ref": "#/components/schemas/Industry"
-          },
-          "scope": {
-            "type": "string",
-            "title": "Scope"
-          },
-          "startDate": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Startdate"
-          },
-          "pricingModel": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PricingModel"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "currency": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Currency"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "hourlyRate": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hourlyrate"
-          },
-          "fixedPrice": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fixedprice"
-          },
-          "lastChecked": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lastchecked"
-          },
-          "history": {
-            "items": {
-              "$ref": "#/components/schemas/HistoryEntryResponse"
-            },
-            "type": "array",
-            "title": "History"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "industry",
-          "scope",
-          "startDate",
-          "pricingModel",
-          "currency",
-          "hourlyRate",
-          "fixedPrice",
-          "history"
-        ],
-        "title": "ProjectResponse"
       },
       "ProjectSnapshot": {
         "properties": {
@@ -6577,21 +8966,252 @@
         ],
         "title": "ProjectSnapshot"
       },
-      "ProjectsResponse": {
+      "ProjectUpdate": {
         "properties": {
-          "projects": {
-            "items": {
-              "$ref": "#/components/schemas/ProjectResponse"
-            },
-            "type": "array",
-            "title": "Projects"
+          "operationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operationid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "clientName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientname"
+          },
+          "clientEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientemail"
+          },
+          "industry": {
+            "type": "string",
+            "enum": [
+              "Development",
+              "Design",
+              "Marketing"
+            ],
+            "title": "Industry"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "startDate": {
+            "type": "string",
+            "title": "Startdate"
+          },
+          "endDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enddate"
+          },
+          "pricingModel": {
+            "type": "string",
+            "enum": [
+              "hourly",
+              "fixed"
+            ],
+            "title": "Pricingmodel"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "RUB",
+              "USD",
+              "EUR"
+            ],
+            "title": "Currency"
+          },
+          "hourlyRate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hourlyrate"
+          },
+          "fixedPrice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixedprice"
+          },
+          "expectedRevision": {
+            "type": "string",
+            "maxLength": 19,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Expectedrevision"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "projects"
+          "operationId",
+          "name",
+          "industry",
+          "scope",
+          "startDate",
+          "pricingModel",
+          "currency",
+          "expectedRevision"
         ],
-        "title": "ProjectsResponse"
+        "title": "ProjectUpdate"
+      },
+      "ProjectWrite": {
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operationid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "clientName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientname"
+          },
+          "clientEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientemail"
+          },
+          "industry": {
+            "type": "string",
+            "enum": [
+              "Development",
+              "Design",
+              "Marketing"
+            ],
+            "title": "Industry"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "startDate": {
+            "type": "string",
+            "title": "Startdate"
+          },
+          "endDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enddate"
+          },
+          "pricingModel": {
+            "type": "string",
+            "enum": [
+              "hourly",
+              "fixed"
+            ],
+            "title": "Pricingmodel"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "RUB",
+              "USD",
+              "EUR"
+            ],
+            "title": "Currency"
+          },
+          "hourlyRate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hourlyrate"
+          },
+          "fixedPrice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixedprice"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operationId",
+          "name",
+          "industry",
+          "scope",
+          "startDate",
+          "pricingModel",
+          "currency"
+        ],
+        "title": "ProjectWrite"
       },
       "ReadinessResponse": {
         "properties": {
@@ -6645,6 +9265,30 @@
         ],
         "title": "Replies"
       },
+      "ReplyAlternatives": {
+        "properties": {
+          "warm": {
+            "type": "string",
+            "title": "Warm"
+          },
+          "neutral": {
+            "type": "string",
+            "title": "Neutral"
+          },
+          "firm": {
+            "type": "string",
+            "title": "Firm"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "warm",
+          "neutral",
+          "firm"
+        ],
+        "title": "ReplyAlternatives"
+      },
       "ReplyResponse": {
         "properties": {
           "reply": {
@@ -6657,6 +9301,220 @@
           "reply"
         ],
         "title": "ReplyResponse"
+      },
+      "RevisionDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "draftId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Draftid"
+          },
+          "revision": {
+            "type": "string",
+            "maxLength": 19,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Revision"
+          },
+          "stateSnapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Statesnapshot"
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "title": "Schemaversion"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "actorType": {
+            "type": "string",
+            "title": "Actortype"
+          },
+          "actorUserId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actoruserid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projectid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "draftId",
+          "revision",
+          "stateSnapshot",
+          "schemaVersion",
+          "reason",
+          "actorType",
+          "actorUserId",
+          "createdAt"
+        ],
+        "title": "RevisionDTO"
+      },
+      "RevisionResponse": {
+        "properties": {
+          "revision": {
+            "$ref": "#/components/schemas/RevisionDTO"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision"
+        ],
+        "title": "RevisionResponse"
+      },
+      "RevisionsResponse": {
+        "properties": {
+          "revisions": {
+            "items": {
+              "$ref": "#/components/schemas/RevisionDTO"
+            },
+            "type": "array",
+            "title": "Revisions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revisions"
+        ],
+        "title": "RevisionsResponse"
+      },
+      "RunAnalysis": {
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operationid"
+          },
+          "expectedRevision": {
+            "type": "string",
+            "maxLength": 19,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Expectedrevision"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "ru"
+            ],
+            "title": "Locale"
+          },
+          "documentLanguage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documentlanguage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operationId",
+          "expectedRevision",
+          "locale"
+        ],
+        "title": "RunAnalysis"
+      },
+      "SaveWorkingDraft": {
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operationid"
+          },
+          "expectedRevision": {
+            "type": "string",
+            "maxLength": 19,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Expectedrevision"
+          },
+          "changes": {
+            "$ref": "#/components/schemas/WorkingChanges"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "autosave",
+              "manual_save",
+              "tone_change",
+              "language_change",
+              "change_order_edit"
+            ],
+            "title": "Reason",
+            "default": "autosave"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operationId",
+          "expectedRevision",
+          "changes"
+        ],
+        "title": "SaveWorkingDraft"
+      },
+      "TranslateWorkingDraft": {
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operationid"
+          },
+          "expectedRevision": {
+            "type": "string",
+            "maxLength": 19,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Expectedrevision"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operationId",
+          "expectedRevision",
+          "language"
+        ],
+        "title": "TranslateWorkingDraft"
       },
       "UserResponse": {
         "properties": {
@@ -6725,6 +9583,661 @@
           "out_of_scope"
         ],
         "title": "Verdict"
+      },
+      "VersionedOperation": {
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operationid"
+          },
+          "expectedRevision": {
+            "type": "string",
+            "maxLength": 19,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Expectedrevision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operationId",
+          "expectedRevision"
+        ],
+        "title": "VersionedOperation"
+      },
+      "WorkflowProject": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "clientName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientname"
+          },
+          "clientEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientemail"
+          },
+          "industry": {
+            "type": "string",
+            "title": "Industry"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "startDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startdate"
+          },
+          "endDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enddate"
+          },
+          "pricingModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricingmodel"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "hourlyRate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hourlyrate"
+          },
+          "fixedPrice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixedprice"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "archivedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archivedat"
+          },
+          "lastChecked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastchecked"
+          },
+          "history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "History",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "industry",
+          "scope",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "WorkflowProject"
+      },
+      "WorkingChanges": {
+        "properties": {
+          "requestText": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requesttext"
+          },
+          "draftDocument": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkingDocument"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WorkingChanges"
+      },
+      "WorkingDocument": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 2,
+            "title": "Version"
+          },
+          "reply": {
+            "$ref": "#/components/schemas/WorkingReply"
+          },
+          "changeOrder": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftEditableChangeOrder"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "reply",
+          "changeOrder"
+        ],
+        "title": "WorkingDocument"
+      },
+      "WorkingDraftDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Projectid"
+          },
+          "requestText": {
+            "type": "string",
+            "title": "Requesttext"
+          },
+          "lastAnalysisRunId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastanalysisrunid"
+          },
+          "analysisIsStale": {
+            "type": "boolean",
+            "title": "Analysisisstale"
+          },
+          "draftDocument": {
+            "$ref": "#/components/schemas/WorkingDocument"
+          },
+          "revision": {
+            "type": "string",
+            "maxLength": 19,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Revision"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "analysisRun": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalysisRunDTO"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "projectId",
+          "requestText",
+          "lastAnalysisRunId",
+          "analysisIsStale",
+          "draftDocument",
+          "revision",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "WorkingDraftDTO"
+      },
+      "WorkingReply": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "warm",
+              "neutral",
+              "firm"
+            ],
+            "title": "Tone"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "generated": {
+            "$ref": "#/components/schemas/ReplyAlternatives"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "tone",
+          "language",
+          "generated"
+        ],
+        "title": "WorkingReply"
+      },
+      "scope_guard_api__contracts__HistoryResponse": {
+        "properties": {
+          "entry": {
+            "$ref": "#/components/schemas/HistoryEntryResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry"
+        ],
+        "title": "HistoryResponse"
+      },
+      "scope_guard_api__contracts__ProjectsResponse": {
+        "properties": {
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/scope_guard_api__schemas__projects__ProjectResponse"
+            },
+            "type": "array",
+            "title": "Projects"
+          }
+        },
+        "type": "object",
+        "required": [
+          "projects"
+        ],
+        "title": "ProjectsResponse"
+      },
+      "scope_guard_api__schemas__drafts__DraftResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Projectid"
+          },
+          "historyEntryId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Historyentryid"
+          },
+          "request": {
+            "type": "string",
+            "title": "Request"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "status": {
+            "type": "string",
+            "const": "draft",
+            "title": "Status"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "ru"
+            ],
+            "title": "Locale"
+          },
+          "requestLanguage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ru",
+                  "en",
+                  "es",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestlanguage"
+          },
+          "clientMaterialLanguage": {
+            "type": "string",
+            "title": "Clientmateriallanguage"
+          },
+          "projectSnapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projectsnapshot"
+          },
+          "analysisSnapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Analysissnapshot"
+          },
+          "draftDocument": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Draftdocument"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "projectId",
+          "historyEntryId",
+          "request",
+          "createdAt",
+          "updatedAt",
+          "status",
+          "locale",
+          "requestLanguage",
+          "clientMaterialLanguage",
+          "projectSnapshot",
+          "analysisSnapshot",
+          "draftDocument"
+        ],
+        "title": "DraftResponse"
+      },
+      "scope_guard_api__schemas__projects__ProjectResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "clientName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientname"
+          },
+          "industry": {
+            "$ref": "#/components/schemas/Industry"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "startDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startdate"
+          },
+          "pricingModel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PricingModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Currency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hourlyRate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hourlyrate"
+          },
+          "fixedPrice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixedprice"
+          },
+          "lastChecked": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastchecked"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryEntryResponse"
+            },
+            "type": "array",
+            "title": "History"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "industry",
+          "scope",
+          "startDate",
+          "pricingModel",
+          "currency",
+          "hourlyRate",
+          "fixedPrice",
+          "history"
+        ],
+        "title": "ProjectResponse"
+      },
+      "scope_guard_api__schemas__workflow__DraftResponse": {
+        "properties": {
+          "draft": {
+            "$ref": "#/components/schemas/WorkingDraftDTO"
+          }
+        },
+        "type": "object",
+        "required": [
+          "draft"
+        ],
+        "title": "DraftResponse"
+      },
+      "scope_guard_api__schemas__workflow__HistoryResponse": {
+        "properties": {
+          "entry": {
+            "$ref": "#/components/schemas/HistoryEntryDTO"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry"
+        ],
+        "title": "HistoryResponse"
+      },
+      "scope_guard_api__schemas__workflow__ProjectResponse": {
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/WorkflowProject"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project"
+        ],
+        "title": "ProjectResponse"
+      },
+      "scope_guard_api__schemas__workflow__ProjectsResponse": {
+        "properties": {
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowProject"
+            },
+            "type": "array",
+            "title": "Projects"
+          }
+        },
+        "type": "object",
+        "required": [
+          "projects"
+        ],
+        "title": "ProjectsResponse"
       }
     }
   }

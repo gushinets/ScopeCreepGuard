@@ -19,6 +19,10 @@ COPY --chown=scopeguard:scopeguard backend/alembic ./alembic
 COPY --chown=scopeguard:scopeguard apps/api/entrypoint.sh /app/entrypoint.sh
 USER scopeguard
 
+FROM runtime AS export-worker
+COPY --chown=scopeguard:scopeguard apps/worker/main.py /app/export_worker.py
+ENTRYPOINT ["python", "/app/export_worker.py"]
+
 FROM runtime AS runner
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=24h --retries=3 \
