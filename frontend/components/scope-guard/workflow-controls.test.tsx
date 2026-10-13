@@ -17,10 +17,10 @@ function renderControls(overrides: Partial<StoreValue['workflow']> = {}) {
     regenerate: vi.fn(), complete, retrySave,
     ...overrides,
   }
-  render(<NextIntlClientProvider locale="en" messages={en}><StoreContext.Provider value={{
+  const view = render(<NextIntlClientProvider locale="en" messages={en}><StoreContext.Provider value={{
     workflow, currentDraftId: 'd1', currentHistoryEntryId: null, draftError: '', result: null,
   } as unknown as StoreValue}><WorkflowControls /></StoreContext.Provider></NextIntlClientProvider>)
-  return { workflow, retrySave, complete }
+  return { view, workflow, retrySave, complete }
 }
 
 it('shows one autosave status without manual-save or revision-management controls', () => {
@@ -38,13 +38,10 @@ it('retries only a failed autosave operation', async () => {
   expect(retrySave).toHaveBeenCalledOnce()
 })
 
-it('keeps recovery and conflict controls available', () => {
-  const { workflow } = renderControls({
+it('hides conflict and recovery implementation details from users', () => {
+  const { view } = renderControls({
     status: 'conflict',
     recovery: { version: 1, draftId: 'd1', baseRevision: '1', changes: { requestText: 'local', draftDocument: { version: 2, reply: { text: '', tone: 'neutral', language: 'en', generated: { warm: '', neutral: '', firm: '' } }, changeOrder: null } }, attempt: null },
   })
-  expect(screen.getByRole('button', { name: en.workflow.recover })).toBeTruthy()
-  expect(screen.getByRole('button', { name: en.workflow.reviewServer })).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: en.workflow.recover }))
-  expect(workflow.acceptRecovery).toHaveBeenCalledOnce()
+  expect(view.container.innerHTML).toBe('')
 })

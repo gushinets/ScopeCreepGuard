@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import type { WorkingDraft } from '@/lib/drafts/workflow-types'
 import { useStore } from './store'
 
 export function WorkflowControls() {
@@ -11,8 +10,7 @@ export function WorkflowControls() {
   const t = useTranslations()
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
-  const [server, setServer] = useState<WorkingDraft | null>(null)
-  if (!workflow || !currentDraftId) return null
+  if (!workflow || !currentDraftId || workflow.status === 'conflict' || workflow.recovery) return null
   async function action(operation: () => Promise<unknown>) {
     setBusy(true); setFailed(false)
     try { await operation() } catch { setFailed(true) } finally { setBusy(false) }
@@ -21,11 +19,9 @@ export function WorkflowControls() {
     <p role="status" className="text-sm">{t(`workflow.${workflow.status}`)}</p>
     {workflow.stale && result && <p className="mt-2 text-sm">{t('workflow.stale')}</p>}
     {workflow.archived && <p className="mt-2 text-sm">{t('workflow.archived')}</p>}
-    {workflow.recovery && <div className="mt-3 rounded-lg border p-3"><p>{t('workflow.recovery')}</p><div className="mt-2 flex gap-2"><Button onClick={workflow.acceptRecovery}>{t('workflow.recover')}</Button><Button variant="outline" onClick={workflow.discardRecovery}>{t('workflow.discard')}</Button></div></div>}
-    {workflow.status === 'conflict' && <div className="mt-3 rounded-lg border p-3"><p>{t('workflow.conflictHelp')}</p><Button variant="outline" disabled={busy} onClick={() => void action(async () => setServer(await workflow.compareConflict()))}>{t('workflow.reviewServer')}</Button>{server && <div className="mt-3"><h3 className="font-medium">{t('workflow.serverVersion')}</h3><p className="whitespace-pre-wrap">{server.requestText}</p><p className="mt-2 whitespace-pre-wrap">{server.draftDocument.reply.text}</p>{server.draftDocument.changeOrder && <p className="mt-2 whitespace-pre-wrap">{server.draftDocument.changeOrder.description} · {server.draftDocument.changeOrder.additionalCost} {server.draftDocument.changeOrder.currency}</p>}<div className="mt-2 flex flex-wrap gap-2"><Button disabled={busy} onClick={() => void action(async () => { await workflow.resolveConflict(true); setServer(null) })}>{t('workflow.reapply')}</Button><Button disabled={busy} variant="outline" onClick={() => void action(async () => { await workflow.resolveConflict(false); setServer(null) })}>{t('workflow.useServer')}</Button></div></div>}</div>}
     <div className="mt-3 flex flex-wrap gap-2">
       {workflow.status === 'failed' && <Button variant="outline" disabled={busy || workflow.archived} onClick={() => void action(workflow.retrySave)}>{t('workflow.retrySave')}</Button>}
-      <Button disabled={busy || workflow.stale || workflow.archived || workflow.status === 'conflict'} onClick={() => void action(workflow.complete)}>{t('workflow.complete')}</Button>
+      <Button disabled={busy || workflow.stale || workflow.archived} onClick={() => void action(workflow.complete)}>{t('workflow.complete')}</Button>
     </div>
     {(draftError || failed) && <p role="alert" className="mt-2 text-sm">{draftError ? t(draftError) : t('errors.requestFailed')}</p>}
   </section>
