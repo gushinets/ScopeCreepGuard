@@ -55,6 +55,7 @@ class WorkingDocument(InputModel):
     reply: WorkingReply
     change_order: DraftEditableChangeOrder | None
     estimate: EstimateProvenance | None = None
+    language_selection: dict[str, Any] | None = None
 
 
 class WorkingChanges(InputModel):
@@ -167,6 +168,21 @@ class AnalysisResponse(WireModel):
     draft: WorkingDraftDTO | None
     applied: bool
     conflict: bool = False
+    history_entry_id: UUID | None = None
+
+
+class PendingLlmOperation(WireModel):
+    operation_id: UUID
+    status: Literal["queued", "running", "succeeded", "failed"]
+    status_url: str
+    deadline_at: datetime
+
+
+class LlmOperationStatus(PendingLlmOperation):
+    stages: dict[str, str]
+    response_format: str
+    result: dict[str, Any] | None
+    error: dict[str, Any] | None
 
 
 class Feedback(InputModel):

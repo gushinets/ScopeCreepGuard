@@ -1,0 +1,962 @@
+{
+  "enums": {
+    "currency": [
+      "RUB",
+      "USD",
+      "EUR"
+    ],
+    "evaluation_accuracy": [
+      "correct",
+      "wrong",
+      "debatable"
+    ],
+    "industry": [
+      "Development",
+      "Design",
+      "Marketing"
+    ],
+    "pricing_model": [
+      "hourly",
+      "fixed"
+    ],
+    "verdict": [
+      "in_scope",
+      "borderline",
+      "out_of_scope"
+    ]
+  },
+  "tables": {
+    "llm_operations": {
+      "columns": [
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "analysis_run_id",
+          "not_null": false,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "command_key",
+          "not_null": true,
+          "type": "uuid"
+        },
+        {
+          "default": "now()",
+          "generated": "",
+          "identity": "",
+          "name": "created_at",
+          "not_null": true,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "deadline_at",
+          "not_null": true,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "draft_id",
+          "not_null": true,
+          "type": "uuid"
+        },
+        {
+          "default": "0",
+          "generated": "",
+          "identity": "",
+          "name": "epoch",
+          "not_null": true,
+          "type": "bigint"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "error",
+          "not_null": false,
+          "type": "jsonb"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "finished_at",
+          "not_null": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "frozen_input",
+          "not_null": true,
+          "type": "jsonb"
+        },
+        {
+          "default": "gen_random_uuid()",
+          "generated": "",
+          "identity": "",
+          "name": "id",
+          "not_null": true,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "input_hash",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "kind",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "lease_expires_at",
+          "not_null": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "owner_id",
+          "not_null": true,
+          "type": "uuid"
+        },
+        {
+          "default": "0",
+          "generated": "",
+          "identity": "",
+          "name": "physical_calls",
+          "not_null": true,
+          "type": "integer"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "policy",
+          "not_null": true,
+          "type": "jsonb"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "project_id",
+          "not_null": true,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "request_hash",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": "0",
+          "generated": "",
+          "identity": "",
+          "name": "reserved",
+          "not_null": true,
+          "type": "numeric(20,10)"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "result",
+          "not_null": false,
+          "type": "jsonb"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "source_revision",
+          "not_null": true,
+          "type": "bigint"
+        },
+        {
+          "default": "0",
+          "generated": "",
+          "identity": "",
+          "name": "spent",
+          "not_null": true,
+          "type": "numeric(20,10)"
+        },
+        {
+          "default": "'queued'::text",
+          "generated": "",
+          "identity": "",
+          "name": "status",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "worker_id",
+          "not_null": false,
+          "type": "text"
+        }
+      ],
+      "constraints": [
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "FOREIGN KEY (analysis_run_id) REFERENCES analysis_runs(id) ON DELETE RESTRICT",
+          "name": "llm_operations_analysis_run_id_fkey",
+          "type": "f",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK (((status <> 'succeeded'::text) OR ((result IS NOT NULL) AND (finished_at IS NOT NULL))))",
+          "name": "llm_operations_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "FOREIGN KEY (draft_id) REFERENCES drafts(id) ON DELETE RESTRICT",
+          "name": "llm_operations_draft_id_fkey",
+          "type": "f",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((kind = ANY (ARRAY['check'::text, 'regenerate'::text, 'translate'::text, 'estimate'::text])))",
+          "name": "llm_operations_kind_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE RESTRICT",
+          "name": "llm_operations_owner_id_fkey",
+          "type": "f",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "UNIQUE (owner_id, project_id, command_key)",
+          "name": "llm_operations_owner_id_project_id_command_key_key",
+          "type": "u",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((physical_calls >= 0))",
+          "name": "llm_operations_physical_calls_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "PRIMARY KEY (id)",
+          "name": "llm_operations_pkey",
+          "type": "p",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT",
+          "name": "llm_operations_project_id_fkey",
+          "type": "f",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((reserved >= (0)::numeric))",
+          "name": "llm_operations_reserved_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((source_revision > 0))",
+          "name": "llm_operations_source_revision_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((spent >= (0)::numeric))",
+          "name": "llm_operations_spent_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text])))",
+          "name": "llm_operations_status_check",
+          "type": "c",
+          "validated": true
+        }
+      ],
+      "force_rls": false,
+      "indexes": [
+        {
+          "definition": "CREATE UNIQUE INDEX llm_operations_owner_id_project_id_command_key_key ON public.llm_operations USING btree (owner_id, project_id, command_key)",
+          "name": "llm_operations_owner_id_project_id_command_key_key",
+          "nulls_not_distinct": false,
+          "ready": true,
+          "valid": true
+        },
+        {
+          "definition": "CREATE UNIQUE INDEX llm_operations_pkey ON public.llm_operations USING btree (id)",
+          "name": "llm_operations_pkey",
+          "nulls_not_distinct": false,
+          "ready": true,
+          "valid": true
+        },
+        {
+          "definition": "CREATE INDEX llm_operations_queue ON public.llm_operations USING btree (status, lease_expires_at, created_at)",
+          "name": "llm_operations_queue",
+          "nulls_not_distinct": false,
+          "ready": true,
+          "valid": true
+        }
+      ],
+      "kind": "r",
+      "rls": false,
+      "triggers": []
+    },
+    "llm_steps": {
+      "columns": [
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "accepted_result",
+          "not_null": false,
+          "type": "jsonb"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "candidate",
+          "not_null": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "feedback",
+          "not_null": false,
+          "type": "jsonb"
+        },
+        {
+          "default": "gen_random_uuid()",
+          "generated": "",
+          "identity": "",
+          "name": "id",
+          "not_null": true,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "input_hash",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "operation_id",
+          "not_null": true,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "prepared_request",
+          "not_null": false,
+          "type": "jsonb"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "prompt_version",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "schema_version",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": "0",
+          "generated": "",
+          "identity": "",
+          "name": "semantic_attempt",
+          "not_null": true,
+          "type": "integer"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "stage_key",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": "'pending'::text",
+          "generated": "",
+          "identity": "",
+          "name": "status",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": "0",
+          "generated": "",
+          "identity": "",
+          "name": "transport_attempt",
+          "not_null": true,
+          "type": "integer"
+        }
+      ],
+      "constraints": [
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK (((status <> 'accepted'::text) OR (accepted_result IS NOT NULL)))",
+          "name": "llm_steps_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "FOREIGN KEY (operation_id) REFERENCES llm_operations(id) ON DELETE RESTRICT",
+          "name": "llm_steps_operation_id_fkey",
+          "type": "f",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "UNIQUE (operation_id, stage_key)",
+          "name": "llm_steps_operation_id_stage_key_key",
+          "type": "u",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "PRIMARY KEY (id)",
+          "name": "llm_steps_pkey",
+          "type": "p",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK (((semantic_attempt >= 0) AND (semantic_attempt <= 3)))",
+          "name": "llm_steps_semantic_attempt_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'accepted'::text, 'failed'::text])))",
+          "name": "llm_steps_status_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK (((transport_attempt >= 0) AND (transport_attempt <= 2)))",
+          "name": "llm_steps_transport_attempt_check",
+          "type": "c",
+          "validated": true
+        }
+      ],
+      "force_rls": false,
+      "indexes": [
+        {
+          "definition": "CREATE UNIQUE INDEX llm_steps_operation_id_stage_key_key ON public.llm_steps USING btree (operation_id, stage_key)",
+          "name": "llm_steps_operation_id_stage_key_key",
+          "nulls_not_distinct": false,
+          "ready": true,
+          "valid": true
+        },
+        {
+          "definition": "CREATE UNIQUE INDEX llm_steps_pkey ON public.llm_steps USING btree (id)",
+          "name": "llm_steps_pkey",
+          "nulls_not_distinct": false,
+          "ready": true,
+          "valid": true
+        }
+      ],
+      "kind": "r",
+      "rls": false,
+      "triggers": []
+    },
+    "provider_calls": {
+      "columns": [
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "actual_model",
+          "not_null": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "actual_provider",
+          "not_null": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "cached_tokens",
+          "not_null": false,
+          "type": "integer"
+        },
+        {
+          "default": "'USD'::text",
+          "generated": "",
+          "identity": "",
+          "name": "cost_currency",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": "'unknown'::text",
+          "generated": "",
+          "identity": "",
+          "name": "cost_status",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "epoch",
+          "not_null": true,
+          "type": "bigint"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "error",
+          "not_null": false,
+          "type": "jsonb"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "estimated_cost",
+          "not_null": false,
+          "type": "numeric(20,10)"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "finished_at",
+          "not_null": false,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": "gen_random_uuid()",
+          "generated": "",
+          "identity": "",
+          "name": "id",
+          "not_null": true,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "input_tokens",
+          "not_null": false,
+          "type": "integer"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "latency_ms",
+          "not_null": false,
+          "type": "integer"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "operation_id",
+          "not_null": true,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "output_status",
+          "not_null": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "output_tokens",
+          "not_null": false,
+          "type": "integer"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "physical_index",
+          "not_null": true,
+          "type": "integer"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "provider_request_id",
+          "not_null": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "reasoning_effort",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "reasoning_tokens",
+          "not_null": false,
+          "type": "integer"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "reported_cost",
+          "not_null": false,
+          "type": "numeric(20,10)"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "request_hash",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "requested_model",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "reserved_cost",
+          "not_null": true,
+          "type": "numeric(20,10)"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "response_id",
+          "not_null": false,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "semantic_attempt",
+          "not_null": true,
+          "type": "integer"
+        },
+        {
+          "default": "now()",
+          "generated": "",
+          "identity": "",
+          "name": "started_at",
+          "not_null": true,
+          "type": "timestamp with time zone"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "status",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "step_id",
+          "not_null": true,
+          "type": "uuid"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "transport_attempt",
+          "not_null": true,
+          "type": "integer"
+        },
+        {
+          "default": "'unknown'::text",
+          "generated": "",
+          "identity": "",
+          "name": "usage_status",
+          "not_null": true,
+          "type": "text"
+        },
+        {
+          "default": null,
+          "generated": "",
+          "identity": "",
+          "name": "validation_status",
+          "not_null": false,
+          "type": "text"
+        }
+      ],
+      "constraints": [
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((cached_tokens >= 0))",
+          "name": "provider_calls_cached_tokens_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((estimated_cost >= (0)::numeric))",
+          "name": "provider_calls_estimated_cost_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((input_tokens >= 0))",
+          "name": "provider_calls_input_tokens_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "FOREIGN KEY (operation_id) REFERENCES llm_operations(id) ON DELETE RESTRICT",
+          "name": "provider_calls_operation_id_fkey",
+          "type": "f",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "UNIQUE (operation_id, physical_index)",
+          "name": "provider_calls_operation_id_physical_index_key",
+          "type": "u",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((output_tokens >= 0))",
+          "name": "provider_calls_output_tokens_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((physical_index > 0))",
+          "name": "provider_calls_physical_index_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "PRIMARY KEY (id)",
+          "name": "provider_calls_pkey",
+          "type": "p",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((reasoning_tokens >= 0))",
+          "name": "provider_calls_reasoning_tokens_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((reported_cost >= (0)::numeric))",
+          "name": "provider_calls_reported_cost_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((reserved_cost >= (0)::numeric))",
+          "name": "provider_calls_reserved_cost_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK (((semantic_attempt >= 1) AND (semantic_attempt <= 3)))",
+          "name": "provider_calls_semantic_attempt_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((status = ANY (ARRAY['in_flight'::text, 'completed'::text, 'failed'::text, 'unknown'::text])))",
+          "name": "provider_calls_status_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "FOREIGN KEY (step_id) REFERENCES llm_steps(id) ON DELETE RESTRICT",
+          "name": "provider_calls_step_id_fkey",
+          "type": "f",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "UNIQUE (step_id, semantic_attempt, transport_attempt)",
+          "name": "provider_calls_step_id_semantic_attempt_transport_attempt_key",
+          "type": "u",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK (((transport_attempt >= 1) AND (transport_attempt <= 2)))",
+          "name": "provider_calls_transport_attempt_check",
+          "type": "c",
+          "validated": true
+        },
+        {
+          "deferrable": false,
+          "deferred": false,
+          "definition": "CHECK ((validation_status = ANY (ARRAY['accepted'::text, 'rejected'::text])))",
+          "name": "provider_calls_validation_status_check",
+          "type": "c",
+          "validated": true
+        }
+      ],
+      "force_rls": false,
+      "indexes": [
+        {
+          "definition": "CREATE UNIQUE INDEX provider_calls_operation_id_physical_index_key ON public.provider_calls USING btree (operation_id, physical_index)",
+          "name": "provider_calls_operation_id_physical_index_key",
+          "nulls_not_distinct": false,
+          "ready": true,
+          "valid": true
+        },
+        {
+          "definition": "CREATE UNIQUE INDEX provider_calls_pkey ON public.provider_calls USING btree (id)",
+          "name": "provider_calls_pkey",
+          "nulls_not_distinct": false,
+          "ready": true,
+          "valid": true
+        },
+        {
+          "definition": "CREATE UNIQUE INDEX provider_calls_step_id_semantic_attempt_transport_attempt_key ON public.provider_calls USING btree (step_id, semantic_attempt, transport_attempt)",
+          "name": "provider_calls_step_id_semantic_attempt_transport_attempt_key",
+          "nulls_not_distinct": false,
+          "ready": true,
+          "valid": true
+        }
+      ],
+      "kind": "r",
+      "rls": false,
+      "triggers": []
+    }
+  }
+}

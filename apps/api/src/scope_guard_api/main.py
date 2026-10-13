@@ -46,7 +46,11 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     application.add_middleware(UnhandledErrorMiddleware)
     application.add_middleware(OriginMiddleware, allowed_origins=settings.allowed_origins)
     application.add_middleware(DraftReadCacheMiddleware)
-    application.add_middleware(WorkflowBoundary, enabled=settings.workflow_v2)
+    if settings.llm_workflow and not settings.workflow_v2:
+        raise ValueError("LLM workflow requires persistent workflow activation")
+    application.add_middleware(
+        WorkflowBoundary, enabled=settings.workflow_v2, llm_enabled=settings.llm_workflow
+    )
     application.include_router(health_router)
     application.include_router(auth_router)
     application.include_router(projects_router)

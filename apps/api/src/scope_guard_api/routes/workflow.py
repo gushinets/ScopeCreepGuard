@@ -1,11 +1,13 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from scope_guard.domain.drafts.workflow import WorkflowError
 from scope_guard.services.drafts.workflow import WorkflowService
 from starlette.responses import Response
 
-from scope_guard_api.dependencies import current_owner, workflow_service
+from scope_guard_api.dependencies import current_owner, llm_operations_service, workflow_service
+from scope_guard_api.llm_response import admit_response, status_payload
 from scope_guard_api.schemas.workflow import (
     AgreementResponse,
     AgreementsResponse,
@@ -17,7 +19,9 @@ from scope_guard_api.schemas.workflow import (
     Feedback,
     HistoriesResponse,
     HistoryResponse,
+    LlmOperationStatus,
     Operation,
+    PendingLlmOperation,
     ProjectResponse,
     ProjectsResponse,
     ProjectUpdate,
@@ -116,10 +120,16 @@ async def restore(
 
 @router.post(
     "/drafts/{identifier}/analyses",
+    responses={202: {"model": PendingLlmOperation}},
     response_model=AnalysisResponse,
     response_model_exclude_unset=True,
 )
-async def analyze(identifier: UUID, body: RunAnalysis, owner: Owner, service: Service):
+async def analyze(
+    identifier: UUID, body: RunAnalysis, owner: Owner, service: Service, request: Request
+):
+    response = await admit_response(request, UUID(owner["id"]), identifier, "check", body.to_wire())
+    if response is not None:
+        return response
     return await service.analyze(UUID(owner["id"]), identifier, body.to_wire())
 
 
@@ -130,10 +140,18 @@ async def run(identifier: UUID, owner: Owner, service: Service):
 
 @router.post(
     "/drafts/{identifier}/estimate",
+    responses={202: {"model": PendingLlmOperation}},
     response_model=AnalysisResponse,
     response_model_exclude_unset=True,
 )
-async def estimate(identifier: UUID, body: VersionedOperation, owner: Owner, service: Service):
+async def estimate(
+    identifier: UUID, body: VersionedOperation, owner: Owner, service: Service, request: Request
+):
+    response = await admit_response(
+        request, UUID(owner["id"]), identifier, "estimate", body.to_wire()
+    )
+    if response is not None:
+        return response
     return await service.estimate(UUID(owner["id"]), identifier, body.to_wire())
 
 
@@ -148,10 +166,18 @@ async def apply(identifier: UUID, owner: Owner, service: Service):
 
 @router.post(
     "/drafts/{identifier}/regenerate",
+    responses={202: {"model": PendingLlmOperation}},
     response_model=DraftResponse,
     response_model_exclude_unset=True,
 )
-async def regenerate(identifier: UUID, body: VersionedOperation, owner: Owner, service: Service):
+async def regenerate(
+    identifier: UUID, body: VersionedOperation, owner: Owner, service: Service, request: Request
+):
+    response = await admit_response(
+        request, UUID(owner["id"]), identifier, "regenerate", body.to_wire()
+    )
+    if response is not None:
+        return response
     return {
         "draft": await service.generate(UUID(owner["id"]), identifier, "regenerate", body.to_wire())
     }
@@ -159,13 +185,31 @@ async def regenerate(identifier: UUID, body: VersionedOperation, owner: Owner, s
 
 @router.post(
     "/drafts/{identifier}/translate",
+    responses={202: {"model": PendingLlmOperation}},
     response_model=DraftResponse,
     response_model_exclude_unset=True,
 )
-async def translate(identifier: UUID, body: TranslateWorkingDraft, owner: Owner, service: Service):
+async def translate(
+    identifier: UUID, body: TranslateWorkingDraft, owner: Owner, service: Service, request: Request
+):
+    response = await admit_response(
+        request, UUID(owner["id"]), identifier, "translate", body.to_wire()
+    )
+    if response is not None:
+        return response
     return {
         "draft": await service.generate(UUID(owner["id"]), identifier, "translate", body.to_wire())
     }
+
+
+@router.get("/llm-operations/{identifier}", response_model=LlmOperationStatus)
+async def llm_status(identifier: UUID, request: Request, owner: Owner):
+    service = llm_operations_service(request)
+    if service is None:
+        raise WorkflowError("workflowUnavailable", 503)
+    return status_payload(
+        request, UUID(owner["id"]), await service.status(UUID(owner["id"]), identifier)
+    )
 
 
 @router.post(
@@ -191,6 +235,15 @@ async def histories(identifier: UUID, owner: Owner, service: Service):
 )
 async def history(identifier: UUID, owner: Owner, service: Service):
     return {"entry": await service.history(UUID(owner["id"]), identifier)}
+
+
+@router.post(
+    "/history/{identifier}/restore", response_model=DraftResponse, response_model_exclude_unset=True
+)
+async def reopen_history(
+    identifier: UUID, body: VersionedOperation, owner: Owner, service: Service
+):
+    return {"draft": await service.reopen_history(UUID(owner["id"]), identifier, body.to_wire())}
 
 
 @router.post("/history/{identifier}/change-orders", response_model=AgreementResponse)

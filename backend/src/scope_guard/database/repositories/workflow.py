@@ -387,8 +387,8 @@ class WorkflowSQLRepository:
                 "on,requested_by_user_id,request_text,project_snapshot,interface_locale,r"
                 "equested_document_language,input_schema_version,status,model,prompt_vers"
                 "ion,idempotency_key,request_hash) VALUES(:project,:draft,:revision,:owne"
-                "r,:request,CAST(:snapshot AS jsonb),:locale,:language,1,'pending','gpt-5"
-                ".4-nano',:prompt,:key,:hash) RETURNING to_jsonb(analysis_runs)"
+                "r,:request,CAST(:snapshot AS jsonb),:locale,:language,1,'pending',:model,"
+                ":prompt,:key,:hash) RETURNING to_jsonb(analysis_runs)"
             ),
             {
                 "project": draft["projectId"],
@@ -399,7 +399,8 @@ class WorkflowSQLRepository:
                 "snapshot": encoded(context),
                 "locale": parameters["locale"],
                 "language": parameters.get("documentLanguage"),
-                "prompt": "analysis-v1",
+                "prompt": parameters.get("_prompt", "analysis-v1"),
+                "model": parameters.get("_model", "gpt-5.4-nano"),
                 "key": key,
                 "hash": digest,
             },
@@ -937,6 +938,9 @@ class WorkflowUnitOfWork:
     async def __aenter__(self):
         await self.work.__aenter__()
         self.workflow = WorkflowSQLRepository(self.work.session)
+        from scope_guard.database.repositories.llm import LlmTransactionRepository
+
+        self.llm = LlmTransactionRepository(self.work.session)
         return self
 
     async def __aexit__(self, *args):

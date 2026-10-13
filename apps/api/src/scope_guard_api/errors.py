@@ -11,6 +11,18 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
 class ErrorCode(StrEnum):
+    provider_budget_unavailable = "errors.providerBudgetUnavailable"
+    operation_budget_exceeded = "errors.operationBudgetExceeded"
+    operation_deadline_exceeded = "errors.operationDeadlineExceeded"
+    semantic_attempts_exhausted = "errors.semanticAttemptsExhausted"
+    transport_attempts_exhausted = "errors.transportAttemptsExhausted"
+    provider_outcome_unknown = "errors.providerOutcomeUnknown"
+    provider_transport_failed = "errors.providerTransportFailed"
+    provider_output_incomplete = "errors.providerOutputIncomplete"
+    operation_lease_lost = "errors.operationLeaseLost"
+    workflow_version_unavailable = "errors.workflowVersionUnavailable"
+    provider_model_mismatch = "errors.providerModelMismatch"
+    attempt_sequence_invalid = "errors.attemptSequenceInvalid"
     request_body_invalid = "errors.requestBodyInvalid"
     request_failed = "errors.requestFailed"
     auth_required = "errors.authRequired"

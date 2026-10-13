@@ -245,6 +245,22 @@ class WorkflowService:
                 }
             if "draftDocument" in changes:
                 document = validate_document(changes["draftDocument"])
+                if not trusted and document.get("languageSelection") != draft["draftDocument"].get(
+                    "languageSelection"
+                ):
+                    raise WorkflowError("documentInvalid")
+                if (
+                    not trusted
+                    and document["reply"]["language"] != draft["draftDocument"]["reply"]["language"]
+                ):
+                    raise WorkflowError("documentInvalid")
+                if (
+                    not trusted
+                    and changes.get("requestText", draft["requestText"]) != draft["requestText"]
+                ):
+                    if document.get("languageSelection"):
+                        document = deepcopy(document)
+                        document["languageSelection"]["override"] = False
                 if (
                     not trusted
                     and document["reply"]["generated"]
@@ -258,6 +274,11 @@ class WorkflowService:
                     proposed_order = document.get("changeOrder") or {}
                     if proposed_order.get("aiValues", {}) != previous_order.get("aiValues", {}):
                         raise WorkflowError("documentInvalid")
+                changes = {**changes, "draftDocument": document}
+            elif changes.get("requestText", draft["requestText"]) != draft["requestText"]:
+                document = deepcopy(draft["draftDocument"])
+                if document.get("languageSelection"):
+                    document["languageSelection"]["override"] = False
                 changes = {**changes, "draftDocument": document}
             result = await work.workflow.save(
                 owner, identifier, revision, operation, digest, changes, reason, context(project)
@@ -310,6 +331,30 @@ class WorkflowService:
                 "lastAnalysisRunId": saved.get("lastAnalysisRunId"),
                 "analysisIsStale": not analysis_matches(
                     run, saved["requestText"], context(project)
+                ),
+            },
+            "restore",
+            trusted=True,
+        )
+
+    async def reopen_history(self, owner, identifier, body):
+        entry = await self.history(owner, identifier)
+        snapshot = entry["checkSnapshot"]
+        if entry["sourceKind"] != "explicit" or not entry.get("analysisRunId"):
+            raise WorkflowError("legacyProvenanceMissing", 409)
+        run = await self.run(owner, UUID(entry["analysisRunId"]))
+        draft = await self.project_draft(owner, UUID(entry["projectId"]))
+        project = await self.project(owner, UUID(entry["projectId"]))
+        return await self.write(
+            owner,
+            UUID(draft["id"]),
+            {**body, "historyEntryId": str(identifier)},
+            {
+                "requestText": snapshot["requestText"],
+                "draftDocument": snapshot["draftDocument"],
+                "lastAnalysisRunId": run["id"],
+                "analysisIsStale": not analysis_matches(
+                    run, snapshot["requestText"], context(project)
                 ),
             },
             "restore",
