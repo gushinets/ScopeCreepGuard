@@ -185,14 +185,14 @@ function ResultState() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
+      {!workflow && <div className="flex flex-wrap items-center gap-3">
         <Button type="button" disabled={isSavingDraft || generating} onClick={() => void saveDraft()}>
           {isSavingDraft ? t(currentDraftId ? 'drafts.saving' : 'drafts.creating') : t(currentDraftId ? 'drafts.save' : 'drafts.create')}
         </Button>
         {currentDraftId && <p role="status" className="text-xs text-muted-foreground">{t(isDraftDirty ? 'drafts.unsaved' : 'drafts.saved')}</p>}
         {!currentDraftId && <p className="text-xs text-muted-foreground">{t('drafts.temporary')}</p>}
-      </div>
-      {draftError && <p role="alert" className="text-sm text-outscope-text">{t(draftError)}</p>}
+      </div>}
+      {!workflow && draftError && <p role="alert" className="text-sm text-outscope-text">{t(draftError)}</p>}
       {projectSnapshot ? <details className="rounded-lg border border-border p-3" open>
         <summary className="text-sm font-medium">{t('drafts.projectContext')}</summary>
         <p className="mt-2 text-sm font-medium">{projectSnapshot.name}</p>

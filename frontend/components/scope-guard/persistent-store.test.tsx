@@ -66,6 +66,7 @@ it.each(['2027-02-01', ''])('restores current persisted estimate provenance for 
   const withResult = ({ children }: { children: ReactNode }) => wrapper({ children: <>{children}<ResultPanel /></> })
   const hook = renderHook(() => useStore(), { wrapper: withResult })
   await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  expect(screen.queryByRole('button', { name: en.drafts.save })).toBeNull()
   expect(hook.result.current.result?.commercialSignature).toBe(signature)
   expect(screen.queryByRole('button', { name: en.result.createChangeOrder })).toBeNull()
   hook.unmount()
@@ -218,19 +219,68 @@ it('does not create another project when opening its confirmed Draft temporarily
   expect(hook.result.current.currentDraftId).toBe('d2')
 })
 
-it('opens server-confirmed state and saves before navigation without creating History', async () => {
+it('autosaves edits before navigation without creating History', async () => {
   const hook = renderHook(() => useStore(), { wrapper })
   await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
   expect(hook.result.current.requestText).toBe('Server-confirmed request')
   expect(hook.result.current.currentDraftId).toBe('d1')
-  act(() => hook.result.current.setRequestText('Edited request'))
-  await act(async () => hook.result.current.saveDraft())
+  vi.useFakeTimers()
+  try {
+    act(() => hook.result.current.setRequestText('Edited request'))
+    await act(async () => { await vi.advanceTimersByTimeAsync(750) })
+  } finally { vi.useRealTimers() }
   expect(saved.requestText).toBe('Edited request')
   expect(hook.result.current.workflow?.status).toBe('saved')
   expect(requests.some(path => path.endsWith('/history'))).toBe(false)
   hook.unmount()
   const reopened = renderHook(() => useStore(), { wrapper })
   await waitFor(() => expect(reopened.result.current.requestText).toBe('Edited request'))
+})
+
+it('completes the persisted check after flushing and keeps the Draft editable', async () => {
+  const originalFetch = vi.mocked(fetch).getMockImplementation()!
+  let historyRequested = false
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (String(input) === '/api/v2/drafts/d1/history') {
+      historyRequested = true
+      expect(saved.requestText).toBe('Ready to complete')
+      return Response.json({ entry: { id: 'h1', projectId: 'p1', request: saved.requestText, date: '2026-10-12', verdict: 'in_scope', summary: 'Complete' } })
+    }
+    return originalFetch(input, init)
+  })
+  const hook = renderHook(() => useStore(), { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  act(() => hook.result.current.setRequestText('Ready to complete'))
+  await act(async () => { await hook.result.current.workflow?.complete() })
+  expect(historyRequested).toBe(true)
+  expect(hook.result.current.currentHistoryEntryId).toBe('h1')
+  expect(hook.result.current.currentDraftId).toBe('d1')
+  act(() => hook.result.current.setRequestText('Still editable'))
+  expect(hook.result.current.requestText).toBe('Still editable')
+  expect(hook.result.current.workflow?.status).toBe('dirty')
+})
+
+it('retries the failed autosave payload without adding an empty edit', async () => {
+  const originalFetch = vi.mocked(fetch).getMockImplementation()!
+  const bodies: unknown[] = []
+  let fail = true
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (String(input) === '/api/v2/drafts/d1' && init?.method === 'PUT') {
+      bodies.push(JSON.parse(String(init.body)))
+      if (fail) throw new Error('offline')
+    }
+    return originalFetch(input, init)
+  })
+  const hook = renderHook(() => useStore(), { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  act(() => hook.result.current.setRequestText('Retry this exact edit'))
+  await act(async () => { await expect(hook.result.current.workflow?.complete()).rejects.toThrow('errors.requestFailed') })
+  expect(hook.result.current.workflow?.status).toBe('failed')
+  fail = false
+  await act(async () => { await hook.result.current.workflow?.retrySave() })
+  expect(bodies).toHaveLength(2)
+  expect(bodies[1]).toEqual(bodies[0])
+  expect(saved.requestText).toBe('Retry this exact edit')
 })
 
 it('offers recovery without automatically replacing the saved request', async () => {
