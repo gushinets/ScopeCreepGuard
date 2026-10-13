@@ -7,6 +7,10 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy import create_engine, text
+
+# isort: split
+
 from scope_guard.database.migrations import migrate
 from scope_guard.database.repositories.workflow import WorkflowUnitOfWork
 from scope_guard.database.session import Database, normalize_url
@@ -14,7 +18,6 @@ from scope_guard.domain.analysis.normalization import parse_snapshot
 from scope_guard.domain.change_orders.estimation import commercial_signature
 from scope_guard.domain.drafts.workflow import WorkflowError
 from scope_guard.services.drafts.workflow import WorkflowService, generation_context
-from sqlalchemy import create_engine, text
 
 pytestmark = pytest.mark.integration
 
@@ -139,6 +142,16 @@ def test_estimate_deadline_provenance_and_late_application(
             assert metadata["effectiveEndDate"] == effective
             assert metadata["commercialSignature"] == result["commercialSignature"]
             assert metadata["estimateValid"] is True
+            with pytest.raises(WorkflowError) as stale_save:
+                await service.save(
+                    owner,
+                    identifier,
+                    {
+                        **operation(draft),
+                        "changes": {"draftDocument": document},
+                    },
+                )
+            assert stale_save.value.status == 409
             assert (await service.estimate(owner, identifier, body))["draft"][
                 "revision"
             ] == current["revision"]
