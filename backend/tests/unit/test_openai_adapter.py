@@ -20,7 +20,8 @@ INPUT = AnalysisInput(
 )
 
 
-def test_one_adapter_operation_and_parameters():
+@pytest.mark.parametrize("model", ["gpt-5.6-luna", "configured-model"])
+def test_one_adapter_operation_and_parameters(model):
     from scope_guard.integrations.llm.openai import OpenAIGeneration
 
     class Responses:
@@ -33,10 +34,12 @@ def test_one_adapter_operation_and_parameters():
             )
 
     responses = Responses()
-    adapter = OpenAIGeneration("synthetic", client=SimpleNamespace(responses=responses))
+    adapter = OpenAIGeneration(
+        "synthetic", model=model, client=SimpleNamespace(responses=responses)
+    )
     result = asyncio.run(adapter.analyze(INPUT))
     assert result.summary and len(responses.calls) == 1
-    assert responses.calls[0]["model"] == "gpt-5.4-nano"
+    assert responses.calls[0]["model"] == model
     assert responses.calls[0]["reasoning"] == {"effort": "medium"}
     assert responses.calls[0]["text"]["format"]["strict"] is True
 
@@ -59,9 +62,9 @@ def test_output_failures(status, text, code):
 
     with pytest.raises(GenerationError, match=code):
         asyncio.run(
-            OpenAIGeneration("synthetic", client=SimpleNamespace(responses=Responses())).analyze(
-                INPUT
-            )
+            OpenAIGeneration(
+                "synthetic", model="gpt-5.6-luna", client=SimpleNamespace(responses=Responses())
+            ).analyze(INPUT)
         )
 
 
@@ -107,11 +110,12 @@ def test_reply_uses_high_reasoning_and_selected_tone(tone):
     value = ReplyInput(INPUT.context, INPUT.request, INPUT.locale, tone, "old 😀")
     result = asyncio.run(
         OpenAIGeneration(
-            "synthetic", client=SimpleNamespace(responses=Responses())
+            "synthetic", model="configured-model", client=SimpleNamespace(responses=Responses())
         ).regenerate_reply(value)
     )
     assert result == FIXTURE["analysisFixture"]["replies"][tone]
     assert len(calls) == 1 and calls[0]["reasoning"] == {"effort": "high"}
+    assert calls[0]["model"] == "configured-model"
     assert "old 😀" in calls[0]["input"]
 
 
@@ -120,7 +124,7 @@ def test_missing_key_and_provider_error_are_distinct_and_logs_are_private(caplog
 
     with caplog.at_level("INFO", logger="scope_guard.generation"):
         with pytest.raises(GenerationError, match="analysisUnavailable"):
-            asyncio.run(OpenAIGeneration(" \ufeff ").analyze(INPUT))
+            asyncio.run(OpenAIGeneration(" \ufeff ", model="gpt-5.6-luna").analyze(INPUT))
     unavailable = [
         json.loads(record.message)
         for record in caplog.records
@@ -142,9 +146,9 @@ def test_missing_key_and_provider_error_are_distinct_and_logs_are_private(caplog
 
     with pytest.raises(GenerationError, match="analysisFailed"):
         asyncio.run(
-            OpenAIGeneration("synthetic", client=SimpleNamespace(responses=Responses())).analyze(
-                INPUT
-            )
+            OpenAIGeneration(
+                "synthetic", model="gpt-5.6-luna", client=SimpleNamespace(responses=Responses())
+            ).analyze(INPUT)
         )
     assert "sentinel" not in caplog.text
     for record in caplog.records:
@@ -184,7 +188,7 @@ def test_material_output_and_applicability_failures(status, text):
     with pytest.raises(GenerationError, match="analysisInvalid"):
         asyncio.run(
             OpenAIGeneration(
-                "synthetic", client=SimpleNamespace(responses=Responses())
+                "synthetic", model="gpt-5.6-luna", client=SimpleNamespace(responses=Responses())
             ).translate_materials(value)
         )
 

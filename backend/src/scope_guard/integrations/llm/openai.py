@@ -55,8 +55,9 @@ def analysis_fields(value, *, reply=False):
 
 
 class OpenAIGeneration:
-    def __init__(self, key: str, *, client=None):
+    def __init__(self, key: str, model: str, *, client=None):
         self._key = key
+        self._model = model
         self._client = client
 
     async def close(self):
@@ -86,7 +87,7 @@ class OpenAIGeneration:
         try:
             response = await invoke(
                 lambda: self._client.responses.create(
-                    model="gpt-5.4-nano",
+                    model=self._model,
                     reasoning={"effort": effort},
                     **messages,
                     text={

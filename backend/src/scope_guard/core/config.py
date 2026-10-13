@@ -32,6 +32,17 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("SCOPE_GUARD_OPENAI_API_KEY", "OPENAI_API_KEY")
     )
+    openai_model: str = Field(
+        default="gpt-5.6-luna",
+        validation_alias=AliasChoices("SCOPE_GUARD_OPENAI_MODEL", "OPENAI_MODEL"),
+    )
+
+    @field_validator("openai_model")
+    @classmethod
+    def validate_openai_model(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("openai_model must not be empty or whitespace-only")
+        return value
 
     @field_validator("allowed_origins")
     @classmethod

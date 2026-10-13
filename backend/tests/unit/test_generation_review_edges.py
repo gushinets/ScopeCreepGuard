@@ -123,7 +123,7 @@ def test_huge_model_number_is_invalid(field):
     target[field] = 10**400
     with pytest.raises(ValueError):
         parse_analysis(raw)
-    adapter = OpenAIGeneration("synthetic")
+    adapter = OpenAIGeneration("synthetic", model="gpt-5.6-luna")
     with pytest.raises(GenerationError, match="analysisInvalid"):
         adapter._analysis(SimpleNamespace(status="completed", output_text=json.dumps(raw)), INPUT)
 
@@ -183,7 +183,7 @@ def test_lone_surrogate_reaches_official_sdk_transport():
             http_client=httpx.AsyncClient(transport=httpx.MockTransport(transport)),
         )
         try:
-            await OpenAIGeneration("synthetic", client=client)._request(
+            await OpenAIGeneration("synthetic", model="gpt-5.6-luna", client=client)._request(
                 "analyze",
                 {"instructions": "scope\ud800", "input": "request\udfff"},
                 {},
