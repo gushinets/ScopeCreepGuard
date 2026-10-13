@@ -8211,6 +8211,51 @@
         ],
         "title": "ErrorResponse"
       },
+      "EstimateProvenance": {
+        "properties": {
+          "analysisRunId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Analysisrunid"
+          },
+          "sourceDraftRevision": {
+            "type": "string",
+            "maxLength": 19,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Sourcedraftrevision"
+          },
+          "effectiveEndDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveenddate"
+          },
+          "commercialSignature": {
+            "type": "string",
+            "title": "Commercialsignature"
+          },
+          "estimateValid": {
+            "type": "boolean",
+            "title": "Estimatevalid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "analysisRunId",
+          "sourceDraftRevision",
+          "effectiveEndDate",
+          "commercialSignature",
+          "estimateValid"
+        ],
+        "title": "EstimateProvenance"
+      },
       "EstimateResponse": {
         "properties": {
           "result": {
@@ -9810,6 +9855,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/DraftEditableChangeOrder"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "estimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EstimateProvenance"
               },
               {
                 "type": "null"

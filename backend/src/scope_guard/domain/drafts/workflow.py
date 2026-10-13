@@ -7,6 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from uuid import UUID
 
 from scope_guard.domain.drafts.values import JsonObject, freeze_object, thaw_json
 from scope_guard.domain.shared.language import normalize_language
@@ -88,7 +89,8 @@ EDITOR_KEYS = EDITOR_TEXT | {
 def validate_document(value: dict) -> dict:
     if (
         not isinstance(value, dict)
-        or set(value) != {"version", "reply", "changeOrder"}
+        or not {"version", "reply", "changeOrder"} <= value.keys()
+        or value.keys() - {"version", "reply", "changeOrder", "estimate"}
         or type(value["version"]) is not int
         or value["version"] != 2
     ):
@@ -135,6 +137,33 @@ def validate_document(value: dict) -> dict:
                 or not all(isinstance(v, str) for v in co[key].values())
             ):
                 raise WorkflowError("documentInvalid")
+    estimate = value.get("estimate")
+    if estimate is not None:
+        if not isinstance(estimate, dict) or set(estimate) != {
+            "analysisRunId",
+            "sourceDraftRevision",
+            "effectiveEndDate",
+            "commercialSignature",
+            "estimateValid",
+        }:
+            raise WorkflowError("documentInvalid")
+        try:
+            UUID(estimate["analysisRunId"])
+            revision = estimate["sourceDraftRevision"]
+            if (
+                not isinstance(revision, str)
+                or not re.fullmatch(r"[1-9][0-9]{0,18}", revision)
+                or int(revision) >= 2**63
+            ):
+                raise ValueError
+            if estimate["effectiveEndDate"] is not None:
+                date.fromisoformat(estimate["effectiveEndDate"])
+            if type(estimate["estimateValid"]) is not bool or not isinstance(
+                estimate["commercialSignature"], str
+            ):
+                raise ValueError
+        except (ValueError, TypeError, AttributeError):
+            raise WorkflowError("documentInvalid") from None
     if len(json.dumps(value, ensure_ascii=True)) > 1_000_000:
         raise WorkflowError("documentTooLarge", 413)
     return deepcopy(value)

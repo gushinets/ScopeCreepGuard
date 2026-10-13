@@ -1,10 +1,10 @@
 """Versioned workflow DTOs. These are not database mappings."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import ConfigDict, Field, StrictInt, StrictStr
+from pydantic import ConfigDict, Field, StrictBool, StrictInt, StrictStr
 
 from scope_guard_api.schemas.analysis import AnalysisSnapshot
 from scope_guard_api.schemas.drafts import DraftEditableChangeOrder
@@ -42,10 +42,19 @@ class WorkingReply(InputModel):
     generated: ReplyAlternatives
 
 
+class EstimateProvenance(InputModel):
+    analysis_run_id: UUID
+    source_draft_revision: Revision
+    effective_end_date: date | None
+    commercial_signature: StrictStr
+    estimate_valid: StrictBool
+
+
 class WorkingDocument(InputModel):
     version: Literal[2]
     reply: WorkingReply
     change_order: DraftEditableChangeOrder | None
+    estimate: EstimateProvenance | None = None
 
 
 class WorkingChanges(InputModel):

@@ -156,7 +156,7 @@ function ResultState() {
 
   const material = clientMaterials ? applyClientMaterials(result, clientMaterials) : result
 
-  const endDate = draftDocument?.changeOrder?.endDate ?? draftDocument?.projectDetails.endDate ?? ''
+  const endDate = workflow ? draftDocument?.changeOrder?.endDate || selectedProject.endDate || '' : draftDocument?.changeOrder?.endDate ?? draftDocument?.projectDetails.endDate ?? ''
   const needsEstimate = !material.estimateValid || material.commercialSignature !== commercialSignature(selectedProject, endDate)
 
   async function openChangeOrder() {

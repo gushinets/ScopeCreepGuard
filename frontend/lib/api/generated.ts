@@ -1190,6 +1190,22 @@ export interface components {
         ErrorResponse: {
             error: components["schemas"]["ErrorCode"];
         };
+        /** EstimateProvenance */
+        EstimateProvenance: {
+            /**
+             * Analysisrunid
+             * Format: uuid
+             */
+            analysisRunId: string;
+            /** Sourcedraftrevision */
+            sourceDraftRevision: string;
+            /** Effectiveenddate */
+            effectiveEndDate: string | null;
+            /** Commercialsignature */
+            commercialSignature: string;
+            /** Estimatevalid */
+            estimateValid: boolean;
+        };
         /** EstimateResponse */
         EstimateResponse: {
             result: components["schemas"]["AnalysisSnapshot"];
@@ -1767,6 +1783,7 @@ export interface components {
             version: 2;
             reply: components["schemas"]["WorkingReply"];
             changeOrder: components["schemas"]["DraftEditableChangeOrder"] | null;
+            estimate?: components["schemas"]["EstimateProvenance"] | null;
         };
         /** WorkingDraftDTO */
         WorkingDraftDTO: {

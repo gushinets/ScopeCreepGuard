@@ -119,6 +119,8 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
   const result: AnalysisResult | null = rawResult && snapshot ? {
     ...rawResult, replies: snapshot.draftDocument.reply.generated,
     clientLanguage: snapshot.draftDocument.reply.language,
+    commercialSignature: snapshot.draftDocument.estimate?.commercialSignature ?? rawResult.commercialSignature,
+    estimateValid: snapshot.draftDocument.estimate?.estimateValid ?? rawResult.estimateValid,
   } : null
   const analysisProject = selectedProject && snapshot?.analysisRun ? { ...selectedProject, ...snapshot.analysisRun.projectSnapshot, id: selectedProject.id, history: selectedProject.history } : selectedProject
   const draftDocument: DraftDocument | null = snapshot && result ? {
@@ -198,11 +200,11 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     const current = controller.current!
     const run = navigation.current
     const saved = await flush()
-    if (run !== navigation.current || controller.current !== current) return
+    if (run !== navigation.current || controller.current !== current) return false
     const edits = current.editToken
     const response = await action(saved)
-    if (run !== navigation.current || controller.current !== current) return
-    applyOperationResponse(current, edits, response)
+    if (run !== navigation.current || controller.current !== current) return false
+    return applyOperationResponse(current, edits, response)
   }
   async function runAnalysis() {
     const current = controller.current
@@ -296,13 +298,13 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     createProject, updateProject,
     createEstimate: async () => {
       let estimate: AnalysisResult | null = null
-      await applyAction(async saved => {
+      const applied = await applyAction(async saved => {
         const response = await operations.current.run<{ draft: WorkingDraft | null; analysisRun: { resultSnapshot: AnalysisResult } }>(`drafts/${saved.id}/estimate`, { expectedRevision: saved.revision })
         if (!response.draft) throw new WorkflowApiError(ERROR_CODES.draftConflict, 409)
         estimate = response.analysisRun.resultSnapshot
         return response.draft
       })
-      if (!estimate) throw new Error('No estimate')
+      if (!applied || !estimate) throw new WorkflowApiError(ERROR_CODES.draftConflict, 409)
       return estimate
     },
     setRequestText, loadExample: setRequestText, runCheck: () => { void runAnalysis() }, reset: () => { void reset() },

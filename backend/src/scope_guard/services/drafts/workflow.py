@@ -250,6 +250,8 @@ class WorkflowService:
                 ):
                     raise WorkflowError("documentInvalid")
                 if not trusted:
+                    if document.get("estimate") != draft["draftDocument"].get("estimate"):
+                        raise WorkflowError("documentInvalid")
                     previous_order = draft["draftDocument"].get("changeOrder") or {}
                     proposed_order = document.get("changeOrder") or {}
                     if proposed_order.get("aiValues", {}) != previous_order.get("aiValues", {}):
@@ -363,8 +365,18 @@ class WorkflowService:
             active(project)
             # Repository checks existing operation before validating the current revision.
             source = {**draft, "revision": str(revision)}
+            frozen_context = context(project)
+            if body.get("kind") == "estimate":
+                source = (await work.workflow.revision(owner, identifier, revision))[
+                    "stateSnapshot"
+                ]
+                frozen_context = context(source["context"])
+                editor = source["draftDocument"].get("changeOrder") or {}
+                frozen_context["estimateEndDate"] = (
+                    editor.get("endDate") or frozen_context.get("endDate") or None
+                )
             run, created = await work.workflow.create_run(
-                owner, source, context(project), parameters, operation, digest
+                owner, source, frozen_context, parameters, operation, digest
             )
             if created:
                 if not draft["requestText"].strip() or not project["scope"].strip():
@@ -378,12 +390,15 @@ class WorkflowService:
             return await self.apply_analysis(owner, UUID(run["id"]))
         try:
             timestamp = datetime.now(UTC).isoformat()
+            effective_deadline = run["projectSnapshot"].get(
+                "estimateEndDate", run["projectSnapshot"].get("endDate")
+            )
             result = await self.generator.analyze(
                 AnalysisInput(
                     generation_context(draft["projectId"], run["projectSnapshot"]),
                     run["requestText"],
                     run["interfaceLocale"],
-                    run["projectSnapshot"].get("endDate"),
+                    effective_deadline,
                     timestamp,
                     run["requestedDocumentLanguage"],
                 )
@@ -393,7 +408,7 @@ class WorkflowService:
 
             result_wire["commercialSignature"] = commercial_signature(
                 generation_context(draft["projectId"], run["projectSnapshot"]),
-                run["projectSnapshot"].get("endDate"),
+                effective_deadline,
             )
             result_wire["draftCreatedAt"] = timestamp
             if result_wire.get("hasAdditionalWork") and result_wire["changeOrder"].get(
@@ -463,6 +478,15 @@ class WorkflowService:
                 old["aiValues"] = proposed["aiValues"]
             else:
                 document["changeOrder"] = proposed
+            document["estimate"] = {
+                "analysisRunId": str(identifier),
+                "sourceDraftRevision": run["sourceDraftRevision"],
+                "effectiveEndDate": run["projectSnapshot"].get(
+                    "estimateEndDate", run["projectSnapshot"].get("endDate")
+                ),
+                "commercialSignature": run["resultSnapshot"]["commercialSignature"],
+                "estimateValid": run["resultSnapshot"]["estimateValid"],
+            }
         try:
             result = await self.write(
                 owner,
