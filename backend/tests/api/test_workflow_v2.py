@@ -33,7 +33,9 @@ def test_v2_rejects_client_supplied_analysis_even_with_valid_identifiers():
         assert result.status_code == 400
 
 
-@pytest.mark.parametrize(("code", "status"), [("analysisUnavailable", 503), ("analysisFailed", 502)])
+@pytest.mark.parametrize(
+    ("code", "status"), [("analysisUnavailable", 503), ("analysisFailed", 502)]
+)
 def test_generation_errors_keep_their_workflow_status_and_code(code, status):
     from scope_guard.domain.analysis.domain import GenerationError
 

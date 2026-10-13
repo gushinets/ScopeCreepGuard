@@ -65,7 +65,9 @@ class OpenAIGeneration:
 
     async def _request(self, operation, messages, schema, name, effort):
         if not trim(self._key):
-            log_event("provider_unavailable", operation=operation, category="configuration", status=503)
+            log_event(
+                "provider_unavailable", operation=operation, category="configuration", status=503
+            )
             raise GenerationError("analysisUnavailable", 503)
         if self._client is None:
             # httpx honours HTTP(S)_PROXY/NO_PROXY; no frontend environment loading.
