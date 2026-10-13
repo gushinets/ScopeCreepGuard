@@ -8,6 +8,7 @@ import { assertErrorCode, type ErrorCode } from '@/lib/api/errors'
 import { localeToDateLocale, type Locale } from '@/i18n/config'
 import { VerdictChip } from './verdict'
 import { useStore } from './store'
+import { PersistentHistoryView } from './persistent-history'
 
 function formatDate(iso: string, locale: Locale) {
   return new Date(iso).toLocaleDateString(localeToDateLocale(locale), {
@@ -18,12 +19,13 @@ function formatDate(iso: string, locale: Locale) {
 }
 
 export function HistoryView() {
-  const { selectedProject, downloadEvaluationsExport, openDraft, draftError } = useStore()
+  const { selectedProject, downloadEvaluationsExport, openDraft, draftError, workflow } = useStore()
   const locale = useLocale()
   const t = useTranslations()
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<ErrorCode | ''>('')
   const [openingId, setOpeningId] = useState<string | null>(null)
+  if (workflow) return <PersistentHistoryView key={selectedProject?.id} />
 
   if (!selectedProject) {
     return (

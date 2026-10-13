@@ -21,6 +21,7 @@ export function ClientReply({
   document: controlledDocument,
   onDocumentChange,
   disabled = false,
+  onRegenerate,
 }: {
   result: AnalysisResult
   projectId: string
@@ -28,6 +29,7 @@ export function ClientReply({
   document?: ReplyDocument
   onDocumentChange?: (reply: ReplyDocument) => void
   disabled?: boolean
+  onRegenerate?: () => Promise<void>
 }) {
   const t = useTranslations()
   const [localDocument, setLocalDocument] = useState<ReplyDocument>({ tone: 'neutral', text: result.replies.neutral, generated: result.replies })
@@ -70,6 +72,7 @@ export function ClientReply({
     setRegenerationFailed(false)
 
     try {
+      if (onRegenerate) { await onRegenerate(); return }
       const response = await fetch('/api/replies/regenerate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -27,7 +27,7 @@ const accuracyPrefix: Record<EvaluationAccuracy, string> = {
 }
 
 export function VerdictFeedback() {
-  const { currentHistoryEntryId, submitEvaluation } = useStore()
+  const { currentHistoryEntryId, submitEvaluation, workflow, result } = useStore()
   const t = useTranslations()
   const [accuracy, setAccuracy] = useState<EvaluationAccuracy | null>(null)
   const [expectedVerdict, setExpectedVerdict] = useState<Verdict | null>(null)
@@ -35,7 +35,7 @@ export function VerdictFeedback() {
   const [isSaved, setIsSaved] = useState(false)
   const [saveError, setSaveError] = useState<ErrorCode | ''>('')
 
-  if (!currentHistoryEntryId) return null
+  if (!currentHistoryEntryId && !(workflow && result)) return null
 
   async function save(nextAccuracy: EvaluationAccuracy, nextExpected: Verdict | null) {
     setIsSaving(true)

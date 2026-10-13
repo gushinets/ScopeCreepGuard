@@ -48,6 +48,8 @@ export interface HistoryEntry {
 }
 
 export interface Project {
+  clientEmail?: string | null
+  endDate?: string | null
   id: string
   name: string
   clientName?: string | null

@@ -61,7 +61,7 @@ export interface DraftListItem {
   id: string
   requestPreview: string
   projectName: string
-  verdict: Verdict
+  verdict: Verdict | null
   createdAt: string
   updatedAt: string
 }
