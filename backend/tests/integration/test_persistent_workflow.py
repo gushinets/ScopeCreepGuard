@@ -837,6 +837,20 @@ def test_atomic_saves_conflicts_and_completed_retries(disposable_url, monkeypatc
                 )
                 == 1
             )
+        async with factory() as work:
+            with pytest.raises(WorkflowError) as mismatch:
+                await work.workflow.saved_operation(
+                    owner, UUID(draft["id"]), operation, "different"
+                )
+            assert mismatch.value.code == "errors.operationMismatch"
+        concurrent = await asyncio.gather(
+            save(uuid4(), 2), save(uuid4(), 2), return_exceptions=True
+        )
+        assert len([value for value in concurrent if isinstance(value, dict)]) == 1
+        rejected = [value for value in concurrent if isinstance(value, WorkflowError)]
+        assert len(rejected) == 1 and rejected[0].status == 409
+        async with factory() as work:
+            assert len(await work.workflow.revisions(owner, UUID(draft["id"]))) == 3
         await database.close()
 
     asyncio.run(exercise())

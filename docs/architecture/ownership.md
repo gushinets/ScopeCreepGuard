@@ -1,7 +1,7 @@
 # Application ownership
 
 `frontend` owns UI/localization, browser/editor state, page guards and the
-same-origin gateway. It forwards all 24 public API operations once, preserving
+same-origin gateway. It forwards legacy and versioned API operations once, preserving
 headers/cookies/cancellation without retries or fallback. It has no database,
 provider-key or migration responsibility.
 
@@ -22,8 +22,8 @@ ports and existing detached ProjectDetail, DraftSummary and EvaluationExport
 read DTOs; no ORM objects cross this boundary.
 
 `backend/database` owns SQLAlchemy mappings, repositories, optimized read SQL,
-sessions/UoWs and guarded Alembic support. All table names, enum values, precision,
-foreign keys, indexes, cascades and migration provenance remain unchanged.
+sessions/UoWs and guarded Alembic support. The original baseline remains immutable;
+ANY-549 adds staged workflow tables, composite constraints and retained archives.
 
 `backend/integrations` owns OpenAI/prompts, auth adapters, PDF/localization/fonts,
 scope readers and bounded isolated child processes. Services depend on ports.
@@ -37,22 +37,24 @@ state. Commit/rollback releases the lock. Only successful migration starts API;
 API readiness gates frontend. Import/OpenAPI generation never migrates. No
 separate migrate service or required Compose profile remains.
 
-Draft creation retains proof expiry/binding and atomic history/draft/lastChecked
-updates under the owned-project lock and creation key. Saved snapshots stay
-immutable; legacy absent/null context remains readable. Evaluation upsert and
-owner-filtered JSONL preserve existing semantics. PDFs use saved/editor values,
-never rerun analysis or recalculate original money. Scope extraction remains
-temporary and editable; no currency conversion or rate provider is introduced.
+Legacy creation retains generation proofs until cutover. Versioned workflows create
+one persistent Draft per project, freeze analysis runs, and archive only explicit
+completed checks. Optimistic saves persist revisions/events atomically. Evaluations
+derive original analysis on the server. PDFs render finalized archives and durable
+files are downloaded again without rerendering. Scope extraction remains temporary
+and editable; no currency conversion or rate provider is introduced.
 
 Runtime dependencies: frontend -> API -> services/domain; bootstrap -> concrete
 database/integration adapters; adapters -> service ports/domain; database ->
 PostgreSQL. Backend never imports API/frontend. The root uv lock pins both Python
 distributions; API owns FastAPI/Uvicorn/multipart dependencies.
 
-`apps/worker/README.md` records future service-only/outbox possibilities. There is
-no worker container, queue or jobs table. Generation admission remains local to
+`apps/worker/README.md` describes the durable export worker. PostgreSQL export
+records provide its queue; private object storage holds files. No outbox or sending
+is introduced. Generation admission remains local to
 one production API worker/replica. Migration locking alone does not enable
 multi-replica production generation. Deploy/rollback matching application image
 pairs without destructive migration reversal. Historical migration verification
 documents remain historical evidence; the application-boundaries record captures
-current verification.
+current verification. [ANY-549 workflow](draft-workflow.md) records current entity
+relationships, maintenance rollout, retention and external storage configuration.
