@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 from scope_guard_api.main import create_app
 
@@ -30,3 +31,21 @@ def test_v2_rejects_client_supplied_analysis_even_with_valid_identifiers():
             },
         )
         assert result.status_code == 400
+
+
+@pytest.mark.parametrize(("code", "status"), [("analysisUnavailable", 503), ("analysisFailed", 502)])
+def test_generation_errors_keep_their_workflow_status_and_code(code, status):
+    from scope_guard.domain.analysis.domain import GenerationError
+
+    app = create_app(Settings(_env_file=None, workflow_v2=True))
+
+    @app.get("/_test/generation-error")
+    async def generation_error():
+        raise GenerationError(code, status)
+
+    with TestClient(app) as client:
+        response = client.get("/_test/generation-error")
+
+    assert response.status_code == status
+    assert response.json() == {"error": f"errors.{code}"}
+    assert response.headers["cache-control"] == "private, no-store"

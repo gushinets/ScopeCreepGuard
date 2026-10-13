@@ -3,6 +3,7 @@ export const ERROR_CODES = {
   analysisStale: 'errors.analysisStale',
   operationMismatch: 'errors.operationMismatch',
   documentInvalid: 'errors.documentInvalid',
+  documentTooLarge: 'errors.documentTooLarge',
   operationRequired: 'errors.operationRequired',
   revisionRequired: 'errors.revisionRequired',
   revisionNotFound: 'errors.revisionNotFound',
