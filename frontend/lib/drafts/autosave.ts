@@ -16,6 +16,22 @@ export interface RecoveryBuffer {
   changes: SaveBody['changes']; attempt: Attempt | null
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
+/** Apply only fields changed in the editor to a newer server document. */
+function rebaseDocument(base: unknown, local: unknown, server: unknown): unknown {
+  if (Object.is(local, base)) return structuredClone(server)
+  if (!isRecord(base) || !isRecord(local) || !isRecord(server)) return structuredClone(local)
+  const merged = structuredClone(server)
+  for (const key of new Set([...Object.keys(base), ...Object.keys(local)])) {
+    if (!(key in local)) delete merged[key]
+    else merged[key] = rebaseDocument(base[key], local[key], server[key])
+  }
+  return merged
+}
+
 export function parseRecoveryBuffer(value: unknown, draftId: string): RecoveryBuffer | null {
   const object = (item: unknown): item is Record<string, unknown> => !!item && typeof item === 'object' && !Array.isArray(item)
   const changesValid = (item: unknown) => {
@@ -123,6 +139,43 @@ export class DraftAutosave {
       try { await active } finally { if (this.inFlight === active) this.inFlight = null }
     }
     return this.confirmed
+  }
+
+  /**
+   * A generation may finish while this tab has an unsaved edit. Its result is
+   * already committed on the server, so retain that result and replay the
+   * local edit on top of it. This is safe only before a competing save starts.
+   */
+  rebaseOperationResponse(response: WorkingDraft, sourceRevision: string) {
+    if (
+      this.disposed ||
+      this.status !== 'dirty' ||
+      this.inFlight ||
+      this.attempt ||
+      this.confirmed.revision !== sourceRevision ||
+      BigInt(response.revision) <= BigInt(sourceRevision)
+    ) return false
+
+    const requestText = this.local.requestText === this.confirmed.requestText
+      ? response.requestText
+      : this.local.requestText
+    const draftDocument = rebaseDocument(
+      this.confirmed.draftDocument,
+      this.local.draftDocument,
+      response.draftDocument,
+    ) as WorkingDocument
+    this.confirmed = structuredClone(response)
+    this.local = {
+      ...structuredClone(response),
+      requestText,
+      draftDocument,
+      analysisIsStale: response.analysisIsStale || requestText !== response.requestText,
+    }
+    this.error = null
+    this.persist()
+    this.notify()
+    void this.flush().catch(() => {})
+    return true
   }
 
   private async send(attempt: Attempt) {

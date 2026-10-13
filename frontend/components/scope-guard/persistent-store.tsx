@@ -217,9 +217,10 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     }
     changeView('projects')
   }
-  function applyOperationResponse(current: DraftAutosave, edits: symbol, response: WorkingDraft) {
+  function applyOperationResponse(current: DraftAutosave, edits: symbol, response: WorkingDraft, sourceRevision: string) {
     if (BigInt(response.revision) <= BigInt(current.confirmed.revision)) return false
     if (current.editToken !== edits || current.status !== 'saved') {
+      if (current.editToken !== edits && current.rebaseOperationResponse(response, sourceRevision)) return true
       current.markConflict(new WorkflowApiError(ERROR_CODES.draftConflict, 409))
       return false
     }
@@ -234,7 +235,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     const edits = current.editToken
     const response = await action(saved)
     if (run !== navigation.current || controller.current !== current) return false
-    return applyOperationResponse(current, edits, response)
+    return applyOperationResponse(current, edits, response, saved.revision)
   }
   async function runAnalysis() {
     const current = controller.current
@@ -249,7 +250,12 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
       if (run !== navigation.current || current !== controller.current) return
       if (!response.applied || !response.draft) {
         if (BigInt(current.confirmed.revision) <= BigInt(saved.revision)) current.markConflict(new WorkflowApiError(ERROR_CODES.draftConflict, 409))
-      } else if (applyOperationResponse(current, edits, response.draft)) return
+      } else if (applyOperationResponse(current, edits, response.draft, saved.revision)) {
+        // install() has already set status for an unchanged Draft. A rebased
+        // response keeps this controller and needs the status update here.
+        if (controller.current === current) setStatus(current.local.analysisRun?.resultSnapshot ? 'result' : 'idle')
+        return
+      }
       setStatus(current.local.analysisRun?.resultSnapshot ? 'result' : 'idle')
     } catch (error) {
       if (run !== navigation.current || current !== controller.current) return
