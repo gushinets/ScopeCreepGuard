@@ -5,6 +5,7 @@ export interface WorkingDocument {
   version: 2
   reply: { text: string; tone: 'warm' | 'neutral' | 'firm'; language: string; generated: Record<'warm' | 'neutral' | 'firm', string> }
   changeOrder: EditableDraft | null
+  estimate?: { analysisRunId: string; sourceDraftRevision: string; effectiveEndDate: string | null; commercialSignature: string; estimateValid: boolean } | null
 }
 export interface AnalysisRun {
   id: string; projectId: string; sourceDraftId: string; sourceDraftRevision: string

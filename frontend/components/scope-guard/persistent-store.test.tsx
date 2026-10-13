@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
-import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
+import { act, cleanup, renderHook, screen, waitFor } from '@testing-library/react'
 import { NextIntlClientProvider } from 'next-intl'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import en from '@/messages/en.json'
 import type { WorkingDraft } from '@/lib/drafts/workflow-types'
+import { commercialSignature } from '@/lib/change-order/commercial-signature'
+import type { EditableDraft } from '@/lib/change-order/document'
 import { PersistentStoreProvider } from './persistent-store'
+import { ResultPanel } from './result-panel'
 import { useStore } from './store'
 
 const router = { replace: vi.fn() }
@@ -44,6 +47,84 @@ function analyzedDraft() {
     resultSnapshot: { verdict: 'in_scope', confidence: 90, summary: 'Summary', reasoning: 'Reason', citations: [], replies: saved.draftDocument.reply.generated,
       changeOrder: { description: '', timelineImpact: '', additionalCost: '', note: '' } } }
 }
+
+function changeOrder(endDate: string): EditableDraft {
+  return { createdAt: '2026-10-12T00:00:00Z', language: 'en', projectName: project.name, description: 'Extra page',
+    estimatedHours: '2', additionalCost: '333.00', currency: 'EUR', timelineImpact: 'Two days', rationale: '', note: 'Draft',
+    providerName: '', clientName: '', clientEmail: '', endDate, additionalTerms: '', clientApproverName: '', approvalDate: '', noAdditionalCharge: false }
+}
+
+it.each(['2027-02-01', ''])('restores current persisted estimate provenance for deadline %j, but warns after another edit', async edited => {
+  analyzedDraft()
+  saved.analysisRun!.resultSnapshot!.verdict = 'out_of_scope'
+  saved.analysisRun!.resultSnapshot!.estimateValid = true
+  saved.analysisRun!.resultSnapshot!.commercialSignature = commercialSignature(saved.analysisRun!.projectSnapshot, project.endDate)
+  saved.draftDocument.changeOrder = changeOrder(edited)
+  const signature = commercialSignature(saved.analysisRun!.projectSnapshot, edited || project.endDate)
+  Object.assign(saved.draftDocument, { estimate: { analysisRunId: 'estimate-run', sourceDraftRevision: '2', effectiveEndDate: edited || project.endDate, commercialSignature: signature, estimateValid: true } })
+  const original = structuredClone(saved.analysisRun!.resultSnapshot)
+  const withResult = ({ children }: { children: ReactNode }) => wrapper({ children: <>{children}<ResultPanel /></> })
+  const hook = renderHook(() => useStore(), { wrapper: withResult })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  expect(hook.result.current.result?.commercialSignature).toBe(signature)
+  expect(screen.queryByRole('button', { name: en.result.createChangeOrder })).toBeNull()
+  hook.unmount()
+  const reopened = renderHook(() => useStore(), { wrapper: withResult })
+  await waitFor(() => expect(reopened.result.current.isLoadingProjects).toBe(false))
+  expect(screen.queryByRole('button', { name: en.result.createChangeOrder })).toBeNull()
+  act(() => reopened.result.current.updateChangeOrder({ ...reopened.result.current.draftDocument!.changeOrder!, endDate: '2028-03-01' }))
+  await waitFor(() => expect(screen.queryByRole('button', { name: en.result.createChangeOrder })).not.toBeNull())
+  expect(saved.analysisRun!.resultSnapshot).toEqual(original)
+})
+
+it.each([false, true])('flushes edited estimate inputs and only acknowledges a current response (competing save: %s)', async competing => {
+  analyzedDraft()
+  saved.analysisRun!.resultSnapshot!.verdict = 'out_of_scope'
+  saved.analysisRun!.resultSnapshot!.estimateValid = true
+  saved.analysisRun!.resultSnapshot!.commercialSignature = commercialSignature(saved.analysisRun!.projectSnapshot, project.endDate)
+  saved.draftDocument.changeOrder = changeOrder(project.endDate)
+  const original = structuredClone(saved.analysisRun)
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  let received = false
+  const originalFetch = vi.mocked(fetch).getMockImplementation()!
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (String(input).endsWith('/estimate')) {
+      const body = JSON.parse(String(init?.body))
+      expect(body.expectedRevision).toBe(saved.revision)
+      expect(saved.draftDocument.changeOrder?.endDate).toBe('2027-02-01')
+      const draft = structuredClone(saved)
+      draft.revision = String(BigInt(saved.revision) + BigInt(1))
+      const signature = commercialSignature(draft.analysisRun!.projectSnapshot, '2027-02-01')
+      const refreshed = { ...draft.analysisRun!.resultSnapshot!, commercialSignature: signature, estimateValid: true }
+      Object.assign(draft.draftDocument, { estimate: { analysisRunId: 'estimate-run', sourceDraftRevision: saved.revision, effectiveEndDate: '2027-02-01', commercialSignature: signature, estimateValid: true } })
+      saved = structuredClone(draft)
+      received = true
+      await gate
+      return Response.json({ draft, analysisRun: { resultSnapshot: refreshed } })
+    }
+    return originalFetch(input, init)
+  })
+  const hook = renderHook(() => useStore(), { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  act(() => hook.result.current.updateChangeOrder({ ...hook.result.current.draftDocument!.changeOrder!, endDate: '2027-02-01' }))
+  let result!: Promise<unknown>
+  act(() => { result = hook.result.current.createEstimate(project.id, saved.requestText); void result.catch(() => {}) })
+  await waitFor(() => expect(received).toBe(true))
+  if (competing) {
+    act(() => hook.result.current.setRequestText('Newer saved request'))
+    await act(async () => hook.result.current.saveDraft())
+  }
+  await act(async () => {
+    release()
+    if (competing) await expect(result).rejects.toThrow('errors.draftConflict')
+    else await result
+  })
+  expect(hook.result.current.workflow?.status).toBe('saved')
+  expect(saved.analysisRun).toEqual(original)
+  if (competing) expect(hook.result.current.requestText).toBe('Newer saved request')
+  else expect(hook.result.current.result?.commercialSignature).toBe(commercialSignature(saved.analysisRun!.projectSnapshot, '2027-02-01'))
+})
 
 it('shows the first successful analysis result after installing its response', async () => {
   const initial = structuredClone(saved)
