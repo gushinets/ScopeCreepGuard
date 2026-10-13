@@ -48,8 +48,24 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     return `scg:unconfirmed:${owner.current}:${id}:${tab.current}`
   }, [])
 
-  const install = useCallback((draft: WorkingDraft) => {
+  const syncDraftUrl = useCallback((id: string | null) => {
+    const url = new URL(window.location.href)
+    if (id) url.searchParams.set('draft', id)
+    else url.searchParams.delete('draft')
+    window.history.replaceState(window.history.state, '', url)
+  }, [])
+
+  const install = useCallback((draft: WorkingDraft | null, legacyLink?: string) => {
     controller.current?.dispose()
+    setLegacyRevision(null)
+    reviewedConflict.current = null
+    if (!draft) {
+      controller.current = null
+      setSnapshot(null); setProjectId(null); setStatus('idle'); setSaveStatus('saved')
+      setHistoryId(null); setRecovery(null); setDraftError(''); setAnalysisError('')
+      syncDraftUrl(null)
+      return
+    }
     const next = new DraftAutosave(draft, async body => (await workflowApi<{ draft: WorkingDraft }>(`drafts/${draft.id}`, body, 'PUT')).draft, () => {
       if (controller.current !== next) return
       setSnapshot({ ...next.local })
@@ -64,6 +80,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     setHistoryId(null)
     setDraftError('')
     setAnalysisError('')
+    syncDraftUrl(legacyLink ?? draft.id)
     try {
       const prefix = `scg:unconfirmed:${owner.current}:${draft.id}`
       const candidates = [recoveryKey(draft.id), ...Object.keys(localStorage).filter(key => key === prefix || key.startsWith(prefix + ':'))]
@@ -71,7 +88,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
       const raw = JSON.parse(localStorage.getItem(recoverySource.current) ?? 'null') as RecoveryBuffer | null
       setRecovery(parseRecoveryBuffer(raw, draft.id))
     } catch { setRecovery(null) }
-  }, [recoveryKey])
+  }, [recoveryKey, syncDraftUrl])
 
   useEffect(() => {
     let active = true
@@ -96,12 +113,12 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
             if (!(error instanceof WorkflowApiError) || error.status !== 404) throw error
             const legacy = await workflowApi<{ revision: WorkingRevision & { projectId: string } }>(`legacy-drafts/${encodeURIComponent(draftId)}`)
             const current = await workflowApi<{ draft: WorkingDraft }>(`projects/${legacy.revision.projectId}/draft`)
-            if (active) { install(current.draft); setLegacyRevision(legacy.revision) }
+            if (active) { install(current.draft, draftId); setLegacyRevision(legacy.revision) }
           }
         } else if (first) {
           const data = await workflowApi<{ draft: WorkingDraft }>(`projects/${first.id}/draft`)
           if (active) install(data.draft)
-        }
+        } else if (active) install(null)
       } catch (error) { if (active) setProjectError(errorCode(error)) }
       finally { if (active) setLoading(false) }
     }
@@ -142,16 +159,14 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
       if (run !== navigation.current) return
       install(data.draft)
       changeView('check')
-      const url = new URL(window.location.href)
-      url.searchParams.set('draft', data.draft.id)
-      window.history.replaceState(window.history.state, '', url)
-    } catch (error) { report(error) }
+    } catch (error) { if (run === navigation.current) report(error) }
   }
   function setRequestText(text: string) { controller.current?.edit({ requestText: text }) }
   async function setView(next: View) {
     try { if (controller.current) await flush(); changeView(next) } catch (error) { report(error) }
   }
   async function createProject(input: NewProjectInput) {
+    const run = ++navigation.current
     if (controller.current) await flush()
     const parameters = { ...input, clientEmail: input.clientEmail || null, endDate: input.endDate || null }
     const signature = JSON.stringify(['create', parameters])
@@ -159,31 +174,35 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     confirmedProjectActions.current.set(signature, project)
     setProjects(current => [project, ...current.filter(item => item.id !== project.id)])
     const saved = await workflowApi<{ draft: WorkingDraft }>(`projects/${project.id}/draft`)
-    install(saved.draft)
-    changeView('check')
+    if (run === navigation.current) { install(saved.draft); changeView('check') }
     confirmedProjectActions.current.delete(signature)
     return project
   }
   async function updateProject(id: string, input: NewProjectInput, details?: { clientName: string; clientEmail: string; endDate: string }) {
+    const run = navigation.current
     const saved = await flush()
     const parameters = { ...input, clientName: details?.clientName ?? input.clientName, clientEmail: details?.clientEmail || null, endDate: details?.endDate || null, expectedRevision: saved.revision }
     const signature = JSON.stringify(['update', id, parameters])
     const updated = confirmedProjectActions.current.get(signature) ?? (await operations.current.run<{ project: PersistentProject }>(`projects/${id}`, parameters, 'PATCH')).project
     confirmedProjectActions.current.set(signature, updated)
     setProjects(current => current.map(project => project.id === id ? updated : project))
-    install((await workflowApi<{ draft: WorkingDraft }>(`projects/${id}/draft`)).draft)
-    changeView('check')
+    const refreshed = await workflowApi<{ draft: WorkingDraft }>(`projects/${id}/draft`)
+    if (run === navigation.current) { install(refreshed.draft); changeView('check') }
     confirmedProjectActions.current.delete(signature)
     return updated
   }
   async function deleteProject(id: string) {
+    const run = ++navigation.current
+    const current = controller.current
     if (controller.current) await flush()
     await workflowApi(`projects/${id}`, undefined, 'DELETE')
     const remaining = projects.filter(project => project.id !== id)
-    setProjects(remaining)
+    setProjects(previous => previous.filter(project => project.id !== id))
+    if (run !== navigation.current || current !== controller.current) return
     if (selectedProjectId === id) {
-      controller.current?.dispose(); controller.current = null; setSnapshot(null); setProjectId(null)
-      if (remaining[0]) install((await workflowApi<{ draft: WorkingDraft }>(`projects/${remaining[0].id}/draft`)).draft)
+      const replacement = remaining[0] ? (await workflowApi<{ draft: WorkingDraft }>(`projects/${remaining[0].id}/draft`)).draft : null
+      if (run !== navigation.current || current !== controller.current) return
+      install(replacement)
     }
     changeView('projects')
   }
@@ -330,7 +349,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
         reviewedConflict.current = draft
         return draft
       },
-      legacyRevision, closeLegacy: () => setLegacyRevision(null),
+      legacyRevision, closeLegacy: () => { setLegacyRevision(null); syncDraftUrl(controller.current?.confirmed.id ?? null) },
       archivedProjects: async () => (await workflowApi<{ projects: PersistentProject[] }>('projects?archived=true')).projects,
       openArchived: async project => { setProjects(current => [...current.filter(item => item.id !== project.id), project]); await switchProject(project.id); changeView('history') },
       revisions: async () => snapshot ? (await workflowApi<{ revisions: WorkingRevision[] }>(`drafts/${snapshot.id}/revisions`)).revisions : [],
