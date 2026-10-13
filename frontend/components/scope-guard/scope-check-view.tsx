@@ -2,7 +2,6 @@
 
 import { RequestPanel } from './request-panel'
 import { ResultPanel } from './result-panel'
-import { WorkflowControls } from './workflow-controls'
 import { LegacyStateView } from './legacy-state'
 import { useStore } from './store'
 
@@ -14,10 +13,7 @@ export function ScopeCheckView() {
       <div className="lg:sticky lg:top-24 lg:self-start">
         <RequestPanel />
       </div>
-      <div>
-        <WorkflowControls />
-        <ResultPanel />
-      </div>
+      <div><ResultPanel /></div>
     </div>
   )
 }
