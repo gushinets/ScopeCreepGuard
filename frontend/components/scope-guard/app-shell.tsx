@@ -11,6 +11,8 @@ import { ProjectsView } from './projects-view'
 import { NewProjectView } from './new-project-view'
 import { HistoryView } from './history-view'
 import { MyDraftsView } from './my-drafts-view'
+import { PersistentStoreProvider } from './persistent-store'
+import { ArchivedProjects } from './archived-projects'
 
 const NAV: { id: View; labelKey: 'check' | 'projects' | 'history' | 'drafts' }[] = [
   { id: 'check', labelKey: 'check' },
@@ -133,7 +135,7 @@ function Body() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       {view === 'check' && <ScopeCheckView />}
-      {view === 'projects' && <ProjectsView />}
+      {view === 'projects' && <><ProjectsView /><ArchivedProjects /></>}
       {view === 'new_project' && <NewProjectView />}
       {view === 'edit_project' && <NewProjectView key="edit" edit />}
       {view === 'history' && <HistoryView />}
@@ -142,11 +144,12 @@ function Body() {
   )
 }
 
-export function AppShell() {
+export function AppShell({ persistent = false }: { persistent?: boolean }) {
   const t = useTranslations()
+  const Provider = persistent ? PersistentStoreProvider : StoreProvider
 
   return (
-    <StoreProvider>
+    <Provider>
       <div className="min-h-screen bg-background text-foreground">
         <Header />
         <Body />
@@ -156,6 +159,6 @@ export function AppShell() {
           </p>
         </footer>
       </div>
-    </StoreProvider>
+    </Provider>
   )
 }

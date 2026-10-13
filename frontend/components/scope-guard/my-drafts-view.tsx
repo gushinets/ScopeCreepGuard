@@ -42,7 +42,7 @@ export function MyDraftsView() {
         {drafts.map((draft) => <li key={draft.id}>
           <button type="button" disabled={!!openingId} onClick={() => void open(draft.id)} className="block w-full min-w-0 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60">
             <span className="block truncate text-sm font-medium">{draft.requestPreview}</span>
-            <span className="mt-1 block truncate text-xs text-muted-foreground">{draft.projectName} · {t(`verdict.${draft.verdict}`)} · <time dateTime={draft.createdAt}>{new Date(draft.createdAt).toLocaleDateString(localeToDateLocale(locale), { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })}</time>{openingId === draft.id ? ` · ${t('drafts.opening')}` : ''}</span>
+            <span className="mt-1 block truncate text-xs text-muted-foreground">{draft.projectName} · {draft.verdict ? t(`verdict.${draft.verdict}`) : t('workflow.noAnalysis')} · <time dateTime={draft.createdAt}>{new Date(draft.createdAt).toLocaleDateString(localeToDateLocale(locale), { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })}</time>{openingId === draft.id ? ` · ${t('drafts.opening')}` : ''}</span>
           </button>
         </li>)}
       </ul>}

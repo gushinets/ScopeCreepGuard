@@ -33,6 +33,7 @@ export function RequestPanel() {
     status,
     setView,
     loadExample,
+    workflow,
   } = useStore()
   const t = useTranslations()
 
@@ -177,6 +178,7 @@ export function RequestPanel() {
         </div>
         <textarea
           id="request-input"
+          readOnly={!!workflow?.archived}
           value={requestText}
           onChange={(e) => setRequestText(e.target.value)}
           rows={6}
@@ -192,7 +194,7 @@ export function RequestPanel() {
         <Button
           type="button"
           onClick={runCheck}
-          disabled={requestEmpty || !hasScope || busy}
+          disabled={requestEmpty || !hasScope || busy || !!workflow?.archived}
           className="h-11 w-full text-sm"
         >
           <ShieldCheck aria-hidden="true" />

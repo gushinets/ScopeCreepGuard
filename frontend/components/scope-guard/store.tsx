@@ -47,7 +47,9 @@ interface AuthUser {
   email: string
 }
 
-interface NewProjectInput {
+export interface NewProjectInput {
+  clientEmail?: string | null
+  endDate?: string | null
   clientName?: string
   name: string
   industry: Industry
@@ -59,7 +61,25 @@ interface NewProjectInput {
   fixedPrice: string
 }
 
-interface StoreValue {
+export interface StoreValue {
+  workflow?: {
+    status: import('@/lib/drafts/autosave').SaveStatus
+    stale: boolean
+    recovery: import('@/lib/drafts/autosave').RecoveryBuffer | null
+    acceptRecovery: () => void
+    discardRecovery: () => void
+    resolveConflict: (keepLocal: boolean) => Promise<void>
+    compareConflict: () => Promise<import('@/lib/drafts/workflow-types').WorkingDraft | null>
+    legacyRevision: import('@/lib/drafts/workflow-types').WorkingRevision | null
+    closeLegacy: () => void
+    archivedProjects: () => Promise<Project[]>
+    openArchived: (project: Project) => Promise<void>
+    complete: () => Promise<void>
+    regenerate: () => Promise<void>
+    revisions: () => Promise<import('@/lib/drafts/workflow-types').WorkingRevision[]>
+    restore: (revision: string) => Promise<void>
+    archived: boolean
+  }
   user: AuthUser | null
   projects: Project[]
   selectedProject: Project | null
@@ -130,6 +150,7 @@ class ApiError extends Error {
 }
 
 const Ctx = createContext<StoreValue | null>(null)
+export const StoreContext = Ctx
 
 async function readApiError(response: Response) {
   let body: unknown

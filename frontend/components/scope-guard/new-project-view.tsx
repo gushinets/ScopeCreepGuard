@@ -19,7 +19,7 @@ const emptyDetails: ProjectDetails = { clientName: '', clientEmail: '', endDate:
 const industries: Industry[] = ['Development', 'Design', 'Marketing']
 
 export function NewProjectView({ edit = false }: { edit?: boolean }) {
-  const { createProject, updateProject, selectedProject, user, setView } = useStore()
+  const { createProject, updateProject, selectedProject, user, setView, workflow } = useStore()
   const project = edit ? selectedProject : null
   const t = useTranslations()
   const [fields, setFields] = useState<Fields>({
@@ -27,7 +27,7 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
     startDate: project?.startDate ?? '', pricingModel: project?.pricingModel ?? 'hourly',
     currency: project?.currency ?? 'RUB', hourlyRate: project?.hourlyRate ?? '', fixedPrice: project?.fixedPrice ?? '',
   })
-  const [details, setDetails] = useState<ProjectDetails>(() => project && user ? { ...readProjectDetails(user.id, project.id), clientName: project.clientName ?? readProjectDetails(user.id, project.id).clientName } : emptyDetails)
+  const [details, setDetails] = useState<ProjectDetails>(() => workflow && project ? { clientName: project.clientName ?? '', clientEmail: project.clientEmail ?? '', endDate: project.endDate ?? '' } : project && user ? { ...readProjectDetails(user.id, project.id), clientName: project.clientName ?? readProjectDetails(user.id, project.id).clientName } : emptyDetails)
   const [attempted, setAttempted] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<ErrorCode | ''>('')
@@ -93,8 +93,8 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
     }
     setSaving(true)
     try {
-      const saved = project ? await updateProject(project.id, { ...fields, clientName: details.clientName }, details) : await createProject({ ...fields, clientName: details.clientName })
-      if (user && !project) writeProjectDetails(user.id, saved.id, details)
+      const saved = project ? await updateProject(project.id, { ...fields, clientName: details.clientName }, details) : await createProject({ ...fields, clientName: details.clientName, ...(workflow ? { clientEmail: details.clientEmail || null, endDate: details.endDate || null } : {}) })
+      if (user && !project && !workflow) writeProjectDetails(user.id, saved.id, details)
     } catch (error) {
       setSaveError(assertErrorCode(error instanceof Error ? error.message : ''))
     } finally { setSaving(false) }

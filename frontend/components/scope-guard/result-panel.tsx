@@ -141,7 +141,7 @@ function ShortScopeState() {
 }
 
 function ResultState() {
-  const { result, analysisProject: selectedProject, projectSnapshot, currentHistoryEntryId, analyzedRequest, user, setView, createEstimate, clientMaterials, changeClientLanguage, draftDocument, currentDraftId, draftSessionId, updateReply, updateChangeOrder, saveDraft, isSavingDraft, draftError, isDraftDirty } =
+  const { result, analysisProject: selectedProject, projectSnapshot, currentHistoryEntryId, analyzedRequest, user, setView, createEstimate, clientMaterials, changeClientLanguage, draftDocument, currentDraftId, draftSessionId, updateReply, updateChangeOrder, saveDraft, isSavingDraft, draftError, isDraftDirty, workflow } =
     useStore()
   const t = useTranslations()
   const [showChangeOrder, setShowChangeOrder] = useState(!!currentDraftId && !!draftDocument?.changeOrder)
@@ -266,7 +266,8 @@ function ResultState() {
         result={material}
         document={draftDocument?.reply}
         onDocumentChange={updateReply}
-        disabled={isSavingDraft || generating}
+        onRegenerate={workflow?.regenerate}
+        disabled={generating || !!workflow?.archived || (!workflow && isSavingDraft)}
         projectId={selectedProject.id}
         request={analyzedRequest ?? ''}
       />
@@ -287,7 +288,7 @@ function ResultState() {
         </Button>
       )}
       {hasAdditionalWork && (showChangeOrder && (termsComplete || !!currentDraftId) && user && draftDocument?.changeOrder ? (
-        <ChangeOrder result={material} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId ?? draftSessionId} userId={user.id} draft={draftDocument.changeOrder} onDraftChange={updateChangeOrder} disabled={isSavingDraft || generating} draftId={currentDraftId} savedUnchanged={!isDraftDirty} />
+        <ChangeOrder result={material} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId ?? draftSessionId} userId={user.id} draft={draftDocument.changeOrder} onDraftChange={updateChangeOrder} disabled={generating || !!workflow?.archived || (!workflow && isSavingDraft)} draftId={currentDraftId} savedUnchanged={!isDraftDirty} durableWorkflow={!!workflow} />
       ) : (
         <Button
           type="button"

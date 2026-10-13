@@ -15,7 +15,7 @@ import type { AnalysisResult, Currency } from '@/lib/types'
 import { ChangeOrderDocumentPreview } from './change-order-document-preview'
 import { supportedClientLanguage } from '@/lib/client-language'
 
-export function ChangeOrder({ result, projectName, projectId, historyId, userId, initialDraft, documentLanguage, refreshEstimate = false, draft: controlledDraft, onDraftChange, disabled = false, draftId, savedUnchanged = false }: {
+export function ChangeOrder({ result, projectName, projectId, historyId, userId, initialDraft, documentLanguage, refreshEstimate = false, draft: controlledDraft, onDraftChange, disabled = false, draftId, savedUnchanged = false, durableWorkflow = false }: {
   result?: AnalysisResult
   projectName: string
   projectId: string
@@ -29,6 +29,7 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
   disabled?: boolean
   draftId?: string | null
   savedUnchanged?: boolean
+  durableWorkflow?: boolean
 }) {
   const t = useTranslations('changeOrder')
   const messages = useTranslations()
@@ -102,6 +103,7 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
   }
 
   async function download() {
+    if (durableWorkflow) return
     if (downloadController.current) return
     const controller = new AbortController()
     downloadController.current = controller
@@ -141,7 +143,7 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
     <details className="mt-4 rounded-lg border border-border px-3 py-2"><summary className="cursor-pointer text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring">{t('additionalParameters')}</summary><div className="mt-3 grid gap-3">{field('rationale', t('rationaleLabel'), 2)}{field('note', t('noteLabel'), 2)}{field('additionalTerms', t('additionalTerms'), 2)}<div className="grid gap-3 sm:grid-cols-2">{field('providerName', t('providerName'))}{field('clientName', t('clientName'))}{field('clientEmail', t('clientEmail'))}{field('endDate', t('endDate'))}{field('clientApproverName', t('approvedBy'))}{field('approvalDate', t('approvalDate'))}</div></div></details>
     <div className="mt-6"><p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('preview')}</p><ChangeOrderDocumentPreview draft={draft} /></div>
     {!supportedClientLanguage(draft.language) && <p role="alert" className="mt-3 text-sm">{t('pdfLanguageUnsupported')}</p>}
-    <div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => void copy()}><Copy aria-hidden="true" />{t('copy')}</Button><Button type="button" variant="outline" disabled={disabled || downloading || !supportedClientLanguage(draft.language)} onClick={() => void download()}><Download aria-hidden="true" />{t(downloading ? 'downloading' : 'downloadPdf')}</Button>{downloading && <Button type="button" variant="ghost" onClick={() => downloadController.current?.abort()}>{t('cancelDownload')}</Button>}</div>
+    <div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => void copy()}><Copy aria-hidden="true" />{t('copy')}</Button>{!durableWorkflow && <Button type="button" variant="outline" disabled={disabled || downloading || !supportedClientLanguage(draft.language)} onClick={() => void download()}><Download aria-hidden="true" />{t(downloading ? 'downloading' : 'downloadPdf')}</Button>}{downloading && <Button type="button" variant="ghost" onClick={() => downloadController.current?.abort()}>{t('cancelDownload')}</Button>}</div>
     {downloading && <p role="status" className="mt-2 text-xs">{t('downloading')}</p>}
     {exportError && <p role="alert" className="mt-2 text-xs">{messages(exportError)}</p>}
     {status && <p role="status" className="mt-2 text-xs text-muted-foreground">{t(status)}</p>}
