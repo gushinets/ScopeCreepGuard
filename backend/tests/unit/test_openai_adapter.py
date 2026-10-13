@@ -118,8 +118,19 @@ def test_reply_uses_high_reasoning_and_selected_tone(tone):
 def test_missing_key_and_provider_error_are_distinct_and_logs_are_private(caplog):
     from scope_guard.integrations.llm.openai import OpenAIGeneration
 
-    with pytest.raises(GenerationError, match="analysisUnavailable"):
-        asyncio.run(OpenAIGeneration(" \ufeff ").analyze(INPUT))
+    with caplog.at_level("INFO", logger="scope_guard.generation"):
+        with pytest.raises(GenerationError, match="analysisUnavailable"):
+            asyncio.run(OpenAIGeneration(" \ufeff ").analyze(INPUT))
+    unavailable = [json.loads(record.message) for record in caplog.records if "provider_unavailable" in record.message]
+    assert unavailable == [
+        {
+            "event": "provider_unavailable",
+            "correlation_id": "",
+            "operation": "analyze",
+            "category": "configuration",
+            "status": 503,
+        }
+    ]
 
     class Responses:
         async def create(self, **kwargs):
