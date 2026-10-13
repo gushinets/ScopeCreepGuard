@@ -176,6 +176,7 @@ for (const operation of ['regenerate', 'analysis'] as const) {
       await act(async () => hook.result.current.openDraft('d2'))
     }
     await act(async () => {
+      if (scenario === 'pending edits') saved = structuredClone(response)
       release(Response.json(operation === 'analysis' ? { applied: scenario !== 'unapplied after saved edits', draft: scenario === 'unapplied after saved edits' ? null : response, analysisRun: response.analysisRun } : { draft: response }))
       await running
     })
@@ -186,9 +187,13 @@ for (const operation of ['regenerate', 'analysis'] as const) {
       expect(hook.result.current.currentDraftId).toBe('d2')
       expect(hook.result.current.requestText).toBe('Other project')
     } else {
-      expect(hook.result.current.requestText).toBe('Newer local request')
-      expect(hook.result.current.workflow?.status).toBe(scenario === 'pending edits' ? 'conflict' : 'saved')
+      await waitFor(() => expect(hook.result.current.requestText).toBe('Newer local request'))
+      await waitFor(() => expect(hook.result.current.workflow?.status).toBe('saved'))
       if (scenario !== 'pending edits') expect(hook.result.current.draftError).toBe('')
+      if (scenario === 'pending edits') {
+        expect(saved.revision).toBe(String(BigInt(response.revision) + BigInt(1)))
+        expect(hook.result.current.draftError).toBe('')
+      }
     }
   })
 }
