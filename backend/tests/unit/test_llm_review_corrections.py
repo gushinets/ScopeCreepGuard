@@ -129,13 +129,14 @@ def test_duplicate_exhaustion_is_bounded_and_preserves_frozen_materials():
 
 
 @pytest.mark.parametrize("status", ["pending", "accepted"])
-def test_old_prompt_version_fails_before_runner_or_accepted_output_reuse(status):
+@pytest.mark.parametrize("version", ["workflow-v1", "workflow-v2"])
+def test_old_prompt_version_fails_before_runner_or_accepted_output_reuse(status, version):
     class Store:
         async def steps(self, *_):
             return [
                 {
                     "stage_key": "reply",
-                    "prompt_version": "workflow-v1",
+                    "prompt_version": version,
                     "schema_version": "stage-v1",
                     "status": status,
                 }
@@ -233,3 +234,89 @@ def test_translation_stage_request_preserves_saved_materials_without_estimating(
     assert "Do not reassess" in instructions
     assert "hourly rate" not in instructions and "IN_SCOPE:" not in instructions
     assert "confidently helpful" not in instructions
+
+
+class InputBudgetStore(RecordingStore):
+    async def reserve(self, request, transport_attempt):
+        size = (
+            len(
+                json.dumps(
+                    {"messages": request.messages, "schema": request.schema}, ensure_ascii=False
+                ).encode("utf-8")
+            )
+            + 256
+        )
+        if size > 32768:
+            raise GatewayFailure("analysisInputTooLarge")
+        return await super().reserve(request, transport_attempt)
+
+
+@pytest.mark.parametrize("stage,action", [("reply", "regenerate"), ("estimate", "estimate")])
+def test_large_unrelated_saved_material_does_not_consume_stage_input_budget(stage, action):
+    source, store = facts(action=action), InputBudgetStore()
+    large = "Unrelated large note. " * 12000
+    source["document"]["reply"]["generated"].update(warm=large, firm=large)
+    source["document"]["changeOrder"] = {
+        **order(),
+        "additionalTerms": large,
+        "description": "Add Arrow and email alerts.",
+        "estimatedHours": "8",
+        "additionalCost": "240.00",
+        "currency": "USD",
+        "endDate": "2026-12-01",
+    }
+    assert len(json.dumps(source["document"]).encode()) < 1_000_000
+    source["analysis"].update(
+        replies={"warm": large, "neutral": large, "firm": large},
+        changeOrder={
+            "estimatedHours": 8,
+            "additionalCost": "240.00",
+            "currency": "USD",
+            "note": large,
+        },
+    )
+    before = deepcopy(source)
+    candidate = (
+        {
+            "scopePosition": "out_of_scope",
+            "text": (
+                "The requested additions require a separate estimate "
+                "and approval before work begins."
+            ),
+        }
+        if stage == "reply"
+        else {
+            "scopePosition": "out_of_scope",
+            "estimatedHours": 8,
+            "additionalCost": "240.00",
+            "currency": "USD",
+            "rationale": PROSE["en"],
+        }
+    )
+    asyncio.run(run(stage, source, [candidate], store))
+    assert len(store.calls) == 1 and not store.feedbacks
+    payload = json.loads(
+        next(m["content"] for m in store.calls[0]["request"].messages if m["role"] == "user")
+    )
+    assert "Unrelated large note" not in json.dumps(payload)
+    assert payload["analysis"]["verdict"] == "out_of_scope"
+    assert payload["analysis"]["changeOrder"]["additionalCost"] == "240.00"
+    assert payload["project"] == source["project"]
+    if stage == "reply":
+        assert payload["document"]["reply"]["text"] == PROSE["en"]
+        assert payload["document"]["reply"]["tone"] == "neutral"
+        assert "generated" not in payload["document"]["reply"]
+    else:
+        assert payload["document"]["changeOrder"]["description"] == "Add Arrow and email alerts."
+        assert "reply" not in payload["document"]
+    assert source == before
+
+
+def test_relevant_oversized_scope_still_fails_before_dispatch():
+    source, store = facts(action="regenerate"), InputBudgetStore()
+    source["project"]["scope"] = "Agreed deliverable. " * 10000
+    with pytest.raises(GatewayFailure, match="analysisInputTooLarge"):
+        asyncio.run(
+            run("reply", source, [{"scopePosition": "out_of_scope", "text": PROSE["en"]}], store)
+        )
+    assert not store.calls

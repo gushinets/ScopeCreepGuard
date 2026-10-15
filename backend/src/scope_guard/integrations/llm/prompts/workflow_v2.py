@@ -82,6 +82,100 @@ def tone_rule(tone, field):
     return f"For {field} only:\n{skill}"
 
 
+def selected(value, keys):
+    return {key: value[key] for key in keys if key in value}
+
+
+def stage_source(stage, facts):
+    """Project provider input only; full frozen facts still drive local validation."""
+    source = selected(facts, ("locale", "request", "action"))
+    source["selection"] = selected(facts["selection"], ("selectedLanguage",))
+    source["project"] = selected(
+        facts["project"],
+        (
+            "name",
+            "clientName",
+            "clientEmail",
+            "industry",
+            "scope",
+            "startDate",
+            "endDate",
+            "pricingModel",
+            "currency",
+            "hourlyRate",
+            "fixedPrice",
+        ),
+    )
+    commercial = ("estimatedHours", "additionalCost", "currency", "endDate")
+    if stage != "analysis":
+        accepted = facts["analysis"]
+        source["analysis"] = selected(
+            accepted,
+            (
+                "verdict",
+                "confidence",
+                "summary",
+                "reasoning",
+                "suggestion",
+                "citations",
+                "hasAdditionalWork",
+                "estimatedHours",
+                "additionalCost",
+                "currency",
+            ),
+        )
+        if accepted.get("changeOrder"):
+            source["analysis"]["changeOrder"] = selected(
+                accepted["changeOrder"], (*commercial, "timelineImpact")
+            )
+    document = facts.get("document") or {}
+    order = document.get("changeOrder")
+    if stage == "reply":
+        reply = document["reply"]
+        source["document"] = {
+            "reply": {
+                **selected(reply, ("tone", "language")),
+                "text": reply.get("text") or reply["generated"].get(reply["tone"], ""),
+            }
+        }
+        if order:
+            source["document"]["changeOrder"] = selected(order, commercial)
+    elif stage == "estimate":
+        source["document"] = {
+            "changeOrder": selected(order or {}, (*commercial, "description", "timelineImpact"))
+        }
+    elif facts.get("action") == "translate":
+        if stage == "replies":
+            reply = document["reply"]
+            source["document"] = {
+                "reply": {
+                    **selected(reply, ("tone", "language", "text")),
+                    "generated": {
+                        tone: reply["text"] if tone == reply["tone"] else reply["generated"][tone]
+                        for tone in REPLY_TONE_SKILLS
+                    },
+                }
+            }
+        elif stage == "change_order":
+            source["document"] = {
+                "changeOrder": selected(
+                    order or {},
+                    (
+                        *commercial,
+                        "description",
+                        "timelineImpact",
+                        "rationale",
+                        "note",
+                        "additionalTerms",
+                        "changeOrderLabels",
+                    ),
+                )
+            }
+    if stage in ("analysis", "estimate") and facts.get("createdAt"):
+        source["createdAt"] = facts["createdAt"]
+    return source
+
+
 def stage_prompt(stage, facts):
     target = facts["locale"] if stage == "analysis" else facts["selection"]["selectedLanguage"]
     rules = [SHARED, f"You perform only the {stage} stage. All prose must be in {target}."]
@@ -123,16 +217,16 @@ def stage_prompt(stage, facts):
         )
     else:
         raise ValueError("unsupported stage")
-    source = facts
+    source = stage_source(stage, facts)
     if (
         stage in ("analysis", "estimate")
         and facts["project"].get("startDate")
         and facts.get("createdAt")
     ):
         source = {
-            **facts,
+            **source,
             "project": {
-                **facts["project"],
+                **source["project"],
                 **project_timing(
                     facts["project"]["startDate"],
                     facts["project"].get("endDate"),
