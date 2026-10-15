@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from scope_guard.domain.drafts.workflow import WorkflowError
-from scope_guard.domain.llm.runtime import GatewayFailure, digest, encode
+from scope_guard.domain.llm.runtime import PROMPT_VERSION, GatewayFailure, digest, encode
 
 
 async def one(work, sql, parameters=None):
@@ -539,9 +539,14 @@ class LlmTransactionRepository:
                 text(
                     "INSERT INTO llm_steps(operation_id,stage_key, "
                     "input_hash,prompt_version,schema_version) "
-                    "VALUES(:op,:stage,:hash,'workflow-v1', "
+                    "VALUES(:op,:stage,:hash,:prompt, "
                     "'stage-v1')"
                 ),
-                {"op": row["id"], "stage": stage, "hash": values["input_hash"]},
+                {
+                    "op": row["id"],
+                    "stage": stage,
+                    "hash": values["input_hash"],
+                    "prompt": PROMPT_VERSION,
+                },
             )
         return row

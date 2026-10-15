@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
+from fixtures.llm_review import labels as document_labels
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 
@@ -14,7 +15,6 @@ from scope_guard.database.migrations import migrate
 from scope_guard.database.repositories.llm import LlmSQLStore
 from scope_guard.database.repositories.workflow import WorkflowUnitOfWork
 from scope_guard.database.session import Database, normalize_url
-from scope_guard.domain.change_orders.constants import LABEL_KEYS
 from scope_guard.integrations.llm.detection import select
 from scope_guard.integrations.llm.gateway import ProviderGateway
 from scope_guard.integrations.llm.litellm_adapter import LiteLLMResponsesAdapter
@@ -75,7 +75,7 @@ def output(stage, locale, language):
         "applicable": True,
         **dict.fromkeys(("description", "timelineImpact", "rationale", "note"), PROSE[language]),
         "additionalTerms": "",
-        "labels": dict.fromkeys(LABEL_KEYS, PROSE[language]),
+        "labels": document_labels(language),
     }
 
 
@@ -179,9 +179,10 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
             },
         )
         bodies, rejected = [], 0
+        regeneration_mode, regeneration_attempt = "different", 0
 
         def http(request):
-            nonlocal rejected
+            nonlocal rejected, regeneration_attempt
             body = json.loads(request.content)
             bodies.append(body)
             stage = body["text"]["format"]["name"]
@@ -190,6 +191,33 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                 value = output(stage, locale, "ru")
             else:
                 value = output(stage, locale, target)
+            if stage == "reply_v1":
+                regeneration_attempt += 1
+                frozen = json.loads(
+                    next(m["content"] for m in body["input"] if m["role"] == "user")
+                )
+                previous = frozen["document"]["reply"]["text"]
+                if regeneration_mode == "always" or (
+                    regeneration_mode in ("once", "whitespace") and regeneration_attempt == 1
+                ):
+                    value["text"] = (
+                        " \n " + previous.replace(" ", "  \n") + " "
+                        if regeneration_mode == "whitespace"
+                        else previous
+                    )
+                else:
+                    value["text"] = (
+                        PROSE[target]
+                        if previous != PROSE[target]
+                        else PROSE[target]
+                        + " "
+                        + {
+                            "en": "Please confirm whether to prepare that proposal for review.",
+                            "ru": "Подтвердите, пожалуйста, необходимость подготовки "
+                            "отдельного предложения.",
+                            "es": "Confirme si debemos preparar esa propuesta para su revisión.",
+                        }[target]
+                    )
             return httpx.Response(200, json=provider_response(value, len(bodies), usage))
 
         adapter = LiteLLMResponsesAdapter("synthetic", transport=httpx.MockTransport(http))
@@ -334,6 +362,64 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                     "status"
                 ] == "succeeded"
                 assert "now included" not in json.dumps(bodies[-1]["input"])
+            # Only the reply stage retries; failed replacements retain the saved Draft.
+            for regeneration_mode in ("once", "whitespace", "always"):
+                regeneration_attempt = 0
+                before = await workflow.draft(owner, draft_id)
+                before_history = len(await workflow.histories(owner, UUID(project["id"])))
+                before_calls = len(bodies)
+                pending = await operations.admit(
+                    owner,
+                    draft_id,
+                    "regenerate",
+                    {"operationId": str(uuid4()), "expectedRevision": before["revision"]},
+                )
+                regenerate_id = UUID(pending["operationId"])
+                assert await worker.process_one()
+                regenerated = await operations.status(owner, regenerate_id)
+                expected_calls = 3 if regeneration_mode == "always" else 2
+                assert len(bodies) - before_calls == expected_calls
+                assert all(b["text"]["format"]["name"] == "reply_v1" for b in bodies[before_calls:])
+                async with database.new_uow() as work:
+                    attempts = (
+                        (
+                            await work.session.execute(
+                                text(
+                                    "SELECT * FROM provider_calls WHERE operation_id=:id "
+                                    "ORDER BY physical_index"
+                                ),
+                                {"id": regenerate_id},
+                            )
+                        )
+                        .mappings()
+                        .all()
+                    )
+                assert len(attempts) == expected_calls
+                assert all(
+                    c["validation_status"] == "rejected"
+                    for c in attempts[: expected_calls if regeneration_mode == "always" else 1]
+                )
+                assert all(c["reported_cost"] is None for c in attempts)
+                assert all((c["estimated_cost"] is not None) == usage for c in attempts)
+                after = await workflow.draft(owner, draft_id)
+                assert (
+                    after["draftDocument"]["changeOrder"] == before["draftDocument"]["changeOrder"]
+                )
+                assert after["lastAnalysisRunId"] == before["lastAnalysisRunId"]
+                assert len(await workflow.histories(owner, UUID(project["id"]))) == before_history
+                if regeneration_mode == "always":
+                    assert regenerated["status"] == "failed"
+                    assert regenerated["error"]["code"] == "errors.semanticAttemptsExhausted"
+                    assert "unchanged_reply" in json.dumps(regenerated["error"])
+                    assert after["draftDocument"] == before["draftDocument"]
+                    assert after["revision"] == before["revision"]
+                else:
+                    assert regenerated["status"] == "succeeded"
+                    assert (
+                        after["draftDocument"]["reply"]["text"]
+                        != before["draftDocument"]["reply"]["text"]
+                    )
+            regeneration_mode = "different"
             if locale == "en" and language == "ru":
                 draft = await workflow.draft(owner, draft_id)
                 pending = await operations.admit(
@@ -359,6 +445,33 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                     "lastAnalysisRunId"
                 ]
             assert len(await workflow.histories(owner, UUID(project["id"]))) == 1
+            # Old pending work must not resume under changed prompts or consume calls.
+            current = await workflow.draft(owner, draft_id)
+            old = await operations.admit(
+                owner,
+                draft_id,
+                "check",
+                {
+                    "operationId": str(uuid4()),
+                    "expectedRevision": current["revision"],
+                    "locale": locale,
+                },
+            )
+            old_id = UUID(old["operationId"])
+            assert all(s["prompt_version"] == "workflow-v2" for s in await store.steps(old_id))
+            async with database.new_uow() as work:
+                await work.session.execute(
+                    text(
+                        "UPDATE llm_steps SET prompt_version='workflow-v1' WHERE operation_id=:id"
+                    ),
+                    {"id": old_id},
+                )
+                await work.commit()
+            count = len(bodies)
+            assert await worker.process_one()
+            old_status = await operations.status(owner, old_id)
+            assert old_status["error"]["code"] == "errors.workflowVersionUnavailable"
+            assert len(bodies) == count
             if locale == "ru" and language == "en":
                 # Translation remains this check, with the same manual commercial values.
                 draft = await workflow.draft(owner, draft_id)

@@ -5,6 +5,8 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+PROMPT_VERSION = "workflow-v2"
+
 
 def encode(value):
     return json.dumps(value, sort_keys=True, ensure_ascii=True, allow_nan=False, default=str)
