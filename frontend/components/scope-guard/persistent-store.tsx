@@ -259,20 +259,21 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
       setStatus('loading')
       const response = await operations.current.run<{ draft: WorkingDraft | null; analysisRun: WorkingDraft['analysisRun']; applied: boolean; historyEntryId?: string }>(`drafts/${saved.id}/analyses`, { expectedRevision: saved.revision, locale: locale === 'ru' ? 'ru' : 'en', ...(saved.draftDocument.languageSelection?.override ? { documentLanguage: saved.draftDocument.reply.language } : {}) })
       if (run !== navigation.current || current !== controller.current) return
+      let applied = false
       if (!response.applied || !response.draft) {
         if (BigInt(current.confirmed.revision) <= BigInt(saved.revision)) current.markConflict(new WorkflowApiError(ERROR_CODES.draftConflict, 409))
-      } else if (applyOperationResponse(current, edits, response.draft, saved.revision)) {
-        if (response.historyEntryId) {
-          setHistoryId(response.historyEntryId)
-          const refreshed = await workflowApi<{ projects: PersistentProject[] }>('projects')
-          setProjects(refreshed.projects)
-        }
+      } else applied = applyOperationResponse(current, edits, response.draft, saved.revision)
+      if (applied) {
+        if (response.historyEntryId) setHistoryId(response.historyEntryId)
         // install() has already set status for an unchanged Draft. A rebased
         // response keeps this controller and needs the status update here.
         if (controller.current === current) setStatus(current.local.analysisRun?.resultSnapshot ? 'result' : 'idle')
-        return
+      } else setStatus(current.local.analysisRun?.resultSnapshot ? 'result' : 'idle')
+      if (response.historyEntryId) {
+        const active = controller.current
+        const refreshed = await workflowApi<{ projects: PersistentProject[] }>('projects')
+        if (run === navigation.current && active === controller.current) setProjects(refreshed.projects)
       }
-      setStatus(current.local.analysisRun?.resultSnapshot ? 'result' : 'idle')
     } catch (error) {
       if (run !== navigation.current || current !== controller.current) return
       setAnalysisError(errorCode(error)); setStatus('error')

@@ -141,6 +141,37 @@ it('shows the first successful analysis result after installing its response', a
   await waitFor(() => expect(hook.result.current.status).toBe('result'))
 })
 
+it('refreshes automatically published History without replacing a newer saved request', async () => {
+  analyzedDraft()
+  saved.draftDocument.reply.text = 'Saved manual reply'
+  const old = structuredClone(saved)
+  const entry = { id: 'late-check', projectId: project.id, date: '2026-10-15', request: old.requestText, verdict: 'in_scope', summary: 'Earlier check' }
+  let release!: (response: Response) => void
+  let completed = false
+  const delayed = new Promise<Response>(resolve => { release = resolve })
+  const originalFetch = vi.mocked(fetch).getMockImplementation()!
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (String(input).endsWith('/analyses')) return delayed
+    if (String(input) === '/api/v2/projects' && completed) return Response.json({ projects: [{ ...project, history: [entry] }] })
+    return originalFetch(input, init)
+  })
+  const hook = renderHook(() => useStore(), { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  act(() => hook.result.current.runCheck())
+  await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/analyses'))).toBe(true))
+  act(() => hook.result.current.setRequestText('Newer saved request'))
+  await act(async () => hook.result.current.saveDraft())
+  const newer = structuredClone(saved)
+  completed = true
+  await act(async () => { release(Response.json({ applied: false, draft: null, historyEntryId: entry.id, analysisRun: old.analysisRun })) })
+  await waitFor(() => expect(hook.result.current.selectedProject?.history.map(item => item.id)).toContain(entry.id))
+  expect(hook.result.current.requestText).toBe(newer.requestText)
+  expect(hook.result.current.draftDocument?.reply.text).toBe('Saved manual reply')
+  expect(hook.result.current.currentDraftId).toBe(old.id)
+  expect(hook.result.current.currentHistoryEntryId).toBeNull()
+  expect(hook.result.current.draftError).toBe('')
+})
+
 for (const operation of ['regenerate', 'analysis'] as const) {
   it.each(['normal', 'saved edits', 'pending edits', 'navigation', 'unapplied after saved edits'] as const)(`${operation}: protects state with %s during a delayed response`, async scenario => {
     saved.revision = '9007199254740991'

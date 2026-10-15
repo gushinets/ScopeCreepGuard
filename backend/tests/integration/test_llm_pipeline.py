@@ -15,6 +15,7 @@ from scope_guard.database.migrations import migrate
 from scope_guard.database.repositories.llm import LlmSQLStore
 from scope_guard.database.repositories.workflow import WorkflowUnitOfWork
 from scope_guard.database.session import Database, normalize_url
+from scope_guard.domain.llm.runtime import PROMPT_VERSION
 from scope_guard.integrations.llm.detection import select
 from scope_guard.integrations.llm.gateway import ProviderGateway
 from scope_guard.integrations.llm.litellm_adapter import LiteLLMResponsesAdapter
@@ -458,7 +459,7 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                 },
             )
             old_id = UUID(old["operationId"])
-            assert all(s["prompt_version"] == "workflow-v2" for s in await store.steps(old_id))
+            assert all(s["prompt_version"] == PROMPT_VERSION for s in await store.steps(old_id))
             async with database.new_uow() as work:
                 await work.session.execute(
                     text(

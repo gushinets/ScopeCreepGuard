@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-PROMPT_VERSION = "workflow-v2"
+PROMPT_VERSION = "workflow-v3"
 
 
 def encode(value):
