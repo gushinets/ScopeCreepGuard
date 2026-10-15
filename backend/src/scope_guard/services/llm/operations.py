@@ -7,7 +7,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from scope_guard.domain.drafts.workflow import WorkflowError, empty_document
-from scope_guard.domain.llm.runtime import digest, encode
+from scope_guard.domain.llm.runtime import PROMPT_VERSION, digest, encode
 from scope_guard.services.drafts.workflow import context, expected, key
 
 STAGES = {
@@ -143,7 +143,7 @@ class LlmOperations:
                         "locale": locale,
                         "documentLanguage": selection["selectedLanguage"],
                         "_model": self.policy["model"],
-                        "_prompt": "workflow-v1",
+                        "_prompt": PROMPT_VERSION,
                         "kind": "estimate" if kind == "estimate" else "analysis",
                     },
                     command,

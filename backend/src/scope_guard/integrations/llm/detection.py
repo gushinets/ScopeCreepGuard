@@ -28,9 +28,9 @@ def clean(text, exceptions=()):
     return re.sub(r"https?://\S+|[\w.+-]+@[\w.-]+\.[a-z]+", " ", text)
 
 
-def evidence(text, exceptions=()):
+def evidence(text, exceptions=(), *, minimum_letters=12):
     prose = clean(text, exceptions)
-    if sum(c.isalpha() for c in prose) < 12:
+    if sum(c.isalpha() for c in prose) < minimum_letters:
         return {"language": None, "confidence": None, "status": "uncertain"}
     values = detector().compute_language_confidence_values(prose)
     if not values:

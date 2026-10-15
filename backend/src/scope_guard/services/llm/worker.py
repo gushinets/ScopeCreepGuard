@@ -10,7 +10,7 @@ from scope_guard.domain.analysis.normalization import parse_snapshot
 from scope_guard.domain.analysis.serialization import analysis_to_wire
 from scope_guard.domain.change_orders.estimation import commercial_signature
 from scope_guard.domain.drafts.workflow import WorkflowError
-from scope_guard.domain.llm.runtime import Binding, GatewayFailure, digest
+from scope_guard.domain.llm.runtime import PROMPT_VERSION, Binding, GatewayFailure, digest
 from scope_guard.services.drafts.workflow import context, formed_document, generation_context
 
 NAMESPACE = UUID("66366366-3663-4663-8663-663663663663")
@@ -84,7 +84,7 @@ class LlmWorker:
         if operation["policy"].get("version") != "workflow-policy-v1":
             raise GatewayFailure("workflowVersionUnavailable")
         record = next(s for s in await self.store.steps(operation["id"]) if s["stage_key"] == stage)
-        if record["prompt_version"] != "workflow-v1" or record["schema_version"] != "stage-v1":
+        if record["prompt_version"] != PROMPT_VERSION or record["schema_version"] != "stage-v1":
             raise GatewayFailure("workflowVersionUnavailable")
         start, transport = record["semantic_attempt"], 0
         if record["status"] != "accepted" and start and not record["candidate"]:
