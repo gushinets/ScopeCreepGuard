@@ -128,7 +128,9 @@ def test_duplicate_exhaustion_is_bounded_and_preserves_frozen_materials():
 
 
 @pytest.mark.parametrize("status", ["pending", "accepted"])
-@pytest.mark.parametrize("version", ["workflow-v1", "workflow-v2", "workflow-v3", "workflow-v4"])
+@pytest.mark.parametrize(
+    "version", ["workflow-v1", "workflow-v2", "workflow-v3", "workflow-v4", "workflow-v5"]
+)
 def test_old_prompt_version_fails_before_runner_or_accepted_output_reuse(status, version):
     class Store:
         async def steps(self, *_):
