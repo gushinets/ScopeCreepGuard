@@ -420,7 +420,7 @@ def test_legacy_multiple_drafts_preserve_ids_and_missing_provenance(disposable_u
     engine.dispose()
 
 
-def test_http_workflow_and_restart_safe_export(disposable_url, monkeypatch):
+def test_saved_fixture_http_workflow_and_restart_safe_export(disposable_url, monkeypatch):
     import asyncio
     import json
     from pathlib import Path
@@ -499,8 +499,26 @@ def test_http_workflow_and_restart_safe_export(disposable_url, monkeypatch):
                     "locale": "en",
                 },
             )
-            assert checked.status_code == 200, checked.text
-            draft = checked.json()["draft"]
+            assert checked.status_code == 503, checked.text
+            assert checked.json() == {"error": "errors.workflowUnavailable"}
+            # Explicit synthetic saved fixture for export/read/edit compatibility.
+            # This is not a successful public generation journey in retired mode.
+            from scope_guard.services.drafts.workflow import WorkflowService
+
+            def seed_factory():
+                return WorkflowUnitOfWork(app.state.database.new_uow())
+
+            draft = (
+                await WorkflowService(seed_factory, app.state.generator).analyze(
+                    owner,
+                    UUID(draft["id"]),
+                    {
+                        "expectedRevision": draft["revision"],
+                        "operationId": str(uuid4()),
+                        "locale": "en",
+                    },
+                )
+            )["draft"]
             edited = draft["draftDocument"]
             edited["reply"]["text"] = "Edited after analysis"
             edited_response = await client.put(
@@ -734,14 +752,62 @@ def test_completed_check_archive_and_agreement_are_independent(disposable_url, m
         parameters = {"expectedRevision": draft["revision"], "operationId": str(uuid4())}
         history = await service.complete(owner, UUID(draft["id"]), parameters)
         assert (await service.complete(owner, UUID(draft["id"]), parameters))["id"] == history["id"]
+        alias = {"expectedRevision": draft["revision"], "operationId": str(uuid4())}
+        assert (await service.complete(owner, UUID(draft["id"]), alias))["id"] == history["id"]
+        repeats = await asyncio.gather(
+            *(
+                service.complete(
+                    owner, UUID(draft["id"]), {**parameters, "operationId": str(uuid4())}
+                )
+                for _ in range(3)
+            )
+        )
+        assert {entry["id"] for entry in repeats} == {history["id"]}
+        assert len(await service.histories(owner, UUID(project["id"]))) == 1
+        from scope_guard.domain.drafts.workflow import WorkflowError
+
+        with pytest.raises(WorkflowError) as mismatch:
+            await service.complete(owner, UUID(draft["id"]), {**alias, "expectedRevision": "999"})
+        assert mismatch.value.code == "errors.operationMismatch"
         agreement = await service.finalize(
             owner, UUID(history["id"]), {"operationId": str(uuid4())}
         )
         assert agreement["status"] == "finalized"
+        document = {
+            **draft["draftDocument"],
+            "reply": {**draft["draftDocument"]["reply"], "text": "Manual revised reply"},
+        }
+        edited = await service.save(
+            owner,
+            UUID(draft["id"]),
+            {
+                "expectedRevision": draft["revision"],
+                "operationId": str(uuid4()),
+                "changes": {"draftDocument": document},
+            },
+        )
+        edited_entry = await service.complete(
+            owner,
+            UUID(draft["id"]),
+            {
+                "expectedRevision": edited["revision"],
+                "operationId": str(uuid4()),
+            },
+        )
+        assert edited_entry["id"] != history["id"]
+        assert (
+            edited_entry["checkSnapshot"]["draftDocument"]["reply"]["text"]
+            == "Manual revised reply"
+        )
+        assert len(await service.histories(owner, UUID(project["id"]))) == 2
+        assert (await service.history(owner, UUID(history["id"])))["checkSnapshot"] == history[
+            "checkSnapshot"
+        ]
+        assert (await service.complete(owner, UUID(draft["id"]), alias))["id"] == history["id"]
         await service.clear(
             owner,
             UUID(draft["id"]),
-            {"expectedRevision": draft["revision"], "operationId": str(uuid4())},
+            {"expectedRevision": edited["revision"], "operationId": str(uuid4())},
         )
         archived = await service.history(owner, UUID(history["id"]))
         assert archived["checkSnapshot"]["requestText"] == "Add another page"

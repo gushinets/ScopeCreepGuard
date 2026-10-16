@@ -128,9 +128,7 @@ async def analyze(
     identifier: UUID, body: RunAnalysis, owner: Owner, service: Service, request: Request
 ):
     response = await admit_response(request, UUID(owner["id"]), identifier, "check", body.to_wire())
-    if response is not None:
-        return response
-    return await service.analyze(UUID(owner["id"]), identifier, body.to_wire())
+    return response
 
 
 @router.get("/analyses/{identifier}")
@@ -150,9 +148,7 @@ async def estimate(
     response = await admit_response(
         request, UUID(owner["id"]), identifier, "estimate", body.to_wire()
     )
-    if response is not None:
-        return response
-    return await service.estimate(UUID(owner["id"]), identifier, body.to_wire())
+    return response
 
 
 @router.post(
@@ -176,11 +172,7 @@ async def regenerate(
     response = await admit_response(
         request, UUID(owner["id"]), identifier, "regenerate", body.to_wire()
     )
-    if response is not None:
-        return response
-    return {
-        "draft": await service.generate(UUID(owner["id"]), identifier, "regenerate", body.to_wire())
-    }
+    return response
 
 
 @router.post(
@@ -195,11 +187,7 @@ async def translate(
     response = await admit_response(
         request, UUID(owner["id"]), identifier, "translate", body.to_wire()
     )
-    if response is not None:
-        return response
-    return {
-        "draft": await service.generate(UUID(owner["id"]), identifier, "translate", body.to_wire())
-    }
+    return response
 
 
 @router.get("/llm-operations/{identifier}", response_model=LlmOperationStatus)

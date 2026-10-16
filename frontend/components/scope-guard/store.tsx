@@ -112,7 +112,7 @@ export interface StoreValue {
   deleteProject: (id: string) => Promise<void>
 
   setView: (v: View) => void
-  selectProject: (id: string) => void
+  selectProject: (id: string, destination?: 'check' | 'edit_project') => void
   createProject: (input: NewProjectInput) => Promise<Project>
   updateProject: (id: string, input: NewProjectInput, details?: ProjectDetails) => Promise<Project>
   createEstimate: (projectId: string, request: string, documentLanguage?: string) => Promise<AnalysisResult>
@@ -359,7 +359,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Locale changes update UI copy without discarding the temporary document.
   }, [router, restoreDraft])
 
-  function selectProject(id: string) {
+  function selectProject(id: string, destination?: 'check' | 'edit_project') {
+    if (destination) setView(destination)
     if (id === selectedProjectId) return
     setTermsChanged(false)
     analysisRun.current += 1

@@ -519,10 +519,9 @@ class WorkflowService:
             analysis_reference = source.get("lastAnalysisRunId")
             old = document["changeOrder"]
             if old and proposed:
-                for name, value in proposed["aiValues"].items():
-                    if old.get(name) == old.get("aiValues", {}).get(name):
-                        old[name] = value
-                old["aiValues"] = proposed["aiValues"]
+                from scope_guard.domain.change_orders.merge import merge_estimate
+
+                document["changeOrder"] = merge_estimate(old, proposed["aiValues"])
             else:
                 document["changeOrder"] = proposed
             document["estimate"] = {

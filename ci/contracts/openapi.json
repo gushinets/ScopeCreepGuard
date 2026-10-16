@@ -1262,7 +1262,7 @@
             "description": "Accepted"
           }
         },
-        "description": "With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
+        "description": "Generation requires the durable LLM workflow (otherwise 503 workflowUnavailable), an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -1455,7 +1455,7 @@
             "description": "Accepted"
           }
         },
-        "description": "With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
+        "description": "Generation requires the durable LLM workflow (otherwise 503 workflowUnavailable), an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -1661,7 +1661,7 @@
             "description": "Accepted"
           }
         },
-        "description": "With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
+        "description": "Generation requires the durable LLM workflow (otherwise 503 workflowUnavailable), an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -1871,7 +1871,7 @@
             "description": "Accepted"
           }
         },
-        "description": "With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
+        "description": "Generation requires the durable LLM workflow (otherwise 503 workflowUnavailable), an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -2361,7 +2361,10 @@
                                 "currency",
                                 "timelineImpact",
                                 "rationale",
-                                "note"
+                                "note",
+                                "manualPrice",
+                                "manualEffort",
+                                "manualRationale"
                               ]
                             },
                             "type": "object"
@@ -3690,7 +3693,10 @@
                                         "currency",
                                         "timelineImpact",
                                         "rationale",
-                                        "note"
+                                        "note",
+                                        "manualPrice",
+                                        "manualEffort",
+                                        "manualRationale"
                                       ]
                                     },
                                     "type": "object"
@@ -5009,7 +5015,10 @@
                                         "currency",
                                         "timelineImpact",
                                         "rationale",
-                                        "note"
+                                        "note",
+                                        "manualPrice",
+                                        "manualEffort",
+                                        "manualRationale"
                                       ]
                                     },
                                     "type": "object"
@@ -8396,7 +8405,10 @@
                     "currency",
                     "timelineImpact",
                     "rationale",
-                    "note"
+                    "note",
+                    "manualPrice",
+                    "manualEffort",
+                    "manualRationale"
                   ]
                 },
                 "type": "object"
@@ -8593,6 +8605,24 @@
         "properties": {
           "error": {
             "$ref": "#/components/schemas/ErrorCode"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string",
+                  "enum": [
+                    "required",
+                    "positive"
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
           }
         },
         "type": "object",

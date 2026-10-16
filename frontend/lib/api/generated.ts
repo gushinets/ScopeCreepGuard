@@ -166,7 +166,7 @@ export interface paths {
         put?: never;
         /**
          * Analyze
-         * @description With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
+         * @description Generation requires the durable LLM workflow (otherwise 503 workflowUnavailable), an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
          */
         post: operations["analyze_api_analyze_post"];
         delete?: never;
@@ -186,7 +186,7 @@ export interface paths {
         put?: never;
         /**
          * Reply
-         * @description With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
+         * @description Generation requires the durable LLM workflow (otherwise 503 workflowUnavailable), an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
          */
         post: operations["reply_api_replies_regenerate_post"];
         delete?: never;
@@ -206,7 +206,7 @@ export interface paths {
         put?: never;
         /**
          * Materials
-         * @description With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
+         * @description Generation requires the durable LLM workflow (otherwise 503 workflowUnavailable), an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
          */
         post: operations["materials_api_client_materials_language_post"];
         delete?: never;
@@ -226,7 +226,7 @@ export interface paths {
         put?: never;
         /**
          * Estimate
-         * @description With the LLM workflow enabled, requires an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
+         * @description Generation requires the durable LLM workflow (otherwise 503 workflowUnavailable), an owned working draftId, expectedRevision, and a stable UUID operationId or Idempotency-Key. Returns 202 for pending work; poll statusUrl until terminal. Client snapshots are not authoritative.
          */
         post: operations["estimate_api_change_orders_estimate_post"];
         delete?: never;
@@ -1237,6 +1237,10 @@ export interface components {
         /** ErrorResponse */
         ErrorResponse: {
             error: components["schemas"]["ErrorCode"];
+            /** Fields */
+            fields?: {
+                [key: string]: "required" | "positive";
+            } | null;
         };
         /** EstimateProvenance */
         EstimateProvenance: {

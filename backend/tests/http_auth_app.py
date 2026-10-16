@@ -5,6 +5,7 @@ import os
 import time
 from pathlib import Path
 
+from fastapi import Request
 from scope_guard_api.main import create_app
 
 from scope_guard.core.config import Settings
@@ -58,6 +59,25 @@ class FixtureGenerator:
 
 
 app.state.generator = FixtureGenerator()
+
+
+@app.post("/__saved_fixture", include_in_schema=False)
+async def saved_fixture(request: Request):
+    """Seed explicitly synthetic legacy material for read/edit compatibility tests."""
+    from scope_guard_api.dependencies import current_owner, generation_service
+    from scope_guard_api.generation_input import parse_analyze
+    from scope_guard_api.generation_output import analysis_to_wire, snapshot_to_wire
+    from scope_guard_api.locale import resolve_locale
+
+    owner = await current_owner(request)
+    outcome = await generation_service(request).analyze(
+        owner["id"], parse_analyze(await request.json()), resolve_locale(request)
+    )
+    return {
+        "result": analysis_to_wire(outcome.result),
+        "projectSnapshot": snapshot_to_wire(outcome.project_snapshot),
+        "proof": outcome.proof,
+    }
 
 
 @app.get("/__generation_calls", include_in_schema=False)

@@ -67,7 +67,9 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     @application.exception_handler(WorkflowError)
     async def workflow_error(_request, error: WorkflowError):
         return JSONResponse(
-            {"error": error.code}, error.status, headers={"Cache-Control": "private, no-store"}
+            {"error": error.code, **({"fields": error.fields} if error.fields else {})},
+            error.status,
+            headers={"Cache-Control": "private, no-store"},
         )
 
     @application.exception_handler(GenerationError)

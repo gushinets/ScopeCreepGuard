@@ -117,12 +117,13 @@ def test_wrong_language_and_historical_scope_contradictions_are_rejected():
     }
     with pytest.raises(ValueError, match="language"):
         validate_text("reply", "Это изменение не входит в согласованный объем работ.", "es", facts)
-    with pytest.raises(ValueError, match="scope"):
-        validate_text(
+    # Actual scope claims now require the asynchronous persisted semantic review;
+    # metadata alone is still checked locally before that review.
+    with pytest.raises(ValueError, match="scopePosition"):
+        validate_stage(
             "reply",
-            "These changes are already included in the agreed scope, free of charge.",
-            "en",
-            facts,
+            {"scopePosition": "in_scope", "text": "Included work."},
+            {**facts, "locale": "en", "selection": {"selectedLanguage": "en"}},
         )
     with pytest.raises(ValueError, match="numerical"):
         validate_text(

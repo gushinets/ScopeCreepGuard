@@ -504,6 +504,10 @@ class WorkflowSQLRepository:
             ),
             {"project": project, "key": key},
         )
+        if not value:
+            receipt = await self.event_retry(owner, project, key, "history_saved", digest)
+            if receipt:
+                return await self.history(owner, UUID(receipt["historyEntryId"]))
         if value and value["requestHash"] != digest:
             raise WorkflowError("operationMismatch", 409)
         return value
@@ -519,6 +523,29 @@ class WorkflowSQLRepository:
             "requestLanguage": run["requestLanguage"],
             "analysisCompletedAt": run["finishedAt"],
         }
+        # history_operation holds the project lock across lookup and publication.
+        prior = await self.one(
+            "SELECT to_jsonb(h) FROM history_entries h WHERE project_id=:project "
+            "AND source_draft_id=:draft AND analysis_run_id=:run "
+            "AND check_snapshot=CAST(:snapshot AS jsonb) ORDER BY completed_at,id LIMIT 1",
+            {
+                "project": draft["projectId"],
+                "draft": draft["id"],
+                "run": run["id"],
+                "snapshot": encoded(snapshot),
+            },
+        )
+        if prior:
+            await self.event(
+                draft["projectId"],
+                key,
+                "history_saved",
+                owner,
+                {"sourceRevision": draft["revision"], "requestHash": digest},
+                draft_id=draft["id"],
+                history_entry_id=prior["id"],
+            )
+            return prior
         value = await self.one(
             (
                 "INSERT INTO history_entries(project_id,date,request,verdict,summary,sour"
@@ -551,7 +578,7 @@ class WorkflowSQLRepository:
             key,
             "history_saved",
             owner,
-            {"sourceRevision": draft["revision"]},
+            {"sourceRevision": draft["revision"], "requestHash": digest},
             draft_id=draft["id"],
             history_entry_id=value["id"],
         )

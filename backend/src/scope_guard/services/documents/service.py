@@ -1,6 +1,7 @@
 import re
 from decimal import Decimal
 
+from scope_guard.domain.change_orders.readiness import document_readiness, readiness_message
 from scope_guard.domain.drafts.values import EditableChangeOrder, JsonValue, thaw_json
 from scope_guard.domain.shared.js_compat import js_string
 from scope_guard.services.documents.models import PreparedDocument, Row
@@ -22,6 +23,21 @@ def prepare_document(
     base = language.split("-")[0]
     labels = localization.document_labels(language, draft.labels)
     metadata = [Row(labels["project"], draft.project_name.strip())]
+    issues = document_readiness(
+        {
+            "providerName": draft.provider_name,
+            "clientName": draft.client_name,
+            "description": draft.description,
+            "estimatedHours": draft.estimated_hours,
+            "additionalCost": draft.additional_cost,
+            "currency": thaw_json(draft.currency),
+            "timelineImpact": draft.timeline_impact,
+            "endDate": draft.end_date,
+            "noAdditionalCharge": draft.no_additional_charge,
+        }
+    )
+    if issues:
+        metadata.append(Row(labels["status"], readiness_message(issues, language, labels)))
     for key, value in [
         ("provider", draft.provider_name),
         ("client", draft.client_name),

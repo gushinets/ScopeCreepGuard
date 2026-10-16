@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
+from fixtures.llm_ledger import APPROVED
 from fixtures.llm_review import labels as document_labels
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
@@ -43,6 +44,8 @@ PROSE = {
 
 
 def output(stage, locale, language):
+    if stage == "semantic_review_v1":
+        return APPROVED
     if stage == "analysis_v1":
         return {
             "verdict": "out_of_scope",
@@ -111,12 +114,15 @@ def provider_response(payload, index, usage):
 
 
 @pytest.mark.parametrize(
-    "locale,language,wrong,usage",
+    "locale,language,wrong,usage,semantic_failure",
     [
-        ("ru", "es", 1, True),
-        ("en", "ru", 0, True),
-        ("ru", "en", 0, False),
-        ("ru", "es", 3, True),
+        ("ru", "es", 1, True, None),
+        ("en", "ru", 0, True, None),
+        ("ru", "en", 0, False, None),
+        ("ru", "es", 3, True, None),
+        ("en", "en", 0, True, "scope"),
+        ("en", "en", 0, True, "deadline"),
+        ("en", "en", 0, True, "exhaust"),
     ],
 )
 def test_language_matrix_corrections_accounting_and_historical_regeneration(
@@ -125,6 +131,7 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
     language,
     wrong,
     usage,
+    semantic_failure,
 ):
     engine = create_engine(normalize_url(disposable_url))
     with engine.begin() as connection:
@@ -179,11 +186,11 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                 "changes": {"requestText": REQUESTS[language]},
             },
         )
-        bodies, rejected = [], 0
+        bodies, rejected, semantic_rejected = [], 0, 0
         regeneration_mode, regeneration_attempt = "different", 0
 
         def http(request):
-            nonlocal rejected, regeneration_attempt
+            nonlocal rejected, regeneration_attempt, semantic_rejected
             body = json.loads(request.content)
             bodies.append(body)
             stage = body["text"]["format"]["name"]
@@ -192,6 +199,36 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                 value = output(stage, locale, "ru")
             else:
                 value = output(stage, locale, target)
+            bad = (
+                "Of course, we can add Arrow and email alerts under the existing agreement "
+                "at no extra cost. Send the recipient list and we will get started."
+                if semantic_failure == "scope"
+                else PROSE["en"] + " We will deliver everything next week."
+            )
+            if (
+                stage == "replies_v1"
+                and semantic_failure
+                and (semantic_rejected == 0 or semantic_failure == "exhaust")
+            ):
+                value["warm"] = bad
+            if stage == "semantic_review_v1" and semantic_failure:
+                payload = json.loads(
+                    next(m["content"] for m in body["input"] if m["role"] == "user")
+                )
+                if payload["candidate"].get("warm") == bad:
+                    semantic_rejected += 1
+                    value = {
+                        "decision": "reject",
+                        "violations": [
+                            {
+                                "field": "warm",
+                                "rule": "scope_position"
+                                if semantic_failure == "scope"
+                                else "timeline_commitment",
+                                "feedback": "Remove unauthorized commitments.",
+                            }
+                        ],
+                    }
             if stage == "reply_v1":
                 regeneration_attempt += 1
                 frozen = json.loads(
@@ -219,6 +256,11 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                             "es": "Confirme si debemos preparar esa propuesta para su revisión.",
                         }[target]
                     )
+            if (
+                stage == "change_order_v1"
+                and "labels" not in body["text"]["format"]["schema"]["properties"]
+            ):
+                value.pop("labels", None)
             return httpx.Response(200, json=provider_response(value, len(bodies), usage))
 
         adapter = LiteLLMResponsesAdapter("synthetic", transport=httpx.MockTransport(http))
@@ -288,7 +330,7 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
             )
         if fault:
             assert not await worker.process_one()
-            assert len(bodies) == 3
+            assert len(bodies) == 5
             assert not await workflow.histories(owner, UUID(project["id"]))
             worker = LlmWorker(
                 factory, store, StructuredStageRunner(ProviderGateway(store, adapter), store)
@@ -319,7 +361,7 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
         if not usage:
             assert all(c["input_tokens"] is None and c["estimated_cost"] is None for c in calls)
             assert (await store.get(owner, operation_id))["reserved"] > Decimal(0)
-        if wrong == 3:
+        if wrong == 3 or semantic_failure == "exhaust":
             assert status["status"] == "failed" and status["result"] is None
             assert status["error"]["code"] == "errors.semanticAttemptsExhausted"
             assert status["stages"]["analysis"] == "accepted"
@@ -329,7 +371,11 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                 status["error"],
                 [(s["stage_key"], s["feedback"]) for s in await store.steps(operation_id)],
             )
-            assert len(bodies) == 3 + wrong + int(interrupted)
+            assert len(bodies) == 5 + wrong + int(interrupted) + (2 if semantic_failure else 0)
+            if semantic_failure:
+                assert semantic_rejected == 1
+                assert sum(c["validation_status"] == "rejected" for c in calls) == 1
+                assert all(c["estimated_cost"] is not None for c in calls)
             result = status["result"]["analysisRun"]["resultSnapshot"]
             assert (
                 result["summary"] == PROSE[locale]
@@ -366,6 +412,29 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
             # Only the reply stage retries; failed replacements retain the saved Draft.
             for regeneration_mode in ("once", "whitespace", "always"):
                 regeneration_attempt = 0
+                if regeneration_mode == "always":
+                    edited = await workflow.draft(owner, draft_id)
+                    manual = edited["draftDocument"]
+                    manual["reply"]["text"] += (
+                        " "
+                        + {
+                            "en": "Please preserve our manually agreed recipient list.",
+                            "ru": "Пожалуйста, сохраните согласованный вручную список получателей.",
+                            "es": "Conserve nuestra lista de destinatarios acordada manualmente.",
+                        }[target]
+                    )
+                    manual["changeOrder"].update(
+                        additionalCost="333.00", estimatedHours="9.5", currency="EUR"
+                    )
+                    await workflow.save(
+                        owner,
+                        draft_id,
+                        {
+                            "operationId": str(uuid4()),
+                            "expectedRevision": edited["revision"],
+                            "changes": {"draftDocument": manual},
+                        },
+                    )
                 before = await workflow.draft(owner, draft_id)
                 before_history = len(await workflow.histories(owner, UUID(project["id"])))
                 before_calls = len(bodies)
@@ -378,9 +447,12 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                 regenerate_id = UUID(pending["operationId"])
                 assert await worker.process_one()
                 regenerated = await operations.status(owner, regenerate_id)
-                expected_calls = 3 if regeneration_mode == "always" else 2
+                expected_calls = 3
                 assert len(bodies) - before_calls == expected_calls
-                assert all(b["text"]["format"]["name"] == "reply_v1" for b in bodies[before_calls:])
+                assert all(
+                    b["text"]["format"]["name"] in ("reply_v1", "semantic_review_v1")
+                    for b in bodies[before_calls:]
+                )
                 async with database.new_uow() as work:
                     attempts = (
                         (
@@ -463,7 +535,7 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
             async with database.new_uow() as work:
                 await work.session.execute(
                     text(
-                        "UPDATE llm_steps SET prompt_version='workflow-v1' WHERE operation_id=:id"
+                        "UPDATE llm_steps SET prompt_version='workflow-v3' WHERE operation_id=:id"
                     ),
                     {"id": old_id},
                 )

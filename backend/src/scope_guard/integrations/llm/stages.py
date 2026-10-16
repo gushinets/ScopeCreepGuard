@@ -13,10 +13,20 @@ from pydantic_ai import Agent, ModelRetry, NativeOutput
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from scope_guard.domain.llm.runtime import GatewayFailure
-from scope_guard.integrations.llm.detection import clean, detector, evidence
+from scope_guard.integrations.documents.localization import reviewed_stage_labels
+from scope_guard.integrations.llm.detection import clean, detector, evidence, foreign_evidence
+from scope_guard.integrations.llm.preservation import (
+    preserve_translation,
+    recognized_schedule_language,
+)
 from scope_guard.integrations.llm.prompts.workflow_v2 import stage_prompt
 from scope_guard.integrations.llm.pydanticai_model import GatewayResponsesModel
-from scope_guard.integrations.llm.terms import mentions, preserve_mentions
+from scope_guard.integrations.llm.semantic_review import (
+    SemanticReviewer,
+    cosmetic_reply,
+    without_schedule,
+)
+from scope_guard.integrations.llm.terms import mentions
 
 Position = Literal["in_scope", "borderline", "out_of_scope"]
 
@@ -80,14 +90,17 @@ class LabelsStage(StrictStage):
     hours: str
 
 
-class ChangeOrderStage(StrictStage):
+class ChangeOrderProseStage(StrictStage):
     scopePosition: Position
     applicable: bool
-    description: str = Field(min_length=1)
-    timelineImpact: str = Field(min_length=1)
+    description: str
+    timelineImpact: str
     rationale: str
-    note: str = Field(min_length=1)
+    note: str
     additionalTerms: str
+
+
+class ChangeOrderStage(ChangeOrderProseStage):
     labels: LabelsStage
 
 
@@ -136,7 +149,7 @@ def label_vocabulary(target):
     return frozenset(label_words(reference))
 
 
-def label_evidence(prose, target, group, exceptions):
+def label_evidence(prose, target, group, exceptions, *, reviewed_semantically=False):
     """Context disambiguates concise labels, never independently foreign evidence."""
     observed = evidence(prose, minimum_letters=1)
     spans = [
@@ -162,10 +175,21 @@ def label_evidence(prose, target, group, exceptions):
     if (
         len(prose.split()) <= 8
         and len(prose) <= 100
-        and set(label_words(prose)) <= label_vocabulary(target)
+        and (set(label_words(prose)) <= label_vocabulary(target) or reviewed_semantically)
     ):
         return evidence(group, exceptions)
     return observed
+
+
+REVIEWED_HEADING_VARIANTS = {
+    "en": {"Change Order Document Number"},
+    "ru": {"Дата создания документа", "Дата составления документа"},
+    "es": {
+        "Número de documento no asignado",
+        "Folio de la orden de cambio",
+        "Número del documento",
+    },
+}
 
 
 def validate_text(
@@ -178,18 +202,45 @@ def validate_text(
     analysis=False,
     check_position=True,
     label_group=None,
+    reviewed_labels=False,
 ):
-    quotes = (facts.get("analysis") or {}).get("citations", [])
+    quotes = [
+        q
+        for q in (facts.get("analysis") or {}).get("citations", [])
+        if q and q in facts["project"]["scope"]
+    ]
     project = facts["project"]
+    # Exact reviewed labels need no probabilistic inference; other wording remains strict.
+    if field.startswith("labels."):
+        reviewed = reviewed_stage_labels(target)
+        if reviewed and (
+            value == reviewed.get(field.removeprefix("labels."))
+            or value in REVIEWED_HEADING_VARIANTS.get(target.split("-")[0], set())
+        ):
+            return
     exceptions = quotes + [project.get("name") or "", project.get("clientName") or ""]
     prose = clean(value, exceptions)
+    foreign = foreign_evidence(prose, target.split("-")[0])
+    if foreign:
+        raise ValueError(
+            f"{field}.language: expected {target}; foreign prose detected "
+            f"{foreign['language']}; confidence {foreign['confidence']}"
+        )
     observed = (
-        label_evidence(prose, target.split("-")[0], label_group, exceptions)
+        label_evidence(
+            prose,
+            target.split("-")[0],
+            label_group,
+            exceptions,
+            reviewed_semantically=reviewed_labels,
+        )
         if label_group is not None
         else evidence(prose)
     )
     if label_group is None and sum(c.isalpha() for c in prose) < 12 and group:
         observed = evidence(group, exceptions)
+    if field == "timelineImpact" and recognized_schedule_language(prose, target):
+        observed = {"status": "detected", "language": target.split("-")[0], "confidence": 1}
     if observed["status"] != "detected" or observed["language"] != target.split("-")[0]:
         raise ValueError(
             f"{field}.language: expected {target}; detected {observed['language']}; "
@@ -207,9 +258,9 @@ def validate_text(
     allowed_terms = {
         k: terms.get(k) for k in ("estimatedHours", "additionalCost", "currency", "timelineImpact")
     }
-    if not numeric_values(value) <= numeric_values(
-        [project, facts["request"], allowed_terms, saved_order]
-    ):
+    if facts.get("action") != "translate" and not numeric_values(
+        without_schedule(value, target)
+    ) <= numeric_values([project, facts["request"], allowed_terms, saved_order]):
         raise ValueError(f"{field}.numerical_terms: an unsupported number or commitment")
     pairs = {
         (Decimal(str(v)), str(currency).upper())
@@ -221,11 +272,6 @@ def validate_text(
         )
         if v not in (None, "")
     }
-    for amount, currency in re.findall(r"\b(\d+(?:[.,]\d+)?)\s*(USD|EUR|RUB)\b", value, re.I):
-        if (Decimal(amount.replace(",", ".")), currency.upper()) not in pairs:
-            raise ValueError(
-                f"{field}.numerical_terms: preserve accepted amount and currency together"
-            )
     hours = {
         Decimal(str(v))
         for v in (terms.get("estimatedHours"), saved_order.get("estimatedHours"))
@@ -241,26 +287,11 @@ def validate_text(
             raise ValueError(
                 f"{field}.commercial_terms: preserve accepted effort, amount and currency"
             )
-    if check_position and accepted.get("verdict") == "out_of_scope":
-        positive = re.compile(
-            r"\b(?:already included|already covered|included in|covered by|"
-            r"free of charge|без доплат\w*|включен\w*|включён\w*|вход\w* в согласован\w*|"
-            r"ya incluid\w*|ya cubiert\w*|sin coste adicional)\b",
-            re.I,
-        )
-        for match in positive.finditer(prose):
-            before = prose[max(0, match.start() - 25) : match.start()]
-            if not re.search(r"\b(not|never|не|no)\b", before, re.I):
-                raise ValueError(f"{field}.scope_position: contradicts accepted out_of_scope")
-    for word in ("tomorrow", "mañana", "завтра"):
-        if (
-            word in prose.lower()
-            and word not in json.dumps([project, accepted], ensure_ascii=False).lower()
-        ):
-            raise ValueError(f"{field}.timeline_commitment: unsupported commitment")
+    # Scope and schedule are contextual claims, not keyword properties. The persisted
+    # structured review evaluates actual sentences, conditions and saved decisions.
 
 
-def validate_stage(stage, data, facts):
+def validate_stage(stage, data, facts, *, reviewed_labels=False):
     raw = data.model_dump() if isinstance(data, BaseModel) else data
     locale, target = facts["locale"], facts["selection"]["selectedLanguage"]
     accepted = facts.get("analysis") or {}
@@ -302,13 +333,16 @@ def validate_stage(stage, data, facts):
                             "text.unchanged_reply: provide a new formulation while preserving "
                             "language, scope position, facts and commercial terms"
                         )
+                    if cosmetic_reply(previous, raw[field]):
+                        raise ValueError(
+                            "text.cosmetic_reply: provide a new formulation "
+                            "preserving facts and terms"
+                        )
                 validate_text(field, raw[field], target, facts)
                 if facts.get("action") == "translate":
                     reply = facts["document"]["reply"]
                     source = reply["text"] if field == reply["tone"] else reply["generated"][field]
-                    if numeric_values(source) != numeric_values(raw[field]):
-                        raise ValueError(f"{field}.numerical_terms: preserve saved reply terms")
-                    preserve_mentions(field, source, raw[field], reply["language"], target)
+                    preserve_translation(field, source, raw[field], reply["language"], target)
         elif stage == "change_order":
             applicable = accepted.get("hasAdditionalWork", accepted["verdict"] == "out_of_scope")
             if raw["applicable"] != (applicable and accepted["verdict"] != "in_scope"):
@@ -316,19 +350,17 @@ def validate_stage(stage, data, facts):
             fields = ("description", "timelineImpact", "rationale", "note", "additionalTerms")
             group = " ".join(raw[f] for f in fields)
             for field in fields:
+                if (
+                    facts.get("action") != "translate"
+                    and field in ("description", "timelineImpact", "note")
+                    and not raw[field].strip()
+                ):
+                    raise ValueError(f"{field}.required: must be non-empty")
                 if raw[field]:
                     validate_text(field, raw[field], target, facts, group=group)
                 source = (facts.get("document", {}).get("changeOrder") or {}).get(field, "")
-                if facts.get("action") == "translate" and (
-                    bool(source.strip())
-                    and not raw[field].strip()
-                    or numeric_values(source) != numeric_values(raw[field])
-                ):
-                    raise ValueError(
-                        f"{field}.preservation: translate saved text and numerical terms"
-                    )
                 if facts.get("action") == "translate":
-                    preserve_mentions(
+                    preserve_translation(
                         field, source, raw[field], facts["document"]["reply"]["language"], target
                     )
             label_group = " ".join(raw["labels"].values())
@@ -344,6 +376,7 @@ def validate_stage(stage, data, facts):
                     label_group=label_group
                     if field not in ("introduction", "outsideScopeFree")
                     else None,
+                    reviewed_labels=reviewed_labels,
                 )
         elif stage == "estimate":
             if raw["currency"] != facts["project"]["currency"]:
@@ -370,13 +403,28 @@ def prompt(stage, facts):
 class StructuredStageRunner:
     def __init__(self, gateway, store):
         self.gateway, self.store = gateway, store
+        self.reviewer = SemanticReviewer(gateway, store)
 
     async def run(self, binding, stage, facts, record):
         schema = TYPES[stage]
+        labels = (
+            reviewed_stage_labels(facts["selection"]["selectedLanguage"])
+            if stage == "change_order"
+            else None
+        )
+        if labels:
+            schema = ChangeOrderProseStage
+
+        def compose(data):
+            raw = data.model_dump()
+            return {**raw, "labels": dict(labels)} if labels else raw
+
         if record.get("candidate"):
             try:
                 value = schema.model_validate_json(record["candidate"])
-                return validate_stage(stage, value, facts)
+                raw = validate_stage(stage, compose(value), facts, reviewed_labels=labels is None)
+                await self.reviewer.review(binding, stage, facts, raw, record["semantic_attempt"])
+                return raw
             except (ValueError, TypeError) as error:
                 message = (
                     "output.structure: "
@@ -395,8 +443,9 @@ class StructuredStageRunner:
         instructions, user = prompt(stage, facts)
         if record.get("feedback"):
             user += "\nValidation feedback: " + json.dumps(record["feedback"])
+        model = GatewayResponsesModel(self.gateway, binding, record.get("prepared_request"))
         agent = Agent(
-            model=GatewayResponsesModel(self.gateway, binding, record.get("prepared_request")),
+            model=model,
             output_type=NativeOutput(schema, name=stage + "_v1", strict=True),
             instructions=instructions,
             retries={"output": remaining - 1},
@@ -405,7 +454,8 @@ class StructuredStageRunner:
         @agent.output_validator
         async def validator(data):
             try:
-                validate_stage(stage, data, facts)
+                raw = validate_stage(stage, compose(data), facts, reviewed_labels=labels is None)
+                await self.reviewer.review(binding, stage, facts, raw, model.semantic)
             except ValueError as error:
                 message = str(error)
                 await self.store.feedback(binding, {"rule": message})
@@ -416,4 +466,4 @@ class StructuredStageRunner:
             result = await agent.run(user)
         except UnexpectedModelBehavior:
             raise GatewayFailure("semanticAttemptsExhausted") from None
-        return result.output.model_dump()
+        return compose(result.output)

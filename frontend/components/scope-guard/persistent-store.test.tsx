@@ -289,6 +289,8 @@ it('completes the persisted check after flushing and keeps the Draft editable', 
   act(() => hook.result.current.setRequestText('Ready to complete'))
   await act(async () => { await hook.result.current.workflow?.complete() })
   expect(historyRequested).toBe(true)
+  await act(async () => { await hook.result.current.workflow?.complete() })
+  expect(hook.result.current.selectedProject?.history.map(entry => entry.id)).toEqual(['h1'])
   expect(hook.result.current.currentHistoryEntryId).toBe('h1')
   expect(hook.result.current.currentDraftId).toBe('d1')
   act(() => hook.result.current.setRequestText('Still editable'))

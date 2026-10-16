@@ -9,6 +9,7 @@ from uuid import UUID, uuid4, uuid5
 from scope_guard.domain.analysis.normalization import parse_snapshot
 from scope_guard.domain.analysis.serialization import analysis_to_wire
 from scope_guard.domain.change_orders.estimation import commercial_signature
+from scope_guard.domain.change_orders.merge import merge_estimate
 from scope_guard.domain.drafts.workflow import WorkflowError
 from scope_guard.domain.llm.runtime import PROMPT_VERSION, Binding, GatewayFailure, digest
 from scope_guard.services.drafts.workflow import context, formed_document, generation_context
@@ -195,11 +196,14 @@ class LlmWorker:
                 order = document["changeOrder"]
                 if order is None:
                     raise WorkflowError("analysisStale", 409)
-                for field in ("estimatedHours", "additionalCost", "currency", "rationale"):
-                    value = str(estimate[field])
-                    if order.get(field) == order.get("aiValues", {}).get(field):
-                        order[field] = value
-                    order.setdefault("aiValues", {})[field] = value
+                order = merge_estimate(
+                    order,
+                    {
+                        field: str(estimate[field])
+                        for field in ("estimatedHours", "additionalCost", "currency", "rationale")
+                    },
+                )
+                document["changeOrder"] = order
                 document["estimate"] = {
                     "analysisRunId": str(operation["analysis_run_id"]),
                     "sourceDraftRevision": str(operation["source_revision"]),

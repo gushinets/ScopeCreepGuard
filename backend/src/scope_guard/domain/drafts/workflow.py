@@ -14,9 +14,10 @@ from scope_guard.domain.shared.language import normalize_language
 
 
 class WorkflowError(Exception):
-    def __init__(self, code: str, status: int = 400):
+    def __init__(self, code: str, status: int = 400, *, fields: dict[str, str] | None = None):
         self.code = "errors." + code
         self.status = status
+        self.fields = fields
         super().__init__(self.code)
 
 
@@ -189,8 +190,18 @@ def validate_document(value: dict) -> dict:
 
 
 def validate_agreement(value: dict) -> dict:
-    if not isinstance(value, dict) or not str(value.get("description", "")).strip():
-        raise WorkflowError("documentInvalid")
+    from scope_guard.domain.change_orders.readiness import document_readiness
+
+    issues = document_readiness(value if isinstance(value, dict) else {})
+    blocking = {
+        field: reason
+        for field, reason in issues.items()
+        if field in ("description", "additionalCost", "currency")
+        or field == "estimatedHours"
+        and reason != "required"
+    }
+    if blocking:
+        raise WorkflowError("documentInvalid", fields=blocking)
     result = deepcopy(value)
     result["estimatedHours"] = decimal_text(value.get("estimatedHours")) or ""
     if value.get("noAdditionalCharge") is True:
@@ -199,8 +210,6 @@ def validate_agreement(value: dict) -> dict:
         result["additionalCost"] = decimal_text(value.get("additionalCost"), optional=False)
         if Decimal(result["additionalCost"]) <= 0:
             raise WorkflowError("documentInvalid")
-    if value.get("currency") not in ("RUB", "USD", "EUR"):
-        raise WorkflowError("documentInvalid")
     return result
 
 

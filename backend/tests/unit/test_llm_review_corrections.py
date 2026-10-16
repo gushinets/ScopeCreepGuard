@@ -6,6 +6,7 @@ from copy import deepcopy
 from uuid import uuid4
 
 import pytest
+from fixtures.llm_ledger import APPROVED, ReviewLedger
 from fixtures.llm_review import PROSE, facts, order
 
 from scope_guard.domain.llm.runtime import Binding, GatewayFailure, ProviderResponse
@@ -14,37 +15,31 @@ from scope_guard.integrations.llm.stages import StructuredStageRunner, validate_
 from scope_guard.services.llm.worker import LlmWorker
 
 
-class RecordingStore:
-    def __init__(self):
-        self.calls, self.feedbacks = [], []
-
-    async def reserve(self, request, transport_attempt):
-        self.calls.append({"request": request, "transport": transport_attempt})
-        return len(self.calls) - 1
-
-    async def complete(self, identifier, response=None, error=None):
-        self.calls[identifier].update(response=response, error=error)
-
-    async def checkpoint(self, *_):
-        pass
-
-    async def feedback(self, binding, error):
-        self.feedbacks.append(error)
-        self.calls[-1]["rejected"] = True
+class RecordingStore(ReviewLedger):
+    pass
 
 
 async def run(stage, source, outputs, store):
     class Adapter:
         async def request(self, request, timeout):
-            index = len(store.calls) - 1
+            index = sum(c["request"].schema_name != "semantic_review_v1" for c in store.calls) - 1
+            value = deepcopy(outputs[min(index, len(outputs) - 1)])
+            if "labels" not in request.schema.get("properties", {}):
+                value.pop("labels", None)
             return ProviderResponse(
-                json.dumps(outputs[min(index, len(outputs) - 1)], ensure_ascii=False),
+                json.dumps(
+                    APPROVED if request.schema_name == "semantic_review_v1" else value,
+                    ensure_ascii=False,
+                ),
                 input_tokens=100,
                 output_tokens=50,
             )
 
+    binding = Binding(uuid4(), uuid4(), 1, "gpt-5.4-nano", "high" if stage == "reply" else "medium")
+    for attempt in range(1, 4):
+        store.review_slot(binding, stage, attempt)
     return await StructuredStageRunner(ProviderGateway(store, Adapter()), store).run(
-        Binding(uuid4(), uuid4(), 1, "gpt-5.4-nano", "high" if stage == "reply" else "medium"),
+        binding,
         stage,
         source,
         {},
@@ -56,7 +51,7 @@ def test_real_document_labels_pass_once_without_correction(language):
     store = RecordingStore()
     result = asyncio.run(run("change_order", facts(language), [order(language)], store))
     assert result["labels"] == order(language)["labels"]
-    assert len(store.calls) == 1 and not store.feedbacks
+    assert len(store.calls) == 2 and not store.feedbacks
 
 
 @pytest.mark.parametrize(
@@ -110,8 +105,12 @@ def test_duplicate_regeneration_corrects_only_reply_and_records_rejection(first)
     )
     assert value["text"] == revised
     assert source == saved
-    assert [c["request"].semantic_attempt for c in store.calls] == [1, 2]
-    assert all(c["request"].schema_name == "reply_v1" for c in store.calls)
+    assert [c["request"].semantic_attempt for c in store.calls] == [1, 2, 1]
+    assert [c["request"].schema_name for c in store.calls] == [
+        "reply_v1",
+        "reply_v1",
+        "semantic_review_v1",
+    ]
     assert store.calls[0]["rejected"]
     feedback = json.dumps(store.calls[1]["request"].messages)
     assert "text.unchanged_reply" in feedback and "new formulation" in feedback
@@ -129,7 +128,7 @@ def test_duplicate_exhaustion_is_bounded_and_preserves_frozen_materials():
 
 
 @pytest.mark.parametrize("status", ["pending", "accepted"])
-@pytest.mark.parametrize("version", ["workflow-v1", "workflow-v2"])
+@pytest.mark.parametrize("version", ["workflow-v1", "workflow-v2", "workflow-v3", "workflow-v4"])
 def test_old_prompt_version_fails_before_runner_or_accepted_output_reuse(status, version):
     class Store:
         async def steps(self, *_):
@@ -226,6 +225,8 @@ def test_translation_stage_request_preserves_saved_materials_without_estimating(
             **dict.fromkeys(("warm", "neutral", "firm"), PROSE["es"]),
         }
     )
+    if stage == "change_order":
+        source["document"]["changeOrder"] = deepcopy(value)
     asyncio.run(run(stage, source, [value], store))
     instructions = "\n".join(
         m["content"] for m in store.calls[0]["request"].messages if m["role"] == "system"
@@ -294,7 +295,7 @@ def test_large_unrelated_saved_material_does_not_consume_stage_input_budget(stag
         }
     )
     asyncio.run(run(stage, source, [candidate], store))
-    assert len(store.calls) == 1 and not store.feedbacks
+    assert len(store.calls) == 2 and not store.feedbacks
     payload = json.loads(
         next(m["content"] for m in store.calls[0]["request"].messages if m["role"] == "user")
     )
