@@ -29,6 +29,17 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.clearAllMocks() })
 
+it('shows actionable guidance without discarding an incomplete draft or blocking Copy', async () => {
+  render(<ChangeOrder initialDraft={{ ...original, description: '', estimatedHours: '', additionalCost: '', currency: '', timelineImpact: '' }} projectName="Website" projectId="p1" historyId="missing" userId="u1" />)
+  expect(screen.getByTestId('change-order-document-preview').textContent).toContain('Incomplete draft')
+  expect(document.querySelector('#co-description')?.getAttribute('aria-describedby')).toBe('co-description-guidance')
+  expect(document.querySelector('#co-description')?.getAttribute('aria-invalid')).toBe('true')
+  expect(screen.getAllByText('readiness.required').length).toBeGreaterThan(4)
+  fireEvent.click(screen.getByRole('button', { name: 'copy' }))
+  await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('Incomplete draft')))
+  expect(localStorage.getItem('scg:change-order:u1:p1:missing')).toContain('"description":""')
+})
+
 it('retains supplied German labels in preview, copied content, export and storage', async () => {
   render(<ChangeOrder initialDraft={{ ...original, language: 'de', changeOrderLabels: germanLabels, description: 'Zusätzliche Änderungen' }} projectName="Website" projectId="p1" historyId="h1" userId="u1" />)
   const preview = screen.getByTestId('change-order-document-preview')
@@ -64,7 +75,7 @@ it('presents the editable draft as a formal document', () => {
   expect(preview.textContent).toContain('CO-20261005-ABC123')
   expect(preview.textContent).toContain('1. Requested change')
   expect(preview.textContent).toContain('2. Commercial terms')
-  expect(preview.textContent).not.toContain('Provider')
+  expect(preview.textContent).toContain('Incomplete draft — complete or correct: Provider; Client')
   expect(preview.textContent).not.toContain('Client email')
   expect(preview.textContent).toContain('Approved by')
   expect(preview.textContent).toContain('Date')

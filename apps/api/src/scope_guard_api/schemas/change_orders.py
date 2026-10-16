@@ -144,6 +144,9 @@ class EditableChangeOrder(WireModel):
                 "timelineImpact",
                 "rationale",
                 "note",
+                "manualPrice",
+                "manualEffort",
+                "manualRationale",
             ],
             Text,
         ]

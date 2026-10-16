@@ -14,6 +14,7 @@ import { ERROR_CODES, type ErrorCode } from '@/lib/api/errors'
 import type { AnalysisResult, Currency } from '@/lib/types'
 import { ChangeOrderDocumentPreview } from './change-order-document-preview'
 import { supportedClientLanguage } from '@/lib/client-language'
+import { documentReadiness, type ReadinessField } from '@/lib/change-order/readiness'
 
 export function ChangeOrder({ result, projectName, projectId, historyId, userId, initialDraft, documentLanguage, refreshEstimate = false, draft: controlledDraft, onDraftChange, disabled = false, draftId, savedUnchanged = false, durableWorkflow = false }: {
   result?: AnalysisResult
@@ -49,7 +50,7 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
     timelineImpact: initialDraft?.timelineImpact ?? result?.changeOrder.timelineImpact ?? '',
     rationale: initialDraft?.rationale ?? result?.changeOrder.rationale ?? '', note: initialDraft?.note ?? result?.changeOrder.note ?? '',
     providerName: initialDraft?.providerName ?? '', clientName: initialDraft?.clientName ?? '', clientEmail: initialDraft?.clientEmail ?? '', endDate: initialDraft?.endDate ?? '', additionalTerms: initialDraft?.additionalTerms ?? '', clientApproverName: initialDraft?.clientApproverName ?? '', approvalDate: initialDraft?.approvalDate ?? '', noAdditionalCharge: initialDraft?.noAdditionalCharge ?? false,
-    aiValues: result ? {
+    aiValues: initialDraft?.aiValues ?? (result ? {
       description: result.changeOrder.description,
       estimatedHours: result.changeOrder.estimatedHours?.toString() ?? '',
       additionalCost: result.changeOrder.additionalCost,
@@ -57,7 +58,7 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
       timelineImpact: result.changeOrder.timelineImpact,
       rationale: result.changeOrder.rationale ?? '',
       note: result.changeOrder.note,
-    } : initialDraft?.aiValues,
+    } : undefined),
   }})
   const [localDraft, setLocalDraft] = useState<EditableDraft>(() => {
     if (controlledDraft) return controlledDraft
@@ -66,6 +67,7 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
     return { ...original, ...readProjectDetails(userId, projectId) }
   })
   const draft = controlledDraft ?? localDraft
+  const readiness = documentReadiness(draft)
   const [status, setStatus] = useState<'copied' | 'downloaded' | 'error' | 'pdfLanguageUnsupported' | ''>('')
   const [downloading, setDownloading] = useState(false)
   const [exportError, setExportError] = useState<ErrorCode | ''>('')
@@ -90,10 +92,12 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
     const value = draft[key] as string
     const proposed = draft.aiValues?.[key as keyof NonNullable<EditableDraft['aiValues']>]
     const changed = proposed !== undefined && value !== proposed
+    const issue = readiness[key as ReadinessField]
     return <div key={key}>
-      <label htmlFor={`co-${key}`} className="mb-1 block text-xs font-medium text-muted-foreground">{label} {proposed !== undefined ? <span className="font-normal">{changed ? t('edited') : t('aiProposal')}</span> : <span className="font-normal">{t('optional')}</span>}</label>
-      {rows > 1 ? <textarea id={`co-${key}`} rows={rows} disabled={disabled} value={value} onChange={(e) => set(key, e.target.value)} className="w-full resize-y rounded-lg border border-input bg-background p-2.5 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" /> :
-        <input id={`co-${key}`} disabled={disabled} value={value} onChange={(e) => set(key, e.target.value)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" />}
+      <label htmlFor={`co-${key}`} className="mb-1 block text-xs font-medium text-muted-foreground">{label} {proposed !== undefined ? <span className="font-normal">{changed ? t('edited') : t('aiProposal')}</span> : !['providerName', 'clientName', 'description', 'estimatedHours', 'additionalCost', 'timelineImpact'].includes(key) && <span className="font-normal">{t('optional')}</span>}</label>
+      {rows > 1 ? <textarea id={`co-${key}`} aria-invalid={!!issue} aria-describedby={issue ? `co-${key}-guidance` : undefined} rows={rows} disabled={disabled} value={value} onChange={(e) => set(key, e.target.value)} className="w-full resize-y rounded-lg border border-input bg-background p-2.5 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" /> :
+        <input id={`co-${key}`} aria-invalid={!!issue} aria-describedby={issue ? `co-${key}-guidance` : undefined} disabled={disabled} value={value} onChange={(e) => set(key, e.target.value)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40" />}
+      {issue && <p id={`co-${key}-guidance`} className="mt-1 text-xs text-amber-700 dark:text-amber-300">{t(`readiness.${issue}`, { field: label })}</p>}
     </div>
   }
 
@@ -133,11 +137,13 @@ export function ChangeOrder({ result, projectName, projectId, historyId, userId,
   return <section aria-labelledby="change-order-heading" className="rounded-lg border border-border bg-card p-4">
     <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2"><FileText className="size-4 text-muted-foreground" aria-hidden="true" /><h3 id="change-order-heading" className="text-sm font-semibold">{t('heading')}</h3><span className="rounded-md bg-muted px-2 py-0.5 text-xs font-semibold">{t('draft')}</span></div><time className="text-xs text-muted-foreground" dateTime={draft.createdAt}>{formatDocumentDate(draft.createdAt, draft.language)}</time></div>
     <p className="mt-2 text-sm font-medium">{draft.projectName}</p>
+    {Object.keys(readiness).length > 0 && <p role="status" className="mt-3 text-sm text-amber-700 dark:text-amber-300">{t('readiness.help')}</p>}
     <div className="mt-4 grid gap-3">
       {field('description', t('descriptionLabel'), 3)}
       <div className="grid gap-3 sm:grid-cols-2">{field('estimatedHours', t('hoursLabel'))}{!draft.noAdditionalCharge && field('additionalCost', t('costLabel'))}</div>
       <label className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm"><input type="checkbox" disabled={disabled} checked={draft.noAdditionalCharge} onChange={(event) => set('noAdditionalCharge', event.target.checked)} className="mt-0.5 size-4" /><span><span className="font-medium">{t('noAdditionalCharge')}</span><span className="mt-0.5 block text-xs text-muted-foreground">{t('noAdditionalChargeHint')}</span></span></label>
       <div><label htmlFor="co-currency" className="mb-1 block text-xs font-medium text-muted-foreground">{t('currencyLabel')} {draft.aiValues?.currency !== undefined && <span className="font-normal">{draft.currency === draft.aiValues.currency ? t('aiProposal') : t('edited')}</span>}</label><select id="co-currency" disabled={disabled} value={draft.currency} onChange={(e) => changeCurrency(e.target.value as Currency | '')} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"><option value="">{t('noCurrency')}</option>{(['RUB', 'USD', 'EUR'] as const).map((currency) => <option key={currency}>{currency}</option>)}</select></div>
+      {readiness.currency && <p className="text-xs text-amber-700 dark:text-amber-300">{t('readiness.required', { field: t('currencyLabel') })}</p>}
       {field('timelineImpact', t('timelineLabel'), 2)}
     </div>
     <details className="mt-4 rounded-lg border border-border px-3 py-2"><summary className="cursor-pointer text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring">{t('additionalParameters')}</summary><div className="mt-3 grid gap-3">{field('rationale', t('rationaleLabel'), 2)}{field('note', t('noteLabel'), 2)}{field('additionalTerms', t('additionalTerms'), 2)}<div className="grid gap-3 sm:grid-cols-2">{field('providerName', t('providerName'))}{field('clientName', t('clientName'))}{field('clientEmail', t('clientEmail'))}{field('endDate', t('endDate'))}{field('clientApproverName', t('approvedBy'))}{field('approvalDate', t('approvalDate'))}</div></div></details>

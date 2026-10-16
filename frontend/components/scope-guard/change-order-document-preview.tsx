@@ -20,6 +20,7 @@ export function ChangeOrderDocumentPreview({ draft }: { draft: EditableDraft }) 
       </header>
 
       <div className="px-6 py-7 sm:px-9 sm:py-9">
+        {document.readinessWarning && <p role="note" className="mb-4 border border-amber-600 bg-amber-50 p-3 text-sm font-semibold">{document.readinessWarning}</p>}
         <dl className="grid gap-x-8 gap-y-2 border-y border-slate-200 bg-slate-50 px-4 py-4 text-sm sm:grid-cols-2">
           {document.metadata.map(({ label, value }) => <div key={label} className="grid grid-cols-[7rem_1fr] gap-2"><dt className="font-bold text-slate-600">{label}</dt><dd className="font-medium">{value}</dd></div>)}
         </dl>

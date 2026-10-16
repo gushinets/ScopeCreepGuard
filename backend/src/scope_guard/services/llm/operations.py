@@ -18,6 +18,19 @@ STAGES = {
 }
 
 
+def operation_stages(kind):
+    stages = STAGES[kind]
+    return (
+        *stages,
+        *(
+            f"{stage}_review_{attempt}"
+            for stage in stages
+            if stage != "analysis"
+            for attempt in range(1, 4)
+        ),
+    )
+
+
 def pending(row):
     return {
         "operationId": str(row["id"]),
@@ -127,7 +140,7 @@ class LlmOperations:
                     Decimal(self.policy["inputRate"]) * 32768
                     + Decimal(self.policy["outputRate"]) * 4096
                 )
-                minimum = 3 if kind == "check" else 2 if kind == "translate" else 1
+                minimum = 5 if kind == "check" else 4 if kind == "translate" else 2
                 if minimum * worst_call > Decimal(self.policy["maxCost"]):
                     error = {"code": "errors.providerBudgetUnavailable", "status": 503}
             if self.limiter and not self.limiter.allow(
@@ -178,7 +191,7 @@ class LlmOperations:
                     + timedelta(seconds=self.policy.get("durationSeconds", 180)),
                     "finished": timestamp if error else None,
                 },
-                STAGES[kind],
+                operation_stages(kind),
             )
             if error and kind in ("check", "estimate"):
                 await work.workflow.finish_run(owner, UUID(run["id"]), "running", None)

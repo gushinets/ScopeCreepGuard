@@ -108,6 +108,9 @@ def parse_editor(value: object) -> EditableChangeOrder:
                 "timelineImpact",
                 "rationale",
                 "note",
+                "manualPrice",
+                "manualEffort",
+                "manualRationale",
             )
             for key in values
         ):

@@ -173,14 +173,14 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     return controller.current.flush()
   }
   function report(error: unknown) { setDraftError(errorCode(error)) }
-  async function switchProject(id: string) {
+  async function switchProject(id: string, destination: 'check' | 'edit_project' = 'check') {
     const run = ++navigation.current
     try {
       if (controller.current) await flush()
       const data = await workflowApi<{ draft: WorkingDraft }>(`projects/${id}/draft`)
       if (run !== navigation.current) return
       install(data.draft)
-      changeView('check')
+      changeView(destination)
     } catch (error) { if (run === navigation.current) report(error) }
   }
   function setRequestText(text: string) { controller.current?.edit({ requestText: text }) }
@@ -284,7 +284,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     const saved = await flush()
     const response = await operations.current.run<{ entry: ArchivedCheck }>(`drafts/${saved.id}/history`, { expectedRevision: saved.revision })
     setHistoryId(response.entry.id)
-    setProjects(current => current.map(project => project.id === saved.projectId ? { ...project, history: [response.entry, ...project.history] } : project))
+    setProjects(current => current.map(project => project.id === saved.projectId ? { ...project, history: [response.entry, ...project.history.filter(entry => entry.id !== response.entry.id)] } : project))
   }
   async function regenerate() { await applyAction(async saved => (await operations.current.run<{ draft: WorkingDraft }>(`drafts/${saved.id}/regenerate`, { expectedRevision: saved.revision })).draft) }
   async function changeClientLanguage(language: string) {
@@ -348,7 +348,7 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
     },
     changeClientLanguage, currentHistoryEntryId: historyId, analysisError, isLoadingProjects: loading, projectError,
     termsChanged: !!snapshot?.analysisIsStale && !!result, deleteProject,
-    setView: next => { void setView(next) }, selectProject: id => { void switchProject(id) },
+    setView: next => { void setView(next) }, selectProject: (id, destination) => { void switchProject(id, destination) },
     createProject, updateProject,
     createEstimate: async () => {
       let estimate: AnalysisResult | null = null

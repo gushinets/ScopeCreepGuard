@@ -17,6 +17,7 @@ from scope_guard_api.schemas.shared import WireModel
 
 class ErrorResponse(WireModel):
     error: ErrorCode
+    fields: dict[str, Literal["required", "positive"]] | None = None
 
 
 class OkResponse(WireModel):

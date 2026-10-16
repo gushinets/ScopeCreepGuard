@@ -8,7 +8,17 @@ from lingua import Language, LanguageDetectorBuilder
 from scope_guard.domain.change_orders.constants import SUPPORTED_LANGUAGES
 from scope_guard.domain.shared.language import supported_language
 
-VERSION = "lingua-2.1.1-policy-v1"
+VERSION = "lingua-2.1.1-input-v2-output-v2"
+
+# Neutral technical nouns/product identifiers in input, not natural-language votes.
+# Finite calibration vocabulary; unknown terms still contribute uncertainty.
+TECHNICAL_INPUT = re.compile(
+    r"\b(?:email|e-mail|frontend|backend|fullstack|webhooks?|endpoints?|"
+    r"PostgreSQL|MySQL|MongoDB|Docker|Kubernetes|Arrow|DigiKey|Mouser|"
+    r"Instagram|Facebook|Salesforce|WordPress|OpenAI|GitHub|JavaScript|TypeScript|"
+    r"Python|React|Next\.js|OAuth|REST|GraphQL|SDK|CI/CD)\b",
+    re.I,
+)
 
 
 @lru_cache(maxsize=1)
@@ -25,10 +35,72 @@ def clean(text, exceptions=()):
     for value in sorted(exceptions, key=len, reverse=True):
         if value:
             text = text.replace(value, " ")
-    return re.sub(r"https?://\S+|[\w.+-]+@[\w.-]+\.[a-z]+", " ", text)
+    # Detection-only representation. Never use this to rewrite model/source inputs.
+    text = re.sub(
+        r"```[\s\S]*?```|https?://\S+|www\.\S+|[\w.+-]+@[\w.-]+\.[a-z]+", " ", text, flags=re.I
+    )
+    text = re.sub(
+        r"`[^`\n]*`", lambda m: " " if re.search(r"[_(){}=;]|[a-z][A-Z]", m[0]) else m[0], text
+    )
+    text = re.sub(r"\b(?:[a-z]+(?:[A-Z][a-z0-9]*)+|[a-z]+(?:_[a-z0-9]+)+)\b", " ", text)
+    return re.sub(r"\b(?:API|URL|HTTP|HTTPS|JSON|SQL|SEO|webhooks?)\b", " ", text, flags=re.I)
 
 
-def evidence(text, exceptions=(), *, minimum_letters=12):
+def fragments(prose):
+    sentences = re.split(r"[.!?;\n]+\s*", prose)
+    return [
+        *sentences,
+        *(
+            prose[s.start_index : s.end_index]
+            for s in detector().detect_multiple_languages_of(prose)
+        ),
+    ]
+
+
+def foreign_evidence(text, target):
+    """Independent strong foreign evidence cannot borrow majority confidence."""
+    for span in fragments(text):
+        observed = evidence(span, minimum_letters=8)
+        if observed["status"] == "detected" and observed["language"] != target:
+            return observed
+    return None
+
+
+def input_evidence(text):
+    prose = TECHNICAL_INPUT.sub(" ", clean(text))
+    # Nonoverlapping Lingua spans provide relative volume. Independently score each
+    # substantive span; sentence boundaries prevent a short second language being
+    # swallowed into the whole-text score. Uncertain volume stays in the denominator.
+    totals, confidences, volume = {}, {}, 0
+    for sentence in re.split(r"[.!?;\n]+\s*", prose):
+        whole = evidence(sentence, confidence_threshold=0.75)
+        if whole["status"] == "detected" and not foreign_evidence(sentence, whole["language"]):
+            letters = sum(c.isalpha() for c in sentence)
+            volume += letters
+            language = whole["language"]
+            totals[language] = totals.get(language, 0) + letters
+            confidences[language] = min(confidences.get(language, 1), whole["confidence"])
+            continue
+        spans = detector().detect_multiple_languages_of(sentence)
+        for span in spans:
+            part = sentence[span.start_index : span.end_index]
+            letters = sum(c.isalpha() for c in part)
+            volume += letters
+            observed = evidence(part, confidence_threshold=0.75)
+            if observed["status"] == "detected":
+                language = observed["language"]
+                totals[language] = totals.get(language, 0) + letters
+                confidences[language] = min(confidences.get(language, 1), observed["confidence"])
+    if totals:
+        leading = max(totals, key=totals.get)
+        share = totals[leading] / volume
+        if share >= 0.65:
+            return {"language": leading, "confidence": confidences[leading], "status": "detected"}
+    observed = evidence(prose)
+    return {**observed, "status": "uncertain"}
+
+
+def evidence(text, exceptions=(), *, minimum_letters=12, confidence_threshold=0.80):
     prose = clean(text, exceptions)
     if sum(c.isalpha() for c in prose) < minimum_letters:
         return {"language": None, "confidence": None, "status": "uncertain"}
@@ -59,7 +131,7 @@ def evidence(text, exceptions=(), *, minimum_letters=12):
         if not strong:
             selected += item.end_index - item.start_index
     confident = (
-        first.value >= 0.80
+        first.value >= confidence_threshold
         and first.value - second.value >= 0.20
         and (not total or selected / total >= 0.75)
     )
@@ -71,7 +143,7 @@ def evidence(text, exceptions=(), *, minimum_letters=12):
 
 
 def select(request, locale, override=None):
-    observed = evidence(request)
+    observed = input_evidence(request)
     language = supported_language(override)
     if override and not language:
         raise ValueError("clientLanguageInvalid")

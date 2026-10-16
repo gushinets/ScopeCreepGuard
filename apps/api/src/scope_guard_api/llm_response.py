@@ -31,7 +31,7 @@ def status_payload(request, owner, status):
 async def admit_response(request, owner, identifier, kind, body):
     service = llm_operations_service(request)
     if service is None:
-        return None
+        raise WorkflowError("workflowUnavailable", 503)
     body = {**body, "operationId": command_key(request, body)}
     pending = await service.admit(owner, identifier, kind, body)
     status = status_payload(

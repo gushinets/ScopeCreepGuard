@@ -190,10 +190,25 @@ def generation_journey(request, cookie, foreign_cookie, project, url, backend):
             return json.load(response)["calls"]
 
     initial_calls = calls()
-    status, headers, raw = request("/api/analyze", "POST", body, cookie)
-    assert status == 200 and headers["cache-control"] == "private, no-store"
-    assert headers["x-request-id"]
-    analyzed = json.loads(raw)
+    retired = (
+        "/api/analyze",
+        "/api/replies/regenerate",
+        "/api/client-materials/language",
+        "/api/change-orders/estimate",
+    )
+    for path in retired:
+        payload = {**body, "tone": "firm", "previousReply": "old", "clientLanguage": "en"}
+        status, _, raw = request(path, "POST", payload, cookie)
+        assert status == 503 and json.loads(raw)["error"] == "errors.workflowUnavailable"
+    assert calls() == initial_calls
+    seed = urllib.request.Request(
+        backend + "/__saved_fixture",
+        data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json", "Cookie": cookie},
+        method="POST",
+    )
+    with urllib.request.urlopen(seed) as response:
+        analyzed = json.load(response)
     context = {
         "projectId": project["id"],
         "request": body["request"],
@@ -208,10 +223,6 @@ def generation_journey(request, cookie, foreign_cookie, project, url, backend):
         ),
         ("/api/change-orders/estimate", context),
     )
-    for path, payload in operations:
-        status, response_headers, _ = request(path, "POST", payload, cookie)
-        assert status == 200 and "cache-control" not in response_headers
-        assert request(path, "POST", payload, foreign_cookie)[0] == 404
     with psycopg.connect(url) as database:
         assert database.execute("SELECT count(*) FROM drafts").fetchone()[0] == 0
         assert database.execute("SELECT count(*) FROM history_entries").fetchone()[0] == 0
@@ -221,7 +232,7 @@ def generation_journey(request, cookie, foreign_cookie, project, url, backend):
             ).fetchone()[0]
             is None
         )
-    assert calls() == initial_calls + 4
+    assert calls() == initial_calls + 1
     document = {**fixture["documentFixture"], "result": analyzed["result"]}
     save = {
         **context,
@@ -260,7 +271,7 @@ def generation_journey(request, cookie, foreign_cookie, project, url, backend):
             if method == "GET":
                 assert headers["cache-control"] == "private, no-store"
     assert json.loads(request("/api/drafts", cookie=foreign_cookie)[2]) == {"drafts": []}
-    assert calls() == initial_calls + 4
+    assert calls() == initial_calls + 1
     with psycopg.connect(url) as database:
         assert database.execute("SELECT count(*) FROM drafts").fetchone()[0] == 1
         assert database.execute("SELECT count(*) FROM history_entries").fetchone()[0] == 1
@@ -269,17 +280,13 @@ def generation_journey(request, cookie, foreign_cookie, project, url, backend):
             "fixed_price=999 WHERE id=%s",
             (project["id"],),
         )
-    for path, payload in operations[1:]:
-        assert request(path, "POST", {**payload, "draftId": drafts[0]["id"]}, cookie)[0] == 200
-    for _ in range(4):
-        assert request("/api/replies/regenerate", "POST", operations[0][1], cookie)[0] == 200
-    status, _, raw = request("/api/analyze", "POST", body, cookie)
-    assert status == 429 and json.loads(raw) == {"error": "errors.analysisRateLimited"}
-    assert calls() == initial_calls + 10
+    for path, payload in operations:
+        status, _, raw = request(path, "POST", {**payload, "draftId": drafts[0]["id"]}, cookie)
+        assert status == 503 and json.loads(raw)["error"] == "errors.workflowUnavailable"
+    assert calls() == initial_calls + 1
     print(
-        "Generation gateway: four owners, zero generation writes, "
-        "Python proof -> Python drafts/list/PUT/reload/dedup, owner isolation, "
-        "historical context and shared limit passed."
+        "Retired generation: actionable 503 without provider calls; "
+        "synthetic saved fixture -> drafts/list/PUT/reload/dedup and owner isolation passed."
     )
 
 

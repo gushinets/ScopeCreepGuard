@@ -1,17 +1,38 @@
 import json
 from datetime import date
+from functools import lru_cache
 from importlib.resources import files
 
 from babel import Locale
 from babel.dates import format_date
 
 from scope_guard.domain.analysis.domain import ABSENT, Labels
+from scope_guard.domain.change_orders.constants import LABEL_KEYS
 from scope_guard.domain.shared.language import normalize_language
 from scope_guard.services.documents.models import DocumentError
 
 PDF_LANGUAGES = frozenset(
     "ru en es de fr it nl pl pt tr uk bg el cs sk hr ro hu fi sv da nb et lv lt id".split()
 )
+
+
+@lru_cache(maxsize=64)
+def reviewed_stage_labels(language: str) -> dict[str, str] | None:
+    """Complete server-owned native-contract labels for reviewed catalog locales."""
+    catalog = json.loads(files(__package__).joinpath("labels.json").read_text(encoding="utf-8"))
+    base = language.split("-")[0]
+    if base not in catalog:
+        return None
+    aliases = {
+        "draft": "status",
+        "clientEmail": "email",
+        "estimatedEffort": "effort",
+        "additionalFee": "fee",
+        "noAdditionalCharge": "noCharge",
+    }
+    result = {key: catalog[base][aliases.get(key, key)] for key in LABEL_KEYS if key != "hours"}
+    result["hours"] = {"en": "hours", "ru": "часы", "es": "horas"}[base]
+    return result
 
 
 def supported_language(value: str) -> str:

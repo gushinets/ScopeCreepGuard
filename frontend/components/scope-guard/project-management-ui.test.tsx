@@ -73,3 +73,9 @@ it('passes the optional local end date separately from the project API input', a
   expect(update.mock.calls[0][1]).not.toHaveProperty('endDate')
   expect(update.mock.calls[0][2].endDate).toBe('2027-01-01')
 })
+it('selects the project and editor in one navigation action', () => {
+  render(<NextIntlClientProvider locale="en" messages={en}><ProjectsView /></NextIntlClientProvider>)
+  fireEvent.click(screen.getByRole('button', { name: en.projects.edit }))
+  expect(state.value.selectProject).toHaveBeenCalledWith('p1', 'edit_project')
+  expect(state.value.setView).not.toHaveBeenCalled()
+})

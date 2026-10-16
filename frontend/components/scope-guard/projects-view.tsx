@@ -93,7 +93,7 @@ export function ProjectsView() {
                   aria-hidden="true"
                 />
               </button>
-              <Button type="button" variant="ghost" className="mr-3" onClick={() => { selectProject(p.id); setView('edit_project') }}>
+              <Button type="button" variant="ghost" className="mr-3" onClick={() => selectProject(p.id, 'edit_project')}>
                 {t('projects.edit')}
               </Button>
               <div className="mr-3"><DeleteProjectAction project={p} /></div>

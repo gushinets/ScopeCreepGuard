@@ -29,7 +29,7 @@ CARD = {
 }
 
 
-def test_generation_reads_are_owned_detached_and_never_write(disposable_url):
+def test_retired_generation_never_calls_provider_or_mutates_legacy_data(disposable_url):
     prepare_alembic(disposable_url)
 
     async def run():
@@ -111,49 +111,18 @@ def test_generation_reads_are_owned_detached_and_never_write(disposable_url):
                     ).one()
 
             before = await state()
-            analyzed = await call("/api/analyze", body)
-            assert (
-                analyzed.status_code == 200
-                and analyzed.headers["cache-control"] == "private, no-store"
-            )
-            historical = {**body, "proof": analyzed.json()["proof"], "locale": "en"}
-            for path, payload in (
-                ("/api/replies/regenerate", {**body, "tone": "firm", "previousReply": "old"}),
-                (
-                    "/api/client-materials/language",
-                    {**historical, "analysis": analyzed.json()["result"], "clientLanguage": "en"},
-                ),
-                ("/api/change-orders/estimate", historical),
+            for path in (
+                "/api/analyze",
+                "/api/replies/regenerate",
+                "/api/client-materials/language",
+                "/api/change-orders/estimate",
             ):
-                response = await call(path, payload)
-                assert response.status_code == 200, response.text
-                assert "cache-control" not in response.headers
-                assert (await call(path, payload, owners[1])).status_code == 404
-            assert generator.calls == 4 and before == await state()
-            async with app.state.database.new_uow() as work:
-                await work.session.execute(
-                    text(
-                        "UPDATE projects SET scope='new scope', name='New', "
-                        "hourly_rate=999 WHERE id=:id"
-                    ),
-                    {"id": project["id"]},
-                )
-                await work.commit()
-            assert (await call("/api/change-orders/estimate", historical)).status_code == 200
-            assert contexts[-1].scope == "Five pages only." and contexts[-1].hourly_rate == "100.00"
-            assert (
-                await call(
-                    "/api/replies/regenerate", {**body, "tone": "warm", "previousReply": "old"}
-                )
-            ).status_code == 200
-            assert contexts[-1].scope == "new scope"
-            assert (
-                await call("/api/change-orders/estimate", {**historical, "draftId": None})
-            ).json() == {"error": "errors.draftProofInvalid"}
-            assert (
-                await call("/api/analyze", {**body, "projectId": "malformed"})
-            ).status_code == 500
-            assert (await call("/api/analyze", body, owners[0] + "; locale=bad")).status_code == 500
+                for cookie in owners:
+                    response = await call(path, body, cookie)
+                    assert response.status_code == 503
+                    assert response.json() == {"error": "errors.workflowUnavailable"}
+            assert generator.calls == 0 and contexts == []
+            assert before == await state()
             assert app.state.database.engine.pool.checkedout() == 0
 
     asyncio.run(run())

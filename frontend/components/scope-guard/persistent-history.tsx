@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { workflowApi } from '@/lib/drafts/workflow-client'
+import { workflowApi, WorkflowApiError } from '@/lib/drafts/workflow-client'
 import type { Agreement, ArchivedCheck, DocumentExport } from '@/lib/drafts/workflow-types'
 import { ChangeOrderDocumentPreview } from './change-order-document-preview'
 import { useStore } from './store'
+
+const readinessLabels = { description: 'changeOrder.descriptionLabel', estimatedHours: 'changeOrder.hoursLabel', additionalCost: 'changeOrder.costLabel', currency: 'changeOrder.currencyLabel' } as const
 
 function ExportItem({ initial }: { initial: DocumentExport }) {
   const t = useTranslations()
@@ -60,24 +62,35 @@ function AgreementItem({ agreement, archived, refresh }: { agreement: Agreement;
 }
 
 export function PersistentHistoryView() {
-  const { selectedProject, workflow } = useStore()
+  const { selectedProject, workflow, draftDocument } = useStore()
   const t = useTranslations()
   const [selected, setSelected] = useState<ArchivedCheck | null>(null)
   const [agreements, setAgreements] = useState<Agreement[]>([])
   const [error, setError] = useState(false)
   const [busy, setBusy] = useState(false)
   const finalizeKey = useRef(crypto.randomUUID())
+  const [finalizeFields, setFinalizeFields] = useState<string[]>([])
   async function refresh(id = selected?.id) {
     if (id) setAgreements((await workflowApi<{ changeOrders: Agreement[] }>(`history/${id}/change-orders`)).changeOrders)
   }
   async function open(id: string) {
+    setFinalizeFields([])
     setBusy(true)
     try { setSelected((await workflowApi<{ entry: ArchivedCheck }>(`history/${id}`)).entry); await refresh(id); setError(false); finalizeKey.current = crypto.randomUUID() } catch { setError(true) } finally { setBusy(false) }
   }
   async function finalize() {
     if (!selected) return
     setBusy(true)
-    try { await workflowApi(`history/${selected.id}/change-orders`, { operationId: finalizeKey.current }); await refresh(); finalizeKey.current = crypto.randomUUID(); setError(false) } catch { setError(true) } finally { setBusy(false) }
+    setFinalizeFields([])
+    try { await workflowApi(`history/${selected.id}/change-orders`, { operationId: finalizeKey.current }); await refresh(); finalizeKey.current = crypto.randomUUID(); setError(false) } catch (failure) { setError(true); if (failure instanceof WorkflowApiError) setFinalizeFields(Object.keys(failure.fields ?? {})) } finally { setBusy(false) }
   }
-  return <section className="mx-auto max-w-3xl"><h2 className="text-xl font-semibold">{t('history.title')}</h2><p className="mt-2 text-sm">{t('workflow.historyHelp')}</p>{!selectedProject ? <p>{t('history.selectProject')}</p> : <ul className="mt-4 space-y-3">{selectedProject.history.map(entry => <li key={entry.id} className="rounded border p-3"><p>{entry.request}</p><p className="mt-1 text-sm">{entry.summary}</p><Button className="mt-2" variant="outline" disabled={busy} onClick={() => void open(entry.id)}>{t('workflow.viewCheck')}</Button></li>)}</ul>}{error && <p role="alert">{t('errors.requestFailed')}</p>}{selected && <article className="mt-6 rounded border bg-card p-4"><h3 className="font-semibold">{selected.summary}</h3>{selected.sourceKind === 'legacy_unverified' ? <p className="mt-3">{t('workflow.legacyHistory')}</p> : <>{workflow?.openHistory && <Button className="mt-3" disabled={busy || !!workflow.archived} variant="outline" onClick={() => { setBusy(true); void workflow.openHistory!(selected.id).catch(() => setError(true)).finally(() => setBusy(false)) }}>{t('workflow.reopen')}</Button>}<p className="mt-3 whitespace-pre-wrap">{selected.checkSnapshot.requestText}</p><h4 className="mt-4 font-medium">{t('workflow.archivedScope')}</h4><p className="whitespace-pre-wrap">{selected.checkSnapshot.projectSnapshot?.scope}</p><p className="mt-3">{selected.checkSnapshot.analysis?.reasoning}</p><h4 className="mt-4 font-medium">{t('reply.heading')}</h4><p className="whitespace-pre-wrap">{selected.checkSnapshot.draftDocument?.reply.text}</p>{selected.checkSnapshot.draftDocument?.changeOrder && <div className="mt-4"><ChangeOrderDocumentPreview draft={selected.checkSnapshot.draftDocument.changeOrder} /><Button className="mt-3" disabled={busy || !!workflow?.archived || agreements.some(item => item.status === 'finalized')} onClick={() => void finalize()}>{t('workflow.finalize')}</Button></div>}</>}{agreements.map(agreement => <AgreementItem key={`${agreement.id}:${agreement.revision}`} agreement={agreement} archived={!!workflow?.archived} refresh={() => refresh()} />)}</article>}</section>
+  async function archiveEdits() {
+    if (!workflow) return
+    setBusy(true)
+    try {
+      await workflow.complete()
+      setSelected(null); setAgreements([]); setFinalizeFields([]); setError(false)
+    } catch { setError(true) } finally { setBusy(false) }
+  }
+  return <section className="mx-auto max-w-3xl"><h2 className="text-xl font-semibold">{t('history.title')}</h2><p className="mt-2 text-sm">{t('workflow.historyHelp')}</p>{workflow && draftDocument?.changeOrder && !workflow.legacyRevision && <div className="mt-3"><p className="text-sm text-muted-foreground">{t('workflow.archiveEditsHelp')}</p><Button className="mt-2" variant="outline" disabled={busy || workflow.archived} onClick={() => void archiveEdits()}>{t('workflow.archiveEdits')}</Button></div>}{!selectedProject ? <p>{t('history.selectProject')}</p> : <ul className="mt-4 space-y-3">{selectedProject.history.map(entry => <li key={entry.id} className="rounded border p-3"><p>{entry.request}</p><p className="mt-1 text-sm">{entry.summary}</p><Button className="mt-2" variant="outline" disabled={busy} onClick={() => void open(entry.id)}>{t('workflow.viewCheck')}</Button></li>)}</ul>}{error && <p role="alert">{t('errors.requestFailed')}</p>}{finalizeFields.length > 0 && <ul role="alert" className="mt-2 text-sm">{finalizeFields.map(field => <li key={field}>{t('changeOrder.readiness.required', { field: t(readinessLabels[field as keyof typeof readinessLabels] ?? 'changeOrder.descriptionLabel') })}</li>)}</ul>}{selected && <article className="mt-6 rounded border bg-card p-4"><h3 className="font-semibold">{selected.summary}</h3>{selected.sourceKind === 'legacy_unverified' ? <p className="mt-3">{t('workflow.legacyHistory')}</p> : <>{workflow?.openHistory && <Button className="mt-3" disabled={busy || !!workflow.archived} variant="outline" onClick={() => { setBusy(true); void workflow.openHistory!(selected.id).catch(() => setError(true)).finally(() => setBusy(false)) }}>{t('workflow.reopen')}</Button>}<p className="mt-3 whitespace-pre-wrap">{selected.checkSnapshot.requestText}</p><h4 className="mt-4 font-medium">{t('workflow.archivedScope')}</h4><p className="whitespace-pre-wrap">{selected.checkSnapshot.projectSnapshot?.scope}</p><p className="mt-3">{selected.checkSnapshot.analysis?.reasoning}</p><h4 className="mt-4 font-medium">{t('reply.heading')}</h4><p className="whitespace-pre-wrap">{selected.checkSnapshot.draftDocument?.reply.text}</p>{selected.checkSnapshot.draftDocument?.changeOrder && <div className="mt-4"><ChangeOrderDocumentPreview draft={selected.checkSnapshot.draftDocument.changeOrder} /><Button className="mt-3" disabled={busy || !!workflow?.archived || agreements.some(item => item.status === 'finalized')} onClick={() => void finalize()}>{t('workflow.finalize')}</Button></div>}</>}{agreements.map(agreement => <AgreementItem key={`${agreement.id}:${agreement.revision}`} agreement={agreement} archived={!!workflow?.archived} refresh={() => refresh()} />)}</article>}</section>
 }

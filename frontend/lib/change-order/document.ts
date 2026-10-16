@@ -1,11 +1,12 @@
 import type { Currency } from '@/lib/types'
 import { normalizeLanguageTag } from '@/lib/client-language'
 import { normalizeChangeOrderLabels, type ChangeOrderLabels as ClientLabels } from './labels'
+import { readinessMessage } from './readiness'
 
 export type DocumentLanguage = string
 
 export interface EditableDraft {
-  aiValues?: Partial<Record<'description' | 'estimatedHours' | 'additionalCost' | 'currency' | 'timelineImpact' | 'rationale' | 'note', string>>
+  aiValues?: Partial<Record<'description' | 'estimatedHours' | 'additionalCost' | 'currency' | 'timelineImpact' | 'rationale' | 'note' | 'manualPrice' | 'manualEffort' | 'manualRationale', string>>
   reference?: string
   createdAt: string
   language: DocumentLanguage
@@ -68,6 +69,7 @@ const labels: Record<string, ChangeOrderLabels> = {
 }
 
 export interface ChangeOrderDocument {
+  readinessWarning: string
   labels: ChangeOrderLabels
   title: string
   status: string
@@ -123,6 +125,7 @@ export function createChangeOrderDocument(draft: EditableDraft): ChangeOrderDocu
   if (draft.rationale.trim()) additionalItems.push({ label: t.rationale, value: draft.rationale.trim() })
   if (draft.note.trim()) additionalItems.push({ label: t.note, value: draft.note.trim() })
   return {
+    readinessWarning: readinessMessage(draft, { ...t }),
     labels: t, title: t.title, status: t.status, reference,
     createdDate: formatDocumentDate(draft.createdAt, draft.language), metadata,
     introduction: t.introduction, description: draft.description.trim(), commercialTerms,
@@ -141,6 +144,7 @@ export function buildChangeOrderText(draft: EditableDraft): string {
   const { labels: t } = document
   const lines = [
     `${document.title} — ${document.status}`,
+    ...(document.readinessWarning ? [document.readinessWarning, ''] : []),
     `${t.documentNumber}: ${document.reference}`,
     `${t.created}: ${document.createdDate}`,
     '', ...document.metadata.map(({ label, value }) => `${label}: ${value}`),

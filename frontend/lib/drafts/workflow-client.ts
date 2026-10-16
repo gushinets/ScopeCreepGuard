@@ -1,7 +1,7 @@
 import { ERROR_CODES, isErrorCode, type ErrorCode } from '@/lib/api/errors'
 
 export class WorkflowApiError extends Error {
-  constructor(public code: ErrorCode, public status: number, public terminal = false) { super(code) }
+  constructor(public code: ErrorCode, public status: number, public terminal = false, public fields?: Record<string, string>) { super(code) }
 }
 
 export async function operationApi<T>(url: string, body?: unknown, method = body === undefined ? 'GET' : 'POST'): Promise<T> {
@@ -10,7 +10,7 @@ export async function operationApi<T>(url: string, body?: unknown, method = body
     response = await fetch(url, { method, cache: 'no-store', ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) })
   } catch { throw new WorkflowApiError(ERROR_CODES.requestFailed, 0) }
   const value = await response.json()
-  if (!response.ok) throw new WorkflowApiError(isErrorCode(value.error) ? value.error : ERROR_CODES.requestFailed, response.status, !!value.operationId)
+  if (!response.ok) throw new WorkflowApiError(isErrorCode(value.error) ? value.error : ERROR_CODES.requestFailed, response.status, !!value.operationId, value.fields)
   if (response.status === 202 && value.operationId && value.statusUrl) return pollOperation<T>(value)
   return value as T
 }
