@@ -27,7 +27,7 @@ def test_invalid_log_level_is_rejected(monkeypatch):
 @pytest.mark.parametrize(
     "primary,alias,expected",
     [
-        (None, None, "gpt-5.6-luna"),
+        (None, None, "gpt-6-luna"),
         ("configured-model", "legacy-model", "configured-model"),
         (None, "legacy-model", "legacy-model"),
     ],

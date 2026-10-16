@@ -39,7 +39,7 @@ class Settings(BaseSettings):
         default=None, validation_alias=AliasChoices("SCOPE_GUARD_OPENAI_API_KEY", "OPENAI_API_KEY")
     )
     openai_model: str = Field(
-        default="gpt-5.6-luna",
+        default="gpt-6-luna",
         validation_alias=AliasChoices("SCOPE_GUARD_OPENAI_MODEL", "OPENAI_MODEL"),
     )
 
