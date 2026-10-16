@@ -149,3 +149,34 @@ def test_translation_accepts_localized_commercial_notation(original, translated)
         ),
     }
     assert validate_stage("replies", candidate, source) == candidate
+
+
+@pytest.mark.parametrize(
+    "language,forbidden",
+    [("en", "outside the agreed"), ("ru", "за пределами"), ("es", "fuera del alcance")],
+)
+@pytest.mark.parametrize("verdict", ["in_scope", "borderline", "out_of_scope"])
+def test_composed_catalog_introduction_does_not_assert_a_scope_verdict(
+    language, forbidden, verdict
+):
+    source = facts(language)
+    source["analysis"]["verdict"] = verdict
+    if verdict == "in_scope":
+        source["analysis"].update(hasAdditionalWork=False, estimatedHours=0, additionalCost="0")
+    prose = {
+        "en": "This document records the requested work and proposed terms "
+        "for client review and approval.",
+        "ru": "Настоящий документ фиксирует запрошенные работы и предлагаемые условия "
+        "для проверки и согласования клиентом.",
+        "es": "Este documento recoge el trabajo solicitado y las condiciones propuestas "
+        "para su revisión y aprobación por el cliente.",
+    }[language]
+    candidate = order(language)
+    candidate["scopePosition"] = verdict
+    candidate["applicable"] = verdict != "in_scope"
+    candidate.update(dict.fromkeys(("description", "timelineImpact", "rationale", "note"), prose))
+    store = RecordingStore()
+    result = asyncio.run(run("change_order", source, [candidate], store))
+    # These are the same composed labels presented to semantic review and publication.
+    assert forbidden not in result["labels"]["introduction"]
+    assert len(store.calls) == 2 and not store.feedbacks

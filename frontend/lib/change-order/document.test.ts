@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { buildChangeOrderText, createChangeOrderDocument, makeChangeOrderReference, type EditableDraft } from './document'
 
@@ -95,4 +96,11 @@ describe('change order document', () => {
     expect(text).toContain(approvedBy)
     expect(text).toContain(date)
   })
+})
+
+it.each(['en', 'ru', 'es'])('uses the reviewed neutral server introduction in %s previews and copied text', language => {
+ const catalog = JSON.parse(readFileSync('../backend/src/scope_guard/integrations/documents/labels.json', 'utf8'))
+ const document = createChangeOrderDocument({ ...draft, language })
+ expect(document.introduction).toBe(catalog[language].introduction)
+ expect(buildChangeOrderText({ ...draft, language })).toContain(catalog[language].introduction)
 })
