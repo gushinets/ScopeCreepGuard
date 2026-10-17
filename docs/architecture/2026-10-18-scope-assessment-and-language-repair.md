@@ -55,6 +55,7 @@ validator warnings were not restored. Diagnostics stay internal and nonblocking.
 - `frontend/components/scope-guard/nonblocking-result.test.tsx`: replace absence assertion, retain explicit-action/failure coverage.
 - `frontend/components/scope-guard/client-language.test.tsx`: retain assessment across translation and reopening.
 - `frontend/components/scope-guard/persistent-store.test.tsx`: saved/reopened estimate separation, cleared/free terms, intentional override payloads.
+- `frontend/components/scope-guard/drafts.test.tsx`: CI follow-up replaces the remaining obsolete hidden-assessment expectation with restored assessment and independent saved-term checks after reload.
 - `frontend/messages/en.json`, `frontend/messages/ru.json`: request, recommendation and preliminary-estimate labels.
 - `docs/architecture/plans/2026-10-18-restore-scope-assessment-and-language.md`: implementation record.
 - This report. Ignored local `AGENT.md`/`WORKLOG.md` updated separately.
@@ -147,3 +148,21 @@ override available. Broader lint/tests and a new acceptance campaign are outside
 this repair. Implementation and verification were completed before publication
 was separately authorized. On 2026-10-18 the user requested a PR; publication
 includes only this repair and its documentation. Merging into main is not authorized.
+
+## PR #29 CI follow-up
+
+The reported frontend CI failure was deterministic: the legacy saved-draft reload
+test still asserted that `Not included` (the saved assessment reasoning) was
+absent. Replaced that obsolete assertion with scoped checks for reasoning,
+supporting quotation, recommendation and the original EUR200 preliminary
+estimate. The same test also checks that the saved manual EUR175 price, 1.5 hours
+and edited reply remain authoritative after reload. No product code, test
+timeouts, dependency versions, fixture data or CI configuration changed.
+
+Verification: draft suite **18 passed**; full disposable CI frontend harness
+**398 frontend tests across 55 files and 20 Python HTTP contract tests passed**.
+The default local Windows run had unrelated five-second auth/project gateway
+timeouts; rerunning the same harness with only a local `--maxWorkers=2` argument
+passed, without changing assertions or timeout thresholds. Full frontend ESLint,
+API type freshness, TypeScript and diff checks passed. Runtime code is unchanged,
+so this test correction requires no container rebuild or new AI calls.
