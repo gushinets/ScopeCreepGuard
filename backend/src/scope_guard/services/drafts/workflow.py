@@ -639,9 +639,18 @@ class WorkflowService:
                 material_source["replies"] = {**reply["generated"], reply["tone"]: reply["text"]}
                 if document["changeOrder"]:
                     material_source["changeOrder"] = deepcopy(document["changeOrder"])
-                    material_source["changeOrderLabels"] = document["changeOrder"].get(
+                    # Editor decimals are strings; analysis snapshots use numeric hours.
+                    # Convert only the detached provider input, retaining saved manual terms.
+                    hours = decimal_text(material_source["changeOrder"].pop("estimatedHours", None))
+                    if hours is not None:
+                        material_source["changeOrder"]["estimatedHours"] = float(hours)
+                    translated_labels = document["changeOrder"].get(
                         "changeOrderLabels", material_source.get("changeOrderLabels")
                     )
+                    if translated_labels is not None:
+                        material_source["changeOrderLabels"] = translated_labels
+                    else:
+                        material_source.pop("changeOrderLabels", None)
                     for field in (
                         "description",
                         "timelineImpact",
