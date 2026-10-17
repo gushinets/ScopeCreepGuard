@@ -54,6 +54,27 @@ function changeOrder(endDate: string): EditableDraft {
     providerName: '', clientName: '', clientEmail: '', endDate, additionalTerms: '', clientApproverName: '', approvalDate: '', noAdditionalCharge: false }
 }
 
+it('reopens the full original assessment while current agreement terms remain independent', async () => {
+  analyzedDraft()
+  Object.assign(saved.analysisRun!.resultSnapshot!, { verdict: 'out_of_scope', reasoning: 'A new page changes the agreed deliverables.', citations: ['Original scope'], suggestion: 'Approve the extra work first.', hasAdditionalWork: true, changeOrder: null, estimate: { estimatedHours: 8, additionalCost: '240.00', currency: 'USD' } })
+  saved.draftDocument.changeOrder = { ...changeOrder('2027-02-01'), noAdditionalCharge: true }
+  const original = structuredClone(saved.analysisRun)
+  const withResult = ({ children }: { children: ReactNode }) => wrapper({ children: <>{children}<ResultPanel /></> })
+  const hook = renderHook(() => useStore(), { wrapper: withResult })
+  await screen.findByText('A new page changes the agreed deliverables.')
+  expect(screen.getByText('$240.00')).toBeTruthy()
+  expect(hook.result.current.draftDocument?.changeOrder).toMatchObject({ additionalCost: '333.00', currency: 'EUR', noAdditionalCharge: true })
+  act(() => hook.result.current.updateChangeOrder({ ...hook.result.current.draftDocument!.changeOrder!, estimatedHours: '', additionalCost: '', currency: '' }))
+  await act(async () => hook.result.current.saveDraft())
+  hook.unmount()
+  const reopened = renderHook(() => useStore(), { wrapper: withResult })
+  await screen.findByText('A new page changes the agreed deliverables.')
+  for (const text of ['Original scope', 'Approve the extra work first.', '$240.00']) expect(screen.getByText(text)).toBeTruthy()
+  expect(reopened.result.current.draftDocument?.changeOrder).toMatchObject({ estimatedHours: '', additionalCost: '', currency: '', noAdditionalCharge: true })
+  expect(saved.analysisRun).toEqual(original)
+  expect(requests.some(path => path.endsWith('/agreements') || path.endsWith('/analyses'))).toBe(false)
+})
+
 it.each(['2027-02-01', ''])('restores current persisted estimate provenance for deadline %j, without forcing regeneration after another edit', async edited => {
   analyzedDraft()
   saved.analysisRun!.resultSnapshot!.verdict = 'out_of_scope'
@@ -139,6 +160,27 @@ it('shows the first successful analysis result after installing its response', a
   await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
   act(() => hook.result.current.runCheck())
   await waitFor(() => expect(hook.result.current.status).toBe('result'))
+})
+
+it.each([false, true])('passes only an intentional language override to a new analysis: override=%s', async override => {
+  analyzedDraft()
+  saved.draftDocument.reply.language = 'es'
+  saved.draftDocument.languageSelection = { language: 'en', confidence: 0.4078, status: 'uncertain', selectedLanguage: 'es', override, version: 'test', requestHash: 'test' }
+  let submitted: Record<string, unknown> | undefined
+  const originalFetch = vi.mocked(fetch).getMockImplementation()!
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (String(input).endsWith('/analyses')) {
+      submitted = JSON.parse(String(init?.body))
+      return Response.json({ applied: true, draft: { ...saved, revision: '4' }, analysisRun: saved.analysisRun })
+    }
+    return originalFetch(input, init)
+  })
+  const hook = renderHook(() => useStore(), { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  act(() => hook.result.current.runCheck())
+  await waitFor(() => expect(submitted).toBeDefined())
+  expect(submitted?.documentLanguage).toBe(override ? 'es' : undefined)
+  expect(submitted?.locale).toBe('en')
 })
 
 it('refreshes automatically published History without replacing a newer saved request', async () => {

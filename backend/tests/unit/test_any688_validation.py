@@ -39,14 +39,14 @@ def test_substantive_fragment_language_selection(locale, client_request, target)
 
 
 @pytest.mark.parametrize("locale", ["en", "ru"])
-def test_ambiguous_and_code_only_requests_use_visible_uncertain_fallback(locale):
+def test_ambiguous_candidates_are_retained_and_code_only_requests_use_fallback(locale):
     for request in (
         "Please add email notifications for customers. Пожалуйста, добавьте уведомления клиентам.",
         "https://example.test/English-request alerts@example.test ```js\nsendEmail(userId)\n```",
     ):
         selection = select(request, locale)
         assert selection["status"] == "uncertain"
-        assert selection["selectedLanguage"] == locale
+        assert selection["selectedLanguage"] == (selection["language"] or locale)
 
 
 @pytest.mark.parametrize(

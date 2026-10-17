@@ -8,7 +8,7 @@ from lingua import Language, LanguageDetectorBuilder
 from scope_guard.domain.change_orders.constants import SUPPORTED_LANGUAGES
 from scope_guard.domain.shared.language import supported_language
 
-VERSION = "lingua-2.1.1-input-v2-output-v2"
+VERSION = "lingua-2.1.1-input-v3-output-v2"
 
 # Neutral technical nouns/product identifiers in input, not natural-language votes.
 # Finite calibration vocabulary; unknown terms still contribute uncertainty.
@@ -143,11 +143,18 @@ def evidence(text, exceptions=(), *, minimum_letters=12, confidence_threshold=0.
 
 
 def select(request, locale, override=None):
+    """Override, then leading supported candidate, then interface locale (or English).
+
+    Confidence is diagnostic evidence, not a veto on an available candidate.
+    The locale fallback applies only to requests without usable language evidence.
+    """
     observed = input_evidence(request)
     language = supported_language(override)
     if override and not language:
         raise ValueError("clientLanguageInvalid")
-    target = language or (observed["language"] if observed["status"] == "detected" else locale)
+    target = (
+        language or supported_language(observed["language"]) or supported_language(locale) or "en"
+    )
     return {
         **observed,
         "selectedLanguage": target,
