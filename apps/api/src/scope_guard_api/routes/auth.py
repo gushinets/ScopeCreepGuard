@@ -65,6 +65,12 @@ async def register(request: Request, service: AuthDependency):
 @router.post("/login", response_model=AuthResponse, openapi_extra=credentials_request)
 async def login(request: Request, service: AuthDependency):
     user, token = await service.login(await read_json_object(request))
+    if getattr(request.app.state, "database", None) is not None:
+        from uuid import UUID
+
+        from scope_guard_api.dependencies import profile_service
+
+        await profile_service(request).observe(UUID(user["id"]))
     response = JSONResponse({"user": user})
     session_cookie(response, request, token, SESSION_MAX_AGE_SECONDS)
     return response

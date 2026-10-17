@@ -1,4 +1,6 @@
 import asyncio
+import logging
+from collections.abc import Awaitable, Callable
 from types import TracebackType
 from typing import Protocol, Self
 
@@ -15,10 +17,15 @@ class AsyncUnitOfWork(Protocol):
 
 
 class SqlAlchemyUnitOfWork:
-    def __init__(self, factory: async_sessionmaker[AsyncSession]):
+    def __init__(
+        self,
+        factory: async_sessionmaker[AsyncSession],
+        after_commit: Callable[[], Awaitable[None]] | None = None,
+    ):
         self._factory = factory
         self._session: AsyncSession | None = None
         self._finished = False
+        self._after_commit = after_commit
 
     async def __aenter__(self) -> Self:
         if self._session is not None or self._finished:
@@ -34,8 +41,20 @@ class SqlAlchemyUnitOfWork:
         return self._session
 
     async def commit(self) -> None:
-        await self.session.commit()
+        session = self.session
+        dirty = session.info.get("marketing_metrics_dirty", False)
+        await session.commit()
         self._finished = True
+        if dirty and self._after_commit is not None:
+            # T1 is committed and its connection released before T2 opens a new UoW.
+            # Closing also prevents accidental reuse while the callback executes.
+            try:
+                await session.close()
+                await self._after_commit()
+            except Exception:
+                logging.getLogger("scope_guard").exception(
+                    "marketing_metrics_reconciliation_failed"
+                )
 
     async def rollback(self) -> None:
         await self.session.rollback()

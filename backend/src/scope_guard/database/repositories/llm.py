@@ -6,6 +6,7 @@ from decimal import Decimal
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
+from scope_guard.database.repositories.activity import llm_event, profiles_supported
 from scope_guard.domain.drafts.workflow import WorkflowError
 from scope_guard.domain.llm.runtime import PROMPT_VERSION, GatewayFailure, digest, encode
 
@@ -244,6 +245,7 @@ class LlmSQLStore:
                     ),
                 },
             )
+            work.session.info["marketing_metrics_dirty"] = True
             await work.commit()
         return row["id"]
 
@@ -375,6 +377,7 @@ class LlmSQLStore:
                         "epoch": call["epoch"],
                     },
                 )
+            work.session.info["marketing_metrics_dirty"] = True
             await work.commit()
 
     async def checkpoint(self, request, response):
@@ -404,6 +407,7 @@ class LlmSQLStore:
                 ),
                 {"step": binding.step_id},
             )
+            work.session.info["marketing_metrics_dirty"] = True
             await work.commit()
 
     async def feedback(self, binding, error):
@@ -424,6 +428,7 @@ class LlmSQLStore:
                 ),
                 {"step": binding.step_id, "error": encode({"code": "validationRejected", **error})},
             )
+            work.session.info["marketing_metrics_dirty"] = True
             await work.commit()
 
     async def fail(self, identifier, epoch, code, status=502):
@@ -481,6 +486,26 @@ class LlmSQLStore:
                 ),
                 {"target": target, "current": current},
             )
+        if await profiles_supported(work.session):
+            rows = (
+                (
+                    await work.session.execute(
+                        text(
+                            "SELECT o.* FROM llm_operations o WHERE o.status='failed' "
+                            "AND NOT EXISTS "
+                            "(SELECT 1 FROM activity_events e WHERE e.project_id=o.project_id "
+                            "AND e.operation_id=o.command_key AND e.event_type IN "
+                            "('check.failed','estimate.failed',"
+                            "'translation.failed','reply.failed')) "
+                            "ORDER BY o.id FOR UPDATE OF o"
+                        )
+                    )
+                )
+                .mappings()
+                .all()
+            )
+            for row in rows:
+                await llm_event(work.session, dict(row), "failed")
 
 
 class LlmTransactionRepository:
@@ -500,6 +525,16 @@ class LlmTransactionRepository:
             raise GatewayFailure("operationLeaseLost")
         if row["spent"] + row["reserved"] > Decimal(row["policy"]["maxCost"]):
             raise GatewayFailure("operationBudgetExceeded")
+        if await profiles_supported(self.session):
+            self.session.info["activity_executor"] = "system"
+            self.session.info["activity_origin_session"] = await self.session.scalar(
+                text(
+                    "SELECT product_session_id FROM activity_events WHERE project_id=:project "
+                    "AND operation_id=:key AND event_type LIKE '%.requested' "
+                    "ORDER BY created_at LIMIT 1"
+                ),
+                {"project": row["project_id"], "key": row["command_key"]},
+            )
         return row
 
     async def publish(self, operation, envelope):
@@ -513,6 +548,7 @@ class LlmTransactionRepository:
             ),
             {"id": operation["id"], "epoch": operation["epoch"], "result": encode(envelope)},
         )
+        await llm_event(self.session, operation, "completed", envelope)
 
     async def prior(self, owner, project, command):
         return await one(
@@ -549,4 +585,8 @@ class LlmTransactionRepository:
                     "prompt": PROMPT_VERSION,
                 },
             )
+        if row["kind"] not in ("check", "estimate"):
+            await llm_event(self.session, row, "requested")
+        if row["status"] == "failed":
+            await llm_event(self.session, row, "failed")
         return row

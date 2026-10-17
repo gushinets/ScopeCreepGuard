@@ -3,7 +3,8 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from scope_guard.database.models import DraftRow, HistoryEntryRow, ProjectRow
+from scope_guard.database.models import HistoryEntryRow, ProjectRow
+from scope_guard.database.models.compatibility import CompatibilityDraftRow as DraftRow
 from scope_guard.database.repositories.projects import History, Projects
 from scope_guard.domain.analysis.domain import freeze
 from scope_guard.domain.drafts.generation_context import HistoricalGenerationDraft

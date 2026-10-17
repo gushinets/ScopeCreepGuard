@@ -26,7 +26,7 @@ from scope_guard.domain.shared.enums import (
     PricingModel,
 )
 
-"""Exact mapping of the Drizzle schema after migration 0006; no runtime DDL."""
+"""Historical Drizzle baseline mapping; current schema uses models.workflow Core tables."""
 
 
 class ProjectRow(Base):

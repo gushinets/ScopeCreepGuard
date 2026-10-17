@@ -14,10 +14,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from scope_guard.database.models.base import Base, fk, pk, timestamp
 
-"""Exact mapping of the Drizzle schema after migration 0006; no runtime DDL."""
+"""Historical Drizzle baseline mapping; current schema uses models.workflow Core tables."""
 
 
-class DraftRow(Base):
+class CompatibilityDraftRow(Base):
     __tablename__ = "drafts"
     __table_args__ = (
         UniqueConstraint("history_entry_id", name="drafts_history_entry_id_unique"),
@@ -45,3 +45,7 @@ class DraftRow(Base):
     status: Mapped[str] = mapped_column(Text, server_default=text("'draft'"))
     created_at: Mapped[datetime] = timestamp()
     updated_at: Mapped[datetime] = timestamp()
+
+
+# Retained import for frozen baseline clients. Current mappings live in workflow.py.
+DraftRow = CompatibilityDraftRow

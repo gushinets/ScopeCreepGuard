@@ -251,7 +251,7 @@ def verify_workflow_schema(connection: Connection, revision: str, *, extra_objec
         raise SchemaCompatibilityError(differences)
 
 
-def verify_llm_schema(connection: Connection) -> None:
+def _verify_llm_schema_v5(connection: Connection) -> None:
     names = ("llm_operations", "llm_steps", "provider_calls")
     verify_workflow_schema(connection, "0004_workflow_retire", extra_objects=names)
     expected = json.loads(Path(__file__).with_name("0005_llm_workflow_schema.json").read_text())
@@ -260,7 +260,70 @@ def verify_llm_schema(connection: Connection) -> None:
         raise SchemaCompatibilityError(differences)
 
 
-REVISION_VALIDATORS["0005_llm_workflow"] = verify_llm_schema
+PROFILE_TABLES = TABLES + (
+    "draft_revisions",
+    "analysis_runs",
+    "change_orders",
+    "document_exports",
+    "activity_events",
+    "llm_operations",
+    "llm_steps",
+    "provider_calls",
+    "profiles",
+    "profile_preferences",
+    "profile_revisions",
+    "product_sessions",
+    "marketing_metrics",
+)
+
+
+def inspect_profile_schema(connection: Connection) -> dict:
+    """Whole managed catalog, including all behavior and immutable guard definitions."""
+    actual = inspect_schema(connection, PROFILE_TABLES)
+    actual["functions"] = [
+        dict(row)
+        for row in connection.exec_driver_sql(
+            "SELECT p.proname AS name,p.prosrc AS source FROM pg_proc p JOIN pg_namespace n "
+            "ON n.oid=p.pronamespace WHERE n.nspname='public' "
+            "ORDER BY p.proname"
+        ).mappings()
+    ]
+    return actual
+
+
+def verify_profile_schema(connection: Connection) -> None:
+    verify_managed_schema(connection)
+    expected = json.loads(
+        Path(__file__).with_name("0006_profile_metrics_schema.json").read_text(encoding="utf-8")
+    )
+    differences = compare_schema(inspect_profile_schema(connection), expected)
+    objects = set(
+        connection.exec_driver_sql(
+            "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
+            "WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S')"
+        ).scalars()
+    )
+    differences.extend(
+        SchemaDifference("schema.unexpected_public_object." + name)
+        for name in sorted(objects - set(PROFILE_TABLES) - {"alembic_version"})
+    )
+    if differences:
+        raise SchemaCompatibilityError(differences)
+
+
+def verify_llm_schema(connection: Connection) -> None:
+    """Validate supported runtime revision, retaining exact revision-specific checks."""
+    revisions = (
+        connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalars().all()
+    )
+    if revisions == ["0006_profile_metrics"]:
+        verify_profile_schema(connection)
+    else:
+        _verify_llm_schema_v5(connection)
+
+
+REVISION_VALIDATORS["0005_llm_workflow"] = _verify_llm_schema_v5
+REVISION_VALIDATORS["0006_profile_metrics"] = verify_profile_schema
 
 
 def verify_revision_schema(connection: Connection, *, revision: str | None, head: str) -> None:

@@ -7,6 +7,10 @@ def auth_service(request: Request):
     return bootstrap.auth_service(request)
 
 
+def profile_service(request: Request):
+    return bootstrap.profile_service(request)
+
+
 async def current_owner(request: Request) -> dict[str, str]:
     return await auth_service(request).me(request.cookies.get("scg_session"))
 

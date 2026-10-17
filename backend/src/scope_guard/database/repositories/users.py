@@ -32,6 +32,11 @@ class Users:
             if getattr(diagnostic, "constraint_name", None) == "users_email_unique":
                 raise DuplicateEmail() from None
             raise
+        from scope_guard.database.repositories.activity import profiles_supported
+        from scope_guard.database.repositories.profiles import Profiles
+
+        if await profiles_supported(self.session):
+            await Profiles(self.session).create(row.id)
         return User(row.id, row.email, row.password_hash)
 
 
