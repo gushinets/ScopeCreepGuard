@@ -75,7 +75,14 @@ class LlmSQLStore:
                 .all()
             ]
 
-    async def claim(self, worker):
+    async def claim(self, worker, *, lane="user"):
+        if lane not in ("user", "diagnostic"):
+            raise ValueError("invalid_llm_lane")
+        kind_filter = (
+            "kind='diagnostic'"
+            if lane == "diagnostic"
+            else "kind IN ('check','regenerate','translate','estimate','agreement')"
+        )
         async with self.factory() as work:
             await work.session.execute(
                 text(
@@ -97,9 +104,8 @@ class LlmSQLStore:
             )
             row = await one(
                 work,
-                "SELECT * FROM llm_operations WHERE status='queued' OR "
-                "(status='running' AND lease_expires_at<=now()) ORDER BY "
-                "(kind='diagnostic'),created_at,id "
+                f"SELECT * FROM llm_operations WHERE {kind_filter} AND (status='queued' OR "
+                "(status='running' AND lease_expires_at<=now())) ORDER BY created_at,id "
                 "LIMIT 1 FOR UPDATE SKIP LOCKED",
             )
             if row:

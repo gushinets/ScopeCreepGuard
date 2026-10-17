@@ -18,13 +18,28 @@ NAMESPACE = UUID("66366366-3663-4663-8663-663663663663")
 
 
 class LlmWorker:
-    def __init__(self, factory, store, runner, *, worker_id=None):
+    def __init__(
+        self,
+        factory,
+        store,
+        runner,
+        *,
+        worker_id=None,
+        poll_interval=2,
+        heartbeat_interval=15,
+        shutdown_timeout=30,
+    ):
+        if min(poll_interval, heartbeat_interval, shutdown_timeout) <= 0:
+            raise ValueError("invalid_worker_interval")
         self.factory, self.store, self.runner = factory, store, runner
         self.worker_id = worker_id or str(uuid4())
         self.stopping = asyncio.Event()
+        self.poll_interval = poll_interval
+        self.heartbeat_interval = heartbeat_interval
+        self.shutdown_timeout = shutdown_timeout
 
-    async def process_one(self):
-        operation = await self.store.claim(self.worker_id)
+    async def process_one(self, *, lane="user"):
+        operation = await self.store.claim(self.worker_id, lane=lane)
         if operation is None:
             return False
         task = asyncio.create_task(self.execute(operation))
@@ -33,7 +48,7 @@ class LlmWorker:
         async def heartbeat():
             nonlocal lease_lost
             while not task.done():
-                await asyncio.sleep(15)
+                await asyncio.sleep(self.heartbeat_interval)
                 try:
                     valid = await self.store.renew(operation["id"], operation["epoch"])
                 except Exception:
@@ -398,17 +413,39 @@ class LlmWorker:
             await work.llm.publish(operation, envelope)
             await work.commit()
 
-    async def run(self):
+    async def _run_lane(self, lane):
+        # One serial claim/execute lifecycle per lane, with independent UoWs.
         while not self.stopping.is_set():
             try:
-                processed = await self.process_one()
+                processed = await self.process_one(lane=lane)
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logging.getLogger("scope_guard").error("llm_worker_cycle_failed")
+                logging.getLogger("scope_guard").error(
+                    "llm_worker_cycle_failed", extra={"lane": lane}
+                )
                 processed = False
             if not processed:
                 try:
-                    await asyncio.wait_for(self.stopping.wait(), timeout=2)
+                    await asyncio.wait_for(self.stopping.wait(), timeout=self.poll_interval)
                 except TimeoutError:
                     pass
+
+    async def run(self):
+        """Own both lanes, drain together, then cancel and await fenced recovery."""
+        lanes = [
+            asyncio.create_task(self._run_lane(lane), name=f"llm-{lane}")
+            for lane in ("user", "diagnostic")
+        ]
+        try:
+            await self.stopping.wait()
+            # A single overall drain deadline, never one timeout per lane.
+            await asyncio.wait(lanes, timeout=self.shutdown_timeout)
+        finally:
+            self.stopping.set()
+            for task in lanes:
+                if not task.done():
+                    task.cancel()
+            # process_one awaits provider accounting, abandonment and heartbeat
+            # cleanup before relinquishing this process's ownership.
+            await asyncio.gather(*lanes, return_exceptions=True)

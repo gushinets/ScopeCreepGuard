@@ -1,0 +1,33 @@
+{
+  "source": {
+    "createdAt": "2026-10-17T12:00:00Z",
+    "projectName": "Synthetic commercial contract",
+    "description": "Keep reference 200 EUR in the requested description.",
+    "estimatedHours": "2.5",
+    "additionalCost": "200",
+    "currency": "EUR",
+    "timelineImpact": "Two business days after approval.",
+    "rationale": "2.5 hours × 80 EUR = 200 EUR.",
+    "note": "Keep note 80 EUR.",
+    "providerName": "Synthetic studio",
+    "clientName": "Synthetic client",
+    "clientEmail": "",
+    "endDate": "2026-11-01",
+    "additionalTerms": "Keep unrelated term 200 EUR.",
+    "clientApproverName": "",
+    "approvalDate": "",
+    "noAdditionalCharge": false
+  },
+  "rationales": [
+    { "name": "manual", "value": "2.5 hours × 80 EUR = 200 EUR." },
+    { "name": "AI", "value": "AI estimate: 2.5 hours at 80 EUR." },
+    { "name": "empty", "value": "" }
+  ],
+  "languages": [
+    { "language": "en", "effort": "2.5 hours", "freeFee": "No additional charge" },
+    { "language": "ru", "effort": "2.5 ч", "freeFee": "Без дополнительной оплаты" },
+    { "language": "es", "effort": "2.5 horas", "freeFee": "Sin coste adicional" }
+  ],
+  "paidFee": "200 EUR",
+  "freeProjection": { "noCharge": true, "effort": "2.5", "amount": "", "currency": "", "rationale": "", "schedule": "Two business days after approval." }
+}

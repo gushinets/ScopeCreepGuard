@@ -140,7 +140,7 @@ def test_worker_publishes_once_and_preserves_late_edit(disposable_url, target):
         histories = await workflow.histories(owner, UUID(project["id"]))
         assert len(histories) == 1
         # A separate queued diagnostic job does not change user-operation status.
-        assert await worker.process_one()
+        assert await worker.process_one(lane="diagnostic")
         assert (await operations.admit(owner, draft_id, "check", command))[
             "operationId"
         ] == pending["operationId"]
