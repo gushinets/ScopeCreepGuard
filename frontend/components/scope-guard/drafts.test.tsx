@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { NextIntlClientProvider } from 'next-intl'
 import en from '@/messages/en.json'
@@ -111,7 +111,15 @@ it('opens persisted drafts after reload with empty localStorage and ignores conf
   localStorage.clear()
   app()
   await waitFor(() => expect((document.querySelector('#co-description') as HTMLTextAreaElement)?.value).toBe('My own scope'))
-  expect(screen.queryByText('Not included')).toBeNull()
+  const assessment = within(screen.getByRole('region', { name: en.result.whyHeading }))
+  expect(assessment.getByText(analysisFixture.reasoning)).toBeTruthy()
+  expect(assessment.getByText(analysisFixture.citations[0])).toBeTruthy()
+  expect(assessment.getByText(analysisFixture.suggestion!)).toBeTruthy()
+  expect(assessment.getByText(en.result.preliminaryEstimate)).toBeTruthy()
+  expect(assessment.getByText('€200.00')).toBeTruthy()
+  expect((document.querySelector('#co-additionalCost') as HTMLInputElement).value).toBe('175')
+  expect((document.querySelector('#co-estimatedHours') as HTMLInputElement).value).toBe('1.5')
+  expect((screen.getByLabelText(en.reply.editableLabel) as HTMLTextAreaElement).value).toBe('My edited reply')
 })
 
 it('renders legacy history safely without offering a nonexistent saved document', async () => {

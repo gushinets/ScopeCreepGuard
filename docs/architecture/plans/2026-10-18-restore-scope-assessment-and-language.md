@@ -38,3 +38,14 @@ for review; no remaining authorized implementation work.
 On 2026-10-18 the user separately requested a PR. Commit and push only the repair
 and its documentation on the existing repair branch, then open a PR against main.
 Preserve unrelated untracked documents and ignored local journals. No merge is authorized.
+
+## CI follow-up
+
+User requested fixing PR #29's frontend failure. Correct the remaining legacy
+draft reload assertion that hid saved reasoning; verify full assessment and
+separation from manual document terms after reopening. Draft suite: 18 passed.
+Full disposable frontend harness: 398 frontend tests and 20 Python HTTP contracts
+passed with a local two-worker concurrency limit after unrelated Windows gateway
+timeouts under default parallelism. Full frontend lint, API types and TypeScript
+passed. Only test/documentation changes; push to the existing PR branch, preserve
+all unrelated documents, no merge or application rebuild.
