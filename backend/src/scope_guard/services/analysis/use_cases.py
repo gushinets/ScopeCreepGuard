@@ -108,7 +108,7 @@ class GenerationUseCases:
         if (
             result.has_additional_work is True
             and context.currency
-            and result.change_order.currency != context.currency
+            and (result.change_order.currency if result.change_order else "") != context.currency
         ):
             result = replace(result, estimate_valid=False)
         result = replace(

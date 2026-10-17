@@ -51,7 +51,7 @@ def test_real_document_labels_pass_once_without_correction(language):
     store = RecordingStore()
     result = asyncio.run(run("change_order", facts(language), [order(language)], store))
     assert result["labels"] == order(language)["labels"]
-    assert len(store.calls) == 2 and not store.feedbacks
+    assert len(store.calls) == 1 and not store.feedbacks
 
 
 @pytest.mark.parametrize(
@@ -103,33 +103,27 @@ def test_duplicate_regeneration_corrects_only_reply_and_records_rejection(first)
             store,
         )
     )
-    assert value["text"] == revised
+    # Content novelty is diagnosed after publication, never a generator retry.
+    assert value["text"] == first
     assert source == saved
-    assert [c["request"].semantic_attempt for c in store.calls] == [1, 2, 1]
-    assert [c["request"].schema_name for c in store.calls] == [
-        "reply_v1",
-        "reply_v1",
-        "semantic_review_v1",
-    ]
-    assert store.calls[0]["rejected"]
-    feedback = json.dumps(store.calls[1]["request"].messages)
-    assert "text.unchanged_reply" in feedback and "new formulation" in feedback
+    assert len(store.calls) == 1 and not store.feedbacks
 
 
 def test_duplicate_exhaustion_is_bounded_and_preserves_frozen_materials():
     store, source = RecordingStore(), facts(action="regenerate")
     saved = deepcopy(source)
-    with pytest.raises(GatewayFailure, match="semanticAttemptsExhausted"):
-        asyncio.run(
-            run("reply", source, [{"scopePosition": "out_of_scope", "text": PROSE["en"]}], store)
-        )
-    assert source == saved and len(store.calls) == 3
-    assert all(c["rejected"] and c["response"].output_tokens == 50 for c in store.calls)
+    value = asyncio.run(
+        run("reply", source, [{"scopePosition": "out_of_scope", "text": PROSE["en"]}], store)
+    )
+    assert value["text"] == PROSE["en"]
+    assert source == saved and len(store.calls) == 1
+    assert not store.feedbacks
 
 
 @pytest.mark.parametrize("status", ["pending", "accepted"])
 @pytest.mark.parametrize(
-    "version", ["workflow-v1", "workflow-v2", "workflow-v3", "workflow-v4", "workflow-v5"]
+    "version",
+    ["workflow-v1", "workflow-v2", "workflow-v3", "workflow-v4", "workflow-v5", "workflow-v6"],
 )
 def test_old_prompt_version_fails_before_runner_or_accepted_output_reuse(status, version):
     class Store:
@@ -297,7 +291,7 @@ def test_large_unrelated_saved_material_does_not_consume_stage_input_budget(stag
         }
     )
     asyncio.run(run(stage, source, [candidate], store))
-    assert len(store.calls) == 2 and not store.feedbacks
+    assert len(store.calls) == 1 and not store.feedbacks
     payload = json.loads(
         next(m["content"] for m in store.calls[0]["request"].messages if m["role"] == "user")
     )

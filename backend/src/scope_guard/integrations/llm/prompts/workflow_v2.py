@@ -146,6 +146,13 @@ def stage_source(stage, facts):
         }
         if order:
             source["document"]["changeOrder"] = selected(order, commercial)
+    elif stage == "change_order" and facts.get("action") == "agreement":
+        source["document"] = {
+            "reply": selected(document["reply"], ("tone", "language", "text")),
+            "changeOrder": selected(
+                order or {}, (*commercial, "description", "timelineImpact", "additionalTerms")
+            ),
+        }
     elif stage == "estimate":
         source["document"] = {
             "changeOrder": selected(order or {}, (*commercial, "description", "timelineImpact"))

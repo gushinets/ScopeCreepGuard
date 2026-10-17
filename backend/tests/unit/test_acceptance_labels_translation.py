@@ -35,7 +35,7 @@ def test_non_catalog_native_labels_require_contextual_language_and_semantic_revi
     result = asyncio.run(run("change_order", source, [candidate], store))
     assert result["labels"] == labels
     assert "labels" in store.calls[0]["request"].schema["properties"]
-    assert len(store.calls) == 2 and not store.feedbacks
+    assert len(store.calls) == 1 and not store.feedbacks
 
 
 @pytest.mark.parametrize(
@@ -65,7 +65,7 @@ def test_catalog_stage_uses_label_free_schema_and_returns_complete_labels(langua
     result = asyncio.run(run("change_order", source, [candidate], store))
     assert result["labels"]
     assert "labels" not in store.calls[0]["request"].schema["properties"]
-    assert len(store.calls) == 2 and not store.feedbacks
+    assert len(store.calls) == 1 and not store.feedbacks
 
 
 def test_translation_d1_stale_estimate_is_rejected_and_faithful_text_passes():
@@ -179,4 +179,4 @@ def test_composed_catalog_introduction_does_not_assert_a_scope_verdict(
     result = asyncio.run(run("change_order", source, [candidate], store))
     # These are the same composed labels presented to semantic review and publication.
     assert forbidden not in result["labels"]["introduction"]
-    assert len(store.calls) == 2 and not store.feedbacks
+    assert len(store.calls) == 1 and not store.feedbacks

@@ -5,7 +5,7 @@ from dataclasses import replace
 from typing import Literal
 
 from babel.dates import get_month_names
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model, model_validator
 from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
@@ -210,7 +210,22 @@ class SemanticReviewer:
                     in ("estimatedHours", "additionalCost", "currency", "timelineImpact", "endDate")
                 }
             source["savedDecisions"] = saved
-        payload = {"source": source, "candidate": candidate, "stage": stage}
+        allowed = sorted(review_fields(candidate))
+        field_type = Literal[tuple(allowed)]
+        violation_type = create_model(
+            "AllowedViolation", __base__=Violation, field=(field_type, ...)
+        )
+        decision_type = create_model(
+            "AllowedReviewDecision",
+            __base__=ReviewDecision,
+            violations=(list[violation_type], Field(max_length=12)),
+        )
+        payload = {
+            "source": source,
+            "candidate": candidate,
+            "stage": stage,
+            "allowedFieldPaths": allowed,
+        }
         key = f"{stage}_review_{attempt}"
         record = next(
             (s for s in await self.store.steps(binding.operation_id) if s["stage_key"] == key), None
@@ -232,36 +247,44 @@ class SemanticReviewer:
                 decision = checked_decision(
                     ReviewDecision.model_validate_json(record["candidate"]), candidate
                 )
-                await self.store.accept(review_binding, decision.model_dump())
+                await self.store.accept(
+                    review_binding,
+                    {
+                        **decision.model_dump(),
+                        "violations": [
+                            {**v.model_dump(), "feedback": MESSAGES[v.rule]}
+                            for v in decision.violations
+                        ],
+                    },
+                )
             else:
                 if record["semantic_attempt"]:
-                    if record["transport_attempt"] >= 2:
-                        raise GatewayFailure("transportAttemptsExhausted")
-                    review_binding = replace(
-                        review_binding, transport_start=record["transport_attempt"]
-                    )
+                    raise GatewayFailure("diagnosticOutcomeUnknown")
                 agent = Agent(
                     model=GatewayResponsesModel(
                         self.gateway, review_binding, record.get("prepared_request")
                     ),
-                    output_type=NativeOutput(
-                        ReviewDecision, name="semantic_review_v1", strict=True
-                    ),
-                    instructions=REVIEW_RULES,
+                    output_type=NativeOutput(decision_type, name="semantic_review_v2", strict=True),
+                    instructions=REVIEW_RULES
+                    + "\nUse only these field paths, without a candidate. prefix: "
+                    + ", ".join(allowed),
                     retries={"output": 0},
                 )
                 result = await agent.run(encode(payload))
                 decision = checked_decision(result.output, candidate)
-                await self.store.accept(review_binding, decision.model_dump())
+                await self.store.accept(
+                    review_binding,
+                    {
+                        **decision.model_dump(),
+                        "violations": [
+                            {**v.model_dump(), "feedback": MESSAGES[v.rule]}
+                            for v in decision.violations
+                        ],
+                    },
+                )
         except (ValidationError, ValueError, UnexpectedModelBehavior):
             await self.store.feedback(
                 review_binding, {"rule": "review.structure: invalid semantic decision"}
             )
             raise GatewayFailure("providerOutputIncomplete") from None
-        if decision.decision != "accept":
-            # Never forward arbitrary model-authored instructions/source text to feedback logs.
-            raise ValueError(
-                "; ".join(f"{v.field}.{v.rule}: {MESSAGES[v.rule]}" for v in decision.violations)[
-                    :500
-                ]
-            )
+        return decision

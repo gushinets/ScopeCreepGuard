@@ -20,7 +20,7 @@ async def main():
         raise RuntimeError("Worker requires database configuration")
     if settings.worker_role == "llm":
         from scope_guard.database.repositories.llm import LlmSQLStore
-        from scope_guard.database.schema_verification import verify_llm_schema
+        from scope_guard.database.schema_verification import verify_nonblocking_schema
         from scope_guard.integrations.llm.gateway import ProviderGateway
         from scope_guard.integrations.llm.litellm_adapter import LiteLLMResponsesAdapter
         from scope_guard.integrations.llm.stages import StructuredStageRunner
@@ -29,7 +29,7 @@ async def main():
         if not settings.llm_workflow or not settings.workflow_v2 or not settings.openai_api_key:
             raise RuntimeError("LLM worker requires workflow flags and provider configuration")
         async with database.engine.begin() as connection:
-            await connection.run_sync(verify_llm_schema)
+            await connection.run_sync(verify_nonblocking_schema)
         store = LlmSQLStore(database.new_uow)
         adapter = LiteLLMResponsesAdapter(settings.openai_api_key.get_secret_value())
         worker = LlmWorker(

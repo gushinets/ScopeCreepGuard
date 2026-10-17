@@ -258,7 +258,7 @@ class EventRepository:
 
 async def llm_event(session, operation, phase, envelope=None):
     """One outcome per logical operation, independent of physical provider attempts."""
-    if not await profiles_supported(session):
+    if operation["kind"] in ("diagnostic", "agreement") or not await profiles_supported(session):
         return
     from scope_guard.database.repositories.workflow import WorkflowSQLRepository
 

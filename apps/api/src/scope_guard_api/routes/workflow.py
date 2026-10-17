@@ -137,6 +137,18 @@ async def run(identifier: UUID, owner: Owner, service: Service):
 
 
 @router.post(
+    "/drafts/{identifier}/agreement",
+    responses={202: {"model": PendingLlmOperation}},
+    response_model=DraftResponse,
+    response_model_exclude_unset=True,
+)
+async def prepare_agreement(
+    identifier: UUID, body: VersionedOperation, owner: Owner, service: Service, request: Request
+):
+    return await admit_response(request, UUID(owner["id"]), identifier, "agreement", body.to_wire())
+
+
+@router.post(
     "/drafts/{identifier}/estimate",
     responses={202: {"model": PendingLlmOperation}},
     response_model=AnalysisResponse,

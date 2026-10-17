@@ -9,6 +9,16 @@ def test_v2_requires_authentication_and_retires_unsafe_legacy_routes():
     app = create_app(Settings(_env_file=None, workflow_v2=True))
     with TestClient(app) as client:
         assert client.get("/api/v2/projects").status_code == 401
+        assert (
+            client.post(
+                "/api/v2/drafts/11111111-1111-4111-8111-111111111111/agreement",
+                json={
+                    "operationId": "22222222-2222-4222-8222-222222222222",
+                    "expectedRevision": "1",
+                },
+            ).status_code
+            == 401
+        )
         response = client.put("/api/drafts/11111111-1111-4111-8111-111111111111", json={})
         assert response.status_code == 426
         assert response.json()["error"] == "errors.clientUpgradeRequired"

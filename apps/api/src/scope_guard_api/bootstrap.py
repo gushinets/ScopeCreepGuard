@@ -108,12 +108,12 @@ def lifespan(settings):
         app.state.database = database
         try:
             if settings.llm_workflow:
-                from scope_guard.database.schema_verification import verify_llm_schema
+                from scope_guard.database.schema_verification import verify_nonblocking_schema
 
                 if database is None:
                     raise RuntimeError("LLM workflow requires the compatible database schema")
                 async with database.engine.begin() as connection:
-                    await connection.run_sync(verify_llm_schema)
+                    await connection.run_sync(verify_nonblocking_schema)
             yield
         finally:
             await app.state.generator.close()

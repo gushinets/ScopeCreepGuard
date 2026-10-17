@@ -1,5 +1,8 @@
 # Persistent Draft workflow — ANY-549
 
+Current LLM publication and agreement rules: [17 October nonblocking workflow](2026-10-17-nonblocking-llm-workflow.md). This supersedes older coupled material readiness and full-context classification-staleness descriptions below.
+
+
 PostgreSQL owns confirmed work and archives. `/api/v2` exposes versioned contracts;
 localStorage is an explicit recovery buffer for unconfirmed edits only. See the
 [approved implementation record](plans/2026-10-12-any-549-persistent-draft-workflow.md).

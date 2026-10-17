@@ -58,3 +58,9 @@ pairs without destructive migration reversal. Historical migration verification
 documents remain historical evidence; the application-boundaries record captures
 current verification. [ANY-549 workflow](draft-workflow.md) records current entity
 relationships, maintenance rollout, retention and external storage configuration.
+
+The [nonblocking LLM workflow](2026-10-17-nonblocking-llm-workflow.md) supersedes
+older content-rejection publication policy. Main checks publish analysis/replies
+and History independently; explicit agreement preparation and post-publication
+content diagnostics reuse the existing durable LLM worker and accounting tables.
+Matching 0007 API/worker/frontend rollout is operator-owned.

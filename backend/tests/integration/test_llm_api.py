@@ -25,6 +25,8 @@ def test_admission_status_is_read_only_and_legacy_requires_stable_owned_context(
                 "('api-llm@example.test','hash') RETURNING id"
             )
         )
+        migrate(connection, target="head")
+
     app = create_app(
         Settings(
             _env_file=None,

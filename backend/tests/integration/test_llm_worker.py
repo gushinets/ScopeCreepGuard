@@ -19,7 +19,7 @@ from scope_guard.services.llm.worker import LlmWorker
 pytestmark = pytest.mark.integration
 
 
-@pytest.mark.parametrize("target", ["0005_llm_workflow", "head"])
+@pytest.mark.parametrize("target", ["0007_nonblocking_llm", "head"])
 def test_worker_publishes_once_and_preserves_late_edit(disposable_url, target):
     engine = create_engine(normalize_url(disposable_url))
     with engine.begin() as connection:
@@ -82,6 +82,9 @@ def test_worker_publishes_once_and_preserves_late_edit(disposable_url, target):
         stages = []
 
         class Runner:
+            async def diagnose(self, operation):
+                await store.finish_diagnostics(operation)
+
             async def run(self, binding, stage, facts, record):
                 stages.append(stage)
                 if stage == "reply":
@@ -132,11 +135,12 @@ def test_worker_publishes_once_and_preserves_late_edit(disposable_url, target):
         assert await worker.process_one()
         status = await operations.status(owner, UUID(pending["operationId"]))
         assert status["status"] == "succeeded"
-        assert set(stages) == {"analysis", "replies", "change_order"}
+        assert set(stages) == {"analysis", "replies"}
         assert status["result"]["applied"] is True
         histories = await workflow.histories(owner, UUID(project["id"]))
         assert len(histories) == 1
-        assert not await worker.process_one()
+        # A separate queued diagnostic job does not change user-operation status.
+        assert await worker.process_one()
         assert (await operations.admit(owner, draft_id, "check", command))[
             "operationId"
         ] == pending["operationId"]
@@ -205,7 +209,7 @@ def test_worker_publishes_once_and_preserves_late_edit(disposable_url, target):
                     == 2
                 )
                 assert await work.session.scalar(text("SELECT count(*) FROM evaluation_cases")) == 1
-            for kind in ("regenerate", "translate", "estimate"):
+            for kind in ("agreement", "regenerate", "translate", "estimate"):
                 latest = await workflow.draft(owner, draft_id)
                 admitted = await operations.admit(
                     owner,
@@ -244,7 +248,9 @@ def test_worker_publishes_once_and_preserves_late_edit(disposable_url, target):
                 assert metrics["regeneration_succeeded"] == 1
                 assert metrics["translation_succeeded"] == 1
                 assert metrics["estimate_succeeded"] == 1
-                assert metrics["operations_succeeded"] == 5
+                assert (
+                    metrics["operations_succeeded"] == 6
+                )  # includes the explicit agreement command
         await database.close()
 
     asyncio.run(exercise())

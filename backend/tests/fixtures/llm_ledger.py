@@ -40,6 +40,13 @@ class ReviewLedger:
         step["input_hash"] = input_hash
 
     async def reserve(self, request, transport_attempt):
+        step = next((r for r in self.records.values() if r["id"] == request.binding.step_id), None)
+        if step:
+            step.update(
+                status="running",
+                semantic_attempt=request.semantic_attempt,
+                transport_attempt=transport_attempt,
+            )
         self.calls.append({"request": request, "transport": transport_attempt})
         return len(self.calls) - 1
 

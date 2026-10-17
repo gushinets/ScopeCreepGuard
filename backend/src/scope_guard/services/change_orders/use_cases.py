@@ -43,7 +43,10 @@ class EstimateChangeOrder:
         )
         if result.verdict == "in_scope" or result.has_additional_work is not True:
             raise GenerationError("analysisInvalid", 409)
-        if result.estimate_valid is not True or result.change_order.currency != context.currency:
+        if (
+            result.estimate_valid is not True
+            or (result.change_order.currency if result.change_order else "") != context.currency
+        ):
             raise GenerationError("analysisInvalid", 502)
         return EstimateOutcome(
             replace(

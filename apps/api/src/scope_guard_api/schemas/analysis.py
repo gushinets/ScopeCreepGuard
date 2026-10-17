@@ -47,6 +47,12 @@ class AnalysisChangeOrder(WireModel):
         return value.strip()
 
 
+class PreliminaryEstimate(WireModel):
+    estimated_hours: Annotated[float, Field(strict=True, ge=0, allow_inf_nan=False)]
+    additional_cost: Annotated[StrictStr, Field(pattern=r"^\d+(?:\.\d{1,2})?$")]
+    currency: Currency | Literal[""]
+
+
 class AnalysisSnapshot(WireModel):
     verdict: Verdict
     confidence: Annotated[StrictInt, Field(ge=0, le=100)]
@@ -55,7 +61,8 @@ class AnalysisSnapshot(WireModel):
     citations: list[StrictStr]
     suggestion: StrictStr | None = None
     replies: AnalysisReplies
-    change_order: AnalysisChangeOrder
+    change_order: AnalysisChangeOrder | None
+    estimate: PreliminaryEstimate | None = None
     has_additional_work: StrictBool | None = None
     request_language: Literal["ru", "en", "es", "other"] | None = None
     client_language: StrictStr | None = None
@@ -113,6 +120,7 @@ class AnalysisSnapshot(WireModel):
         if (
             self.client_language
             and self.client_language.split("-")[0] not in {"ru", "en", "es"}
+            and self.change_order is not None
             and not self.change_order_labels
         ):
             raise ValueError("labels_required")

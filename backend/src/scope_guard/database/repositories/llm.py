@@ -1,7 +1,10 @@
 """Short independent transactions for execution, fencing, and attempt accounting."""
 
 import json
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
+from uuid import UUID, uuid5
 
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
@@ -95,7 +98,8 @@ class LlmSQLStore:
             row = await one(
                 work,
                 "SELECT * FROM llm_operations WHERE status='queued' OR "
-                "(status='running' AND lease_expires_at<=now()) ORDER BY created_at,id "
+                "(status='running' AND lease_expires_at<=now()) ORDER BY "
+                "(kind='diagnostic'),created_at,id "
                 "LIMIT 1 FOR UPDATE SKIP LOCKED",
             )
             if row:
@@ -431,6 +435,21 @@ class LlmSQLStore:
             work.session.info["marketing_metrics_dirty"] = True
             await work.commit()
 
+    async def finish_diagnostics(self, operation):
+        async with self.factory() as work:
+            await self.owned(
+                work,
+                SimpleNamespace(operation_id=operation["id"], epoch=operation["epoch"]),
+            )
+            await work.session.execute(
+                text(
+                    "UPDATE llm_operations SET status='succeeded',result='{}'::jsonb,"
+                    "finished_at=now(),lease_expires_at=NULL WHERE id=:id AND epoch=:epoch"
+                ),
+                {"id": operation["id"], "epoch": operation["epoch"]},
+            )
+            await work.commit()
+
     async def fail(self, identifier, epoch, code, status=502):
         async with self.factory() as work:
             rule = await one(
@@ -491,7 +510,8 @@ class LlmSQLStore:
                 (
                     await work.session.execute(
                         text(
-                            "SELECT o.* FROM llm_operations o WHERE o.status='failed' "
+                            "SELECT o.* FROM llm_operations o WHERE o.status='failed' AND "
+                            "o.kind<>'diagnostic' "
                             "AND NOT EXISTS "
                             "(SELECT 1 FROM activity_events e WHERE e.project_id=o.project_id "
                             "AND e.operation_id=o.command_key AND e.event_type IN "
@@ -549,6 +569,79 @@ class LlmTransactionRepository:
             {"id": operation["id"], "epoch": operation["epoch"], "result": encode(envelope)},
         )
         await llm_event(self.session, operation, "completed", envelope)
+        if operation["kind"] != "diagnostic":
+            await self.enqueue_diagnostics(operation)
+
+    async def active_agreement(self, owner, draft):
+        return await one(
+            self,
+            "SELECT * FROM llm_operations WHERE owner_id=:owner AND draft_id=:draft "
+            "AND kind='agreement' AND status IN ('queued','running') ORDER BY created_at LIMIT 1",
+            {"owner": owner, "draft": draft},
+        )
+
+    async def restore_existing(self, operation, envelope):
+        await self.session.execute(
+            text(
+                "UPDATE llm_operations SET status='succeeded',result=CAST(:result AS "
+                "jsonb),error=NULL WHERE id=:id"
+            ),
+            {"id": operation["id"], "result": encode(envelope)},
+        )
+
+    async def enqueue_diagnostics(self, operation):
+        # Same commit as user publication; replay cannot create another review job.
+        parent = await one(
+            self, "SELECT * FROM llm_operations WHERE id=:id", {"id": operation["id"]}
+        )
+        stages = (
+            (
+                await self.session.execute(
+                    text(
+                        "SELECT stage_key FROM llm_steps WHERE operation_id=:id AND "
+                        "status='accepted' "
+                        "ORDER BY stage_key"
+                    ),
+                    {"id": operation["id"]},
+                )
+            )
+            .scalars()
+            .all()
+        )
+        timestamp = datetime.now(UTC)
+        policy = dict(parent["policy"])
+        policy["maxCost"] = str(
+            max(Decimal(0), Decimal(policy["maxCost"]) - parent["spent"] - parent["reserved"])
+        )
+        policy["maxCalls"] = min(len(stages), max(0, policy["maxCalls"] - parent["physical_calls"]))
+        frozen = {"parentId": str(parent["id"]), "contract": "diagnostics-v1"}
+        command = uuid5(
+            UUID("66366366-3663-4663-8663-663663663663"), str(parent["id"]) + ":diagnostics"
+        )
+        values = {
+            "owner": parent["owner_id"],
+            "project": parent["project_id"],
+            "draft": parent["draft_id"],
+            "revision": parent["source_revision"],
+            "run": parent["analysis_run_id"],
+            "kind": "diagnostic",
+            "key": command,
+            "hash": digest(frozen),
+            "input": encode(frozen),
+            "input_hash": digest(frozen),
+            "policy": encode(policy),
+            "status": "queued",
+            "error": None,
+            "deadline": timestamp + timedelta(seconds=180),
+            "finished": None,
+        }
+        if not await self.prior(parent["owner_id"], parent["project_id"], command):
+            await self.insert(
+                values,
+                tuple(
+                    key for stage in stages for key in (stage + "_diagnostic", stage + "_review_1")
+                ),
+            )
 
     async def prior(self, owner, project, command):
         return await one(

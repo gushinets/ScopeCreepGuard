@@ -54,7 +54,7 @@ function changeOrder(endDate: string): EditableDraft {
     providerName: '', clientName: '', clientEmail: '', endDate, additionalTerms: '', clientApproverName: '', approvalDate: '', noAdditionalCharge: false }
 }
 
-it.each(['2027-02-01', ''])('restores current persisted estimate provenance for deadline %j, but warns after another edit', async edited => {
+it.each(['2027-02-01', ''])('restores current persisted estimate provenance for deadline %j, without forcing regeneration after another edit', async edited => {
   analyzedDraft()
   saved.analysisRun!.resultSnapshot!.verdict = 'out_of_scope'
   saved.analysisRun!.resultSnapshot!.estimateValid = true
@@ -74,7 +74,7 @@ it.each(['2027-02-01', ''])('restores current persisted estimate provenance for 
   await waitFor(() => expect(reopened.result.current.isLoadingProjects).toBe(false))
   expect(screen.queryByRole('button', { name: en.result.createChangeOrder })).toBeNull()
   act(() => reopened.result.current.updateChangeOrder({ ...reopened.result.current.draftDocument!.changeOrder!, endDate: '2028-03-01' }))
-  await waitFor(() => expect(screen.queryByRole('button', { name: en.result.createChangeOrder })).not.toBeNull())
+  await waitFor(() => expect(screen.queryByRole('button', { name: en.result.prepareAgreement })).toBeNull())
   expect(saved.analysisRun!.resultSnapshot).toEqual(original)
 })
 

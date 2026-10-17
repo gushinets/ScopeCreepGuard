@@ -112,6 +112,9 @@ class LlmWorker:
     async def execute(self, operation):
         if digest(operation["frozen_input"]) != operation["input_hash"]:
             raise GatewayFailure("workflowVersionUnavailable")
+        if operation["kind"] == "diagnostic":
+            await self.runner.diagnose(operation)
+            return
         facts = deepcopy(operation["frozen_input"])
         kind = operation["kind"]
         if kind in ("check", "estimate"):
@@ -126,7 +129,7 @@ class LlmWorker:
         if kind == "check":
             analysis = await self.stage(operation, "analysis", facts)
             facts["analysis"] = analysis
-            replies, order = await self.material_stages(operation, facts)
+            replies = await self.stage(operation, "replies", facts)
             result = {
                 k: v
                 for k, v in analysis.items()
@@ -135,11 +138,8 @@ class LlmWorker:
             result.update(
                 replies={k: replies[k] for k in ("warm", "neutral", "firm")},
                 clientLanguage=facts["selection"]["selectedLanguage"],
-                changeOrderLabels=order["labels"],
-                changeOrder={
-                    **{k: order[k] for k in ("description", "timelineImpact", "rationale", "note")},
-                    **{k: analysis[k] for k in ("estimatedHours", "additionalCost", "currency")},
-                },
+                changeOrder=None,
+                estimate={k: analysis[k] for k in ("estimatedHours", "additionalCost", "currency")},
             )
             project = facts["project"]
             result["commercialSignature"] = commercial_signature(
@@ -155,8 +155,6 @@ class LlmWorker:
                 result, project, result["clientLanguage"], facts["createdAt"]
             )
             document["languageSelection"] = facts["selection"]
-            if document["changeOrder"]:
-                document["changeOrder"]["additionalTerms"] = order["additionalTerms"]
             await self.publish_check(operation, result, document)
         else:
             document = facts["document"]
@@ -165,6 +163,41 @@ class LlmWorker:
                 reply = document["reply"]
                 reply["text"] = variant["text"]
                 reply["generated"][reply["tone"]] = variant["text"]
+            elif kind == "agreement":
+                if document.get("changeOrder") is None:
+                    if facts.get("prepareEstimate"):
+                        estimate = await self.stage(operation, "estimate", facts)
+                        facts["analysis"].update(
+                            {
+                                k: estimate[k]
+                                for k in ("estimatedHours", "additionalCost", "currency")
+                            }
+                        )
+                    order = await self.stage(operation, "change_order", facts)
+                    source = {
+                        **facts["analysis"],
+                        "replies": document["reply"]["generated"],
+                        "changeOrderLabels": order["labels"],
+                        "changeOrder": {
+                            **{
+                                k: order[k]
+                                for k in ("description", "timelineImpact", "rationale", "note")
+                            },
+                            **{
+                                k: facts["analysis"].get(k, "")
+                                for k in ("estimatedHours", "additionalCost", "currency")
+                            },
+                        },
+                    }
+                    # Explicit preparation is allowed for every verdict.
+                    document["changeOrder"] = formed_document(
+                        source,
+                        facts["project"],
+                        document["reply"]["language"],
+                        facts["createdAt"],
+                        explicit=True,
+                    )["changeOrder"]
+                    document["changeOrder"]["additionalTerms"] = order["additionalTerms"]
             elif kind == "translate":
                 replies, order = await self.material_stages(operation, facts)
                 reply = document["reply"]
@@ -221,10 +254,15 @@ class LlmWorker:
         # Await cancellation/accounting of both children before releasing ownership.
         tasks = [
             asyncio.create_task(self.stage(operation, stage, facts))
-            for stage in ("replies", "change_order")
+            for stage in (
+                ("replies", "change_order")
+                if facts["document"].get("changeOrder")
+                else ("replies",)
+            )
         ]
         try:
-            return await asyncio.gather(*tasks)
+            values = await asyncio.gather(*tasks)
+            return (values[0], values[1] if len(values) > 1 else None)
         except BaseException:
             for task in tasks:
                 task.cancel()
@@ -309,7 +347,11 @@ class LlmWorker:
                 uuid5(NAMESPACE, str(operation["id"]) + ":edit"),
                 operation["request_hash"],
                 {"draftDocument": document},
-                "language_change" if operation["kind"] == "translate" else "regenerate",
+                "language_change"
+                if operation["kind"] == "translate"
+                else "change_order_edit"
+                if operation["kind"] == "agreement"
+                else "regenerate",
                 context(project),
             )
             saved["analysisRun"] = await work.workflow.run(
@@ -326,7 +368,7 @@ class LlmWorker:
                     commercialSignature=document["estimate"]["commercialSignature"],
                 )
                 source["changeOrder"] = {
-                    **source["changeOrder"],
+                    **(source.get("changeOrder") or {}),
                     **{
                         k: estimate[k]
                         for k in ("estimatedHours", "additionalCost", "currency", "rationale")

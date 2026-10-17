@@ -41,6 +41,8 @@ def test_complete_check_atomic_refresh_and_actual_d1_translation(disposable_url,
             )
         )
 
+        migrate(connection, target="head")
+
     async def exercise():
         database = Database(normalize_url(disposable_url))
 
@@ -140,7 +142,8 @@ def test_complete_check_atomic_refresh_and_actual_d1_translation(disposable_url,
 
         checked = await operate("check", locale="en")
         assert checked["status"] == "succeeded", checked["error"]
-        assert len(wire) == 5
+        assert len(wire) == 2
+        assert (await operate("agreement"))["status"] == "succeeded"
         baseline = (await workflow.draft(owner, draft_id))["draftDocument"]
         assert baseline["changeOrder"]["changeOrderLabels"]
         assert len(await workflow.histories(owner, project_id)) == 1
@@ -215,17 +218,21 @@ def test_complete_check_atomic_refresh_and_actual_d1_translation(disposable_url,
             "USD",
             "2.5",
         )
-        assert order["description"] == D1["candidates"][1]["description"]
-        assert order["timelineImpact"] == "3 business days after approval"
-        assert co_attempts == 2
+        assert order["description"] == D1["candidates"][0]["description"]
+        assert order["timelineImpact"] == D1["candidates"][0]["timelineImpact"]
+        assert co_attempts == 1
         assert len(await workflow.histories(owner, project_id)) == 1
         before = deepcopy(reloaded)
         mode = "bad_schedule"
         rejected = await operate("translate", language="es")
-        assert rejected["status"] == "failed"
-        assert (await workflow.draft(owner, draft_id))["draftDocument"] == before["draftDocument"]
-        assert (await workflow.draft(owner, draft_id))["revision"] == before["revision"]
-        assert "timeline_commitment" in str(rejected["error"])
+        assert rejected["status"] == "succeeded"
+        assert (await workflow.draft(owner, draft_id))["draftDocument"]["changeOrder"][
+            "timelineImpact"
+        ] == "3 días naturales después de la aprobación"
+        assert (
+            int((await workflow.draft(owner, draft_id))["revision"]) == int(before["revision"]) + 1
+        )
+        assert rejected["error"] is None
         await adapter.close()
         await database.close()
 

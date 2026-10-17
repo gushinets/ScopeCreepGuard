@@ -547,6 +547,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/drafts/{identifier}/agreement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prepare Agreement */
+        post: operations["prepare_agreement_api_v2_drafts__identifier__agreement_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/drafts/{identifier}/estimate": {
         parameters: {
             query?: never;
@@ -1049,7 +1066,8 @@ export interface components {
             /** Suggestion */
             suggestion?: string | null;
             replies: components["schemas"]["AnalysisReplies"];
-            changeOrder: components["schemas"]["AnalysisChangeOrder"];
+            changeOrder: components["schemas"]["AnalysisChangeOrder"] | null;
+            estimate?: components["schemas"]["PreliminaryEstimate"] | null;
             /** Hasadditionalwork */
             hasAdditionalWork?: boolean | null;
             /** Requestlanguage */
@@ -1578,6 +1596,15 @@ export interface components {
              * Format: date-time
              */
             deadlineAt: string;
+        };
+        /** PreliminaryEstimate */
+        PreliminaryEstimate: {
+            /** Estimatedhours */
+            estimatedHours: number;
+            /** Additionalcost */
+            additionalCost: string;
+            /** Currency */
+            currency: components["schemas"]["Currency"] | "";
         };
         /**
          * PricingModel
@@ -4153,7 +4180,6 @@ export interface operations {
                                 /** Firm */
                                 firm: string;
                             };
-                            /** AnalysisChangeOrder */
                             changeOrder: {
                                 /** Description */
                                 description: string;
@@ -4169,7 +4195,15 @@ export interface operations {
                                 currency?: ("RUB" | "USD" | "EUR") | "" | null;
                                 /** Rationale */
                                 rationale?: string | null;
-                            };
+                            } | null;
+                            estimate?: {
+                                /** Estimatedhours */
+                                estimatedHours: number;
+                                /** Additionalcost */
+                                additionalCost: string;
+                                /** Currency */
+                                currency: ("RUB" | "USD" | "EUR") | "";
+                            } | null;
                             /** Hasadditionalwork */
                             hasAdditionalWork?: boolean | null;
                             /** Requestlanguage */
@@ -4630,7 +4664,6 @@ export interface operations {
                                 /** Firm */
                                 firm: string;
                             };
-                            /** AnalysisChangeOrder */
                             changeOrder: {
                                 /** Description */
                                 description: string;
@@ -4646,7 +4679,15 @@ export interface operations {
                                 currency?: ("RUB" | "USD" | "EUR") | "" | null;
                                 /** Rationale */
                                 rationale?: string | null;
-                            };
+                            } | null;
+                            estimate?: {
+                                /** Estimatedhours */
+                                estimatedHours: number;
+                                /** Additionalcost */
+                                additionalCost: string;
+                                /** Currency */
+                                currency: ("RUB" | "USD" | "EUR") | "";
+                            } | null;
                             /** Hasadditionalwork */
                             hasAdditionalWork?: boolean | null;
                             /** Requestlanguage */
@@ -5762,6 +5803,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    prepare_agreement_api_v2_drafts__identifier__agreement_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionedOperation"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["scope_guard_api__schemas__workflow__DraftResponse"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingLlmOperation"];
                 };
             };
             /** @description Validation Error */

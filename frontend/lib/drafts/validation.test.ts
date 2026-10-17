@@ -11,7 +11,7 @@ describe('draft validation', () => {
       idempotencyKey: '10000000-0000-4000-8000-000000000002',
       analysisSnapshot: { ...analysisFixture, replies: { warm: 'Forged', neutral: 'Forged', firm: 'Forged' } }, draftDocument: documentFixture,
     }, claims)
-    expect(input.analysisSnapshot.changeOrder.additionalCost).toBe('200')
+    expect(input.analysisSnapshot.changeOrder!.additionalCost).toBe('200')
     expect(input.analysisSnapshot.draftCreatedAt).toBe('2026-10-06T12:00:00.000Z')
     expect(input.draftDocument.changeOrder?.additionalCost).toBe('175')
     expect(input.draftDocument.reply.text).toBe('My edited reply')

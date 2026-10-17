@@ -234,7 +234,7 @@ def analysis_matches(run: dict | None, request: str, context: dict) -> bool:
         and run.get("status") == "succeeded"
         and run.get("projectSnapshot") is not None
         and run.get("requestText") == request
-        and run["projectSnapshot"] == context
+        and all(run["projectSnapshot"].get(f) == context.get(f) for f in ("scope", "industry"))
     )
 
 

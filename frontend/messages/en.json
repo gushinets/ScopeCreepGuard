@@ -132,6 +132,8 @@
     "fromScope": "From your saved scope",
     "verifyWarning": "This is an AI-assisted assessment, not a legal or final decision. Review it before you reply to your client.",
     "draftChangeOrderAnyway": "Draft a change order anyway",
+    "refreshEstimate": "Update estimate",
+    "prepareAgreement": "Prepare agreement",
     "createChangeOrder": "Create Change Order",
     "completeProjectTerms": "Complete project terms to create Change Order",
     "generatingChangeOrder": "Preparing Change Order…",

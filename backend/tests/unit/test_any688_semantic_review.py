@@ -11,6 +11,7 @@ from fixtures.llm_review import PROSE, facts
 
 from scope_guard.domain.llm.runtime import Binding, GatewayFailure, ProviderResponse
 from scope_guard.integrations.llm.gateway import ProviderGateway
+from scope_guard.integrations.llm.semantic_review import SemanticReviewer
 from scope_guard.integrations.llm.stages import StructuredStageRunner
 
 
@@ -22,7 +23,7 @@ async def exercise(bad, rule, *, exhaust=False, decision=None, source=None):
 
     class Adapter:
         async def request(self, request, timeout):
-            if request.schema_name == "semantic_review_v1":
+            if request.schema_name == "semantic_review_v2":
                 payload = json.loads(request.messages[-1]["content"])
                 invalid = payload["candidate"]["text"] == bad
                 value = (
@@ -69,6 +70,8 @@ async def exercise(bad, rule, *, exhaust=False, decision=None, source=None):
     saved = deepcopy(source)
     try:
         value = await runner.run(binding, "reply", source, {})
+        # A separate diagnostic phase sees the published candidate, without repairs.
+        await SemanticReviewer(runner.gateway, store).review(binding, "reply", source, value, 1)
         return value, store, saved, source
     except GatewayFailure as error:
         error.store, error.source, error.saved = store, source, saved
@@ -93,28 +96,18 @@ async def exercise(bad, rule, *, exhaust=False, decision=None, source=None):
 )
 def test_actual_candidate_rejection_corrects_only_reply_and_accounts_review(bad, rule):
     value, store, saved, source = asyncio.run(exercise(bad, rule))
-    assert value["text"] != bad
-    assert source == saved
-    assert len(store.calls) == 4
-    assert [c["request"].schema_name for c in store.calls] == [
-        "reply_v1",
-        "semantic_review_v1",
-        "reply_v1",
-        "semantic_review_v1",
-    ]
-    assert store.calls[0]["rejected"]
+    assert value["text"] == bad and source == saved
+    assert len(store.calls) == 2
+    assert [c["request"].schema_name for c in store.calls] == ["reply_v1", "semantic_review_v2"]
+    assert not store.calls[0].get("rejected")
     assert all(c["response"].input_tokens == 100 for c in store.calls)
-    assert rule in json.dumps(store.calls[2]["request"].messages)
 
 
 def test_rejected_review_exhaustion_preserves_saved_manual_materials():
     bad = "We can complete the additional work next week under the existing agreement."
-    with pytest.raises(GatewayFailure, match="semanticAttemptsExhausted") as caught:
-        asyncio.run(exercise(bad, "timeline_commitment", exhaust=True))
-    error = caught.value
-    assert error.source == error.saved
-    assert len(error.store.calls) == 6
-    assert sum(bool(c.get("rejected")) for c in error.store.calls) == 3
+    value, store, saved, source = asyncio.run(exercise(bad, "timeline_commitment", exhaust=True))
+    assert value["text"] == bad and source == saved
+    assert len(store.calls) == 2 and not store.calls[0].get("rejected")
 
 
 @pytest.mark.parametrize(
@@ -158,8 +151,8 @@ def test_localized_absolute_relative_promises_use_frozen_context_and_correct(loc
     source = facts(language, action="regenerate")
     source["locale"] = locale
     result, store, saved, current = asyncio.run(exercise(bad, "timeline_commitment", source=source))
-    assert result["text"] != bad and current == saved
-    assert len(store.calls) == 4
+    assert result["text"] == bad and current == saved
+    assert len(store.calls) == 2
 
 
 @pytest.mark.parametrize(
@@ -180,7 +173,7 @@ def test_actual_scope_claims_are_reviewed_for_every_verdict(verdict, bad):
     source = facts(action="regenerate")
     source["analysis"]["verdict"] = verdict
     result, store, _, _ = asyncio.run(exercise(bad, "scope_position", source=source))
-    assert result["text"] != bad and len(store.calls) == 4
+    assert result["text"] == bad and len(store.calls) == 2
     payload = json.loads(store.calls[1]["request"].messages[-1]["content"])
     assert payload["source"]["analysis"]["verdict"] == verdict
 
@@ -205,7 +198,7 @@ def test_localized_free_work_reversal_is_corrected(locale, language, bad):
     source = facts(language, action="regenerate")
     source["locale"] = locale
     result, store, _, _ = asyncio.run(exercise(bad, "scope_position", source=source))
-    assert result["text"] != bad and len(store.calls) == 4
+    assert result["text"] == bad and len(store.calls) == 2
 
 
 def test_saved_decisions_and_candidate_injection_are_untrusted_review_data():
@@ -259,13 +252,11 @@ def test_uncertain_review_corrects_or_exhausts_with_every_call_accounted():
         "decision": "uncertain",
         "violations": [{"field": "text", "rule": "uncertain", "feedback": "Insufficient support."}],
     }
-    with pytest.raises(GatewayFailure, match="semanticAttemptsExhausted") as caught:
-        asyncio.run(
-            exercise(PROSE["en"] + " Please review the proposal.", "uncertain", decision=decision)
-        )
-    assert len(caught.value.store.calls) == 6
-    assert all(c["response"].output_tokens == 50 for c in caught.value.store.calls)
-    assert caught.value.source == caught.value.saved
+    candidate = PROSE["en"] + " Please review the proposal."
+    value, store, saved, source = asyncio.run(exercise(candidate, "uncertain", decision=decision))
+    assert value["text"] == candidate and source == saved
+    assert len(store.calls) == 2
+    assert all(c["response"].output_tokens == 50 for c in store.calls)
 
 
 def test_review_timeout_retains_uncertain_attempts_without_accepting_materials():
@@ -287,5 +278,10 @@ def test_review_timeout_retains_uncertain_attempts_without_accepting_materials()
         assert len(store.calls) == 2
         assert all(c["error"]["uncertain"] for c in store.calls)
         assert all(r["status"] != "accepted" for r in store.records.values())
+        with pytest.raises(GatewayFailure, match="diagnosticOutcomeUnknown"):
+            await SemanticReviewer(gateway, store).review(
+                binding, "reply", facts(), {"scopePosition": "out_of_scope", "text": PROSE["en"]}, 1
+            )
+        assert len(store.calls) == 2
 
     asyncio.run(run())

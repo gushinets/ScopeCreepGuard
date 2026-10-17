@@ -9,7 +9,7 @@ from typing import Literal
 
 from babel.units import format_unit
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
-from pydantic_ai import Agent, ModelRetry, NativeOutput
+from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from scope_guard.domain.llm.runtime import GatewayFailure
@@ -22,7 +22,6 @@ from scope_guard.integrations.llm.preservation import (
 from scope_guard.integrations.llm.prompts.workflow_v2 import stage_prompt
 from scope_guard.integrations.llm.pydanticai_model import GatewayResponsesModel
 from scope_guard.integrations.llm.semantic_review import (
-    SemanticReviewer,
     cosmetic_reply,
     without_schedule,
 )
@@ -106,7 +105,7 @@ class ChangeOrderStage(ChangeOrderProseStage):
 
 class EstimateStage(StrictStage):
     scopePosition: Position
-    estimatedHours: float = Field(gt=0, le=10000)
+    estimatedHours: float = Field(ge=0, le=10000)
     additionalCost: str = Field(pattern=r"^\d+(?:\.\d{1,2})?$")
     currency: Literal["RUB", "USD", "EUR"]
     rationale: str = Field(min_length=1)
@@ -253,7 +252,7 @@ def validate_text(
         value = re.sub(r"^\s*\d+[.)]\s+", "", value)
         prose = re.sub(r"^\s*\d+[.)]\s+", "", prose)
     accepted = facts.get("analysis") or {}
-    terms = accepted.get("changeOrder", accepted)
+    terms = accepted.get("changeOrder") or accepted.get("estimate") or accepted
     saved_order = facts.get("document", {}).get("changeOrder") or {}
     allowed_terms = {
         k: terms.get(k) for k in ("estimatedHours", "additionalCost", "currency", "timelineImpact")
@@ -403,7 +402,11 @@ def prompt(stage, facts):
 class StructuredStageRunner:
     def __init__(self, gateway, store):
         self.gateway, self.store = gateway, store
-        self.reviewer = SemanticReviewer(gateway, store)
+
+    async def diagnose(self, operation):
+        from scope_guard.integrations.llm.diagnostics import execute_diagnostics
+
+        await execute_diagnostics(self, operation)
 
     async def run(self, binding, stage, facts, record):
         schema = TYPES[stage]
@@ -422,8 +425,7 @@ class StructuredStageRunner:
         if record.get("candidate"):
             try:
                 value = schema.model_validate_json(record["candidate"])
-                raw = validate_stage(stage, compose(value), facts, reviewed_labels=labels is None)
-                await self.reviewer.review(binding, stage, facts, raw, record["semantic_attempt"])
+                raw = compose(value)
                 return raw
             except (ValueError, TypeError) as error:
                 message = (
@@ -450,17 +452,6 @@ class StructuredStageRunner:
             instructions=instructions,
             retries={"output": remaining - 1},
         )
-
-        @agent.output_validator
-        async def validator(data):
-            try:
-                raw = validate_stage(stage, compose(data), facts, reviewed_labels=labels is None)
-                await self.reviewer.review(binding, stage, facts, raw, model.semantic)
-            except ValueError as error:
-                message = str(error)
-                await self.store.feedback(binding, {"rule": message})
-                raise ModelRetry(message) from error
-            return data
 
         try:
             result = await agent.run(user)

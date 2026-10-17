@@ -386,6 +386,14 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
       },
       discardRecovery: () => { localStorage.removeItem(recoverySource.current); setRecovery(null) },
       resolveConflict, complete, retrySave, regenerate,
+      prepareAgreement: async () => {
+        const applied = await applyAction(async saved => {
+          if (saved.draftDocument.changeOrder) return saved
+          const response = await operations.current.run<{ draft: WorkingDraft }>(`drafts/${saved.id}/agreement`, { expectedRevision: saved.revision })
+          return response.draft
+        })
+        if (!applied) throw new WorkflowApiError(ERROR_CODES.draftConflict, 409)
+      },
       compareConflict: async () => {
         const draft = controller.current ? (await workflowApi<{ draft: WorkingDraft }>(`drafts/${controller.current.confirmed.id}`)).draft : null
         reviewedConflict.current = draft
