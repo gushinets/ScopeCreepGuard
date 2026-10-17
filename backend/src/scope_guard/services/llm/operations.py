@@ -145,14 +145,25 @@ class LlmOperations:
                         for f in ("pricingModel", "hourlyRate", "fixedPrice", "currency")
                     )
                 )
-                if frozen["prepareEstimate"]:
-                    frozen["project"] = {
-                        **frozen["project"],
-                        **{
-                            f: project.get(f)
-                            for f in ("pricingModel", "hourlyRate", "fixedPrice", "currency")
-                        },
-                    }
+                # A new agreement uses current accepted document inputs while its
+                # classification context remains the original scope and industry.
+                frozen["project"] = {
+                    **frozen["project"],
+                    **{
+                        f: project.get(f)
+                        for f in (
+                            "name",
+                            "clientName",
+                            "clientEmail",
+                            "startDate",
+                            "endDate",
+                            "pricingModel",
+                            "hourlyRate",
+                            "fixedPrice",
+                            "currency",
+                        )
+                    },
+                }
             selection["requestHash"] = digest(draft["requestText"])
             error = None
             if not self.policy.get("inputRate") or not self.policy.get("outputRate"):

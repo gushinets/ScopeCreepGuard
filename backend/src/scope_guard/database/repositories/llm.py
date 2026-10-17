@@ -613,7 +613,10 @@ class LlmTransactionRepository:
         policy["maxCost"] = str(
             max(Decimal(0), Decimal(policy["maxCost"]) - parent["spent"] - parent["reserved"])
         )
-        policy["maxCalls"] = min(len(stages), max(0, policy["maxCalls"] - parent["physical_calls"]))
+        review_calls = 2 * sum(stage != "analysis" for stage in stages)
+        policy["maxCalls"] = min(
+            review_calls, max(0, policy["maxCalls"] - parent["physical_calls"])
+        )
         frozen = {"parentId": str(parent["id"]), "contract": "diagnostics-v1"}
         command = uuid5(
             UUID("66366366-3663-4663-8663-663663663663"), str(parent["id"]) + ":diagnostics"
