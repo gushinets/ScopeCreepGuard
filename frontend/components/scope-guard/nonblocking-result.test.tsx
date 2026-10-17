@@ -29,7 +29,10 @@ it.each(['en', 'ru'] as const)('prepares only on action and isolates failure in 
   const messages = locale === 'ru' ? ru : en
   render(<NextIntlClientProvider locale={locale} messages={messages}><ResultPanel /></NextIntlClientProvider>)
   expect(prepareAgreement).not.toHaveBeenCalled()
-  expect(screen.queryByText(messages.result.whyHeading)).toBeNull()
+  expect(screen.getByText(messages.result.whyHeading)).toBeTruthy()
+  expect(screen.getByText(analysisFixture.reasoning)).toBeTruthy()
+  expect(screen.getByText(analysisFixture.citations[0])).toBeTruthy()
+  expect(screen.getByText(analysisFixture.suggestion!)).toBeTruthy()
   expect(screen.queryByText('Hidden historical scope')).toBeNull()
   expect(screen.queryByText('Agreement editor')).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: messages.result.prepareAgreement }))

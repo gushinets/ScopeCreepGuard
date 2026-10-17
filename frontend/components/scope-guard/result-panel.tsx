@@ -12,7 +12,7 @@ import {
 import { useLocale, useTranslations } from 'next-intl'
 import { commercialSignature } from '@/lib/change-order/commercial-signature'
 import { Button } from '@/components/ui/button'
-import { VerdictBanner } from './verdict'
+import { ScopeAssessment } from './scope-assessment'
 import { ClientReply } from './client-reply'
 import { ChangeOrder } from './change-order'
 import { VerdictFeedback } from './verdict-feedback'
@@ -202,11 +202,7 @@ function ResultState() {
         {!currentDraftId && <p className="text-xs text-muted-foreground">{t('drafts.temporary')}</p>}
       </div>}
       {!workflow && draftError && <p role="alert" className="text-sm text-outscope-text">{t(draftError)}</p>}
-      <VerdictBanner
-        verdict={result.verdict}
-        confidence={result.confidence}
-        summary={result.summary}
-      />
+      <ScopeAssessment result={result} request={analyzedRequest} />
 
       <VerdictFeedback key={currentHistoryEntryId ?? 'unlabeled'} />
 
