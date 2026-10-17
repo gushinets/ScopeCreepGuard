@@ -10,8 +10,9 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.mark.parametrize("target", ["0004_workflow_retire", "head"])
+@pytest.mark.parametrize("saved_hours", ["2.50", ""])
 def test_generation_uses_saved_edits_and_restoration_checks_context(
-    disposable_url, monkeypatch, target
+    disposable_url, monkeypatch, target, saved_hours
 ):
     import asyncio
     import json
@@ -75,8 +76,15 @@ def test_generation_uses_saved_edits_and_restoration_checks_context(
                 return "Regenerated saved reply"
 
             async def translate_materials(self, value):
+                from scope_guard.domain.analysis.domain import ABSENT
+
                 assert value.analysis.replies.neutral == "Regenerated saved reply"
                 assert value.analysis.change_order.description == "My saved terms"
+                assert value.analysis.change_order.estimated_hours == (
+                    2.5 if saved_hours else ABSENT
+                )
+                assert value.analysis.change_order.additional_cost == "333.00"
+                assert value.analysis.change_order.currency == "EUR"
                 return parse_materials(
                     {
                         "clientLanguage": "ru",
@@ -115,7 +123,9 @@ def test_generation_uses_saved_edits_and_restoration_checks_context(
         original_run = deepcopy(draft["analysisRun"])
         document = deepcopy(draft["draftDocument"])
         document["reply"]["text"] = "My saved reply"
-        document["changeOrder"].update(description="My saved terms", additionalCost="333.00")
+        document["changeOrder"].update(
+            description="My saved terms", additionalCost="333.00", estimatedHours=saved_hours
+        )
         draft = await service.save(
             owner,
             identifier,
@@ -154,6 +164,7 @@ def test_generation_uses_saved_edits_and_restoration_checks_context(
             owner, identifier, "translate", {**operation(draft), "language": "ru"}
         )
         assert draft["draftDocument"]["changeOrder"]["additionalCost"] == "333.00"
+        assert draft["draftDocument"]["changeOrder"]["estimatedHours"] == saved_hours
         estimate = await service.estimate(owner, identifier, operation(draft))
         assert estimate["analysisRun"]["promptVersion"] == "analysis-v1"
         assert estimate["analysisRun"]["purpose"] == "estimate"

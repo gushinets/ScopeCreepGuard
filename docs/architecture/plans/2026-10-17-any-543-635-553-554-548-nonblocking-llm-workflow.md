@@ -97,3 +97,47 @@ After implementation verification, the user explicitly instructed “make pr and
 Commit the implementation and its new handoff/plan, push the requested branch and
 open a PR against main. Preserve/exclude the four pre-existing untracked documents.
 Disclose the Docker test/cleanup limits; do not merge or modify Linear.
+
+## PR #26 CI follow-up: saved translation hours
+
+The user supplied the backend CI log and authorized a correction and push to the
+existing branch. Base: `c68ae98e1e6e8ee4e232e380bfc814c728fa75ec`;
+branch: `codex/nonblocking-llm-workflow`, current checkout, no worktree.
+
+1. Reproduce the five translation failures in the cancellation and persistent
+   workflow tests against owned disposable PostgreSQL databases.
+2. Correct the editor-to-analysis boundary: convert validated decimal hour text
+   into numeric hours only in the detached translation input; omit empty optional
+   hours. Retain strict snapshot validation and the saved manual values.
+3. Extend integration coverage for edited decimal hours and empty hours, including
+   both supported historical schema targets. Keep cancellation, receipt, replay,
+   scope freshness and manual amount/currency assertions.
+4. Run the full backend suite, lint, formatting, both type-check targets and
+   contract freshness checks; record actual results before committing and pushing.
+
+Initial reproduction: **5 failed, 9 passed in 81.33s**, matching the supplied CI
+failures. All originate before the translation provider call because saved editor
+hours are text while `parse_snapshot` requires a number. The postcommit assertion
+and provider-cancellation timeout are downstream effects of that same exception.
+No database migration, frontend change, paid provider call or Linear update is
+required. Owner: this branch / PR #26.
+
+Final correction also omits absent optional labels instead of injecting `null`.
+The first rerun exposed this second invalid input after hours were corrected;
+strict snapshot validation remains unchanged.
+
+Verification of the final correction:
+- Affected disposable PostgreSQL integration files: **16 passed in 42.91s**.
+- Unit/API/architecture: **634 passed**, six Windows temporary-directory setup
+  errors; those six tests rerun with owned workspace basetemp: **6 passed in 21.40s**.
+- Ruff lint and formatting (358 files), Linux and Windows mypy (226 source files),
+  OpenAPI and generated API contract freshness, PDF verification script: passed.
+- Initial full-suite attempt loaded the intermediate correction and reported
+  733 passed, seven translation failures and eleven Windows temporary-directory
+  setup errors. It is superseded for translation by the final 16-test passing run.
+- Fresh full integration run with workspace basetemp stalled before completing
+  any test; interrupted after several minutes. Full integration success is not
+  claimed. Its exact disposable PostgreSQL container was verified and removed.
+
+Evidence: ignored `output/nonblocking-workflow/ci-fix-*.log` and `ci-fix-pdf/`.
+No assertions were weakened. Push this scoped correction to the existing PR.
