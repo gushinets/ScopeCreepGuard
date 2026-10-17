@@ -3,6 +3,7 @@
 import json
 
 from scope_guard.domain.change_orders.estimation import project_timing
+from scope_guard.domain.llm.commercial_terms import current_commercial_terms
 from scope_guard.integrations.documents.localization import reviewed_stage_labels
 from scope_guard.integrations.llm.prompts.reply_tone_skills_v1 import REPLY_TONE_SKILLS
 
@@ -90,32 +91,6 @@ def tone_rule(tone, field):
 
 def selected(value, keys):
     return {key: value[key] for key in keys if key in value}
-
-
-def current_commercial_terms(facts):
-    """Use saved fields even when empty; only absent agreements use AI estimates."""
-    if "currentCommercialTerms" in facts:
-        return facts["currentCommercialTerms"]
-    order = (facts.get("document") or {}).get("changeOrder")
-    saved = order is not None
-    analysis = facts.get("analysis") or {}
-    values = order if saved else (analysis.get("estimate") or analysis)
-    return {
-        "source": "savedAgreement" if saved else "preliminaryEstimate",
-        "preliminary": not saved,
-        **{
-            key: values.get(key)
-            for key in (
-                "estimatedHours",
-                "additionalCost",
-                "currency",
-                "timelineImpact",
-                "endDate",
-                "additionalTerms",
-            )
-        },
-        "noAdditionalCharge": bool(values.get("noAdditionalCharge", False)),
-    }
 
 
 def regeneration_source(facts):
