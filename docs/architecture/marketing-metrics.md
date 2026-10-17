@@ -46,6 +46,12 @@ committed sources, including after process interruption. Without any action or
 read there is no freshness guarantee. Cancellation can interrupt reconciliation;
 the same persisted-source repair path applies on the next access.
 
+For synchronous regeneration/translation, the failure handler checks the persisted
+draft operation receipt before recording failure. Cancellation after T1 retains
+the committed success without appending a contradictory failure event. Cancellation
+still propagates to that caller; retrying the same command key recovers its saved
+result without another generation call.
+
 ## Definition version 1
 
 - All populations exclude `profiles.analytics_excluded`. Professional status

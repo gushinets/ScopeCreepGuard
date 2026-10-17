@@ -674,6 +674,10 @@ class WorkflowService:
 
             async def record_generation_failure():
                 async with self.factory() as work:
+                    # write() can be cancelled after T1 commits, while awaiting T2
+                    # or enriching the response. Its durable receipt is authoritative.
+                    if await work.workflow.saved_operation(owner, identifier, operation, digest):
+                        return
                     await work.workflow.generation_event(
                         owner, draft, operation, kind, "failed", digest
                     )
