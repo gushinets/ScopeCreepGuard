@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
+from scope_guard.domain.llm.commercial_terms import current_commercial_terms
 from scope_guard.domain.llm.runtime import GatewayFailure
 from scope_guard.integrations.documents.localization import reviewed_stage_labels
 from scope_guard.integrations.llm.detection import clean, detector, evidence, foreign_evidence
@@ -19,7 +20,7 @@ from scope_guard.integrations.llm.preservation import (
     preserve_translation,
     recognized_schedule_language,
 )
-from scope_guard.integrations.llm.prompts.workflow_v2 import current_commercial_terms, stage_prompt
+from scope_guard.integrations.llm.prompts.workflow_v2 import stage_prompt
 from scope_guard.integrations.llm.pydanticai_model import GatewayResponsesModel
 from scope_guard.integrations.llm.semantic_review import (
     cosmetic_reply,

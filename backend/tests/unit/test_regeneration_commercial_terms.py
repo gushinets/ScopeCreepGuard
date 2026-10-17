@@ -8,7 +8,7 @@ import pytest
 from fixtures.llm_review import facts
 from test_llm_review_corrections import RecordingStore, run
 
-from scope_guard.integrations.llm.prompts.workflow_v2 import current_commercial_terms
+from scope_guard.domain.llm.commercial_terms import current_commercial_terms
 
 
 @pytest.mark.parametrize("mode", ["saved", "rate", "free", "cleared", "missing", "preliminary"])

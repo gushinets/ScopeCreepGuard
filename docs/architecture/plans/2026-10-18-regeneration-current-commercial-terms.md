@@ -70,3 +70,26 @@ limits. No historical paid-call authorization is reused.
 
 Changes are uncommitted on the preserved checkout. AGENT.md and WORKLOG.md remain
 ignored; unrelated untracked acceptance/design documents remain untouched.
+
+
+## PR 28 CI boundary correction
+
+The first GitHub backend run reported 797 passing tests and one deterministic
+architecture failure: services/llm/operations.py imported the helper from an
+integration prompt module. Services must not depend on integrations.
+
+Correction: move the pure current_commercial_terms helper into
+`domain/llm/commercial_terms.py`; admission, prompt projection and local diagnostics
+import that domain function directly. Update the focused test import. No prompt,
+frozen-input contract, authority rule or runtime behavior changes; the moved
+function's AST was compared with the original and is identical. Existing
+architecture checks remain intact.
+
+Local verification after this correction: 106 tests passed across architecture
+boundaries, commercial regeneration, review corrections and semantic review;
+mypy passed for 228 source files; Ruff lint/format and whitespace checks passed.
+The full backend CI pipeline must confirm the updated branch. No paid AI calls,
+application database changes or broad acceptance campaign were performed.
+
+Publish this correction as a separate commit on the existing PR branch, preserving
+unrelated local documents and ignored files.
