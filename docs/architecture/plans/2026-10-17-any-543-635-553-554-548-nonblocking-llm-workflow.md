@@ -141,3 +141,45 @@ Verification of the final correction:
 
 Evidence: ignored `output/nonblocking-workflow/ci-fix-*.log` and `ci-fix-pdf/`.
 No assertions were weakened. Push this scoped correction to the existing PR.
+
+## PR #26 review corrections
+
+Authorized by the user: fix all three verified P2 findings. Base `9441069`, same
+branch and checkout; preserve unrelated documents. No migrations or paid calls.
+
+1. Reproduce stale agreement recipient/end-date values with pricing unchanged
+   and changed; freeze current document-facing fields on explicit admission while
+   retaining historical scope/industry and existing manual agreement values.
+2. Persist agreement estimate provenance atomically with its document, including
+   the effective date and commercial signature. Keep the historical run immutable.
+3. Give diagnostic reviews two transport attempts per reviewable stage, bounded
+   by remaining parent call and cost budgets. Verify an actual retryable transport
+   failure recovers for single- and multi-stage agreements without affecting users.
+4. Verify affected integrations, unit/API tests, lint, formatting and type checks.
+   Record actual results and remaining limitations before handoff.
+
+Completed: admission overlays current names, recipient contact, start/end dates
+and commercial fields without replacing frozen scope/industry. New agreements
+persist estimate provenance in the same fenced document publication. Existing
+agreements/manual values are retained by the existing no-generation path.
+Diagnostic call limits allow two attempts per non-analysis stage, still capped
+by unused parent calls/cost; historical accounting is untouched.
+
+Regression evidence: the pre-fix unchanged-pricing case reproduced the old
+project name (`Monitor` rather than `Updated project`). The expanded PostgreSQL
+matrix covers recipient/date edits with and without changed pricing, metadata
+signatures, immutable historical runs, existing agreement reuse, and actual
+retryable transport failure for one- and two-stage agreement diagnostics.
+Initial final-code matrix: eight passed, two reached a legacy end-of-test
+assertion expecting diagnostic errors for all non-reject cases. The new retry
+success cases now explicitly require semantic pass and no diagnostic errors;
+their rerun passed: **2 passed, 8 deselected in 46.60s**. Thus all ten scenarios
+passed across those runs; no production change followed the matrix run.
+
+Backend unit/API/architecture: **640 passed in 92.64s** using backend cwd and an
+owned writable basetemp. An earlier sandbox run from repository root had local
+permission/path errors and is not counted as passing. Ruff lint/format (358
+files), Linux/Windows mypy (226 sources), OpenAPI and generated API freshness all
+passed. Full integration suite/browser were not rerun for these backend-only
+corrections; earlier full-suite limitations remain recorded above. No new schema
+migration or paid calls. Keep unrelated untracked documents out of the commit.

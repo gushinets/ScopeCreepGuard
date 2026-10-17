@@ -198,6 +198,18 @@ class LlmWorker:
                         explicit=True,
                     )["changeOrder"]
                     document["changeOrder"]["additionalTerms"] = order["additionalTerms"]
+                    document["estimate"] = {
+                        "analysisRunId": str(operation["analysis_run_id"]),
+                        "sourceDraftRevision": str(operation["source_revision"]),
+                        "effectiveEndDate": document["changeOrder"].get("endDate") or None,
+                        "commercialSignature": commercial_signature(
+                            generation_context(str(operation["project_id"]), facts["project"]),
+                            document["changeOrder"].get("endDate") or None,
+                        ),
+                        "estimateValid": bool(
+                            facts.get("prepareEstimate") or facts["analysis"].get("estimateValid")
+                        ),
+                    }
             elif kind == "translate":
                 replies, order = await self.material_stages(operation, facts)
                 reply = document["reply"]

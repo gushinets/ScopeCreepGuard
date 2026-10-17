@@ -25,8 +25,9 @@ from scope_guard.services.llm.worker import LlmWorker
 pytestmark = pytest.mark.integration
 
 
-@pytest.mark.parametrize("review", ["reject", "malformed", "malformed_label", "outage"])
-def test_main_agreement_diagnostics_and_concurrency(disposable_url, review):
+@pytest.mark.parametrize("review", ["reject", "malformed", "malformed_label", "outage", "retry"])
+@pytest.mark.parametrize("pricing_changed", [False, True])
+def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pricing_changed):
     engine = create_engine(normalize_url(disposable_url))
     with engine.begin() as connection:
         migrate(connection, target="0005_llm_workflow")
@@ -85,13 +86,24 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review):
         )
         calls, hold, entered = [], asyncio.Event(), asyncio.Event()
         fail_agreement = False
+        retry_review = False
 
         class Adapter:
             async def request(self, request, timeout):
+                nonlocal retry_review
                 calls.append(request)
                 if request.schema_name == "semantic_review_v2":
+                    if retry_review:
+                        retry_review = False
+                        raise ConnectionError("controlled retryable diagnostic transport error")
                     entered.set()
                     await hold.wait()
+                    if review == "retry":
+                        return ProviderResponse(
+                            json.dumps({"decision": "accept", "violations": []}),
+                            input_tokens=100,
+                            output_tokens=25,
+                        )
                     if review == "outage":
                         raise RuntimeError("controlled diagnostic outage")
                     value = {
@@ -159,10 +171,15 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review):
                 **project,
                 "operationId": str(uuid4()),
                 "expectedRevision": draft["revision"],
-                "hourlyRate": "60.00",
+                "hourlyRate": "60.00" if pricing_changed else "30.00",
+                "name": "Updated project",
+                "clientName": "Updated client",
+                "clientEmail": "updated@example.test",
+                "endDate": "2026-12-31",
             },
         )
         draft = await workflow.draft(owner, draft_id)
+        assert draft["analysisIsStale"] is False
         fail_agreement = True
         agreement, body = await admit("agreement", draft)
         await worker.process_one()
@@ -185,8 +202,52 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review):
         assert (await operations.admit(owner, draft_id, "agreement", body))[
             "operationId"
         ] == agreement["operationId"]
-        assert draft["draftDocument"]["changeOrder"]["additionalCost"] == "480.00"
+        order = draft["draftDocument"]["changeOrder"]
+        assert order["additionalCost"] == ("480.00" if pricing_changed else "240.00")
+        assert order["projectName"] == "Updated project"
+        assert order["clientName"] == "Updated client"
+        assert order["clientEmail"] == "updated@example.test"
+        assert order["endDate"] == "2026-12-31"
+        from scope_guard.domain.change_orders.estimation import commercial_signature
+        from scope_guard.services.drafts.workflow import generation_context
+
+        current_project = await workflow.project(owner, UUID(project["id"]))
+        provenance = draft["draftDocument"]["estimate"]
+        assert provenance["estimateValid"] is True
+        assert provenance["commercialSignature"] == commercial_signature(
+            generation_context(project["id"], current_project), order["endDate"]
+        )
+        assert provenance["effectiveEndDate"] == order["endDate"]
+        assert draft["analysisRun"]["projectSnapshot"]["name"] == "Monitor"
         assert draft["analysisRun"]["resultSnapshot"]["estimate"]["additionalCost"] == "240.00"
+        if review == "retry":
+            retry_review = True
+            reviews_before = sum(c.schema_name == "semantic_review_v2" for c in calls)
+            assert await worker.process_one()
+            assert sum(c.schema_name == "semantic_review_v2" for c in calls) == (
+                reviews_before + (3 if pricing_changed else 2)
+            )
+            async with database.new_uow() as work:
+                diagnostic = (
+                    await work.session.execute(
+                        text(
+                            "SELECT id FROM llm_operations WHERE kind='diagnostic' "
+                            "AND frozen_input->>'parentId'=:parent"
+                        ),
+                        {"parent": agreement["operationId"]},
+                    )
+                ).scalar_one()
+            records = await store.steps(diagnostic)
+            observations = [
+                o
+                for s in records
+                if s["accepted_result"]
+                for o in s["accepted_result"].get("observations", [])
+            ]
+            assert any(
+                o["rule"] == "semantic_review" and o["outcome"] == "pass" for o in observations
+            )
+            assert not any(o["outcome"] == "diagnostic_error" for o in observations)
         count = len(calls)
         reopened, _ = await admit("agreement", draft)
         assert (await operations.status(owner, UUID(reopened["operationId"])))[
@@ -293,11 +354,15 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review):
             )
             observations = [item for row in diagnostic_rows if row for item in row["observations"]]
             assert any(o["outcome"] == "finding" for o in observations)
-            assert (
-                any(o["outcome"] == "diagnostic_error" for o in observations)
-                if review != "reject"
-                else any(o["rule"] == "scope_position" for o in observations)
-            )
+            if review == "retry":
+                assert any(
+                    o["rule"] == "semantic_review" and o["outcome"] == "pass" for o in observations
+                )
+                assert not any(o["outcome"] == "diagnostic_error" for o in observations)
+            elif review == "reject":
+                assert any(o["rule"] == "scope_position" for o in observations)
+            else:
+                assert any(o["outcome"] == "diagnostic_error" for o in observations)
             assert all("candidate.text" not in json.dumps(o) for o in observations)
             assert (
                 await work.session.scalar(
