@@ -43,18 +43,9 @@ async def main():
                 loop.add_signal_handler(sig, worker.stopping.set)
             except NotImplementedError:
                 signal.signal(sig, lambda *_: loop.call_soon_threadsafe(worker.stopping.set))
-        running = asyncio.create_task(worker.run())
         try:
-            await worker.stopping.wait()
-            try:
-                await asyncio.wait_for(asyncio.shield(running), timeout=30)
-            except TimeoutError:
-                running.cancel()
-                await asyncio.gather(running, return_exceptions=True)
+            await worker.run()
         finally:
-            if not running.done():
-                running.cancel()
-                await asyncio.gather(running, return_exceptions=True)
             await adapter.close()
             await database.close()
         return

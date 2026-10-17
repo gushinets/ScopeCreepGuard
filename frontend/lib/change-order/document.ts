@@ -100,6 +100,18 @@ export function makeChangeOrderReference(createdAt: string, historyId: string): 
   return `CO-${date}-${suffix}`
 }
 
+// Presentation only: never write these resolved values back into the editor.
+export function commercialPresentation(draft: EditableDraft) {
+  return {
+    noCharge: draft.noAdditionalCharge,
+    effort: draft.estimatedHours.trim(),
+    amount: draft.noAdditionalCharge ? '' : draft.additionalCost.trim(),
+    currency: draft.noAdditionalCharge ? '' : draft.currency,
+    rationale: draft.noAdditionalCharge ? '' : draft.rationale.trim(),
+    schedule: draft.timelineImpact.trim(),
+  }
+}
+
 export function createChangeOrderDocument(draft: EditableDraft): ChangeOrderDocument {
   const language = normalizeLanguageTag(draft.language) ?? 'en'
   const base = language.split('-')[0]
@@ -115,21 +127,22 @@ export function createChangeOrderDocument(draft: EditableDraft): ChangeOrderDocu
   if (draft.clientName.trim()) metadata.push({ label: t.client, value: draft.clientName.trim() })
   if (draft.clientEmail.trim()) metadata.push({ label: t.email, value: draft.clientEmail.trim() })
   const commercialTerms: Array<{ label: string; value: string }> = []
-  if (draft.estimatedHours.trim()) commercialTerms.push({ label: t.effort, value: `${draft.estimatedHours.trim()} ${base === 'ru' ? 'ч' : base === 'es' ? 'horas' : base === 'en' ? 'hours' : supplied!.hours}` })
-  if (draft.noAdditionalCharge) commercialTerms.push({ label: t.fee, value: t.noCharge })
-  else if (draft.additionalCost.trim()) commercialTerms.push({ label: t.fee, value: `${draft.additionalCost.trim()}${draft.currency ? ` ${draft.currency}` : ''}` })
+  const terms = commercialPresentation(draft)
+  if (terms.effort) commercialTerms.push({ label: t.effort, value: `${terms.effort} ${base === 'ru' ? 'ч' : base === 'es' ? 'horas' : base === 'en' ? 'hours' : supplied!.hours}` })
+  if (terms.noCharge) commercialTerms.push({ label: t.fee, value: t.noCharge })
+  else if (terms.amount) commercialTerms.push({ label: t.fee, value: `${terms.amount}${terms.currency ? ` ${terms.currency}` : ''}` })
   const additionalItems: Array<{ label: string; value: string }> = []
-  if (draft.noAdditionalCharge) additionalItems.push({ label: t.fee, value: t.outsideScopeFree })
+  if (terms.noCharge) additionalItems.push({ label: t.fee, value: t.outsideScopeFree })
   if (draft.endDate) additionalItems.push({ label: t.endDate, value: formatDocumentDate(draft.endDate, draft.language) })
   if (draft.additionalTerms.trim()) additionalItems.push({ label: t.terms, value: draft.additionalTerms.trim() })
-  if (draft.rationale.trim()) additionalItems.push({ label: t.rationale, value: draft.rationale.trim() })
+  if (terms.rationale) additionalItems.push({ label: t.rationale, value: terms.rationale })
   if (draft.note.trim()) additionalItems.push({ label: t.note, value: draft.note.trim() })
   return {
     readinessWarning: readinessMessage(draft, { ...t }),
     labels: t, title: t.title, status: t.status, reference,
     createdDate: formatDocumentDate(draft.createdAt, draft.language), metadata,
     introduction: t.introduction, description: draft.description.trim(), commercialTerms,
-    scheduleImpact: draft.timelineImpact.trim(), additionalItems,
+    scheduleImpact: terms.schedule, additionalItems,
     sections: [{ heading: t.requestedChange }, { heading: t.commercialTerms }, { heading: t.scheduleImpact }, { heading: t.additionalTerms }],
     approvalHeading: t.approval,
     approval: {

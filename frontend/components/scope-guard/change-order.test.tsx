@@ -127,6 +127,31 @@ it('makes no-charge work explicit and restores the paid amount when switched bac
   expect((document.querySelector('#co-additionalCost') as HTMLInputElement).value).toBe('1000')
 })
 
+it('retains paid rationale through autosave and remount while free preview and Copy omit it', async () => {
+  const rationale = '2.5 hours × 80 EUR = 200 EUR.'
+  const props = { initialDraft: { ...original, estimatedHours: '2.5', additionalCost: '200', currency: 'EUR' as const, rationale }, projectName: 'Website', projectId: 'p1', historyId: 'free', userId: 'u1' }
+  const view = render(<ChangeOrder {...props} />)
+  fireEvent.click(screen.getByRole('checkbox', { name: /^noAdditionalCharge/ }))
+  await waitFor(() => expect(JSON.parse(localStorage.getItem('scg:change-order:u1:p1:free')!)).toMatchObject({ noAdditionalCharge: true, additionalCost: '200', currency: 'EUR', rationale }))
+  expect(screen.getByTestId('change-order-document-preview').textContent).not.toContain(rationale)
+  fireEvent.click(screen.getByRole('button', { name: 'copy' }))
+  await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalled())
+  const copied = vi.mocked(navigator.clipboard.writeText).mock.calls.at(-1)![0]
+  expect(copied).toContain('No additional charge')
+  expect(copied).toContain('2.5 hours')
+  expect(copied).toContain('Two days')
+  expect(copied).not.toContain(rationale)
+  expect(copied).not.toContain('200 EUR')
+  view.unmount()
+  render(<ChangeOrder {...props} />)
+  expect((screen.getByRole('checkbox', { name: /^noAdditionalCharge/ }) as HTMLInputElement).checked).toBe(true)
+  expect(screen.getByTestId('change-order-document-preview').textContent).not.toContain(rationale)
+  fireEvent.click(screen.getByRole('checkbox', { name: /^noAdditionalCharge/ }))
+  expect((document.querySelector('#co-additionalCost') as HTMLInputElement).value).toBe('200')
+  expect((document.querySelector('#co-currency') as HTMLSelectElement).value).toBe('EUR')
+  expect(screen.getByTestId('change-order-document-preview').textContent).toContain(rationale)
+})
+
 it('shows localized feedback instead of downloading unsupported glyphs', async () => {
   pdfMock.mockRejectedValue(new ApiClientError(ERROR_CODES.pdfGlyphUnsupported, 400))
   render(<ChangeOrder initialDraft={original} projectName="Website" projectId="p1" historyId="h1" userId="u1" />)

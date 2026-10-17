@@ -1,9 +1,9 @@
 import re
 from decimal import Decimal
 
+from scope_guard.domain.change_orders.presentation import commercial_presentation
 from scope_guard.domain.change_orders.readiness import document_readiness, readiness_message
 from scope_guard.domain.drafts.values import EditableChangeOrder, JsonValue, thaw_json
-from scope_guard.domain.shared.js_compat import js_string
 from scope_guard.services.documents.models import PreparedDocument, Row
 from scope_guard.services.documents.ports import DocumentLocalization
 
@@ -47,25 +47,26 @@ def prepare_document(
             metadata.append(Row(labels[key], value.strip()))
     hours = {"ru": "ч", "es": "horas", "en": "hours"}.get(base, labels.get("hours", ""))
     # The editor's text is authoritative, including nonnumeric user overrides.
-    cost = draft.additional_cost.strip()
+    terms = commercial_presentation(draft)
+    cost = terms.amount
     money_value(cost)
-    currency = js_string(thaw_json(draft.currency))
+    currency = terms.currency
     commercial = (
         Row(
             labels["effort"],
-            f"{draft.estimated_hours.strip()} {hours}" if draft.estimated_hours.strip() else "—",
+            f"{terms.effort} {hours}" if terms.effort else "—",
         ),
         Row(
             labels["fee"],
             labels["noCharge"]
-            if draft.no_additional_charge
+            if terms.no_charge
             else f"{cost}{' ' + currency if currency else ''}"
             if cost
             else "—",
         ),
     )
     additional = []
-    if draft.no_additional_charge:
+    if terms.no_charge:
         additional.append(Row(labels["fee"], labels["outsideScopeFree"]))
     if draft.end_date:
         additional.append(
@@ -73,7 +74,7 @@ def prepare_document(
         )
     for key, value in [
         ("terms", draft.additional_terms),
-        ("rationale", draft.rationale),
+        ("rationale", terms.rationale),
         ("note", draft.note),
     ]:
         if value.strip():
@@ -86,7 +87,7 @@ def prepare_document(
         tuple(metadata),
         draft.description.strip(),
         commercial,
-        draft.timeline_impact.strip(),
+        terms.schedule,
         tuple(additional),
         (
             Row(labels["approvedBy"], draft.client_approver_name.strip()),

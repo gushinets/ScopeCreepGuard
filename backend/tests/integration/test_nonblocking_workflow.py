@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from integration.test_llm_pipeline import output
+from scope_guard_api.draft_input import parse_editor
 from sqlalchemy import create_engine, text
 
 from scope_guard.database.migrations import migrate
@@ -15,6 +16,7 @@ from scope_guard.database.repositories.workflow import WorkflowUnitOfWork
 from scope_guard.database.session import Database, normalize_url
 from scope_guard.domain.drafts.workflow import WorkflowError
 from scope_guard.domain.llm.runtime import ProviderResponse
+from scope_guard.integrations.documents.preparation import prepare_document
 from scope_guard.integrations.llm.detection import select
 from scope_guard.integrations.llm.gateway import ProviderGateway
 from scope_guard.integrations.llm.stages import StructuredStageRunner
@@ -151,7 +153,7 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
             "operationId"
         ] == pending["operationId"]
         # Slow diagnostics are owned by a separate job after main success/History commit.
-        job = asyncio.create_task(worker.process_one())
+        job = asyncio.create_task(worker.process_one(lane="diagnostic"))
         await asyncio.wait_for(entered.wait(), 20)
         assert (await operations.status(owner, UUID(pending["operationId"])))[
             "status"
@@ -223,7 +225,7 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
         if review == "retry":
             retry_review = True
             reviews_before = sum(c.schema_name == "semantic_review_v2" for c in calls)
-            assert await worker.process_one()
+            assert await worker.process_one(lane="diagnostic")
             assert sum(c.schema_name == "semantic_review_v2" for c in calls) == (
                 reviews_before + (3 if pricing_changed else 2)
             )
@@ -281,6 +283,50 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
         )
         draft = await workflow.draft(owner, draft_id)
         assert draft["analysisIsStale"] is False
+        if review == "reject" and not pricing_changed:
+            # Durable free/paid edits change presentation without clearing source,
+            # revising the original analysis/History, or dispatching generation.
+            histories_before = deepcopy(await workflow.histories(owner, UUID(project["id"])))
+            analysis_before = deepcopy(draft["analysisRun"])
+            free_document = deepcopy(draft["draftDocument"])
+            free_document["changeOrder"].update(
+                noAdditionalCharge=True,
+                rationale="2.5 hours × 80 EUR = 200 EUR.",
+            )
+            command = {
+                "operationId": str(uuid4()),
+                "expectedRevision": draft["revision"],
+                "changes": {"draftDocument": free_document},
+            }
+            saved = await workflow.save(owner, draft_id, command)
+            assert (await workflow.save(owner, draft_id, command))["revision"] == saved["revision"]
+            reloaded = await workflow.draft(owner, draft_id)
+            co = reloaded["draftDocument"]["changeOrder"]
+            assert co == free_document["changeOrder"]
+            assert co["additionalCost"] == "175.35" and co["currency"] == "USD"
+            free = prepare_document(parse_editor(co))
+            assert free.commercial[1].value == "No additional charge"
+            assert all(row.label != free.label("rationale") for row in free.additional)
+            with pytest.raises(WorkflowError, match="draftConflict"):
+                await workflow.save(owner, draft_id, {**command, "operationId": str(uuid4())})
+            paid_document = deepcopy(reloaded["draftDocument"])
+            paid_document["changeOrder"]["noAdditionalCharge"] = False
+            await workflow.save(
+                owner,
+                draft_id,
+                {
+                    "operationId": str(uuid4()),
+                    "expectedRevision": reloaded["revision"],
+                    "changes": {"draftDocument": paid_document},
+                },
+            )
+            draft = await workflow.draft(owner, draft_id)
+            paid = prepare_document(parse_editor(draft["draftDocument"]["changeOrder"]))
+            assert paid.commercial[1].value == "175.35 USD"
+            assert any(row.value == co["rationale"] for row in paid.additional)
+            assert draft["analysisRun"] == analysis_before
+            assert await workflow.histories(owner, UUID(project["id"])) == histories_before
+            assert len(calls) == count
         archived = await workflow.complete(
             owner, draft_id, {"operationId": str(uuid4()), "expectedRevision": draft["revision"]}
         )
@@ -332,11 +378,11 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
         assert (await operations.status(owner, UUID(regen["operationId"])))["status"] == "failed"
         assert (await workflow.draft(owner, draft_id))["draftDocument"] == changed
         # Drain owned diagnostics; none can write documents or re-dispatch after restart.
-        while await worker.process_one():
+        while await worker.process_one(lane="diagnostic"):
             pass
         assert (await workflow.draft(owner, draft_id))["draftDocument"] == changed
         total_calls = len(calls)
-        assert not await LlmWorker(factory, store, runner).process_one()
+        assert not await LlmWorker(factory, store, runner).process_one(lane="diagnostic")
         assert len(calls) == total_calls
         async with database.new_uow() as work:
             diagnostic_rows = (

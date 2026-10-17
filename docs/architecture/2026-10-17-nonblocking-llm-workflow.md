@@ -1,5 +1,17 @@
 # Nonblocking LLM workflow implementation
 
+## F1/F2 follow-up — commercial projection and independent lanes
+
+The [focused implementation record](2026-10-17-commercial-presentation-execution-lanes.md)
+supersedes the single priority queue scheduling description below. The existing
+worker now owns one bounded user lane and one bounded diagnostic lane, with
+explicit kind-filtered claims and one shared shutdown drain deadline. Existing
+leases, epochs, provider accounting, independent UoWs and restart rules remain.
+Free-work document projections omit payable amount/currency and dedicated pricing
+rationale while retaining all editor values. TS/Python share contract fixtures;
+source snapshots and already generated artifacts are never rewritten. Browser
+acceptance remains explicitly limited as recorded in the follow-up.
+
 Implementation record for ANY-543, ANY-635, ANY-553, ANY-554 and ANY-548.
 The [plan](plans/2026-10-17-any-543-635-553-554-548-nonblocking-llm-workflow.md)
 was saved before product edits. The priority clarification in
