@@ -8,6 +8,7 @@ from uuid import UUID
 
 from scope_guard.domain.drafts.workflow import WorkflowError, empty_document
 from scope_guard.domain.llm.runtime import PROMPT_VERSION, digest, encode
+from scope_guard.integrations.llm.prompts.workflow_v2 import current_commercial_terms
 from scope_guard.services.drafts.workflow import context, expected, key
 
 STAGES = {
@@ -103,6 +104,8 @@ class LlmOperations:
                 "action": kind,
                 "sourceAnalysisRunId": run["id"] if run else None,
             }
+            if kind == "regenerate":
+                frozen["currentCommercialTerms"] = deepcopy(current_commercial_terms(frozen))
             if kind == "estimate":
                 source = (await work.workflow.revision(owner, identifier, expected(body)))[
                     "stateSnapshot"

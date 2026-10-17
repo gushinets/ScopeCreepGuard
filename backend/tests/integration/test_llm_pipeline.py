@@ -234,7 +234,7 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                 frozen = json.loads(
                     next(m["content"] for m in body["input"] if m["role"] == "user")
                 )
-                previous = frozen["document"]["reply"]["text"]
+                previous = frozen["previousReply"]["text"]
                 if regeneration_mode == "always" or (
                     regeneration_mode in ("once", "whitespace") and regeneration_attempt == 1
                 ):

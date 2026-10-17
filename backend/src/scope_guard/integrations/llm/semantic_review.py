@@ -71,7 +71,11 @@ language: prose must exclusively use selection.selectedLanguage; never change ta
 Allow only real names, URLs/emails, code identifiers and verified verbatim scope quotes
 as exceptions. Short document labels use their contextual target language. Arbitrary
 quotes, names or code wrappers cannot hide unrelated foreign sentences.
-cosmetic_reply: For regeneration, compare actual candidate with document.reply.text.
+For regeneration, currentCommercialTerms alone controls commercial facts, including
+cleared values. Saved terms override historical proposals and previousReply wording.
+Do not recalculate from rates. Free selection means no payment required. Preliminary
+estimates stay preliminary. Mentioning every commercial field is not required.
+cosmetic_reply: For regeneration, compare actual candidate with previousReply.text.
 Reject mere punctuation, whitespace, greeting/thank-you additions, near-verbatim wording
 with token substitutions or other cosmetic changes. Accept a genuinely different
 formulation preserving facts, commercial terms, language and scope. This is a judgment,
@@ -187,7 +191,7 @@ class SemanticReviewer:
         # Project relevant context; do not reintroduce unrelated near-1MB Draft text.
         source = stage_source(stage, facts)
         order = facts.get("document", {}).get("changeOrder") or {}
-        if order:
+        if order and stage != "reply":
             saved = {
                 k: order[k]
                 for k in (

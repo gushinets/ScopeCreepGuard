@@ -92,8 +92,53 @@ def selected(value, keys):
     return {key: value[key] for key in keys if key in value}
 
 
+def current_commercial_terms(facts):
+    """Use saved fields even when empty; only absent agreements use AI estimates."""
+    if "currentCommercialTerms" in facts:
+        return facts["currentCommercialTerms"]
+    order = (facts.get("document") or {}).get("changeOrder")
+    saved = order is not None
+    analysis = facts.get("analysis") or {}
+    values = order if saved else (analysis.get("estimate") or analysis)
+    return {
+        "source": "savedAgreement" if saved else "preliminaryEstimate",
+        "preliminary": not saved,
+        **{
+            key: values.get(key)
+            for key in (
+                "estimatedHours",
+                "additionalCost",
+                "currency",
+                "timelineImpact",
+                "endDate",
+                "additionalTerms",
+            )
+        },
+        "noAdditionalCharge": bool(values.get("noAdditionalCharge", False)),
+    }
+
+
+def regeneration_source(facts):
+    reply = facts["document"]["reply"]
+    return {
+        **selected(facts, ("locale", "request", "action")),
+        "selection": selected(facts["selection"], ("selectedLanguage",)),
+        "scopeContext": {
+            "scope": facts["project"]["scope"],
+            **selected(facts["analysis"], ("verdict", "citations", "hasAdditionalWork")),
+        },
+        "currentCommercialTerms": current_commercial_terms(facts),
+        "previousReply": {
+            **selected(reply, ("tone", "language")),
+            "text": reply.get("text") or reply["generated"].get(reply["tone"], ""),
+        },
+    }
+
+
 def stage_source(stage, facts):
     """Project provider input only; full frozen facts still drive local validation."""
+    if stage == "reply":
+        return regeneration_source(facts)
     source = selected(facts, ("locale", "request", "action"))
     source["selection"] = selected(facts["selection"], ("selectedLanguage",))
     source["project"] = selected(
@@ -136,17 +181,7 @@ def stage_source(stage, facts):
             )
     document = facts.get("document") or {}
     order = document.get("changeOrder")
-    if stage == "reply":
-        reply = document["reply"]
-        source["document"] = {
-            "reply": {
-                **selected(reply, ("tone", "language")),
-                "text": reply.get("text") or reply["generated"].get(reply["tone"], ""),
-            }
-        }
-        if order:
-            source["document"]["changeOrder"] = selected(order, commercial)
-    elif stage == "change_order" and facts.get("action") == "agreement":
+    if stage == "change_order" and facts.get("action") == "agreement":
         source["document"] = {
             "reply": selected(document["reply"], ("tone", "language", "text")),
             "changeOrder": selected(
@@ -218,8 +253,17 @@ def stage_prompt(stage, facts):
         rules.append(tone_rule(facts["document"]["reply"]["tone"], "text"))
         rules.append(
             "Generate a new formulation substantively different from the frozen previous reply "
-            "for the selected tone in document.reply.text. Preserve the accepted scope position, "
-            "facts, language, commercial terms and practical next-step requirements. "
+            "for the selected tone in previousReply.text. Preserve the accepted scope position, "
+            "language and practical next-step requirements. Rewrite only the selected reply. "
+            "scopeContext is historical scope and the accepted verdict. "
+            "currentCommercialTerms is authoritative: current saved commercial terms override "
+            "older values in previousReply or historical AI proposals. previousReply is a "
+            "wording reference, not an authority for current pricing. Do not recalculate price "
+            "from project rates. Do not invent or restore missing or cleared conditions. "
+            "When source=preliminaryEstimate, present estimates as explicitly preliminary. "
+            "When noAdditionalCharge=true, free work must not require payment; stored amounts "
+            "are not payable. Mention commercial terms only when useful; do not force every "
+            "reply to list every field. "
             "Do not regenerate analysis, other tones or the Change Order."
             " Adding only greetings, thanks, punctuation or cosmetic substitutions is invalid."
         )

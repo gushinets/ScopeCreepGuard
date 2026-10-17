@@ -175,7 +175,7 @@ def test_actual_scope_claims_are_reviewed_for_every_verdict(verdict, bad):
     result, store, _, _ = asyncio.run(exercise(bad, "scope_position", source=source))
     assert result["text"] == bad and len(store.calls) == 2
     payload = json.loads(store.calls[1]["request"].messages[-1]["content"])
-    assert payload["source"]["analysis"]["verdict"] == verdict
+    assert payload["source"]["scopeContext"]["verdict"] == verdict
 
 
 @pytest.mark.parametrize("locale", ["ru", "en"])
@@ -217,8 +217,8 @@ def test_saved_decisions_and_candidate_injection_are_untrusted_review_data():
     assert result["text"] == candidate
     review = store.calls[1]["request"]
     payload = json.loads(review.messages[-1]["content"])
-    assert payload["source"]["savedDecisions"]["noAdditionalCharge"] is True
-    assert payload["source"]["savedDecisions"]["additionalCost"] == "333.00"
+    assert payload["source"]["currentCommercialTerms"]["noAdditionalCharge"] is True
+    assert payload["source"]["currentCommercialTerms"]["additionalCost"] == "333.00"
     assert review.schema["additionalProperties"] is False
     instructions = " ".join(m["content"] for m in review.messages if m["role"] == "system")
     assert "UNTRUSTED DATA" in instructions and "project endDate alone" in instructions

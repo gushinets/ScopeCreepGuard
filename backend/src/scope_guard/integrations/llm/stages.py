@@ -19,7 +19,7 @@ from scope_guard.integrations.llm.preservation import (
     preserve_translation,
     recognized_schedule_language,
 )
-from scope_guard.integrations.llm.prompts.workflow_v2 import stage_prompt
+from scope_guard.integrations.llm.prompts.workflow_v2 import current_commercial_terms, stage_prompt
 from scope_guard.integrations.llm.pydanticai_model import GatewayResponsesModel
 from scope_guard.integrations.llm.semantic_review import (
     cosmetic_reply,
@@ -254,6 +254,21 @@ def validate_text(
     accepted = facts.get("analysis") or {}
     terms = accepted.get("changeOrder") or accepted.get("estimate") or accepted
     saved_order = facts.get("document", {}).get("changeOrder") or {}
+    if facts.get("action") == "regenerate":
+        terms = dict(current_commercial_terms(facts))
+        if terms["noAdditionalCharge"]:
+            terms["additionalCost"] = "0"
+        saved_order = terms
+        project = {
+            k: v
+            for k, v in project.items()
+            if k
+            not in (
+                "hourlyRate",
+                "fixedPrice",
+                "currency",
+            )
+        }
     allowed_terms = {
         k: terms.get(k) for k in ("estimatedHours", "additionalCost", "currency", "timelineImpact")
     }

@@ -255,7 +255,8 @@ def test_large_unrelated_saved_material_does_not_consume_stage_input_budget(stag
     source["document"]["reply"]["generated"].update(warm=large, firm=large)
     source["document"]["changeOrder"] = {
         **order(),
-        "additionalTerms": large,
+        "note": large,
+        "additionalTerms": "Written approval before work begins.",
         "description": "Add Arrow and email alerts.",
         "estimatedHours": "8",
         "additionalCost": "240.00",
@@ -296,14 +297,16 @@ def test_large_unrelated_saved_material_does_not_consume_stage_input_budget(stag
         next(m["content"] for m in store.calls[0]["request"].messages if m["role"] == "user")
     )
     assert "Unrelated large note" not in json.dumps(payload)
-    assert payload["analysis"]["verdict"] == "out_of_scope"
-    assert payload["analysis"]["changeOrder"]["additionalCost"] == "240.00"
-    assert payload["project"] == source["project"]
     if stage == "reply":
-        assert payload["document"]["reply"]["text"] == PROSE["en"]
-        assert payload["document"]["reply"]["tone"] == "neutral"
-        assert "generated" not in payload["document"]["reply"]
+        assert payload["scopeContext"]["verdict"] == "out_of_scope"
+        assert payload["currentCommercialTerms"]["additionalCost"] == "240.00"
+        assert payload["previousReply"]["text"] == PROSE["en"]
+        assert payload["previousReply"]["tone"] == "neutral"
+        assert "generated" not in payload["previousReply"]
     else:
+        assert payload["analysis"]["verdict"] == "out_of_scope"
+        assert payload["analysis"]["changeOrder"]["additionalCost"] == "240.00"
+        assert payload["project"] == source["project"]
         assert payload["document"]["changeOrder"]["description"] == "Add Arrow and email alerts."
         assert "reply" not in payload["document"]
     assert source == before
