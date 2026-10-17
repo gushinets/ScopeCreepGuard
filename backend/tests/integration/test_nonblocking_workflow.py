@@ -126,6 +126,8 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
                     raise RuntimeError("controlled agreement outage")
                 else:
                     value = output(request.schema_name, "en", "en")
+                    if request.schema_name == "reply_v1":
+                        value["text"] += " Please confirm the separate proposal in writing."
                     if request.schema_name == "replies_v1":
                         value["warm"] += " Сроки согласуем отдельно."
                     if request.schema_name == "change_order_v1":
@@ -361,6 +363,41 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
                 draft_id,
                 {"operationId": str(uuid4()), "expectedRevision": draft["revision"]},
             )
+        # A real admission/worker/provider round trip preserves all other saved state.
+        before = deepcopy(draft)
+        regen_ok, regen_command = await admit("regenerate", draft)
+        frozen_row = await store.get(owner, UUID(regen_ok["operationId"]))
+        frozen_before = deepcopy(frozen_row["frozen_input"])
+        assert frozen_before["currentCommercialTerms"]["additionalCost"] == "175.35"
+        assert frozen_before["currentCommercialTerms"]["currency"] == "USD"
+        assert await worker.process_one()
+        assert (await operations.status(owner, UUID(regen_ok["operationId"])))[
+            "status"
+        ] == "succeeded"
+        sent = json.loads(next(m["content"] for m in calls[-1].messages if m["role"] == "user"))
+        assert sent["currentCommercialTerms"] == frozen_before["currentCommercialTerms"]
+        assert sent["scopeContext"]["scope"] == frozen_before["project"]["scope"]
+        assert "genuinely changed" not in sent["scopeContext"]["scope"]
+        draft = await workflow.draft(owner, draft_id)
+        tone = before["draftDocument"]["reply"]["tone"]
+        expected_document = deepcopy(before["draftDocument"])
+        expected_document["reply"]["text"] = (
+            output("reply_v1", "en", "en")["text"]
+            + " Please confirm the separate proposal in writing."
+        )
+        expected_document["reply"]["generated"][tone] = expected_document["reply"]["text"]
+        assert draft["draftDocument"]["reply"]["text"] != before["draftDocument"]["reply"]["text"]
+        assert draft["draftDocument"] == expected_document
+        assert draft["lastAnalysisRunId"] == before["lastAnalysisRunId"]
+        count_before_replay = len(calls)
+        replay = await operations.admit(owner, draft_id, "regenerate", regen_command)
+        assert replay["operationId"] == regen_ok["operationId"]
+        assert not await worker.process_one()
+        assert len(calls) == count_before_replay
+        assert (await store.get(owner, UUID(regen_ok["operationId"])))[
+            "frozen_input"
+        ] == frozen_before
+
         # Late regeneration uses historical scope but cannot overwrite a newer edit.
         regen, _ = await admit("regenerate", draft)
         changed = deepcopy(draft["draftDocument"])
