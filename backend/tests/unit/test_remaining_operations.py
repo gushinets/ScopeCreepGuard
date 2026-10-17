@@ -187,7 +187,9 @@ def test_locale_cookie_contract_in_development_and_production(production, secure
     client = TestClient(create_app(Settings(_env_file=None, production=production)))
     response = client.post("/api/locale", json={"locale": "en"})
     assert response.status_code == 200 and response.json() == {"ok": True}
-    cookie = response.headers["set-cookie"]
+    cookie = next(
+        value for value in response.headers.get_list("set-cookie") if value.startswith("locale=")
+    )
     assert "locale=en" in cookie
     assert "Max-Age=31536000" in cookie and "Expires=" in cookie
     assert "Path=/" in cookie and "SameSite=lax" in cookie

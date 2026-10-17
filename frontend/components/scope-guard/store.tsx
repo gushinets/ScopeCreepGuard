@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { withBrowserIdentity } from '@/lib/browser-bootstrap'
 import { useLocale } from 'next-intl'
 import { applyClientMaterials, parseClientMaterials, type ClientMaterials } from '@/lib/client-materials'
 import type { CreatedDraftResponse, DraftDocument, DraftListItem, SavedDraft, ReplyDocument, ProjectSnapshot } from '@/lib/drafts/types'
@@ -301,7 +302,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       try {
         const [meResponse, projectsResponse] = await Promise.all([
-          apiFetch<MeResponse>('/api/auth/me'),
+          withBrowserIdentity(() => apiFetch<MeResponse>('/api/auth/me')),
           apiFetch<ProjectsResponse>('/api/projects'),
         ])
 

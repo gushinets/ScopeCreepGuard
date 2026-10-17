@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from scope_guard.database.models.base import Base, fk, pk, verdict
 from scope_guard.domain.shared.enums import Verdict
 
-"""Exact mapping of the Drizzle schema after migration 0006; no runtime DDL."""
+"""Historical Drizzle baseline mapping; current schema uses models.workflow Core tables."""
 
 
 class HistoryEntryRow(Base):

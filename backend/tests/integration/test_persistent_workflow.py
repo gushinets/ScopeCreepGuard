@@ -9,7 +9,10 @@ from scope_guard.database.session import normalize_url
 pytestmark = pytest.mark.integration
 
 
-def test_generation_uses_saved_edits_and_restoration_checks_context(disposable_url, monkeypatch):
+@pytest.mark.parametrize("target", ["0004_workflow_retire", "head"])
+def test_generation_uses_saved_edits_and_restoration_checks_context(
+    disposable_url, monkeypatch, target
+):
     import asyncio
     import json
     from copy import deepcopy
@@ -20,6 +23,7 @@ def test_generation_uses_saved_edits_and_restoration_checks_context(disposable_u
     from scope_guard.database.session import Database
     from scope_guard.domain.analysis.normalization import parse_materials, parse_snapshot
     from scope_guard.domain.drafts.workflow import WorkflowError
+    from scope_guard.services.activity.context import browser_key
     from scope_guard.services.drafts.workflow import WorkflowService
 
     monkeypatch.chdir(Path(__file__).resolve().parents[2])
@@ -33,9 +37,13 @@ def test_generation_uses_saved_edits_and_restoration_checks_context(disposable_u
             )
         )
     fixture = json.loads((Path(__file__).parents[1] / "fixtures/contracts.json").read_text())
+    with engine.begin() as connection:
+        migrate(connection, target=target)
 
     async def exercise():
         database = Database(normalize_url(disposable_url))
+        session_clock = []
+        token = browser_key.set("a" * 64) if target == "head" else None
 
         def factory():
             return WorkflowUnitOfWork(database.new_uow())
@@ -49,6 +57,21 @@ def test_generation_uses_saved_edits_and_restoration_checks_context(disposable_u
                 assert value.previous_reply == "My saved reply"
                 assert value.request == "Add a page"
                 assert database.engine.pool.checkedout() == 0
+                if target == "head":
+                    async with database.new_uow() as work:
+                        await work.session.execute(
+                            text(
+                                "UPDATE product_sessions SET "
+                                "started_at=now()-interval '31 minutes',"
+                                "last_activity_at=now()-interval '30 minutes'"
+                            )
+                        )
+                        session_clock.append(
+                            await work.session.scalar(
+                                text("SELECT last_activity_at FROM product_sessions")
+                            )
+                        )
+                        await work.commit()
                 return "Regenerated saved reply"
 
             async def translate_materials(self, value):
@@ -113,6 +136,20 @@ def test_generation_uses_saved_edits_and_restoration_checks_context(disposable_u
                 },
             )
         draft = await service.generate(owner, identifier, "regenerate", operation(draft))
+        if target == "head":
+            async with database.new_uow() as work:
+                assert await work.session.scalar(text("SELECT count(*) FROM product_sessions")) == 1
+                assert (
+                    await work.session.scalar(text("SELECT last_activity_at FROM product_sessions"))
+                    == session_clock[0]
+                )
+                executor = await work.session.scalar(
+                    text(
+                        "SELECT actor_type FROM activity_events WHERE event_type='draft.updated' "
+                        "ORDER BY recorded_at DESC LIMIT 1"
+                    )
+                )
+                assert executor == "system"
         draft = await service.generate(
             owner, identifier, "translate", {**operation(draft), "language": "ru"}
         )
@@ -144,7 +181,20 @@ def test_generation_uses_saved_edits_and_restoration_checks_context(disposable_u
         restored = await service.restore(owner, identifier, saved_revision, operation(current))
         assert restored["analysisIsStale"] is True
         assert await service.histories(owner, UUID(project["id"])) == []
+        if target == "head":
+            async with database.new_uow() as work:
+                events = (
+                    (await work.session.execute(text("SELECT event_type FROM activity_events")))
+                    .scalars()
+                    .all()
+                )
+                assert "reply.regenerated" in events
+                assert "translation.completed" in events
+                assert "estimate.completed" in events
+                assert "check.completed" not in events
         await database.close()
+        if token is not None:
+            browser_key.reset(token)
 
     asyncio.run(exercise())
     engine.dispose()

@@ -8,6 +8,7 @@ from scope_guard.services.auth.use_cases import AuthError
 from scope_guard.services.evaluations.use_cases import EvaluationError
 from scope_guard.services.projects.use_cases import ProjectError
 
+from scope_guard_api.activity_context import ActivityContextMiddleware
 from scope_guard_api.bootstrap import configure_app, lifespan
 from scope_guard_api.contracts import ErrorResponse
 from scope_guard_api.draft_cache import DraftReadCacheMiddleware
@@ -24,6 +25,7 @@ from scope_guard_api.routes.evaluations import router as evaluations_router
 from scope_guard_api.routes.generation import router as generation_router
 from scope_guard_api.routes.health import router as health_router
 from scope_guard_api.routes.locale import router as locale_router
+from scope_guard_api.routes.profiles import router as profiles_router
 from scope_guard_api.routes.projects import router as projects_router
 from scope_guard_api.routes.technical import router as technical_router
 from scope_guard_api.routes.workflow import router as workflow_router
@@ -46,6 +48,7 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     application.add_middleware(UnhandledErrorMiddleware)
     application.add_middleware(OriginMiddleware, allowed_origins=settings.allowed_origins)
     application.add_middleware(DraftReadCacheMiddleware)
+    application.add_middleware(ActivityContextMiddleware)
     if settings.llm_workflow and not settings.workflow_v2:
         raise ValueError("LLM workflow requires persistent workflow activation")
     application.add_middleware(
@@ -60,6 +63,7 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     application.include_router(locale_router)
     application.include_router(evaluations_router)
     application.include_router(workflow_router)
+    application.include_router(profiles_router)
 
     from scope_guard.domain.drafts.workflow import WorkflowError
     from starlette.responses import JSONResponse

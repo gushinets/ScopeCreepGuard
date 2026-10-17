@@ -44,8 +44,9 @@ Thumbs.db
 credentials.json
 .pnpm-store
 
-# Local agent handoff notes (intentionally excluded from Git)
+# Local agent handoff and work journal
 /AGENT.md
+/WORKLOG.md
 
 # Python applications and verification artifacts
 .venv/

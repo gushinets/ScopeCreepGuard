@@ -2,7 +2,8 @@ from uuid import UUID
 
 from sqlalchemy import func, select
 
-from scope_guard.database.models import DraftRow, HistoryEntryRow, ProjectRow
+from scope_guard.database.models import HistoryEntryRow, ProjectRow
+from scope_guard.database.models.compatibility import CompatibilityDraftRow as DraftRow
 from scope_guard.domain.drafts.values import (
     DraftSummary,
 )

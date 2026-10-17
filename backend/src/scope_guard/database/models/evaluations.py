@@ -12,7 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from scope_guard.database.models.base import Base, accuracy, fk, industry, pk, timestamp, verdict
 from scope_guard.domain.shared.enums import EvaluationAccuracy, Industry, Verdict
 
-"""Exact mapping of the Drizzle schema after migration 0006; no runtime DDL."""
+"""Historical Drizzle baseline mapping; current schema uses models.workflow Core tables."""
 
 
 class EvaluationCaseRow(Base):

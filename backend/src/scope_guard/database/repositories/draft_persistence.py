@@ -6,7 +6,8 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from scope_guard.database.legacy_boundary import require_legacy_schema
-from scope_guard.database.models import DraftRow, HistoryEntryRow, ProjectRow
+from scope_guard.database.models import HistoryEntryRow, ProjectRow
+from scope_guard.database.models.compatibility import CompatibilityDraftRow as DraftRow
 from scope_guard.database.queries.drafts import DraftQueries
 from scope_guard.database.unit_of_work import SqlAlchemyUnitOfWork
 from scope_guard.domain.analysis.domain import ABSENT, Labels

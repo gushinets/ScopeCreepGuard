@@ -5,6 +5,8 @@ from uuid import UUID, uuid4, uuid5
 
 from sqlalchemy import text
 
+from scope_guard.database.repositories.activity import EventRepository, profiles_supported
+from scope_guard.domain.activity import ActivityEvent, canonical_type
 from scope_guard.domain.drafts.workflow import DraftState, WorkflowError, empty_document
 from scope_guard.domain.drafts.workflow_repository import WorkflowRepository
 
@@ -41,6 +43,10 @@ class WorkflowSQLRepository:
         return [detached(value) for value in values]
 
     async def project(self, owner: UUID, identifier: UUID, *, lock=False) -> dict:
+        if lock and await profiles_supported(self.session):
+            await self.session.execute(
+                text("SELECT id FROM profiles WHERE user_id=:owner FOR UPDATE"), {"owner": owner}
+            )
         value = await self.one(
             (
                 "SELECT to_jsonb(p)||jsonb_build_object('hourly_rate',p.hourly_rate::text"
@@ -65,38 +71,85 @@ class WorkflowSQLRepository:
         )
 
     async def event(self, project, operation, event, owner=None, payload=None, **links):
-        names = {
-            "draft_id",
-            "draft_revision_id",
-            "analysis_run_id",
-            "history_entry_id",
-            "change_order_id",
-            "document_export_id",
-        }
-        if links.keys() - names:
-            raise ValueError("invalid_event_links")
-        columns = ",".join(links)
-        values = ",".join(":" + key for key in links)
-        await self.session.execute(
+        repository = EventRepository(self.session)
+        if not await profiles_supported(self.session):
+            return await repository.legacy_append(
+                project, operation, event, owner, payload or {}, links
+            )
+        profile = await self.session.scalar(
             text(
-                (
-                    "INSERT INTO activity_events(project_id,operation_id,event_type,actor_typ"
-                    "e,actor_user_id,payload,payload_version"
-                )
-                + ("," + columns if columns else "")
-                + ") VALUES(:project,:operation,:event,:actor,:owner,CAST(:payload AS jsonb),1"
-                + ("," + values if values else "")
-                + ") ON CONFLICT(project_id,operation_id,event_type) DO NOTHING"
+                "SELECT p.id FROM profiles p JOIN projects j ON j.user_id=p.user_id WHERE j.id=:id"
             ),
-            {
-                "project": project,
-                "operation": operation,
-                "event": event,
-                "actor": "user" if owner else "system",
-                "owner": owner,
-                "payload": encoded(payload or {}),
-                **links,
-            },
+            {"id": project},
+        )
+        if profile is None:
+            raise WorkflowError("profileNotFound", 409)
+        name = canonical_type(event, payload)
+        actor = "user" if owner else "system"
+        if (
+            self.session.info.get("activity_executor") == "system"
+            or event in ("analysis_apply", "analysis_failed", "analysis_cancelled")
+            or event.endswith((".completed", ".failed", ".cancelled", ".regenerated"))
+        ):
+            actor = "system"
+        session_id = self.session.info.get("activity_origin_session")
+        if actor == "system" and session_id is None and links.get("analysis_run_id"):
+            session_id = await self.session.scalar(
+                text(
+                    "SELECT product_session_id FROM activity_events WHERE analysis_run_id=:id "
+                    "AND event_type IN ('check.requested','estimate.requested') ORDER BY "
+                    "created_at LIMIT 1"
+                ),
+                {"id": links["analysis_run_id"]},
+            )
+        return await repository.append(
+            ActivityEvent(
+                profile_id=profile,
+                project_id=project,
+                operation_id=operation,
+                event_type=name,
+                source="workflow",
+                deduplication_key=f"{project}:{operation}:{name}",
+                actor_type=actor,
+                actor_user_id=owner,
+                product_session_id=session_id,
+                payload=payload or {},
+                links=links,
+                legacy_event_type=event,
+            ),
+            touch_session=actor == "user" and event not in ("autosave", "history_saved"),
+        )
+
+    async def generation_event(self, owner, draft, operation, kind, phase, digest):
+        if not await profiles_supported(self.session):
+            return
+        prefix = "reply" if kind == "regenerate" else "translation"
+        event = (
+            prefix
+            + "."
+            + ("regenerated" if kind == "regenerate" and phase == "completed" else phase)
+        )
+        if phase == "requested":
+            await self.project(owner, UUID(draft["projectId"]), lock=True)
+            prior = await self.event_retry(owner, draft["projectId"], operation, event, digest)
+            if prior:
+                raise WorkflowError("operationAlreadyRequested", 409)
+        else:
+            self.session.info["activity_executor"] = "system"
+            self.session.info["activity_origin_session"] = await self.session.scalar(
+                text(
+                    "SELECT product_session_id FROM activity_events WHERE project_id=:project "
+                    "AND operation_id=:key AND event_type=:event"
+                ),
+                {"project": draft["projectId"], "key": operation, "event": prefix + ".requested"},
+            )
+        await self.event(
+            draft["projectId"],
+            operation,
+            event,
+            owner,
+            {"requestHash": digest},
+            draft_id=draft["id"],
         )
 
     async def create_project(self, owner, values, key, digest):
@@ -111,6 +164,14 @@ class WorkflowSQLRepository:
             if prior["creationRequestHash"] != digest:
                 raise WorkflowError("operationMismatch", 409)
             return await self.project(owner, UUID(prior["id"]))
+        profile = None
+        supported = await profiles_supported(self.session)
+        if supported:
+            profile = await self.session.scalar(
+                text("SELECT id FROM profiles WHERE user_id=:owner FOR UPDATE"), {"owner": owner}
+            )
+            if profile is None:
+                raise WorkflowError("profileNotFound", 409)
         p = await self.one(
             (
                 "INSERT INTO projects(user_id,name,client,client_email,industry,scope,sta"
@@ -122,6 +183,11 @@ class WorkflowSQLRepository:
             {**values, "owner": owner, "key": key, "hash": digest},
         )
         project = UUID(p["id"])
+        if supported:
+            await self.session.execute(
+                text("UPDATE projects SET profile_id=:profile WHERE id=:id"),
+                {"profile": profile, "id": project},
+            )
         draft = await self.one(
             (
                 "INSERT INTO drafts(project_id,request_text,analysis_is_stale,draft_docum"
@@ -135,8 +201,10 @@ class WorkflowSQLRepository:
         return context
 
     async def update_project(self, owner, identifier, values):
-        await self.project(owner, identifier, lock=True)
+        current = await self.project(owner, identifier, lock=True)
         if values == {"archived": True}:
+            if current["archivedAt"]:
+                return current
             await self.session.execute(
                 text(
                     "UPDATE projects SET archived_at=COALESCE(archived_at,now()),updated_at=n"
@@ -144,6 +212,14 @@ class WorkflowSQLRepository:
                 ),
                 {"id": identifier, "owner": owner},
             )
+            if await profiles_supported(self.session):
+                await self.event(
+                    identifier,
+                    uuid5(NAMESPACE, str(identifier) + ":archive"),
+                    "project.updated",
+                    owner,
+                    {"archived": True},
+                )
         else:
             await self.session.execute(
                 text(
@@ -306,9 +382,22 @@ class WorkflowSQLRepository:
                 )
                 if previous_doc["changeOrder"].get(name) != next_doc["changeOrder"].get(name)
             )
-        return await self.insert_revision(
+        snapshot = await self.insert_revision(
             row, operation, digest, reason, owner, context, changed_fields
         )
+        estimate = row["draftDocument"].get("estimate")
+        if reason == "analysis_apply" and estimate and await profiles_supported(self.session):
+            run = await self.run(owner, UUID(estimate["analysisRunId"]))
+            await self.event(
+                row["projectId"],
+                UUID(run["idempotencyKey"]),
+                "estimate.completed",
+                owner,
+                {"status": "succeeded"},
+                analysis_run_id=run["id"],
+                draft_id=row["id"],
+            )
+        return snapshot
 
     async def revisions(self, owner, draft):
         await self.draft(owner, draft)
@@ -429,7 +518,7 @@ class WorkflowSQLRepository:
             raise WorkflowError("analysisNotFound", 404)
         creation = await self.one(
             "SELECT to_jsonb(e) FROM activity_events e WHERE analysis_run_id=:id "
-            "AND event_type='analysis_created'",
+            "AND event_type IN ('analysis_created','check.requested','estimate.requested')",
             {"id": identifier},
         )
         value["purpose"] = (
@@ -462,11 +551,21 @@ class WorkflowSQLRepository:
         )
         if value is None:
             raise WorkflowError("analysisConflict", 409)
-        if status != "running":
+        supported = await profiles_supported(self.session)
+        durable = supported and await self.session.scalar(
+            text(
+                "SELECT id FROM llm_operations WHERE analysis_run_id=:id AND kind IN "
+                "('check','estimate')"
+            ),
+            {"id": identifier},
+        )
+        if status != "running" and not durable and (not supported or status != "succeeded"):
             await self.event(
                 current["projectId"],
                 UUID(current["idempotencyKey"]),
-                "analysis_" + status,
+                ("estimate." if current.get("purpose") == "estimate" else "check.") + status
+                if supported
+                else "analysis_" + status,
                 owner,
                 {"status": status},
                 analysis_run_id=identifier,
@@ -582,6 +681,28 @@ class WorkflowSQLRepository:
             draft_id=draft["id"],
             history_entry_id=value["id"],
         )
+        if await profiles_supported(self.session) and run.get("purpose", "analysis") != "estimate":
+            durable = await self.session.scalar(
+                text("SELECT id FROM llm_operations WHERE analysis_run_id=:id AND kind='check'"),
+                {"id": run["id"]},
+            )
+            saved = await self.session.scalar(
+                text(
+                    "SELECT id FROM activity_events WHERE analysis_run_id=:id AND "
+                    "event_type='check.completed'"
+                ),
+                {"id": run["id"]},
+            )
+            if not durable and not saved:
+                await self.event(
+                    draft["projectId"],
+                    UUID(run["idempotencyKey"]),
+                    "check.completed",
+                    None,
+                    {"status": "succeeded"},
+                    analysis_run_id=run["id"],
+                    history_entry_id=value["id"],
+                )
         return value
 
     async def agreement(self, owner, identifier):
@@ -678,9 +799,9 @@ class WorkflowSQLRepository:
         row = await self.one(
             (
                 "SELECT to_jsonb(e) FROM activity_events e WHERE project_id=:project AND "
-                "operation_id=:key AND event_type=:event"
+                "operation_id=:key AND event_type IN (:event,:canonical)"
             ),
-            {"project": project, "key": key, "event": event},
+            {"project": project, "key": key, "event": event, "canonical": canonical_type(event)},
         )
         if row and row["payload"].get("requestHash") != digest:
             raise WorkflowError("operationMismatch", 409)
@@ -802,6 +923,7 @@ class WorkflowSQLRepository:
         return value
 
     async def evaluate(self, owner, run, feedback):
+        await self.project(owner, UUID(run["projectId"]), lock=True)
         result = run["resultSnapshot"]
         human = feedback.get("humanVerdict")
         accuracy = feedback["accuracy"]
@@ -815,7 +937,14 @@ class WorkflowSQLRepository:
             or human == result["verdict"]
         ):
             raise WorkflowError("evaluationLabelInvalid")
-        return await self.one(
+        prior = await self.one(
+            "SELECT to_jsonb(e) FROM evaluation_cases e WHERE user_id=:owner "
+            "AND analysis_run_id=:run",
+            {"owner": owner, "run": run["id"]},
+        )
+        if prior and prior["accuracy"] == accuracy and prior["humanVerdict"] == human:
+            return prior
+        value = await self.one(
             (
                 "INSERT INTO evaluation_cases(user_id,analysis_run_id,scope,request,ai_ve"
                 "rdict,human_verdict,ai_reasoning,accuracy,industry) VALUES(:owner,:run,:"
@@ -836,6 +965,21 @@ class WorkflowSQLRepository:
                 "industry": run["projectSnapshot"]["industry"],
             },
         )
+        if await profiles_supported(self.session):
+            await self.event(
+                run["projectId"],
+                uuid5(NAMESPACE, value["id"] + ":" + value["updatedAt"]),
+                "evaluation.changed",
+                owner,
+                {
+                    "accuracy": accuracy,
+                    "humanVerdict": human,
+                    "evaluationId": value["id"],
+                    "updatedAt": value["updatedAt"],
+                },
+                analysis_run_id=run["id"],
+            )
+        return value
 
     async def claim_export(self):
         row = await self.one(

@@ -31,6 +31,13 @@ def auth_service(request: Request) -> AuthService:
     )
 
 
+def profile_service(request: Request):
+    from scope_guard.database.repositories.profiles import ProfilesUnitOfWork
+    from scope_guard.services.profiles.service import ProfileService
+
+    return ProfileService(lambda: ProfilesUnitOfWork(request.app.state.database.new_uow()))
+
+
 async def current_owner(request: Request) -> dict[str, str]:
     from scope_guard.integrations.auth.sessions import SESSION_COOKIE_NAME
 

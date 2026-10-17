@@ -280,6 +280,10 @@ class WorkflowService:
                 if document.get("languageSelection"):
                     document["languageSelection"]["override"] = False
                 changes = {**changes, "draftDocument": document}
+            if body.get("kind") in ("regenerate", "translate"):
+                await work.workflow.generation_event(
+                    owner, draft, operation, body["kind"], "completed", digest
+                )
             result = await work.workflow.save(
                 owner, identifier, revision, operation, digest, changes, reason, context(project)
             )
@@ -595,72 +599,88 @@ class WorkflowService:
                 run, draft["requestText"], context(project)
             ):
                 raise WorkflowError("analysisStale", 409)
-        self.allowance(owner)
-        document = deepcopy(draft["draftDocument"])
-        reply = document["reply"]
-        frozen = generation_context(draft["projectId"], run["projectSnapshot"])
-        if kind == "regenerate":
-            text = await self.generator.regenerate_reply(
-                ReplyInput(
-                    frozen,
-                    run["requestText"],
-                    run["interfaceLocale"],
-                    reply["tone"],
-                    reply["text"],
-                    reply["language"],
+            await work.workflow.generation_event(owner, draft, operation, kind, "requested", digest)
+            await work.commit()
+        try:
+            self.allowance(owner)
+            document = deepcopy(draft["draftDocument"])
+            reply = document["reply"]
+            frozen = generation_context(draft["projectId"], run["projectSnapshot"])
+            if kind == "regenerate":
+                text = await self.generator.regenerate_reply(
+                    ReplyInput(
+                        frozen,
+                        run["requestText"],
+                        run["interfaceLocale"],
+                        reply["tone"],
+                        reply["text"],
+                        reply["language"],
+                    )
                 )
-            )
-            reply["text"] = text
-            reply["generated"][reply["tone"]] = text
-        elif kind == "translate":
-            language = body.get("language")
-            from scope_guard.domain.shared.language import normalize_language
+                reply["text"] = text
+                reply["generated"][reply["tone"]] = text
+            elif kind == "translate":
+                language = body.get("language")
+                from scope_guard.domain.shared.language import normalize_language
 
-            language = normalize_language(language)
-            if not language:
-                raise WorkflowError("clientLanguageInvalid")
-            material_source = deepcopy(run["resultSnapshot"])
-            material_source["replies"] = {**reply["generated"], reply["tone"]: reply["text"]}
-            if document["changeOrder"]:
-                for field in (
-                    "description",
-                    "timelineImpact",
-                    "rationale",
-                    "note",
-                    "additionalCost",
-                ):
-                    material_source["changeOrder"][field] = document["changeOrder"].get(field, "")
-            value = await self.generator.translate_materials(
-                MaterialInput(
-                    frozen,
-                    run["requestText"],
-                    run["interfaceLocale"],
-                    language,
-                    parse_snapshot(material_source, run["interfaceLocale"]),
+                language = normalize_language(language)
+                if not language:
+                    raise WorkflowError("clientLanguageInvalid")
+                material_source = deepcopy(run["resultSnapshot"])
+                material_source["replies"] = {**reply["generated"], reply["tone"]: reply["text"]}
+                if document["changeOrder"]:
+                    for field in (
+                        "description",
+                        "timelineImpact",
+                        "rationale",
+                        "note",
+                        "additionalCost",
+                    ):
+                        material_source["changeOrder"][field] = document["changeOrder"].get(
+                            field, ""
+                        )
+                value = await self.generator.translate_materials(
+                    MaterialInput(
+                        frozen,
+                        run["requestText"],
+                        run["interfaceLocale"],
+                        language,
+                        parse_snapshot(material_source, run["interfaceLocale"]),
+                    )
                 )
+                material = materials_to_wire(value)
+                reply.update(
+                    language=language,
+                    generated=material["replies"],
+                    text=material["replies"][reply["tone"]],
+                )
+                if document["changeOrder"] and material.get("changeOrder"):
+                    document["changeOrder"].update(material["changeOrder"])
+                    document["changeOrder"]["language"] = language
+                    if material.get("changeOrderLabels"):
+                        document["changeOrder"]["changeOrderLabels"] = material["changeOrderLabels"]
+            else:
+                raise WorkflowError("requestBodyInvalid")
+            # The operation hash includes kind, while the public body keeps the same key.
+            return await self.write(
+                owner,
+                identifier,
+                {**body, "kind": kind},
+                {"draftDocument": document},
+                "regenerate" if kind == "regenerate" else "language_change",
+                trusted=True,
             )
-            material = materials_to_wire(value)
-            reply.update(
-                language=language,
-                generated=material["replies"],
-                text=material["replies"][reply["tone"]],
-            )
-            if document["changeOrder"] and material.get("changeOrder"):
-                document["changeOrder"].update(material["changeOrder"])
-                document["changeOrder"]["language"] = language
-                if material.get("changeOrderLabels"):
-                    document["changeOrder"]["changeOrderLabels"] = material["changeOrderLabels"]
-        else:
-            raise WorkflowError("requestBodyInvalid")
-        # The operation hash includes kind, while the public body keeps the same key.
-        return await self.write(
-            owner,
-            identifier,
-            {**body, "kind": kind},
-            {"draftDocument": document},
-            "regenerate" if kind == "regenerate" else "language_change",
-            trusted=True,
-        )
+        except BaseException:
+
+            async def record_generation_failure():
+                async with self.factory() as work:
+                    await work.workflow.generation_event(
+                        owner, draft, operation, kind, "failed", digest
+                    )
+                    await work.commit()
+
+            await asyncio.shield(record_generation_failure())
+            raise
 
     async def histories(self, owner, identifier):
         async with self.factory() as work:

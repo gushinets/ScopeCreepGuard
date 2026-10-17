@@ -13,6 +13,7 @@ import { HistoryView } from './history-view'
 import { MyDraftsView } from './my-drafts-view'
 import { PersistentStoreProvider } from './persistent-store'
 import { ArchivedProjects } from './archived-projects'
+import { ProductSession } from './product-session'
 
 const NAV: { id: View; labelKey: 'check' | 'projects' | 'history' | 'drafts' }[] = [
   { id: 'check', labelKey: 'check' },
@@ -150,6 +151,7 @@ export function AppShell({ persistent = false }: { persistent?: boolean }) {
 
   return (
     <Provider>
+      {persistent && <ProductSession />}
       <div className="min-h-screen bg-background text-foreground">
         <Header />
         <Body />

@@ -19,7 +19,8 @@ from scope_guard.services.llm.worker import LlmWorker
 pytestmark = pytest.mark.integration
 
 
-def test_worker_publishes_once_and_preserves_late_edit(disposable_url):
+@pytest.mark.parametrize("target", ["0005_llm_workflow", "head"])
+def test_worker_publishes_once_and_preserves_late_edit(disposable_url, target):
     engine = create_engine(normalize_url(disposable_url))
     with engine.begin() as connection:
         migrate(connection, target="0005_llm_workflow")
@@ -29,6 +30,7 @@ def test_worker_publishes_once_and_preserves_late_edit(disposable_url):
                 "('worker@example.test','hash') RETURNING id"
             )
         )
+        migrate(connection, target=target)
 
     async def exercise():
         database = Database(normalize_url(disposable_url))
@@ -82,6 +84,15 @@ def test_worker_publishes_once_and_preserves_late_edit(disposable_url):
         class Runner:
             async def run(self, binding, stage, facts, record):
                 stages.append(stage)
+                if stage == "reply":
+                    return {"text": "The additional scope requires approval."}
+                if stage == "estimate":
+                    return {
+                        "estimatedHours": "8",
+                        "additionalCost": "240.00",
+                        "currency": "USD",
+                        "rationale": "Eight hours at thirty dollars.",
+                    }
                 if stage == "analysis":
                     assert database.engine.pool.checkedout() == 0
                     return {
@@ -163,6 +174,77 @@ def test_worker_publishes_once_and_preserves_late_edit(disposable_url):
         assert (await workflow.history(owner, UUID(history["id"])))["checkSnapshot"] == history[
             "checkSnapshot"
         ]
+        if target == "head":
+            for _ in range(3):
+                await workflow.evaluate(
+                    owner, UUID(history["analysisRunId"]), {"accuracy": "correct"}
+                )
+            await workflow.evaluate(
+                owner, UUID(history["analysisRunId"]), {"accuracy": "debatable"}
+            )
+            async with database.new_uow() as work:
+                events = (
+                    (
+                        await work.session.execute(
+                            text("SELECT * FROM activity_events WHERE event_type='check.completed'")
+                        )
+                    )
+                    .mappings()
+                    .all()
+                )
+                assert len(events) == 2
+                assert {e["payload"]["applied"] for e in events} == {True, False}
+                assert all(e["history_entry_id"] and e["actor_type"] == "system" for e in events)
+                assert (
+                    await work.session.scalar(
+                        text(
+                            "SELECT count(*) FROM activity_events "
+                            "WHERE event_type='evaluation.changed'"
+                        )
+                    )
+                    == 2
+                )
+                assert await work.session.scalar(text("SELECT count(*) FROM evaluation_cases")) == 1
+            for kind in ("regenerate", "translate", "estimate"):
+                latest = await workflow.draft(owner, draft_id)
+                admitted = await operations.admit(
+                    owner,
+                    draft_id,
+                    kind,
+                    {
+                        "operationId": str(uuid4()),
+                        "expectedRevision": latest["revision"],
+                        "language": "ru",
+                    },
+                )
+                assert await worker.process_one()
+                outcome = await operations.status(owner, UUID(admitted["operationId"]))
+                assert outcome["status"] == "succeeded", outcome
+            async with database.new_uow() as work:
+                names = (
+                    (await work.session.execute(text("SELECT event_type FROM activity_events")))
+                    .scalars()
+                    .all()
+                )
+                for name in ("reply.regenerated", "translation.completed", "estimate.completed"):
+                    assert names.count(name) == 1
+                metrics = (
+                    (
+                        await work.session.execute(
+                            text(
+                                "SELECT * FROM marketing_metrics "
+                                "WHERE report_date=(now() AT TIME ZONE 'UTC')::date"
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                assert metrics["check_succeeded"] == 2
+                assert metrics["regeneration_succeeded"] == 1
+                assert metrics["translation_succeeded"] == 1
+                assert metrics["estimate_succeeded"] == 1
+                assert metrics["operations_succeeded"] == 5
         await database.close()
 
     asyncio.run(exercise())

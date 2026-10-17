@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import make_url, text
 from sqlalchemy.engine import URL
@@ -42,7 +43,25 @@ class Database:
         self._probes: set[asyncio.Task] = set()
 
     def new_uow(self) -> SqlAlchemyUnitOfWork:
-        return SqlAlchemyUnitOfWork(self._factory)
+        return SqlAlchemyUnitOfWork(self._factory, after_commit=self._reconcile_metrics)
+
+    def new_metrics_uow(self):
+        from scope_guard.database.repositories.marketing import MarketingRepository
+
+        class MarketingUnitOfWork(SqlAlchemyUnitOfWork):
+            async def __aenter__(self):
+                await super().__aenter__()
+                self.metrics = MarketingRepository(self.session)
+                return self
+
+        # No callback: derived writes cannot recursively trigger reconciliation.
+        return MarketingUnitOfWork(self._factory)
+
+    async def _reconcile_metrics(self) -> None:
+        from scope_guard.services.marketing.service import MetricsService
+
+        today = datetime.now(UTC).date()
+        await MetricsService(self.new_metrics_uow).reconcile(today, today + timedelta(days=1))
 
     async def check_connection(self) -> None:
         async def probe():
