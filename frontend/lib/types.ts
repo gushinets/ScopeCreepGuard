@@ -28,7 +28,8 @@ export interface AnalysisResult {
   citations: string[]
   suggestion?: string
   replies: Record<Tone, string>
-  changeOrder: ChangeOrderDraft
+  changeOrder: ChangeOrderDraft | null
+  estimate?: { estimatedHours: number; additionalCost: string; currency: Currency | '' }
   hasAdditionalWork?: boolean
   requestLanguage?: 'ru' | 'en' | 'es' | 'other'
   clientLanguage?: string

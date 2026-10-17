@@ -79,6 +79,7 @@ WITH owners AS MATERIALIZED (
  WHERE e.id=r.operation_id AND e.project_id=r.project_id)
 ), operations AS (
  SELECT id,profile_id,kind,created_at,finished_at,status FROM durable
+ WHERE source_kind<>'diagnostic'
  UNION ALL SELECT * FROM fallback_runs
  UNION ALL SELECT id,profile_id,kind,created_at,finished_at,status FROM fallback_events
  UNION ALL SELECT * FROM legacy_generations

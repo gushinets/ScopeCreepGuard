@@ -55,7 +55,7 @@ def test_language_matrix_normalization_and_verbatim_citations(locale, language):
         ("hasAdditionalWork", None),
         ("requestLanguage", None),
         ("replies", None),
-        ("changeOrder", None),
+        ("changeOrder", []),
     ],
 )
 def test_malformed_analysis_rejected(field, value):

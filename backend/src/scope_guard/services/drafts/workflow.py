@@ -106,11 +106,15 @@ def project_values(body: dict) -> dict:
     return values
 
 
-def formed_document(result: dict, project: dict, language: str, timestamp: str) -> dict:
+def formed_document(
+    result: dict, project: dict, language: str, timestamp: str, *, explicit=False
+) -> dict:
     document = empty_document(language)
     document["reply"].update(text=result["replies"]["neutral"], generated=result["replies"])
-    if result["verdict"] != "in_scope" and result.get(
-        "hasAdditionalWork", result["verdict"] == "out_of_scope"
+    if (
+        result.get("changeOrder") is not None
+        and (explicit or result["verdict"] != "in_scope")
+        and (explicit or result.get("hasAdditionalWork", result["verdict"] == "out_of_scope"))
     ):
         co = result["changeOrder"]
         try:
@@ -349,13 +353,15 @@ class WorkflowService:
         run = await self.run(owner, UUID(entry["analysisRunId"]))
         draft = await self.project_draft(owner, UUID(entry["projectId"]))
         project = await self.project(owner, UUID(entry["projectId"]))
+        async with self.factory() as work:
+            latest = await work.workflow.latest_materials(owner, UUID(draft["id"]), UUID(run["id"]))
         return await self.write(
             owner,
             UUID(draft["id"]),
             {**body, "historyEntryId": str(identifier)},
             {
                 "requestText": snapshot["requestText"],
-                "draftDocument": snapshot["draftDocument"],
+                "draftDocument": latest or snapshot["draftDocument"],
                 "lastAnalysisRunId": run["id"],
                 "analysisIsStale": not analysis_matches(
                     run, snapshot["requestText"], context(project)
@@ -378,7 +384,10 @@ class WorkflowService:
             if int(draft["revision"]) != expected(body):
                 raise WorkflowError("draftConflict", 409)
             project = await work.workflow.update_project(owner, identifier, values)
-            stale = context(previous) != context(project) or draft["analysisIsStale"]
+            stale = (
+                any(previous.get(f) != project.get(f) for f in ("scope", "industry"))
+                or draft["analysisIsStale"]
+            )
             await work.workflow.save(
                 owner,
                 UUID(draft["id"]),
@@ -462,9 +471,9 @@ class WorkflowService:
                 effective_deadline,
             )
             result_wire["draftCreatedAt"] = timestamp
-            if result_wire.get("hasAdditionalWork") and result_wire["changeOrder"].get(
-                "currency"
-            ) != run["projectSnapshot"].get("currency"):
+            if result_wire.get("hasAdditionalWork") and (
+                result_wire.get("changeOrder") or result_wire.get("estimate") or {}
+            ).get("currency") != run["projectSnapshot"].get("currency"):
                 result_wire["estimateValid"] = False
         except BaseException as error:
             cancelled = isinstance(error, asyncio.CancelledError)
@@ -629,6 +638,10 @@ class WorkflowService:
                 material_source = deepcopy(run["resultSnapshot"])
                 material_source["replies"] = {**reply["generated"], reply["tone"]: reply["text"]}
                 if document["changeOrder"]:
+                    material_source["changeOrder"] = deepcopy(document["changeOrder"])
+                    material_source["changeOrderLabels"] = document["changeOrder"].get(
+                        "changeOrderLabels", material_source.get("changeOrderLabels")
+                    )
                     for field in (
                         "description",
                         "timelineImpact",

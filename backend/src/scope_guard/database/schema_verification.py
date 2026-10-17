@@ -291,11 +291,18 @@ def inspect_profile_schema(connection: Connection) -> dict:
     return actual
 
 
-def verify_profile_schema(connection: Connection) -> None:
+def verify_profile_schema(connection: Connection, *, nonblocking=False) -> None:
     verify_managed_schema(connection)
     expected = json.loads(
         Path(__file__).with_name("0006_profile_metrics_schema.json").read_text(encoding="utf-8")
     )
+    if nonblocking:
+        for constraint in expected["tables"]["llm_operations"]["constraints"]:
+            if constraint["name"] == "llm_operations_kind_check":
+                constraint["definition"] = (
+                    "CHECK ((kind = ANY (ARRAY['check'::text, 'regenerate'::text, "
+                    "'translate'::text, 'estimate'::text, 'agreement'::text, 'diagnostic'::text])))"
+                )
     differences = compare_schema(inspect_profile_schema(connection), expected)
     objects = set(
         connection.exec_driver_sql(
@@ -316,12 +323,19 @@ def verify_llm_schema(connection: Connection) -> None:
     revisions = (
         connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalars().all()
     )
-    if revisions == ["0006_profile_metrics"]:
+    if revisions == ["0007_nonblocking_llm"]:
+        verify_nonblocking_schema(connection)
+    elif revisions == ["0006_profile_metrics"]:
         verify_profile_schema(connection)
     else:
         _verify_llm_schema_v5(connection)
 
 
+def verify_nonblocking_schema(connection):
+    verify_profile_schema(connection, nonblocking=True)
+
+
+REVISION_VALIDATORS["0007_nonblocking_llm"] = verify_nonblocking_schema
 REVISION_VALIDATORS["0005_llm_workflow"] = _verify_llm_schema_v5
 REVISION_VALIDATORS["0006_profile_metrics"] = verify_profile_schema
 

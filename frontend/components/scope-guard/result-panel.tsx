@@ -4,10 +4,8 @@ import { supportedClientLanguage, PDF_CLIENT_LANGUAGES } from '@/lib/client-lang
 import { applyClientMaterials } from '@/lib/client-materials'
 import { useState } from 'react'
 import {
-  ArrowRight,
   Info,
   LoaderCircle,
-  Quote,
   ShieldQuestion,
   TriangleAlert,
 } from 'lucide-react'
@@ -141,7 +139,7 @@ function ShortScopeState() {
 }
 
 function ResultState() {
-  const { result, analysisProject: selectedProject, selectedProject: currentProject, projectSnapshot, currentHistoryEntryId, analyzedRequest, user, setView, createEstimate, clientMaterials, changeClientLanguage, draftDocument, currentDraftId, draftSessionId, updateReply, updateChangeOrder, saveDraft, isSavingDraft, draftError, isDraftDirty, workflow } =
+  const { result, analysisProject: selectedProject, selectedProject: currentProject, currentHistoryEntryId, analyzedRequest, user, setView, createEstimate, clientMaterials, changeClientLanguage, draftDocument, currentDraftId, draftSessionId, updateReply, updateChangeOrder, saveDraft, isSavingDraft, draftError, isDraftDirty, workflow } =
     useStore()
   const t = useTranslations()
   const locale = useLocale()
@@ -151,23 +149,32 @@ function ResultState() {
   const languageError = documentLanguage && !supportedClientLanguage(documentLanguage) ? t('errors.clientLanguageUnsupported') : ''
   const [generating, setGenerating] = useState(false)
   const [estimateError, setEstimateError] = useState('')
-  const hasAdditionalWork = result?.verdict !== 'in_scope' && (result?.hasAdditionalWork ?? result?.verdict === 'out_of_scope')
   const termsComplete = !!selectedProject?.startDate && !!selectedProject.pricingModel && !!selectedProject.currency && !!(selectedProject.hourlyRate || selectedProject.fixedPrice)
 
   if (!result || !selectedProject) return null
 
   const material = clientMaterials ? applyClientMaterials(result, clientMaterials) : result
 
-  const endDate = workflow ? draftDocument?.changeOrder?.endDate || selectedProject.endDate || '' : draftDocument?.changeOrder?.endDate ?? draftDocument?.projectDetails.endDate ?? ''
-  const needsEstimate = !material.estimateValid || material.commercialSignature !== commercialSignature(workflow ? currentProject ?? selectedProject : selectedProject, endDate)
+  const needsEstimate = !!draftDocument?.changeOrder && (!material.estimateValid || material.commercialSignature !== commercialSignature(currentProject ?? selectedProject, draftDocument.changeOrder.endDate || selectedProject.endDate || ''))
+
+  async function refreshEstimate() {
+    if (!selectedProject) return
+    setGenerating(true)
+    setEstimateError('')
+    try { await createEstimate(selectedProject.id, analyzedRequest ?? '', material.clientLanguage) }
+    catch { setEstimateError(t('result.changeOrderError')) }
+    finally { setGenerating(false) }
+  }
 
   async function openChangeOrder() {
-    if (!result || !selectedProject || !termsComplete) { setView('edit_project'); return }
-    if (!needsEstimate) { setShowChangeOrder(true); return }
+    if (!selectedProject) return
+    if (draftDocument?.changeOrder) { setShowChangeOrder(true); return }
+    if (!workflow && (!result || !selectedProject || !termsComplete)) { setView('edit_project'); return }
     setGenerating(true)
     setEstimateError('')
     try {
-      await createEstimate(selectedProject.id, analyzedRequest ?? '', material.clientLanguage)
+      if (workflow) await workflow.prepareAgreement()
+      else await createEstimate(selectedProject.id, analyzedRequest ?? '', material.clientLanguage)
       setShowChangeOrder(true)
     } catch { setEstimateError(t('result.changeOrderError')) }
     finally { setGenerating(false) }
@@ -195,73 +202,13 @@ function ResultState() {
         {!currentDraftId && <p className="text-xs text-muted-foreground">{t('drafts.temporary')}</p>}
       </div>}
       {!workflow && draftError && <p role="alert" className="text-sm text-outscope-text">{t(draftError)}</p>}
-      {projectSnapshot ? <details className="rounded-lg border border-border p-3" open>
-        <summary className="text-sm font-medium">{t('drafts.projectContext')}</summary>
-        <p className="mt-2 text-sm font-medium">{projectSnapshot.name}</p>
-        <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{projectSnapshot.scope}</p>
-        <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
-          <dt>{t('drafts.contextIndustry')}</dt><dd>{projectSnapshot.industry}</dd>
-          <dt>{t('drafts.contextDates')}</dt><dd>{projectSnapshot.startDate ?? '—'} / {projectSnapshot.endDate ?? '—'}</dd>
-          <dt>{t('drafts.contextPricing')}</dt><dd>{projectSnapshot.pricingModel ? t(`drafts.pricing_${projectSnapshot.pricingModel}`) : '—'}</dd>
-          <dt>{t('drafts.contextRate')}</dt><dd>{projectSnapshot.hourlyRate ?? '—'} {projectSnapshot.currency}</dd>
-          <dt>{t('drafts.contextFixed')}</dt><dd>{projectSnapshot.fixedPrice ?? '—'} {projectSnapshot.currency}</dd>
-        </dl>
-      </details> : currentDraftId && <p className="text-xs text-muted-foreground">{t('drafts.legacyContext')}</p>}
       <VerdictBanner
         verdict={result.verdict}
         confidence={result.confidence}
         summary={result.summary}
       />
 
-      {/* Why this verdict */}
-      <section
-        aria-labelledby="why-heading"
-        className="rounded-lg border border-border bg-card p-4"
-      >
-        <h3 id="why-heading" className="text-sm font-semibold text-foreground">
-          {t('result.whyHeading')}
-        </h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-foreground/80 text-pretty">
-          {result.reasoning}
-        </p>
-
-        {result.citations.length > 0 && (
-          <div className="mt-3">
-            <p className="text-xs font-medium text-muted-foreground">
-              {t('result.fromScope')}
-            </p>
-            <ul className="mt-1.5 space-y-1.5">
-              {result.citations.map((c, i) => (
-                <li
-                  key={i}
-                  className="flex gap-2 rounded-md border-l-2 border-border bg-muted/60 px-3 py-1.5 text-sm text-foreground/80"
-                >
-                  <Quote
-                    className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <span className="italic text-pretty">{c}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {result.suggestion && (
-          <div className="mt-3 flex gap-2 rounded-md bg-borderline-soft px-3 py-2 text-sm text-borderline-text">
-            <ArrowRight className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            <p className="leading-relaxed text-pretty">{result.suggestion}</p>
-          </div>
-        )}
-      </section>
-
       <VerdictFeedback key={currentHistoryEntryId ?? 'unlabeled'} />
-
-      {/* Verify warning */}
-      <p className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-        <Info className="size-3.5 shrink-0" aria-hidden="true" />
-        {t('result.verifyWarning')}
-      </p>
 
       <ClientReply
         key={material.clientLanguage}
@@ -276,28 +223,17 @@ function ResultState() {
 
       {estimateError && <p role="alert" className="text-sm text-outscope-text">{estimateError}</p>}
 
-      {hasAdditionalWork && showChangeOrder && needsEstimate && (
-        <Button type="button" variant="outline" className="self-start" disabled={generating || isSavingDraft} onClick={() => void openChangeOrder()}>
-          {generating ? t('result.generatingChangeOrder') : t('result.createChangeOrder')}
-        </Button>
-      )}
-      {hasAdditionalWork && (showChangeOrder && (termsComplete || !!currentDraftId) && user && draftDocument?.changeOrder ? (
+      {needsEstimate && <Button type="button" variant="outline" className="self-start" disabled={generating || !!workflow?.archived} onClick={() => void refreshEstimate()}>{generating ? t('result.generatingChangeOrder') : t('result.refreshEstimate')}</Button>}
+      {showChangeOrder && user && draftDocument?.changeOrder ? (
         <ChangeOrder result={material} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId ?? draftSessionId} userId={user.id} draft={draftDocument.changeOrder} onDraftChange={updateChangeOrder} disabled={generating || !!workflow?.archived || (!workflow && isSavingDraft)} draftId={currentDraftId} savedUnchanged={!isDraftDirty} durableWorkflow={!!workflow} />
       ) : (
-        <Button
-          type="button"
-          variant="outline"
-          className="h-9 self-start"
-          onClick={() => void openChangeOrder()}
-          disabled={generating}
-        >
-          <TriangleAlert aria-hidden="true" />
-          {generating ? t('result.generatingChangeOrder') : termsComplete ? t('result.createChangeOrder') : t('result.completeProjectTerms')}
+        <Button type="button" variant="outline" className="h-9 self-start" onClick={() => void openChangeOrder()} disabled={generating || !!workflow?.archived}>
+          {generating ? t('result.generatingChangeOrder') : t('result.prepareAgreement')}
         </Button>
-      ))}
+      )}
       <section className="rounded-lg border border-border p-3">
         <label htmlFor="co-document-language" className="text-sm font-medium">{t('result.documentLanguage')}</label>
-        <p className="mt-2 text-xs text-muted-foreground">{draftDocument?.languageSelection?.status === 'uncertain' ? t('result.clientLanguageUncertain') : t('result.clientLanguageHint', { language: languageName(draftDocument?.languageSelection?.language ?? material.clientLanguage ?? 'en') })}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{t('result.clientLanguageHint', { language: languageName(material.clientLanguage ?? 'en') })}</p>
         <div className="mt-2 flex gap-2">
           <select id="co-document-language" aria-invalid={!!languageError} aria-describedby="client-language-feedback" disabled={generating || isSavingDraft || !!workflow?.archived} value={documentLanguage} onChange={(e) => setDocumentLanguage(e.target.value)} className="min-w-0 rounded-lg border border-input bg-background px-3 py-2 text-sm">
             {[...new Set<string>([...PDF_CLIENT_LANGUAGES, 'pt-BR', ...(supportedClientLanguage(documentLanguage) ? [documentLanguage] : [])])].map(code => <option key={code} value={code}>{languageName(code)}</option>)}

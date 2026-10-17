@@ -121,7 +121,7 @@ class AnalysisResult:
     reasoning: str
     citations: tuple[str, ...]
     replies: Replies
-    change_order: ChangeOrder
+    change_order: ChangeOrder | None
     client_language: str
     change_order_labels: Labels | Absent = ABSENT
     has_additional_work: bool | Absent = ABSENT
@@ -130,6 +130,7 @@ class AnalysisResult:
     suggestion: str | Absent = ABSENT
     draft_created_at: str | Absent = ABSENT
     commercial_signature: str | Absent = ABSENT
+    preliminary_estimate: tuple[float, str, str] | Absent = ABSENT
 
 
 @dataclass(frozen=True, slots=True)

@@ -5,6 +5,7 @@ import { makeChangeOrderReference } from '@/lib/change-order/document'
 
 export function editableChangeOrder(result: AnalysisResult, project: Project, details: ProjectDetails, seed: string): EditableDraft {
   const co = result.changeOrder
+  if (!co) throw new Error('Agreement has not been prepared')
   const createdAt = result.draftCreatedAt ?? new Date().toISOString()
   return {
     reference: makeChangeOrderReference(createdAt, seed), createdAt,

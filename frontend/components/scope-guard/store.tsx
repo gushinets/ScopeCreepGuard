@@ -79,6 +79,7 @@ export interface StoreValue {
     complete: () => Promise<void>
     retrySave: () => Promise<void>
     regenerate: () => Promise<void>
+    prepareAgreement: () => Promise<void>
     archived: boolean
   }
   user: AuthUser | null
@@ -465,7 +466,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDraftDocument((current) => {
       if (!current) return current
       const updated: AnalysisResult = { ...current.result, changeOrder: data.result.changeOrder, draftCreatedAt: data.result.draftCreatedAt, commercialSignature: data.result.commercialSignature, estimateValid: data.result.estimateValid, changeOrderLabels: data.result.changeOrderLabels }
-      const nextMaterials = current.clientMaterials ? { ...current.clientMaterials, changeOrder: { description: updated.changeOrder.description, timelineImpact: updated.changeOrder.timelineImpact, rationale: updated.changeOrder.rationale ?? '', note: updated.changeOrder.note }, changeOrderLabels: data.result.changeOrderLabels } : null
+      const nextMaterials = current.clientMaterials && updated.changeOrder ? { ...current.clientMaterials, changeOrder: { description: updated.changeOrder.description, timelineImpact: updated.changeOrder.timelineImpact, rationale: updated.changeOrder.rationale ?? '', note: updated.changeOrder.note }, changeOrderLabels: data.result.changeOrderLabels } : null
       const material = nextMaterials ? applyClientMaterials(updated, nextMaterials) : updated
       const proposed = editableChangeOrder(material, project, current.projectDetails, draftSessionId)
       return { ...current, result: updated, clientMaterials: nextMaterials, changeOrder: current.changeOrder ? mergeEstimate(current.changeOrder, proposed) : proposed }

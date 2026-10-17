@@ -27,7 +27,8 @@ describe('parseAnalysisResult', () => {
   })
 
   it('accepts missing optional suggestion', () => {
-    const { suggestion: _s, ...rest } = valid
+    const rest: Partial<typeof valid> = { ...valid }
+    delete rest.suggestion
     expect(parseAnalysisResult(rest).suggestion).toBeUndefined()
   })
 
@@ -93,7 +94,7 @@ describe('parseAnalysisResult', () => {
   it('accepts a positive paid estimate for genuine additional work', () => {
     const parsed = parseAnalysisResult({ ...valid, hasAdditionalWork: true, changeOrder: { ...valid.changeOrder, estimatedHours: 6, additionalCost: '900', currency: 'EUR', rationale: 'Additional work.' } })
     expect(parsed.estimateValid).toBe(true)
-    expect(parsed.changeOrder.additionalCost).toBe('900')
+    expect(parsed.changeOrder!.additionalCost).toBe('900')
   })
 
   it('preserves Spanish as the detected client-request language', () => {

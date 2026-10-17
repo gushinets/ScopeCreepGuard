@@ -65,7 +65,11 @@ def parse_analysis(value, locale="en", override=None) -> AnalysisResult:
         or locale
     )
     translated_labels = labels(raw.get("changeOrderLabels"))
-    if language.split("-")[0] not in {"ru", "en", "es"} and translated_labels == ABSENT:
+    if (
+        language.split("-")[0] not in {"ru", "en", "es"}
+        and translated_labels == ABSENT
+        and raw.get("changeOrder") is not None
+    ):
         invalid("changeOrderLabels")
     if override and normalize_language(raw.get("clientLanguage")) != language:
         invalid("clientLanguage_override")
@@ -87,7 +91,13 @@ def parse_analysis(value, locale="en", override=None) -> AnalysisResult:
     replies = Replies(
         *(text(reply.get(tone), "replies." + tone) for tone in ("warm", "neutral", "firm"))
     )
-    co = obj(raw.get("changeOrder"), "changeOrder")
+    if "changeOrder" not in raw:
+        invalid("changeOrder")
+    co = raw.get("changeOrder")
+    if co is not None:
+        co = obj(co, "changeOrder")
+    else:
+        co = {}
     if "hasAdditionalWork" in raw and type(raw["hasAdditionalWork"]) is not bool:
         invalid("hasAdditionalWork")
     if "requestLanguage" in raw and js_string(raw["requestLanguage"]) not in {
@@ -115,14 +125,18 @@ def parse_analysis(value, locale="en", override=None) -> AnalysisResult:
         and isinstance(co.get("rationale"), str)
         and bool(trim(co["rationale"]))
     )
-    change_order = ChangeOrder(
-        text(co.get("description"), "changeOrder.description"),
-        text(co.get("timelineImpact"), "changeOrder.timelineImpact"),
-        text(cost, "changeOrder.additionalCost"),
-        text(co.get("note"), "changeOrder.note"),
-        hours,
-        co.get("currency", ABSENT) if isinstance(co.get("currency"), str) else ABSENT,
-        co.get("rationale", ABSENT),
+    change_order = (
+        None
+        if raw.get("changeOrder") is None
+        else ChangeOrder(
+            text(co.get("description"), "changeOrder.description"),
+            text(co.get("timelineImpact"), "changeOrder.timelineImpact"),
+            text(cost, "changeOrder.additionalCost"),
+            text(co.get("note"), "changeOrder.note"),
+            hours,
+            co.get("currency", ABSENT) if isinstance(co.get("currency"), str) else ABSENT,
+            co.get("rationale", ABSENT),
+        )
     )
     return AnalysisResult(
         raw["verdict"],
@@ -164,6 +178,7 @@ def parse_snapshot(value, locale="en") -> AnalysisResult:
         draft_created_at=created,
         commercial_signature=signature,
         estimate_valid=raw.get("estimateValid", parsed.estimate_valid),
+        preliminary_estimate=parse_preliminary_estimate(raw.get("estimate")),
     )
 
 
@@ -202,3 +217,19 @@ def parse_materials(value, expected=None) -> ClientMaterials:
         translated,
         translated_labels,
     )
+
+
+def parse_preliminary_estimate(value):
+    if value is None:
+        return ABSENT
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"estimatedHours", "additionalCost", "currency"}
+        or not finite_number(value["estimatedHours"])
+        or value["estimatedHours"] < 0
+        or not isinstance(value["additionalCost"], str)
+        or not re.fullmatch(r"\d+(?:\.\d{1,2})?", value["additionalCost"])
+        or value["currency"] not in ("", "USD", "EUR", "RUB")
+    ):
+        invalid("estimate")
+    return (value["estimatedHours"], value["additionalCost"], value["currency"])

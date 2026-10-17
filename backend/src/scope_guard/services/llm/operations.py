@@ -11,7 +11,8 @@ from scope_guard.domain.llm.runtime import PROMPT_VERSION, digest, encode
 from scope_guard.services.drafts.workflow import context, expected, key
 
 STAGES = {
-    "check": ("analysis", "replies", "change_order"),
+    "check": ("analysis", "replies"),
+    "agreement": ("change_order",),
     "translate": ("replies", "change_order"),
     "regenerate": ("reply",),
     "estimate": ("estimate",),
@@ -20,15 +21,7 @@ STAGES = {
 
 def operation_stages(kind):
     stages = STAGES[kind]
-    return (
-        *stages,
-        *(
-            f"{stage}_review_{attempt}"
-            for stage in stages
-            if stage != "analysis"
-            for attempt in range(1, 4)
-        ),
-    )
+    return stages
 
 
 def pending(row):
@@ -131,6 +124,35 @@ class LlmOperations:
                 }
                 order = draft["draftDocument"].get("changeOrder") or {}
                 frozen["project"]["endDate"] = order.get("endDate") or commercial.get("endDate")
+            if kind == "agreement":
+                if draft["analysisIsStale"]:
+                    raise WorkflowError("analysisStale", 409)
+                # Serialize distinct concurrent clicks, not only redelivery of one key.
+                inflight = await work.llm.active_agreement(owner, identifier)
+                if inflight:
+                    if inflight["source_revision"] != int(draft["revision"]):
+                        raise WorkflowError("draftConflict", 409)
+                    return pending(inflight)
+                frozen["analysis"] = {
+                    **frozen["analysis"],
+                    **(frozen["analysis"].get("estimate") or {}),
+                }
+                frozen["prepareEstimate"] = (
+                    frozen["document"].get("changeOrder") is None
+                    and frozen["analysis"].get("hasAdditionalWork") is True
+                    and any(
+                        frozen["project"].get(f) != project.get(f)
+                        for f in ("pricingModel", "hourlyRate", "fixedPrice", "currency")
+                    )
+                )
+                if frozen["prepareEstimate"]:
+                    frozen["project"] = {
+                        **frozen["project"],
+                        **{
+                            f: project.get(f)
+                            for f in ("pricingModel", "hourlyRate", "fixedPrice", "currency")
+                        },
+                    }
             selection["requestHash"] = digest(draft["requestText"])
             error = None
             if not self.policy.get("inputRate") or not self.policy.get("outputRate"):
@@ -140,7 +162,9 @@ class LlmOperations:
                     Decimal(self.policy["inputRate"]) * 32768
                     + Decimal(self.policy["outputRate"]) * 4096
                 )
-                minimum = 5 if kind == "check" else 4 if kind == "translate" else 2
+                minimum = (
+                    2 if kind in ("check", "translate") or frozen.get("prepareEstimate") else 1
+                )
                 if minimum * worst_call > Decimal(self.policy["maxCost"]):
                     error = {"code": "errors.providerBudgetUnavailable", "status": 503}
             if self.limiter and not self.limiter.allow(
@@ -162,6 +186,7 @@ class LlmOperations:
                     command,
                     request_hash,
                 )
+            existing = kind == "agreement" and frozen["document"].get("changeOrder") is not None
             row = await work.llm.insert(
                 {
                     "owner": owner,
@@ -178,21 +203,34 @@ class LlmOperations:
                         {
                             **self.policy,
                             "maxCalls": {
-                                "check": 12,
+                                "check": 6,
+                                "agreement": 6,
                                 "translate": 8,
                                 "regenerate": 6,
                                 "estimate": 6,
                             }[kind],
                         }
                     ),
-                    "status": "failed" if error else "queued",
+                    "status": "queued" if existing else "failed" if error else "queued",
                     "error": encode(error) if error else None,
                     "deadline": timestamp
                     + timedelta(seconds=self.policy.get("durationSeconds", 180)),
-                    "finished": timestamp if error else None,
+                    "finished": timestamp if error or existing else None,
                 },
-                operation_stages(kind),
+                tuple(
+                    stage
+                    for stage in (
+                        ("estimate", "change_order")
+                        if frozen.get("prepareEstimate")
+                        else operation_stages(kind)
+                    )
+                    if stage != "change_order"
+                    or kind != "translate"
+                    or frozen["document"].get("changeOrder") is not None
+                ),
             )
+            if existing:
+                await work.llm.restore_existing(row, {"draft": {**draft, "analysisRun": run}})
             if error and kind in ("check", "estimate"):
                 await work.workflow.finish_run(owner, UUID(run["id"]), "running", None)
                 await work.workflow.finish_run(

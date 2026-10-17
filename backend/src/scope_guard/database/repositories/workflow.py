@@ -409,6 +409,16 @@ class WorkflowSQLRepository:
             {"draft": draft},
         )
 
+    async def latest_materials(self, owner, draft, run):
+        await self.draft(owner, draft)
+        row = await self.one(
+            "SELECT to_jsonb(r) FROM draft_revisions r WHERE draft_id=:draft "
+            "AND state_snapshot->>'lastAnalysisRunId'=:run "
+            "ORDER BY revision DESC LIMIT 1",
+            {"draft": draft, "run": str(run)},
+        )
+        return row["stateSnapshot"]["draftDocument"] if row else None
+
     async def legacy_revision(self, owner, identifier):
         value = await self.one(
             "SELECT to_jsonb(r) FROM draft_revisions r JOIN projects p ON p.id=r.project_id "

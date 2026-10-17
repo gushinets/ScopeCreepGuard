@@ -15,19 +15,21 @@ def replies_to_wire(replies):
 
 def analysis_to_wire(result: AnalysisResult) -> dict:
     co = result.change_order
-    change_order: dict = {
-        "description": co.description,
-        "timelineImpact": co.timeline_impact,
-        "additionalCost": co.additional_cost,
-        "note": co.note,
-    }
-    for key, optional in (
-        ("estimatedHours", co.estimated_hours),
-        ("currency", co.currency),
-        ("rationale", co.rationale),
-    ):
-        if optional != ABSENT:
-            change_order[key] = optional
+    change_order: dict | None = None
+    if co is not None:
+        change_order = {
+            "description": co.description,
+            "timelineImpact": co.timeline_impact,
+            "additionalCost": co.additional_cost,
+            "note": co.note,
+        }
+        for key, optional in (
+            ("estimatedHours", co.estimated_hours),
+            ("currency", co.currency),
+            ("rationale", co.rationale),
+        ):
+            if optional != ABSENT:
+                change_order[key] = optional
     wire = {
         "verdict": result.verdict,
         "confidence": result.confidence,
@@ -54,6 +56,9 @@ def analysis_to_wire(result: AnalysisResult) -> dict:
     ):
         if extra != ABSENT:
             wire[key] = extra
+    if isinstance(result.preliminary_estimate, tuple):
+        hours, amount, currency = result.preliminary_estimate
+        wire["estimate"] = {"estimatedHours": hours, "additionalCost": amount, "currency": currency}
     return wire
 
 

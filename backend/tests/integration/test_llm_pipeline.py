@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-from decimal import Decimal
 from uuid import UUID, uuid4
 
 import httpx
@@ -16,7 +15,6 @@ from scope_guard.database.migrations import migrate
 from scope_guard.database.repositories.llm import LlmSQLStore
 from scope_guard.database.repositories.workflow import WorkflowUnitOfWork
 from scope_guard.database.session import Database, normalize_url
-from scope_guard.domain.llm.runtime import PROMPT_VERSION
 from scope_guard.integrations.llm.detection import select
 from scope_guard.integrations.llm.gateway import ProviderGateway
 from scope_guard.integrations.llm.litellm_adapter import LiteLLMResponsesAdapter
@@ -44,7 +42,7 @@ PROSE = {
 
 
 def output(stage, locale, language):
-    if stage == "semantic_review_v1":
+    if stage in ("semantic_review_v1", "semantic_review_v2"):
         return APPROVED
     if stage == "analysis_v1":
         return {
@@ -142,6 +140,8 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                 "('pipeline@example.test','hash') RETURNING id"
             )
         )
+
+        migrate(connection, target="head")
 
     async def exercise():
         target = language
@@ -330,7 +330,7 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
             )
         if fault:
             assert not await worker.process_one()
-            assert len(bodies) == 5
+            assert len(bodies) == 2
             assert not await workflow.histories(owner, UUID(project["id"]))
             worker = LlmWorker(
                 factory, store, StructuredStageRunner(ProviderGateway(store, adapter), store)
@@ -355,277 +355,89 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
             )
         assert len(calls) == len(bodies)
         assert all(c["reported_cost"] is None for c in calls)
-        if wrong == 1:
-            assert sum(c["validation_status"] == "rejected" for c in calls) == 1
-            assert all(c["estimated_cost"] is not None for c in calls)
+        # Content findings no longer reject or regenerate a structurally valid candidate.
+        assert status["status"] == "succeeded", status
+        assert all(c["validation_status"] != "rejected" for c in calls)
+        assert status["result"]["draft"]["draftDocument"]["changeOrder"] is None
+        assert all(b["text"]["format"]["name"] != "change_order_v1" for b in bodies)
         if not usage:
             assert all(c["input_tokens"] is None and c["estimated_cost"] is None for c in calls)
-            assert (await store.get(owner, operation_id))["reserved"] > Decimal(0)
-        if wrong == 3 or semantic_failure == "exhaust":
-            assert status["status"] == "failed" and status["result"] is None
-            assert status["error"]["code"] == "errors.semanticAttemptsExhausted"
-            assert status["stages"]["analysis"] == "accepted"
-            assert not await workflow.histories(owner, UUID(project["id"]))
-        else:
-            assert status["status"] == "succeeded", (
-                status["error"],
-                [(s["stage_key"], s["feedback"]) for s in await store.steps(operation_id)],
-            )
-            assert len(bodies) == 5 + wrong + int(interrupted) + (2 if semantic_failure else 0)
-            if semantic_failure:
-                assert semantic_rejected == 1
-                assert sum(c["validation_status"] == "rejected" for c in calls) == 1
-                assert all(c["estimated_cost"] is not None for c in calls)
-            result = status["result"]["analysisRun"]["resultSnapshot"]
-            assert (
-                result["summary"] == PROSE[locale]
-                and result["replies"]["neutral"] == PROSE[language]
-            )
-            draft = await workflow.draft(owner, draft_id)
-            assert draft["draftDocument"]["reply"]["language"] == language
-            assert len(await workflow.histories(owner, UUID(project["id"]))) == 1
-            # Change the current scope; regenerations must retain this check's historical scope.
-            await workflow.update_project(
-                owner,
-                UUID(project["id"]),
-                {
-                    **project,
-                    "scope": "Arrow and email alerts are now included.",
-                    "hourlyRate": "60.00",
-                    "operationId": str(uuid4()),
-                    "expectedRevision": draft["revision"],
-                },
-            )
-            for _ in range(2):
-                draft = await workflow.draft(owner, draft_id)
-                pending = await operations.admit(
-                    owner,
-                    draft_id,
-                    "regenerate",
-                    {"operationId": str(uuid4()), "expectedRevision": draft["revision"]},
-                )
-                assert await worker.process_one()
-                assert (await operations.status(owner, UUID(pending["operationId"])))[
-                    "status"
-                ] == "succeeded"
-                assert "now included" not in json.dumps(bodies[-1]["input"])
-            # Only the reply stage retries; failed replacements retain the saved Draft.
-            for regeneration_mode in ("once", "whitespace", "always"):
-                regeneration_attempt = 0
-                if regeneration_mode == "always":
-                    edited = await workflow.draft(owner, draft_id)
-                    manual = edited["draftDocument"]
-                    manual["reply"]["text"] += (
-                        " "
-                        + {
-                            "en": "Please preserve our manually agreed recipient list.",
-                            "ru": "Пожалуйста, сохраните согласованный вручную список получателей.",
-                            "es": "Conserve nuestra lista de destinatarios acordada manualmente.",
-                        }[target]
-                    )
-                    manual["changeOrder"].update(
-                        additionalCost="333.00", estimatedHours="9.5", currency="EUR"
-                    )
-                    await workflow.save(
-                        owner,
-                        draft_id,
-                        {
-                            "operationId": str(uuid4()),
-                            "expectedRevision": edited["revision"],
-                            "changes": {"draftDocument": manual},
-                        },
-                    )
-                before = await workflow.draft(owner, draft_id)
-                before_history = len(await workflow.histories(owner, UUID(project["id"])))
-                before_calls = len(bodies)
-                pending = await operations.admit(
-                    owner,
-                    draft_id,
-                    "regenerate",
-                    {"operationId": str(uuid4()), "expectedRevision": before["revision"]},
-                )
-                regenerate_id = UUID(pending["operationId"])
-                assert await worker.process_one()
-                regenerated = await operations.status(owner, regenerate_id)
-                expected_calls = 3
-                assert len(bodies) - before_calls == expected_calls
-                assert all(
-                    b["text"]["format"]["name"] in ("reply_v1", "semantic_review_v1")
-                    for b in bodies[before_calls:]
-                )
-                async with database.new_uow() as work:
-                    attempts = (
-                        (
-                            await work.session.execute(
-                                text(
-                                    "SELECT * FROM provider_calls WHERE operation_id=:id "
-                                    "ORDER BY physical_index"
-                                ),
-                                {"id": regenerate_id},
-                            )
-                        )
-                        .mappings()
-                        .all()
-                    )
-                assert len(attempts) == expected_calls
-                assert all(
-                    c["validation_status"] == "rejected"
-                    for c in attempts[: expected_calls if regeneration_mode == "always" else 1]
-                )
-                assert all(c["reported_cost"] is None for c in attempts)
-                assert all((c["estimated_cost"] is not None) == usage for c in attempts)
-                after = await workflow.draft(owner, draft_id)
-                assert (
-                    after["draftDocument"]["changeOrder"] == before["draftDocument"]["changeOrder"]
-                )
-                assert after["lastAnalysisRunId"] == before["lastAnalysisRunId"]
-                assert len(await workflow.histories(owner, UUID(project["id"]))) == before_history
-                if regeneration_mode == "always":
-                    assert regenerated["status"] == "failed"
-                    assert regenerated["error"]["code"] == "errors.semanticAttemptsExhausted"
-                    assert "unchanged_reply" in json.dumps(regenerated["error"])
-                    assert after["draftDocument"] == before["draftDocument"]
-                    assert after["revision"] == before["revision"]
-                else:
-                    assert regenerated["status"] == "succeeded"
-                    assert (
-                        after["draftDocument"]["reply"]["text"]
-                        != before["draftDocument"]["reply"]["text"]
-                    )
-            regeneration_mode = "different"
-            if locale == "en" and language == "ru":
-                draft = await workflow.draft(owner, draft_id)
-                pending = await operations.admit(
-                    owner,
-                    draft_id,
-                    "estimate",
-                    {"operationId": str(uuid4()), "expectedRevision": draft["revision"]},
-                )
-                frozen = (await store.get(owner, UUID(pending["operationId"])))["frozen_input"]
-                assert frozen["project"]["hourlyRate"] == "60.00"
-                assert frozen["project"]["scope"] == "Arrow and email alerts are excluded."
-                assert await worker.process_one()
-                estimate = await operations.status(owner, UUID(pending["operationId"]))
-                assert estimate["status"] == "succeeded", estimate["error"]
-                assert estimate["result"]["analysisRun"]["purpose"] == "estimate"
-                assert (
-                    estimate["result"]["analysisRun"]["resultSnapshot"]["changeOrder"][
-                        "additionalCost"
-                    ]
-                    == "480.00"
-                )
-                assert (await workflow.draft(owner, draft_id))["lastAnalysisRunId"] == draft[
-                    "lastAnalysisRunId"
-                ]
-            assert len(await workflow.histories(owner, UUID(project["id"]))) == 1
-            # Old pending work must not resume under changed prompts or consume calls.
-            current = await workflow.draft(owner, draft_id)
-            old = await operations.admit(
-                owner,
-                draft_id,
-                "check",
-                {
-                    "operationId": str(uuid4()),
-                    "expectedRevision": current["revision"],
-                    "locale": locale,
-                },
-            )
-            old_id = UUID(old["operationId"])
-            assert all(s["prompt_version"] == PROMPT_VERSION for s in await store.steps(old_id))
-            async with database.new_uow() as work:
-                await work.session.execute(
-                    text(
-                        "UPDATE llm_steps SET prompt_version='workflow-v3' WHERE operation_id=:id"
-                    ),
-                    {"id": old_id},
-                )
-                await work.commit()
-            count = len(bodies)
+            assert (await store.get(owner, operation_id))["reserved"] > 0
+        assert len(await workflow.histories(owner, UUID(project["id"]))) == 1
+        draft = await workflow.draft(owner, draft_id)
+        agreement = await operations.admit(
+            owner,
+            draft_id,
+            "agreement",
+            {"operationId": str(uuid4()), "expectedRevision": draft["revision"]},
+        )
+        assert await worker.process_one()
+        assert (await operations.status(owner, UUID(agreement["operationId"])))[
+            "status"
+        ] == "succeeded"
+        draft = await workflow.draft(owner, draft_id)
+        await workflow.update_project(
+            owner,
+            UUID(project["id"]),
+            {
+                **project,
+                "scope": "Arrow and email are now included.",
+                "hourlyRate": "60.00",
+                "operationId": str(uuid4()),
+                "expectedRevision": draft["revision"],
+            },
+        )
+        for regeneration_mode in ("different", "once", "whitespace", "always"):
+            regeneration_attempt = 0
+            before = await workflow.draft(owner, draft_id)
+            before_calls = len(bodies)
+            command = {"operationId": str(uuid4()), "expectedRevision": before["revision"]}
+            pending = await operations.admit(owner, draft_id, "regenerate", command)
             assert await worker.process_one()
-            old_status = await operations.status(owner, old_id)
-            assert old_status["error"]["code"] == "errors.workflowVersionUnavailable"
-            assert len(bodies) == count
-            if locale == "ru" and language == "en":
-                # Translation remains this check, with the same manual commercial values.
-                draft = await workflow.draft(owner, draft_id)
-                document = draft["draftDocument"]
-                document["reply"]["text"] = PROSE["en"] + " Please review the proposal carefully."
-                document["changeOrder"].update(
-                    additionalCost="333.00",
-                    estimatedHours="9.5",
-                    currency="EUR",
-                    endDate="2027-01-01",
-                )
-                draft = await workflow.save(
-                    owner,
-                    draft_id,
-                    {
-                        "operationId": str(uuid4()),
-                        "expectedRevision": draft["revision"],
-                        "changes": {"draftDocument": document},
-                    },
-                )
-                target = "es"
-                pending = await operations.admit(
-                    owner,
-                    draft_id,
-                    "translate",
-                    {
-                        "operationId": str(uuid4()),
-                        "expectedRevision": draft["revision"],
-                        "language": target,
-                    },
-                )
-                assert await worker.process_one()
-                translated = await operations.status(owner, UUID(pending["operationId"]))
-                assert translated["status"] == "succeeded", translated["error"]
-                reopened = await workflow.draft(owner, draft_id)
-                co = reopened["draftDocument"]["changeOrder"]
+            regenerated = await operations.status(owner, UUID(pending["operationId"]))
+            assert regenerated["status"] == "succeeded", regenerated
+            assert len(bodies) - before_calls == 1
+            assert bodies[-1]["text"]["format"]["name"] == "reply_v1"
+            assert "now included" not in json.dumps(bodies[-1]["input"])
+            after = await workflow.draft(owner, draft_id)
+            assert after["draftDocument"]["changeOrder"] == before["draftDocument"]["changeOrder"]
+            assert after["lastAnalysisRunId"] == before["lastAnalysisRunId"]
+            for tone in ("warm", "firm"):
                 assert (
-                    co["additionalCost"],
-                    co["estimatedHours"],
-                    co["currency"],
-                    co["endDate"],
-                ) == ("333.00", "9.5", "EUR", "2027-01-01")
-                assert reopened["analysisRun"]["resultSnapshot"] == result
-                assert reopened["draftDocument"]["languageSelection"]["override"] is True
-                assert reopened["draftDocument"]["reply"]["language"] == "es"
-                assert len(await workflow.histories(owner, UUID(project["id"]))) == 1
-                # New request clears the override; prior materials never enter a new check.
-                reopened = await workflow.save(
-                    owner,
-                    draft_id,
-                    {
-                        "operationId": str(uuid4()),
-                        "expectedRevision": reopened["revision"],
-                        "changes": {"requestText": REQUESTS["ru"]},
-                    },
+                    after["draftDocument"]["reply"]["generated"][tone]
+                    == before["draftDocument"]["reply"]["generated"][tone]
                 )
-                assert reopened["draftDocument"]["languageSelection"]["override"] is False
-                pending = await operations.admit(
-                    owner,
-                    draft_id,
-                    "check",
-                    {
-                        "operationId": str(uuid4()),
-                        "expectedRevision": reopened["revision"],
-                        "locale": "ru",
-                    },
-                )
-                frozen = (await store.get(owner, UUID(pending["operationId"])))["frozen_input"]
-                assert frozen["selection"]["selectedLanguage"] == "ru"
+            if regeneration_mode == "always":
                 assert (
-                    frozen["document"]["reply"]["text"] == ""
-                    and frozen["document"]["changeOrder"] is None
+                    after["draftDocument"]["reply"]["text"]
+                    == before["draftDocument"]["reply"]["text"]
                 )
-                history = (await workflow.histories(owner, UUID(project["id"])))[0]
-                restored = await workflow.reopen_history(
-                    owner,
-                    UUID(history["id"]),
-                    {"operationId": str(uuid4()), "expectedRevision": reopened["revision"]},
-                )
-                assert restored["draftDocument"]["languageSelection"]["override"] is True
-                assert restored["draftDocument"]["reply"]["language"] == "en"
+        assert len(await workflow.histories(owner, UUID(project["id"]))) == 1
+        # Old queued contracts fail without dispatching or rewriting their frozen input.
+        current = await workflow.draft(owner, draft_id)
+        old = await operations.admit(
+            owner,
+            draft_id,
+            "check",
+            {
+                "operationId": str(uuid4()),
+                "expectedRevision": current["revision"],
+                "locale": locale,
+            },
+        )
+        old_id = UUID(old["operationId"])
+        async with database.new_uow() as work:
+            await work.session.execute(
+                text("UPDATE llm_steps SET prompt_version='workflow-v6' WHERE operation_id=:id"),
+                {"id": old_id},
+            )
+            await work.commit()
+        count = len(bodies)
+        assert await worker.process_one()
+        assert (await operations.status(owner, old_id))["error"][
+            "code"
+        ] == "errors.workflowVersionUnavailable"
+        assert len(bodies) == count
         await adapter.close()
         await database.close()
 

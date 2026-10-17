@@ -2893,76 +2893,129 @@
                             "title": "AnalysisReplies"
                           },
                           "changeOrder": {
-                            "properties": {
-                              "description": {
-                                "type": "string",
-                                "title": "Description"
-                              },
-                              "timelineImpact": {
-                                "type": "string",
-                                "title": "Timelineimpact"
-                              },
-                              "additionalCost": {
-                                "type": "string",
-                                "title": "Additionalcost"
-                              },
-                              "note": {
-                                "type": "string",
-                                "title": "Note"
-                              },
-                              "estimatedHours": {
-                                "anyOf": [
-                                  {
-                                    "type": "number",
-                                    "minimum": 0.0
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ],
-                                "title": "Estimatedhours"
-                              },
-                              "currency": {
-                                "anyOf": [
-                                  {
+                            "anyOf": [
+                              {
+                                "properties": {
+                                  "description": {
                                     "type": "string",
-                                    "enum": [
-                                      "RUB",
-                                      "USD",
-                                      "EUR"
+                                    "title": "Description"
+                                  },
+                                  "timelineImpact": {
+                                    "type": "string",
+                                    "title": "Timelineimpact"
+                                  },
+                                  "additionalCost": {
+                                    "type": "string",
+                                    "title": "Additionalcost"
+                                  },
+                                  "note": {
+                                    "type": "string",
+                                    "title": "Note"
+                                  },
+                                  "estimatedHours": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0.0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "title": "Estimatedhours"
+                                  },
+                                  "currency": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "RUB",
+                                          "USD",
+                                          "EUR"
+                                        ],
+                                        "title": "Currency"
+                                      },
+                                      {
+                                        "type": "string",
+                                        "const": ""
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
                                     ],
                                     "title": "Currency"
                                   },
-                                  {
-                                    "type": "string",
-                                    "const": ""
-                                  },
-                                  {
-                                    "type": "null"
+                                  "rationale": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "title": "Rationale"
                                   }
+                                },
+                                "type": "object",
+                                "required": [
+                                  "description",
+                                  "timelineImpact",
+                                  "additionalCost",
+                                  "note"
                                 ],
-                                "title": "Currency"
+                                "title": "AnalysisChangeOrder"
                               },
-                              "rationale": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ],
-                                "title": "Rationale"
+                              {
+                                "type": "null"
                               }
-                            },
-                            "type": "object",
-                            "required": [
-                              "description",
-                              "timelineImpact",
-                              "additionalCost",
-                              "note"
-                            ],
-                            "title": "AnalysisChangeOrder"
+                            ]
+                          },
+                          "estimate": {
+                            "anyOf": [
+                              {
+                                "properties": {
+                                  "estimatedHours": {
+                                    "type": "number",
+                                    "minimum": 0.0,
+                                    "title": "Estimatedhours"
+                                  },
+                                  "additionalCost": {
+                                    "type": "string",
+                                    "pattern": "^\\d+(?:\\.\\d{1,2})?$",
+                                    "title": "Additionalcost"
+                                  },
+                                  "currency": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "RUB",
+                                          "USD",
+                                          "EUR"
+                                        ],
+                                        "title": "Currency"
+                                      },
+                                      {
+                                        "type": "string",
+                                        "const": ""
+                                      }
+                                    ],
+                                    "title": "Currency"
+                                  }
+                                },
+                                "type": "object",
+                                "required": [
+                                  "estimatedHours",
+                                  "additionalCost",
+                                  "currency"
+                                ],
+                                "title": "PreliminaryEstimate"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "hasAdditionalWork": {
                             "anyOf": [
@@ -4215,76 +4268,129 @@
                             "type": "object"
                           },
                           "changeOrder": {
-                            "properties": {
-                              "description": {
-                                "title": "Description",
-                                "type": "string"
+                            "anyOf": [
+                              {
+                                "properties": {
+                                  "description": {
+                                    "title": "Description",
+                                    "type": "string"
+                                  },
+                                  "timelineImpact": {
+                                    "title": "Timelineimpact",
+                                    "type": "string"
+                                  },
+                                  "additionalCost": {
+                                    "title": "Additionalcost",
+                                    "type": "string"
+                                  },
+                                  "note": {
+                                    "title": "Note",
+                                    "type": "string"
+                                  },
+                                  "estimatedHours": {
+                                    "anyOf": [
+                                      {
+                                        "minimum": 0,
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "title": "Estimatedhours"
+                                  },
+                                  "currency": {
+                                    "anyOf": [
+                                      {
+                                        "enum": [
+                                          "RUB",
+                                          "USD",
+                                          "EUR"
+                                        ],
+                                        "title": "Currency",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "const": "",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "title": "Currency"
+                                  },
+                                  "rationale": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "title": "Rationale"
+                                  }
+                                },
+                                "required": [
+                                  "description",
+                                  "timelineImpact",
+                                  "additionalCost",
+                                  "note"
+                                ],
+                                "title": "AnalysisChangeOrder",
+                                "type": "object"
                               },
-                              "timelineImpact": {
-                                "title": "Timelineimpact",
-                                "type": "string"
-                              },
-                              "additionalCost": {
-                                "title": "Additionalcost",
-                                "type": "string"
-                              },
-                              "note": {
-                                "title": "Note",
-                                "type": "string"
-                              },
-                              "estimatedHours": {
-                                "anyOf": [
-                                  {
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "estimate": {
+                            "anyOf": [
+                              {
+                                "properties": {
+                                  "estimatedHours": {
                                     "minimum": 0,
+                                    "title": "Estimatedhours",
                                     "type": "number"
                                   },
-                                  {
-                                    "type": "null"
-                                  }
-                                ],
-                                "title": "Estimatedhours"
-                              },
-                              "currency": {
-                                "anyOf": [
-                                  {
-                                    "enum": [
-                                      "RUB",
-                                      "USD",
-                                      "EUR"
+                                  "additionalCost": {
+                                    "pattern": "^\\d+(?:\\.\\d{1,2})?$",
+                                    "title": "Additionalcost",
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "anyOf": [
+                                      {
+                                        "enum": [
+                                          "RUB",
+                                          "USD",
+                                          "EUR"
+                                        ],
+                                        "title": "Currency",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "const": "",
+                                        "type": "string"
+                                      }
                                     ],
-                                    "title": "Currency",
-                                    "type": "string"
-                                  },
-                                  {
-                                    "const": "",
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
+                                    "title": "Currency"
                                   }
+                                },
+                                "required": [
+                                  "estimatedHours",
+                                  "additionalCost",
+                                  "currency"
                                 ],
-                                "title": "Currency"
+                                "title": "PreliminaryEstimate",
+                                "type": "object"
                               },
-                              "rationale": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ],
-                                "title": "Rationale"
+                              {
+                                "type": "null"
                               }
-                            },
-                            "required": [
-                              "description",
-                              "timelineImpact",
-                              "additionalCost",
-                              "note"
-                            ],
-                            "title": "AnalysisChangeOrder",
-                            "type": "object"
+                            ]
                           },
                           "hasAdditionalWork": {
                             "anyOf": [
@@ -6281,6 +6387,79 @@
         }
       }
     },
+    "/api/v2/drafts/{identifier}/agreement": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Prepare Agreement",
+        "operationId": "prepare_agreement_api_v2_drafts__identifier__agreement_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionedOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__DraftResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingLlmOperation"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/drafts/{identifier}/estimate": {
       "post": {
         "tags": [
@@ -7974,7 +8153,24 @@
             "$ref": "#/components/schemas/AnalysisReplies"
           },
           "changeOrder": {
-            "$ref": "#/components/schemas/AnalysisChangeOrder"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalysisChangeOrder"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "estimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreliminaryEstimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "hasAdditionalWork": {
             "anyOf": [
@@ -9503,6 +9699,39 @@
           "deadlineAt"
         ],
         "title": "PendingLlmOperation"
+      },
+      "PreliminaryEstimate": {
+        "properties": {
+          "estimatedHours": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Estimatedhours"
+          },
+          "additionalCost": {
+            "type": "string",
+            "pattern": "^\\d+(?:\\.\\d{1,2})?$",
+            "title": "Additionalcost"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Currency"
+              },
+              {
+                "type": "string",
+                "const": ""
+              }
+            ],
+            "title": "Currency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "estimatedHours",
+          "additionalCost",
+          "currency"
+        ],
+        "title": "PreliminaryEstimate"
       },
       "PricingModel": {
         "type": "string",

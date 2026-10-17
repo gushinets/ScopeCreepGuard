@@ -38,6 +38,6 @@ export function applyClientMaterials(result: AnalysisResult, materials: ClientMa
   return {
     ...result, clientLanguage: materials.clientLanguage, replies: materials.replies,
     changeOrderLabels: materials.changeOrderLabels,
-    changeOrder: materials.changeOrder ? { ...result.changeOrder, ...Object.fromEntries(CLIENT_TEXT_FIELDS.map((field) => [field, materials.changeOrder![field]])) } : result.changeOrder,
+    changeOrder: materials.changeOrder && result.changeOrder ? { ...result.changeOrder, ...materials.changeOrder } : result.changeOrder,
   }
 }

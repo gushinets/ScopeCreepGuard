@@ -162,6 +162,7 @@ def test_guarded_migrate_upgrades_known_baseline_to_test_only_future_head(
             "0004_workflow_retire.py",
             "0005_llm_workflow.py",
             "0006_profile_metrics.py",
+            "0007_nonblocking_llm.py",
         ),
     )
     shutil.copy(
