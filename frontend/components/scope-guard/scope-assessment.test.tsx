@@ -44,6 +44,14 @@ it('reads historical estimate fields without rendering client-language document 
   expect(screen.queryByText('Draft')).toBeNull()
 })
 
+it('renders a known numeric zero estimate while leaving an unknown amount absent', () => {
+  const view = render(<NextIntlClientProvider locale="en" messages={en}><ScopeAssessment result={{ ...analysis, estimate: { estimatedHours: 0, additionalCost: '0', currency: 'USD' } }} /></NextIntlClientProvider>)
+  expect(screen.getByText('$0.00')).toBeTruthy()
+  view.unmount()
+  render(<NextIntlClientProvider locale="en" messages={en}><ScopeAssessment result={{ ...analysis, estimate: { estimatedHours: 0, additionalCost: '', currency: 'USD' } }} /></NextIntlClientProvider>)
+  expect(screen.queryByText('$0.00')).toBeNull()
+})
+
 it.each(['in_scope', 'borderline', 'out_of_scope'] as const)('tolerates missing optional fields for %s', verdict => {
   const result: AnalysisResult = { ...analysisFixture, verdict, citations: [], suggestion: undefined, estimate: undefined, changeOrder: null, hasAdditionalWork: undefined }
   render(<NextIntlClientProvider locale="en" messages={en}><ScopeAssessment result={result} /></NextIntlClientProvider>)

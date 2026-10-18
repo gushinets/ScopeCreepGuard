@@ -74,8 +74,12 @@ result without another generation call.
   registrations enter its denominator and numerator. A later first check still
   contributes TTV. D7/D30 return uses the exact target calendar day of a timely
   activation cohort. Current incomplete-day retention and empty rates are NULL.
-- Durable operations are counted once; synchronous runs and generation events
-  are included only when no durable operation owns them. Historical successful
+- Durable operations are counted once. Product totals cover only check,
+  regeneration, translation and estimate.
+  Explicit agreement preparation and internal diagnostics remain observable in
+  the ledger and confirmed AI indicators, but are not additional product KPI kinds.
+  Synchronous runs and generation events are included only when no durable
+  operation owns them. Historical successful
   regeneration/translation revisions remain observable successes with unknown
   start/duration. Admission timestamps assign starts, terminal timestamps assign
   outcomes and durations; queue/retry time is included. Succeeded / (succeeded +
