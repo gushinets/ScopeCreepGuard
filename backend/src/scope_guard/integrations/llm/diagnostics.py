@@ -95,7 +95,12 @@ def local_observations(binding, stage, candidate, facts):
                 continue
             checks.append(
                 lambda field=field, original=original, document=document: preserve_translation(
-                    field, original, candidate[field], document["reply"]["language"], target
+                    field,
+                    original,
+                    candidate[field],
+                    document["reply"]["language"],
+                    target,
+                    money=False,
                 )
             )
     observations = [o for check in checks for o in local_observation(binding, stage, check)]

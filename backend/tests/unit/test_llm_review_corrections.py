@@ -19,16 +19,29 @@ class RecordingStore(ReviewLedger):
     pass
 
 
-async def run(stage, source, outputs, store):
+async def run(stage, source, outputs, store, *, reviews=None):
+    review_index = 0
+
     class Adapter:
         async def request(self, request, timeout):
-            index = sum(c["request"].schema_name != "semantic_review_v1" for c in store.calls) - 1
+            nonlocal review_index
+            reviewing = request.schema_name.startswith("semantic_review_")
+            if reviewing:
+                value = (reviews or [APPROVED])[min(review_index, len(reviews or [APPROVED]) - 1)]
+                review_index += 1
+                return ProviderResponse(json.dumps(value), input_tokens=100, output_tokens=50)
+            index = (
+                sum(
+                    not c["request"].schema_name.startswith("semantic_review_") for c in store.calls
+                )
+                - 1
+            )
             value = deepcopy(outputs[min(index, len(outputs) - 1)])
             if "labels" not in request.schema.get("properties", {}):
                 value.pop("labels", None)
             return ProviderResponse(
                 json.dumps(
-                    APPROVED if request.schema_name == "semantic_review_v1" else value,
+                    value,
                     ensure_ascii=False,
                 ),
                 input_tokens=100,

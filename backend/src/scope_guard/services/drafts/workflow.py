@@ -677,7 +677,19 @@ class WorkflowService:
                     text=material["replies"][reply["tone"]],
                 )
                 if document["changeOrder"] and material.get("changeOrder"):
-                    document["changeOrder"].update(material["changeOrder"])
+                    document["changeOrder"].update(
+                        {
+                            field: material["changeOrder"][field]
+                            for field in (
+                                "description",
+                                "timelineImpact",
+                                "rationale",
+                                "note",
+                                "additionalTerms",
+                            )
+                            if field in material["changeOrder"]
+                        }
+                    )
                     document["changeOrder"]["language"] = language
                     if material.get("changeOrderLabels"):
                         document["changeOrder"]["changeOrderLabels"] = material["changeOrderLabels"]

@@ -76,7 +76,14 @@ or bilingual labels. Do not generate replies or rewrite analysis.
 TRANSLATION = """Translate established saved material text including manual edits
 and ancillary terms faithfully into the resolved client language. Do not reassess
 scope, confidence, additional work, effort, fees, currency, dates or commercial
-terms. Preserve every factual claim, numerical value and timeline commitment.
+terms. currentCommercialTerms is authoritative: the saved amount/currency pair
+overrides older prices in saved prose and historical estimates. Translate language
+only; never convert currencies or recalculate from project rates. Spanish does not
+imply EUR and English does not imply USD. Use the saved pair wherever the text
+mentions the payable fee, even if the wording reference still has an older price.
+When noAdditionalCharge=true, stored amounts are not payable: do not revive a fee.
+Missing or cleared commercial fields must stay missing; do not restore estimates.
+Preserve every other factual claim, numerical value and timeline commitment.
 Do not introduce or remove commitments or weaken the accepted scope position.
 Analysis stays in the interface language and must not be returned or rewritten.
 """
@@ -171,6 +178,12 @@ def stage_source(stage, facts):
         # Older analysis estimates are not translation facts. Saved editable values
         # and text are authoritative; sending both caused the D1 stale-price invention.
         source["analysis"] = selected(accepted, ("verdict", "citations", "hasAdditionalWork"))
+        source["currentCommercialTerms"] = current_commercial_terms(facts)
+        source["project"] = {
+            k: v
+            for k, v in source["project"].items()
+            if k not in ("pricingModel", "currency", "hourlyRate", "fixedPrice")
+        }
         if stage == "replies":
             reply = document["reply"]
             source["document"] = {
@@ -193,6 +206,7 @@ def stage_source(stage, facts):
                         "rationale",
                         "note",
                         "additionalTerms",
+                        "noAdditionalCharge",
                         "changeOrderLabels",
                     ),
                 )

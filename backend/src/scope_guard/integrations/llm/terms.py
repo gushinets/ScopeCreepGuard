@@ -176,8 +176,12 @@ def mentions(text, language):
     return result
 
 
-def preserve_mentions(field, source, translated, source_language, target):
-    if mentions(source, source_language) != mentions(translated, target):
+def preserve_mentions(field, source, translated, source_language, target, *, money=True):
+    original, observed = mentions(source, source_language), mentions(translated, target)
+    if not money:
+        original = Counter({pair: count for pair, count in original.items() if pair[0] == "hours"})
+        observed = Counter({pair: count for pair, count in observed.items() if pair[0] == "hours"})
+    if original != observed:
         raise ValueError(
             f"{field}.commercial_terms: preserve each amount, unit and currency binding"
         )
