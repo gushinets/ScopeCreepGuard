@@ -1,0 +1,30 @@
+CHANGE ORDER — DRAFT
+Document no.: CO-20261018
+Created: October 18, 2026
+
+Project: Native workflow audit
+Provider: Diseño Muñoz Álvarez
+Client: Clínica Peña
+Client email: client@example.test
+
+This Change Order records the requested work and proposed terms. It becomes effective only after client approval.
+
+1. Requested change
+Add Arrow and email alerts.
+
+2. Commercial terms
+Estimated effort: 2.5 hours
+Additional fee: No additional charge
+
+3. Schedule impact
+3 working days after approval
+
+4. Additional terms
+Additional fee: This work is outside the agreed scope and will be performed at no additional charge.
+Revised project end date: November 15, 2026
+Special terms: Confirm in writing.
+Document note: These additions are outside the agreed scope and require a separate estimate and approval.
+
+5. Client approval
+Approved by: 
+Date:
