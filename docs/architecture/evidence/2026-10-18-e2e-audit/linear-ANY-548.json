@@ -1,0 +1,104 @@
+{
+  "id": "ANY-548",
+  "title": "Сохранять полный результат и открывать его из истории",
+  "description": "Сейчас · замечание 6. Расширить модель данных и API: хранить вердикт, основание, цитаты, уверенность, все ответы и Change Order. Открывать ранее выполненную проверку из истории.\n\nКритерии: после перезагрузки запись восстанавливает весь результат; исторические записи старого формата обрабатываются без сбоя; данные изолированы по пользователю.",
+  "url": "https://linear.app/paveldik/issue/ANY-548/sohranyat-polnyj-rezultat-i-otkryvat-ego-iz-istorii",
+  "attachments": [
+    {
+      "id": "c1189bff-10e1-4b3d-902c-2ed0ab1d8ab1",
+      "title": "ANY-548 — FAIL D05: L1 HTTP200, затем server History пустая / 15.10.2026",
+      "subtitle": "f00e1014; SHA256 5e6334cf26aa882d49a38b2f234012b7e88cbe3d141835df9b3ea077a425c552"
+    },
+    {
+      "id": "b03b0901-6568-4b79-8ded-3715aff24687",
+      "title": "ANY-548 — QA 15.10.2026 / f00e1014 / FAIL — доказательства",
+      "subtitle": "57 файлов; SHA256 6e9b13811e61e1be6e2a00f0359d6b08f90881c30bcbc1142fa61d1761c1dee8"
+    },
+    {
+      "id": "524589d3-f524-4ede-beab-520ce0b1a502",
+      "title": "ANY-548 — FAIL: результат потерян в новой сессии / 11.10.2026",
+      "subtitle": "20261011-qa-01; SHA256 c03041d6249a18f46fc65280935667a45f4c6fc934fd8c9699d8e7431d5dd23a"
+    },
+    {
+      "id": "88a53a3e-870d-47a0-88c8-226e17b4417d",
+      "title": "ANY-548 — FAIL: обычный анализ отсутствует в истории / 11.10.2026",
+      "subtitle": "20261011-qa-01; SHA256 0eea900bef8fa57a32158c5b9a1ac1d33aa68847d7b027fe4587b0a719c267b2"
+    },
+    {
+      "id": "b4b22393-27f6-40e7-9f1b-26915c311991",
+      "title": "ANY-548 — QA 11.10.2026 / aaff86a / полный пакет (26 файлов)",
+      "subtitle": "20261011-qa-01; SHA256 a64ac0d4f1220fce27bdef67498abb1c7b39276a24f02906d73fcb19dc9a1358"
+    },
+    {
+      "id": "abcb5422-583a-4eff-a737-c86497007bd4",
+      "title": "Приёмочное тестирование Scope Creep Guard — 8 октября 2026",
+      "subtitle": null
+    },
+    {
+      "id": "1ece7472-9c3b-4cbf-93e5-10992ccae8cd",
+      "title": "ANY-548: потеря результата без создания черновика",
+      "subtitle": null
+    },
+    {
+      "id": "054e35ca-9e98-4280-ad7a-0e27737651e7",
+      "title": "ANY-547: Edit and delete projects while preserving saved drafts",
+      "subtitle": null
+    },
+    {
+      "id": "53749e81-0067-4eea-86d6-d9d705810dbc",
+      "title": "ANY-548: Persist Change Order drafts and add My drafts",
+      "subtitle": null
+    }
+  ],
+  "comments": [
+    {
+      "createdAt": "2026-10-18T12:14:29.862Z",
+      "body": "### Проверка полноты результата и истории — 18.10.2026\n\nВ основной выдаче подтверждена полная оценка scope: вердикт и уверенность, запрос, обоснование, цитаты из условий, предварительные трудозатраты/стоимость и рекомендация.\n\nНайден и исправлен остаточный пробел в просмотре истории: вместо одного reasoning теперь используется общий `ScopeAssessment`, отображающий полный сохранённый анализ. Регрессия сначала воспроизведена двумя тестами RU/EN, затем исправлена; целевой набор компонентов — 14 passed.\n\nПодтверждено сохранение исходных исторических снимков при переводе, редактировании коммерческих условий и регенерации. Восстановление истории не создаёт соглашение автоматически. До/после обновления локального приложения контрольные отпечатки существующих history_entries, analysis_runs, drafts и change_orders совпали.\n\nОснование: локальная проверка 18.10.2026, ветка `codex/scope-assessment-and-metrics-completion`, база `fe0e68229efbd586c5ea20cd7b488d931c699b5e` плюс незакоммиченные исправления. Отчёт: `docs/architecture/2026-10-18-scope-assessment-metrics-completion.md`.\n\nПроверка использовала контролируемые ответы на границе AI-провайдера с настоящими UI/API/worker/PostgreSQL. Платные обращения не выполнялись: это подтверждение интеграции и передачи данных, а не качества реальной модели. Статус тикета этим комментарием не изменяется.",
+      "attachments": []
+    },
+    {
+      "createdAt": "2026-10-15T16:57:13.102Z",
+      "body": "**Приёмка ANY-548 от 15.10.2026 — FAIL, тикет не принят.**\n\nПрогон `20261015-five-tickets-f00e1014`, ветка `main`, SHA `f00e1014c376cba9e5dc65e73421a98c3aa3c37e`. Изолированные локальные Next.js/API/worker/PostgreSQL; новый workflow включён. В платных сценариях requested/returned model — `gpt-6-luna`. Синтетические исходные сохранённые результаты и synthetic provider ниже отмечены явно.\n\n**Не прошло**\n\n1. **P1, D05: успешный анализ старого доступного режима не сохраняется автоматически.** В отдельной одноразовой baseline PostgreSQL, `workflow_v2=false`, `llm_workflow=false`: создать P1/S0, отправить EN-запрос в `/api/analyze`, locale RU; не нажимать Create draft / Save / Complete. Реальный GPT-6 Luna вернул HTTP 200 с analysis, тремя replies и CO. Следующий серверный GET проекта вернул **`history: []`**. Ожидалась одна автоматически сохранённая запись с полным результатом. Полный ответ и состояние сервера — `legacy.json`, раздел L1.\n2. **Новый workflow: live восстановление не подтверждено.** Все 14 новых полных checks не завершились из-за CO gate D01 (`errors.semanticAttemptsExhausted`). Поэтому успешная History не появилась и полный путь «реальный check → без дополнительных действий → reload/clean session» заблокирован. Это upstream блокировка приёмки, а не доказанная ошибка атомарного сохранения нового pipeline.\n\n**Что прошло**\n\n- На явно synthetic исходном сохранённом результате просмотр History сохраняет рабочий Draft и URL. Независимый чистый Chromium context вошёл через настоящую login form без переноса localStorage и восстановил состояние с сервера. Доказательства: `materials-browser.json` (`historyReadOnly`, `cleanLoginRestore`), скриншот History.\n- Прямые независимые HTTP проверки: чужие project/draft/history/analysis/agreement/export/download — 404; анонимные — 401; чужой PUT — 404. Это проверка API, а не только скрытых кнопок.\n- Unsupported language отклонён без порчи Draft; stale revision и изменённый payload под прежним command key дают 409. Повтор committed History возвращает тот же ID; повтор после потерянного успешного PUT response не размножает запись; исходные архивы не изменились. Полные assertions: `ANY-548/independent-http.json`.\n- Автоматическая History нового pipeline имеет отдельное controlled worker/PostgreSQL покрытие. Оно не заменяет заблокированный live journey.\n\n**Ограничения**\n\nLive K1 (закрыть вкладку во время операции), K2 (`applied:false`) и S1-CHECK не запускались: после 95/96 физических вызовов осталось недостаточно для нового трёхстадийного check. Их нижние слои не объявляются E2E PASS. Полноценный saved-history legacy L2 не проверен: имеющийся диагностический previousReply вызов не передавал server-owned исторический Draft ID. Старый browser UI и production не проверены.\n\n**Доказательства**\n\nВ ZIP: матрица тикета, L1 HTTP200 и следующий серверный GET с пустой History, M1 и остальные checks с ошибкой CO/непубликованной History, соответствующие stages, independent HTTP проверки, clean-context/history evidence, логи backend/frontend и provenance. Скриншот просмотра History на synthetic записи приложен отдельно.\n\nСтатус по поручению пользователя: **In Progress**.\n\n**Вложения этой проверки**\n\n- [Пакет доказательств (57 файлов)]([Linear attachment URL omitted])\n  SHA256: `6e9b13811e61e1be6e2a00f0359d6b08f90881c30bcbc1142fa61d1761c1dee8`.\n- [ANY-548 — FAIL D05: L1 HTTP200, затем server History пустая / 15.10.2026]([Linear attachment URL omitted])",
+      "attachments": [
+        {
+          "title": "Пакет доказательств (57 файлов)"
+        },
+        {
+          "title": "ANY-548 — FAIL D05: L1 HTTP200, затем server History пустая / 15.10.2026"
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-11T12:58:39.195Z",
+      "body": "@josefvorobyev133 Завершённая проверка исчезает после перезагрузки и отсутствует в истории, если отдельно не создать черновик. Для заявленного сценария сохранения истории это блокер. Поэтому возращают этот тикет в работу",
+      "attachments": []
+    },
+    {
+      "createdAt": "2026-10-11T12:33:07.306Z",
+      "body": "**Локальная приёмка 11.10.2026 — FAIL.** 4 PASS / 2 FAIL / 1 BLOCKED.\n\nПрогон **20261011-qa-01**, ветка main, полный SHA **aaff86ac379c3c6106150d15695bc18021d12c9d**. Изолированный Next.js / FastAPI / PostgreSQL, новая БД; реальные вызовы gpt-5.4-nano. Результаты текущего коммита воспроизведены заново, оценки 08.10 на 753c88a не перенесены. Входы синтетические, восстановлены по темам исходного DOCX и явно указанным условиям; исходные договоры/полные разговоры недоступны.\n\nPASS — критерий подтверждён в указанном сценарии; FAIL — наблюдаемый сбой; BLOCKED — нет возможности завершить проверку или требуется человеческое качественное решение.\n\n### Обычная проверка: воспроизведённая потеря результата\n\n**Точные условия P1 (QA Price monitor):**\n\n```text\nBuild a Make.com workflow that checks prices from DigiKey and Mouser once per day, stores product name, SKU, price, original currency and last-updated date in Google Sheets, and sends Telegram alerts when a price changes by at least 5%. One revision round includes adjustments to alert thresholds and formatting of existing fields. Email alerts, additional suppliers, dashboards and weekly reports are excluded. Displaying prices in another currency is not specified; clarify whether this requires conversion or whether the supplier already provides those prices.\n```\n\n\nЗапрос:\n\n```text\nCan you add Arrow as a third supplier and send the price alerts by email as well?\n```\n\n\nШаги: войти A → выполнить настоящий анализ → увидеть verdict, пояснение, три ответа и Change Order → **не нажимать Create draft** → открыть History → reload → войти A в новую независимую браузерную сессию → снова открыть History.\n\nОжидалось: полный результат автоматически доступен в истории и восстанавливается. Фактически History пуста; после reload и в новой сессии результат отсутствует. UI прямо сообщает, что результат попадает в историю только при создании черновика. FAIL для ordinary-history и ordinary-reload. Скриншоты: history-step1-result.png, history-step2-empty.png, check-new-session-no-result.png, history-new-session-empty.png. API/UI-логи: history-without-draft.json, no-draft-after-reload.json, no-draft-new-session.json.\n\n**BLOCKED:** сравнить поля обычного результата при открытии из истории нельзя — нет записи для открытия. Это следствие подтверждённого FAIL, а не успешное сравнение пустых данных.\n\n### Что прошло при явном сохранении\n\n**PASS:** Create draft → History → Open → reload → новая сессия A. Draft f6f43006-b8b8-4879-9a90-5bda7a7fd403 восстановлен полностью. Равны шесть групп: request, analysisSnapshot, projectSnapshot, requestLanguage, clientMaterialLanguage, draftDocument; выполнены по два повторных чтения. ES draft e8ce3b90-b177-44d3-b92c-741eff0c676d также восстановлен. Точные сравнения: logs/snapshot-comparison.json; сетевые журналы: logs/pw-restore.json, logs/pw-ES-restore-copy.json.\n\n**PASS:** при открытии/reload явно сохранённых результатов нового /api/analyze и нового вызова модели не было.\n\n**PASS — legacy:** собственная SQL-фикстура записи 53200000-0000-4000-8000-000000000001 без полного snapshot показывает только сохранённое summary; Open полного результата не предлагается. SQL, ответ и скриншот приложены.\n\n**PASS — изоляция:** History пользователя B пуста; прямые GET drafts A от B — 404, анонимно — 401. Доказательства: logs/B-history-empty.json, logs/B-and-anonymous-draft-access.json и screenshots/B-history-empty.png. Проверка выполнена по фактической истории в /api/projects и UI, а не по несуществующему маршруту /api/history.\n\n### Матрица всех критериев тикета\n\n| Критерий / сценарий | Ожидалось | Результат | Фактически | Доказательства в архиве |\n|---|---|---|---|---|\n| Сохранение обычной завершённой проверки — Анализ → без Create draft → History | Полный результат появляется и открывается | **FAIL** | History пустая; UI прямо требует Create draft | `logs/history-without-draft.json`<br>`screenshots/history-step2-empty.png` |\n| Восстановление обычного анализа — Без Create draft → reload и новая сессия | Полный результат остаётся | **FAIL** | Результат потерян в обоих случаях | `logs/no-draft-after-reload.json`<br>`logs/no-draft-new-session.json`<br>`screenshots/check-new-session-no-result.png` |\n| Сравнение всех полей обычного результата — Открытие обычного результата из истории | Запрос/вердикт/summary/основание/цитаты/confidence/ответы/языки/CO совпадают | **BLOCKED** | Нет записи, которую можно открыть; зависимость заблокирована подтверждённым дефектом ordinary-history | `logs/history-without-draft.json` |\n| Явное создание черновика и полный snapshot — Create draft → History → reload → новая A сессия | Все поля сохранены | **PASS** | Шесть групп данных равны при двух повторных чтениях; includes analysisSnapshot и draftDocument | `logs/snapshot-comparison.json`<br>`logs/pw-restore.json`<br>`screenshots/explicit-draft-new-session.png` |\n| Открытие без нового анализа — Оба явно сохранённых drafts, reload/new session | Нет нового /api/analyze | **PASS** | Только auth/me, projects, GET draft; экспорт PDF отдельно | `logs/pw-restore.json`<br>`logs/pw-ES-restore-copy.json`<br>`logs/snapshot-comparison.json` |\n| Старая запись без полного snapshot — Собственная SQL fixture P4 | Показаны сохранённые данные, нет придуманного full result | **PASS** | Legacy summary отображается; Open для отсутствующего snapshot не предложен | `fixtures/legacy-history.sql`<br>`logs/legacy-history.json`<br>`screenshots/legacy-history.png` |\n| История и drafts изолированы A/B — UI B History и прямые GET drafts A | B не видит результаты A | **PASS** | История B пустая, GET A drafts404; anonymous401 | `logs/B-history-empty.json`<br>`logs/B-and-anonymous-draft-access.json`<br>`screenshots/B-history-empty.png` |\n\nВсе названные пути относятся к файлам в приложенном пакете доказательств этого тикета. API-подтверждения и снимки экрана получены при реальном прогоне; секреты и auth-proof удалены. Полная матрица также сохранена в criteria.json.\n\n### Приложенные доказательства\n\n- [Полный пакет доказательств — 26 файлов]([Linear attachment URL omitted]) — ZIP, SHA256 `a64ac0d4f1220fce27bdef67498abb1c7b39276a24f02906d73fcb19dc9a1358`\n- [FAIL: обычный анализ отсутствует в истории]([Linear attachment URL omitted])\n- [FAIL: результат потерян в новой сессии]([Linear attachment URL omitted])\n\n**FAIL: обычный анализ отсутствует в истории**\n\n![FAIL: обычный анализ отсутствует в истории]([Linear attachment URL omitted])\n\n**FAIL: результат потерян в новой сессии**\n\n![FAIL: результат потерян в новой сессии]([Linear attachment URL omitted])",
+      "attachments": [
+        {
+          "title": "Полный пакет доказательств — 26 файлов"
+        },
+        {
+          "title": "FAIL: обычный анализ отсутствует в истории"
+        },
+        {
+          "title": "FAIL: результат потерян в новой сессии"
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-08T12:25:05.256Z",
+      "body": "Проверил ANY-548 на коммите **753c88a**. Результат приёмки — **FAIL**: полный результат сохраняется только после явного нажатия «Создать черновик».\n\nЧто работает:\n\n- Созданный черновик открывается из истории после перезагрузки и в новой браузерной сессии того же аккаунта.\n- Восстанавливаются вердикт, summary, основание, цитаты, уверенность, все три ответа, язык и Change Order. Новый анализ OpenAI при открытии не запускается.\n- Старая запись без полного результата обрабатывается без сбоя и подстановки чужих данных.\n- Изоляция соблюдается: чужой аккаунт получает 404 на проект и черновик, неавторизованный пользователь — 401.\n\nЧто не работает:\n\n1. Выполняю проверку и **не нажимаю «Создать черновик»**.\n2. Перехожу в историю — завершённой проверки там нет.\n3. Перезагружаю страницу — результат теряется и недоступен в новой сессии.\n\nЭто воспроизведено на нескольких запросах в двух тестовых проектах. Поведение не соответствует требованию «Открывать ранее выполненную проверку из истории».\n\nДля приёмки нужно обеспечить сохранение и восстановление обычной завершённой проверки без обязательного создания черновика. Сейчас пользователь может потерять результат оплаченного анализа и вынужден запускать его повторно.\n\nДоказательства: [видео воспроизведения]([Linear attachment URL omitted]) и [полный отчёт]([Linear attachment URL omitted]). Материалы также приложены к тикету.",
+      "attachments": [
+        {
+          "title": "видео воспроизведения"
+        },
+        {
+          "title": "полный отчёт"
+        }
+      ]
+    }
+  ]
+}

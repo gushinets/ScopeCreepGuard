@@ -1,0 +1,110 @@
+{
+  "id": "ANY-553",
+  "title": "Сделать реальную генерацию нового варианта ответа",
+  "description": "Следом · замечание 9. Кнопка «Создать другой вариант» должна запрашивать новый текст для выбранного тона, а не повторно подставлять прежний.\n\nКритерии: новый вариант отличается содержательно и сохраняет позицию по scope; перед заменой пользовательской правки есть предупреждение; ошибку запроса можно повторить.",
+  "url": "https://linear.app/paveldik/issue/ANY-553/sdelat-realnuyu-generaciyu-novogo-varianta-otveta",
+  "attachments": [
+    {
+      "id": "02091429-14b4-4c0e-b71b-7c5a6c8b4490",
+      "title": "ANY-553 — FAIL D03: scope out_of_scope → обещание бесплатно (synthetic provider) / 15.10.2026",
+      "subtitle": "f00e1014; SHA256 93d96ea5878601a00f80b1e4594317a7db5a6ed9806bd9ad3cc8ec30fb470068"
+    },
+    {
+      "id": "3148fabd-5ec7-4d55-b037-be6d91e9837a",
+      "title": "ANY-553 — QA 15.10.2026 / f00e1014 / FAIL — доказательства",
+      "subtitle": "67 файлов; SHA256 a35895b4a14a901b8741eebe2ae5f0104b7004a8b6f7ed949fa2fa45829be1fa"
+    },
+    {
+      "id": "966a1cb8-efe3-41aa-94da-bc6ebd920e35",
+      "title": "ANY-553 — FAIL: EN-регенерация отвечает на RU / 11.10.2026",
+      "subtitle": "20261011-qa-01; SHA256 399accc955063bb180f1b95dd299d71673c835758481f4413d38f226422c8c85"
+    },
+    {
+      "id": "76ec2ecd-b512-4094-9c8b-72866fd31012",
+      "title": "ANY-553 — FAIL: ответ использует новые условия вместо исторических / 11.10.2026",
+      "subtitle": "20261011-qa-01; SHA256 6c77e188cb31b1f9d34127277cffd7ce4d0f7aa9471d702c341d5546cbd0479e"
+    },
+    {
+      "id": "a0620edc-01c7-4a28-9cea-6195651e07df",
+      "title": "ANY-553 — Исторический результат до регенерации / 11.10.2026",
+      "subtitle": "20261011-qa-01; SHA256 fc3125998ce0f6b0e84b4a86698a4f51a57c90ca1560e30b2696313c4e02fb55"
+    },
+    {
+      "id": "47d7e958-b147-46da-b574-106ba623c9f5",
+      "title": "ANY-553 — QA 11.10.2026 / aaff86a / полный пакет (26 файлов)",
+      "subtitle": "20261011-qa-01; SHA256 3ca0bc10fdded0b3965eded0ef3278687bb1314ccf50562d4fd68053e65e8cd5"
+    },
+    {
+      "id": "7302981d-7200-4601-aa3e-1d7d98e2a097",
+      "title": "ANY-553: результаты и доказательства приёмки",
+      "subtitle": "28 файлов: данные, запросы/ответы, скриншоты, видео и ревью; коммит753c88a"
+    },
+    {
+      "id": "bd9bc19b-8962-4fca-a89e-7a64ca08740b",
+      "title": "ANY-553: сетевая ошибка регенерации",
+      "subtitle": "Старый ответ сохранён; видимая ошибка при browser abort"
+    },
+    {
+      "id": "5167252e-348d-40d8-afc0-050073227d5c",
+      "title": "ANY-553: EN → RU при регенерации",
+      "subtitle": "Нейтральный ответ на русском при documentLanguage=en"
+    }
+  ],
+  "comments": [
+    {
+      "createdAt": "2026-10-15T16:56:52.368Z",
+      "body": "**Приёмка ANY-553 от 15.10.2026 — FAIL, тикет не принят.**\n\nПрогон `20261015-five-tickets-f00e1014`, ветка `main`, SHA `f00e1014c376cba9e5dc65e73421a98c3aa3c37e`. Изолированные локальные Next.js/API/worker/PostgreSQL; новый workflow включён. В платных сценариях requested/returned model — `gpt-6-luna`. Синтетические исходные сохранённые результаты и synthetic provider ниже отмечены явно.\n\n**Не прошло**\n\n1. **P1, D03: scopePosition в metadata не защищает смысл ответа.** Native schema/gateway/worker/БД с synthetic provider приняли 9 противоречивых примеров EN/RU/ES: для out_of_scope — включение Arrow/email «under the existing agreement at no extra cost»; для in_scope — требование доплаты; для borderline — безусловное обещание включённости. Все получили `succeeded` и опубликованы. Ожидалось отклонение с сохранением прежних материалов. Кандидат, исходный scope, accepted verdict и after находятся в `deterministic/negative/scope-*.json`.\n2. **P2, D07: косметическая регенерация засчитывается как новый вариант.** В synthetic контролях изменение только пунктуации и добавление только `Thank you.` приняты. Точный и whitespace duplicate при этом правильно отклонены. Доказательства: `novelty-punctuation.json`, `novelty-thank-you.json`, положительные контроли рядом.\n3. **P1, D06: неподтверждённый срок проходит в ответ.** При отсутствии согласованной даты обещания `next week` / «на следующей неделе» / `la próxima semana` опубликованы во всех трёх synthetic примерах. Условное обсуждение срока и подтверждённый D1 deadline проходят положительные контроли.\n\n**Что прошло**\n\nДевять реальных регенераций GPT-6 Luna G1–G6/H1–H3 выполнены на явно synthetic исходных сохранённых результатах. Во всех 9 появились самостоятельные новые формулировки; выбранный тон изменился, остальные тона и исходный analysis сохранились, языки соответствуют источникам.\n\nПосле изменения текущего проекта S0→S1 три H остались на историческом S0 и 8 hours / 240 USD с отдельным согласованием. Включённость Arrow/email и 80 EUR из S1 не импортированы. Полные before/after, commands и операции — `ANY-553/G*-fixture.json`, `H*-fixture.json`, stages. Это успешная проверка этих 9 операций, а не успешный полный исходный journey.\n\n**Ограничения**\n\nПолные реальные M1/M2/M4 не завершились из-за общего CO gate D01; исходные G/H journeys на их реальных результатах заблокированы. UI отмены замены ручной правки и все сетевые гонки/две вкладки не проверены полностью; jsdom/worker покрытие не объявляется браузерной приёмкой.\n\nLegacy L2 вернул ответ по текущему S1, но был диагностическим вызовом с previousReply без server-owned ID исторического Draft. Он **не доказывает** поломку сохранённого исторического legacy Draft; полноценный legacy saved-history L2 не проверен. Synthetic отрицательные примеры показывают пропуски валидатора и не измеряют частоту модельных ошибок.\n\n**Доказательства**\n\nВ ZIP: матрица тикета, 9 live G/H before/after, их frozen input и SQL stages, все 9 scope-контрпримеров, novelty/timeline и положительные контроли, M1/M2/M4 как доказательство блокировки исходного journey, диагностический legacy ответ с указанным ограничением, логи и воспроизводимый тест.\n\nСтатус по поручению пользователя: **In Progress**.\n\n**Вложения этой проверки**\n\n- [Пакет доказательств (67 файлов)]([Linear attachment URL omitted])\n  SHA256: `a35895b4a14a901b8741eebe2ae5f0104b7004a8b6f7ed949fa2fa45829be1fa`.\n- [ANY-553 — FAIL D03: scope out_of_scope → обещание бесплатно (synthetic provider) / 15.10.2026]([Linear attachment URL omitted])",
+      "attachments": [
+        {
+          "title": "Пакет доказательств (67 файлов)"
+        },
+        {
+          "title": "ANY-553 — FAIL D03: scope out_of_scope → обещание бесплатно (synthetic provider) / 15.10.2026"
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-11T13:05:48.344Z",
+      "body": "@josefvorobyev133 Старый результат исключает Arrow и email, а новый ответ утверждает, что они уже включены бесплатно. Это самый опасный дефект: приложение может предложить клиенту условия, противоречащие сохранённому анализу. Возвращаю на доработку",
+      "attachments": []
+    },
+    {
+      "createdAt": "2026-10-11T12:34:45.700Z",
+      "body": "**Локальная приёмка 11.10.2026 — FAIL.** 7 PASS / 2 FAIL / 1 BLOCKED.\n\nПрогон **20261011-qa-01**, ветка main, полный SHA **aaff86ac379c3c6106150d15695bc18021d12c9d**. Изолированный Next.js / FastAPI / PostgreSQL, новая БД; реальные вызовы gpt-5.4-nano. Результаты текущего коммита воспроизведены заново, оценки 08.10 на 753c88a не перенесены. Входы синтетические, восстановлены по темам исходного DOCX и явно указанным условиям; исходные договоры/полные разговоры недоступны.\n\nPASS — критерий подтверждён в указанном сценарии; FAIL — наблюдаемый сбой; BLOCKED — нет возможности завершить проверку или требуется человеческое качественное решение.\n\n### Реальная регенерация и языковой сбой\n\n**Точные условия P1 (QA Price monitor):**\n\n```text\nBuild a Make.com workflow that checks prices from DigiKey and Mouser once per day, stores product name, SKU, price, original currency and last-updated date in Google Sheets, and sends Telegram alerts when a price changes by at least 5%. One revision round includes adjustments to alert thresholds and formatting of existing fields. Email alerts, additional suppliers, dashboards and weekly reports are excluded. Displaying prices in another currency is not specified; clarify whether this requires conversion or whether the supplier already provides those prices.\n```\n\n\nТочный запрос до изменения scope:\n\n```text\nPlease add Arrow as a third supplier and send the price alerts by email as well.\n```\n\n\nДля каждого тона выполнены по две реальные регенерации: все первые шесть POST /api/replies/regenerate получили HTTP 200, previousReply и новый ответ сохранены. Все тексты отличаются, позиция относительно неизменённого scope сохранена; новых согласованных цен/дат не добавлено. В первых шести реальных регенерациях (по две warm / neutral / firm) язык EN нарушен в warm-1 и neutral-1: 2/6. Во всём журнале до смены scope — 4/14 успешных HTTP 200 при documentLanguage=en с ответом на русском; ещё два сетевых запроса были прерваны тестом и не входят в знаменатель. Это частоты данного прогона, а не оценка вероятности в эксплуатации.\n\n**FAIL — выбран EN, получен RU.** Первый warm: body.documentLanguage=en; response.reply:\n\n```text\nСпасибо за запрос. В текущем согласованном объёме предусмотрены проверки цен только по DigiKey и Mouser и отправка уведомлений через Telegram; добавление дополнительных поставщиков и отправка email-уведомлений явно исключены. Если вы хотите включить Arrow и дублировать оповещения по email, нам потребуется отдельное согласование Change Order. Пожалуйста, подтвердите, кому именно отправлять письма и каким вы видите формат/текст email-уведомлений — после этого подготовим Change Order и оценку работ.\n```\n\n\n**BLOCKED — содержательная новизна:** warm/neutral добавляют уточнения; firm-2 преимущественно перефразирует firm-1. Весь before/after приведён в logs/regeneration-attempts.json; окончательная оценка качества требует человека.\n\n### FAIL: исторический результат регенерируется по текущим условиям\n\n1. Сохранён старый P1 draft 6486459f-5f0c-4105-ba41-28f5ab6e3387: Arrow/email исключены, verdict=out_of_scope.\n2. Текущий scope проекта изменён: Arrow как третий поставщик и email явно INCLUDED без доплаты (точный текст fixtures/P1-updated-scope.txt).\n3. Открыт старый draft: UI показывает исторические исключения и прежний out_of_scope. Нажато «Создать другой вариант», firm, EN.\n\nОжидалось: новый ответ следует старому сохранённому scope и требует отдельно согласовать Arrow/email. В запросе фактически переданы только projectId, request, tone, previousReply, documentLanguage; исторического draft ID/snapshot нет. HTTP 200 возвращает:\n\n```text\nЭти изменения уже покрыты согласованным объемом: Arrow как третий поставщик и отправка price alerts по email включены, без дополнительной оплаты. Предоставьте, пожалуйста, список адресов для email-уведомлений и требуемые настройки — после этого мы внесем изменения в Make.com workflow в рамках текущего соглашения.\n```\n\n\nНовый ответ утверждает, что работы уже включены бесплатно, одновременно с прежним out_of_scope на экране. Доказательства: logs/pw-historical-after.json и screenshots/historical-before-regen.png / historical-after-regen.png. Это также отдельный языковой FAIL (выбран EN, ответ RU). ES-контроль на том же историческом результате отвечает на ES, но повторяет ошибочную включённость работ; logs/pw-ES-regen.json.\n\n### Проверки управления: PASS\n\nРучной текст MANUAL CANCEL QA FINAL → отменить предупреждение: текст и счётчик запросов 15 не меняются. Подтверждение: marker передан в previousReply, HTTP 200, новый EN-ответ. Загрузка/double click с задержкой 2 s: ровно один POST, поле ответа/тона/кнопка disabled=true. Принудительный route.abort: старый текст сохранён, видна ошибка; после снятия abort retry даёт HTTP 200. Все состояния и сетевые журналы приложены.\n\nВо всех 58 завершённых provider-операциях прогона attempts=1; self-correction в этом пути не наблюдалась. Прерванные браузером запросы не выдаются за завершённые операции модели.\n\n### Матрица всех критериев тикета\n\n| Критерий / сценарий | Ожидалось | Результат | Фактически | Доказательства в архиве |\n|---|---|---|---|---|\n| Несколько реальных вариантов каждого тона — Warm2, neutral2, firm2 плюс edge cases | Настоящие POST и ответы модели | **PASS** | Все первые шесть POST HTTP200; предыдущий текст и ответ каждой попытки сохранены | `logs/regeneration-attempts.json` |\n| Новый содержательный вариант — Попарно before/after первых шести | Изменение больше чем шаблонная замена | **BLOCKED** | Все тексты различаются, warm/neutral добавляют уточнения; firm2 во многом перефразирует firm1. Окончательное качественное решение человеком | `logs/regeneration-attempts.json` |\n| Позиция и согласованные условия на неизменённом scope — Первые 6 + сетевой retry до изменения P1 | Сохраняются исключения, нет новых неподтверждённых чисел | **PASS** | Arrow/email по-прежнему вне scope; новых цен/дат в ответах нет | `logs/regeneration-attempts.json` |\n| Выбранный язык — EN при RU UI; RU и ES controls | Ответы сохраняют язык | **FAIL** | EN регенерации иногда RU; RU и ES controls на выбранном языке | `logs/regeneration-attempts.json`<br>`logs/RU-regeneration-control.json`<br>`logs/pw-ES-regen.json` |\n| Ручная правка: отмена предупреждения — MANUAL CANCEL QA FINAL → Regenerate → dismiss | Текст и число запросов неизменны | **PASS** | Оба состояния: marker неизменен, request count15 | `logs/pw-manual-fill.json`<br>`logs/pw-manual-final-state.json`<br>`screenshots/regen-manual-final-cancel.png` |\n| Ручная правка: подтверждение — Тот же marker → accept | Замена разрешена, реальный новый текст | **PASS** | POST с marker в previousReply; HTTP200 и новый EN ответ | `logs/regeneration-attempts.json` |\n| Загрузка и контролируемый double click — Playwright dblclick с задержкой маршрута 2s | Один POST, блокировка управления | **PASS** | requests1; reply/tones/button disabled=true | `logs/pw-controls-only.json`<br>`screenshots/regen-loading-doubleclick.png` |\n| Сетевой сбой и восстановление — Playwright route.abort → unroute → retry | Старый ответ остаётся, видна ошибка, повтор работает | **PASS** | Текст до/после ошибки равен; alert видимый; retry HTTP200 | `logs/pw-controls-only.json`<br>`screenshots/regen-network-error.png` |\n| Историческая регенерация после изменения scope — Старый out_of_scope draft; текущий scope включает Arrow/email | Ответ соответствует историческим исключениям | **FAIL** | Ответ: изменения уже покрыты согласованным объёмом… без дополнительной оплаты; verdict на экране остаётся out_of_scope | `fixtures/P1-updated-scope.txt`<br>`logs/pw-historical-after.json`<br>`screenshots/historical-after-regen.png` |\n| Конечное поведение и число попыток — Серверные provider metadata | Число реальных попыток прозрачно | **PASS** | Каждая завершённая операция имеет attempts1; self-correction в этом пути не наблюдается | `logs/model-usage.json` |\n\nВсе названные пути относятся к файлам в приложенном пакете доказательств этого тикета. API-подтверждения и снимки экрана получены при реальном прогоне; секреты и auth-proof удалены. Полная матрица также сохранена в criteria.json.\n\n### Приложенные доказательства\n\n- [Полный пакет доказательств — 26 файлов]([Linear attachment URL omitted]) — ZIP, SHA256 `3ca0bc10fdded0b3965eded0ef3278687bb1314ccf50562d4fd68053e65e8cd5`\n- [Исторический результат до регенерации]([Linear attachment URL omitted])\n- [FAIL: ответ использует новые условия вместо исторических]([Linear attachment URL omitted])\n- [FAIL: EN-регенерация отвечает на RU]([Linear attachment URL omitted])\n\n**Исторический результат до регенерации**\n\n![Исторический результат до регенерации]([Linear attachment URL omitted])\n\n**FAIL: ответ использует новые условия вместо исторических**\n\n![FAIL: ответ использует новые условия вместо исторических]([Linear attachment URL omitted])\n\n**FAIL: EN-регенерация отвечает на RU**\n\n![FAIL: EN-регенерация отвечает на RU]([Linear attachment URL omitted])",
+      "attachments": [
+        {
+          "title": "Полный пакет доказательств — 26 файлов"
+        },
+        {
+          "title": "Исторический результат до регенерации"
+        },
+        {
+          "title": "FAIL: ответ использует новые условия вместо исторических"
+        },
+        {
+          "title": "FAIL: EN-регенерация отвечает на RU"
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-08T13:12:28.336Z",
+      "body": "Провёл приёмочное тестирование [ANY-553](https://linear.app/paveldik/issue/ANY-553/sdelat-realnuyu-generaciyu-novogo-varianta-otveta) на коммите **753c88a**, локально, 8 октября. **Результат — FAIL, требуется доработка.**\n\nЧто работает:\n\n* Выполнил 7 успешных реальных регенераций, включая три последовательные для дружелюбного тона. Запросы передают выбранный тон и предыдущий ответ; новые тексты отличаются, позиция по scope сохраняется.\n* Во время загрузки видны состояние ожидания и блокировка элементов. Контролируемый двойной клик вызвал один запрос.\n* Отмена подтверждения сохраняет ручную правку; подтверждение заменяет её новым вариантом.\n* При принудительном сетевом сбое старый ответ сохраняется, ошибка видна. После восстановления сети повторная попытка работает.\n\nЧто мешает приёмке:\n\n**1. Регенерация нарушает язык клиента.** В 3 из 7 успешных вызовов получен русский текст при `documentLanguage=en`: нейтральный тон, твёрдый тон и подтверждённая замена ручного ответа. Проверял EN-запрос про добавление Arrow и email-уведомлений при RU-интерфейсе. Ожидался новый EN-ответ с прежней позицией по scope. Ошибка нестабильна; частота 3/7 относится к этому прогону.\n\n**2. Регенерация исторического черновика использует текущий scope проекта.** Сохранённый snapshot не передаётся в этот запрос. После изменения проекта новый ответ может расходиться с историческим вердиктом на экране. Это вывод ревью кода; отдельное браузерное воспроизведение изменения позиции не проводилось.\n\nПеред приёмкой нужно обеспечить сохранение языка клиента и использовать исторический контекст при регенерации сохранённого ответа. После доработки повторить проверки.\n\nМатериалы:\n\n* \n  [ANY-553-regen-neutral.png]([Linear attachment URL omitted])\n* \n  [ANY-553-regen-network-failure.webm]([Linear attachment URL omitted])\n* \n  [ANY-553-evidence.zip]([Linear attachment URL omitted])",
+      "attachments": [
+        {
+          "title": "ANY-553-regen-neutral.png"
+        },
+        {
+          "title": "ANY-553-regen-network-failure.webm"
+        },
+        {
+          "title": "ANY-553-evidence.zip"
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-02T08:47:21.462Z",
+      "body": "@josefvorobyev133 пока решено использовать self-correction loop для регенерации нового ответа",
+      "attachments": []
+    }
+  ]
+}
