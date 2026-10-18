@@ -119,7 +119,8 @@ def test_empty_denominators():
     assert row["time_to_value_median_seconds"] is None
 
 
-def test_agreement_preparation_is_not_an_agreed_product_operation():
+@pytest.mark.parametrize("preparation_status", ["succeeded", "failed", "cancelled"])
+def test_agreement_preparation_is_not_an_agreed_product_operation(preparation_status):
     snapshot = Snapshot(
         at(3),
         profiles=[{"id": "a", "registered_at": at(1)}],
@@ -132,12 +133,13 @@ def test_agreement_preparation_is_not_an_agreed_product_operation():
                 "finished_at": at(2) + timedelta(seconds=1),
                 "status": status,
             }
-            for kind, status in (("check", "succeeded"), ("agreement", "failed"))
+            for kind, status in (("check", "succeeded"), ("agreement", preparation_status))
         ],
     )
     row = calculate(snapshot, date(2026, 1, 2))
     assert row["operations_succeeded"] == row["check_succeeded"] == 1
     assert row["operations_failed"] == 0
+    assert row["operations_cancelled"] == 0
     assert row["operation_success_percent"] == 100
     assert row["operation_duration_sample_size"] == 1
     assert row["dau"] == 0  # neither preparation nor an unsaved check is activity
