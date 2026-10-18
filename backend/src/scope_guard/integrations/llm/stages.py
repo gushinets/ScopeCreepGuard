@@ -8,23 +8,24 @@ from importlib.resources import files
 from typing import Literal
 
 from babel.units import format_unit
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model
 from pydantic_ai import Agent, ModelRetry, NativeOutput
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
-from scope_guard.domain.llm.commercial_terms import current_commercial_terms
+from scope_guard.domain.llm.commercial_terms import (
+    current_commercial_terms,
+    translation_commercial_terms,
+)
 from scope_guard.domain.llm.runtime import GatewayFailure
 from scope_guard.integrations.documents.localization import reviewed_stage_labels
 from scope_guard.integrations.llm.detection import clean, detector, evidence, foreign_evidence
 from scope_guard.integrations.llm.preservation import (
     preserve_translation,
     recognized_schedule_language,
-    validate_translation_commercial_terms,
 )
 from scope_guard.integrations.llm.prompts.workflow_v2 import stage_prompt
 from scope_guard.integrations.llm.pydanticai_model import GatewayResponsesModel
 from scope_guard.integrations.llm.semantic_review import (
-    SemanticReviewer,
     cosmetic_reply,
     without_schedule,
 )
@@ -35,6 +36,35 @@ Position = Literal["in_scope", "borderline", "out_of_scope"]
 
 class StrictStage(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+class TranslationCommercialTerms(StrictStage):
+    amount: str | None = Field(pattern=r"^\d+(?:\.\d+)?$", strict=True)
+    currency: Literal["RUB", "USD", "EUR"] | None
+    noAdditionalCharge: bool = Field(strict=True)
+
+
+def validate_translation_metadata(data, facts):
+    """Only native commercial metadata can reject an otherwise valid translation."""
+    if facts.get("action") != "translate":
+        return
+    expected = translation_commercial_terms(facts)
+    observed = data.commercialTerms.model_dump()
+    for field in ("amount", "currency", "noAdditionalCharge"):
+        saved, returned = expected[field], observed[field]
+        equal = (
+            Decimal(saved) == Decimal(returned)
+            if field == "amount" and saved is not None and returned is not None
+            else saved == returned
+        )
+        if not equal:
+            raise ValueError(
+                f"commercialTerms.{field}: The saved amount is {expected['amount']} "
+                f"{expected['currency']}, noAdditionalCharge={expected['noAdditionalCharge']}. "
+                f"The structured response returned {observed['amount']} {observed['currency']}, "
+                f"noAdditionalCharge={observed['noAdditionalCharge']}. "
+                "Return the saved commercial values unchanged."
+            )
 
 
 class AnalysisStage(StrictStage):
@@ -310,7 +340,6 @@ def validate_text(
 
 def validate_stage(stage, data, facts, *, reviewed_labels=False):
     raw = data.model_dump() if isinstance(data, BaseModel) else data
-    validate_translation_commercial_terms(stage, raw, facts)
     locale, target = facts["locale"], facts["selection"]["selectedLanguage"]
     accepted = facts.get("analysis") or {}
     if stage == "analysis":
@@ -360,9 +389,7 @@ def validate_stage(stage, data, facts, *, reviewed_labels=False):
                 if facts.get("action") == "translate":
                     reply = facts["document"]["reply"]
                     source = reply["text"] if field == reply["tone"] else reply["generated"][field]
-                    preserve_translation(
-                        field, source, raw[field], reply["language"], target, money=False
-                    )
+                    preserve_translation(field, source, raw[field], reply["language"], target)
         elif stage == "change_order":
             applicable = accepted.get("hasAdditionalWork", accepted["verdict"] == "out_of_scope")
             if raw["applicable"] != (applicable and accepted["verdict"] != "in_scope"):
@@ -386,7 +413,6 @@ def validate_stage(stage, data, facts, *, reviewed_labels=False):
                         raw[field],
                         facts["document"]["reply"]["language"],
                         target,
-                        money=False,
                     )
             label_group = " ".join(raw["labels"].values())
             for field, label in raw["labels"].items():
@@ -444,47 +470,23 @@ class StructuredStageRunner:
         if labels:
             schema = ChangeOrderProseStage
 
+        if facts.get("action") == "translate":
+            schema = create_model(
+                "Translation" + schema.__name__,
+                __base__=schema,
+                commercialTerms=(TranslationCommercialTerms, ...),
+            )
+
         def compose(data):
             raw = data.model_dump()
+            raw.pop("commercialTerms", None)
             return {**raw, "labels": dict(labels)} if labels else raw
-
-        async def validate_commercial(raw, attempt):
-            validate_translation_commercial_terms(stage, raw, facts)
-            if facts.get("action") == "translate" and stage in ("replies", "change_order"):
-                decision = await SemanticReviewer(self.gateway, self.store).review(
-                    binding, stage, facts, raw, attempt, commercial_only=True
-                )
-                if decision.decision != "accept":
-                    terms = current_commercial_terms(facts)
-                    fields = ", ".join(v.field for v in decision.violations)
-                    observed = (
-                        ", ".join(
-                            sorted(
-                                {
-                                    f"{amount} {unit}"
-                                    for violation in decision.violations
-                                    for unit, amount in mentions(
-                                        raw.get(violation.field, ""),
-                                        facts["selection"]["selectedLanguage"],
-                                    )
-                                    if unit != "hours"
-                                }
-                            )
-                        )
-                        or "no recognized fee"
-                    )
-                    raise ValueError(
-                        f"{fields}.commercial_terms: The saved payable total is "
-                        f"{terms.get('additionalCost')} {terms.get('currency')}. "
-                        f"Your text states {observed}. Translate without changing "
-                        "the saved total or separately saved deposits/installments."
-                    )
 
         if record.get("candidate"):
             try:
                 value = schema.model_validate_json(record["candidate"])
                 raw = compose(value)
-                await validate_commercial(raw, binding.semantic_start)
+                validate_translation_metadata(value, facts)
                 return raw
             except (ValueError, TypeError) as error:
                 message = (
@@ -515,7 +517,7 @@ class StructuredStageRunner:
         @agent.output_validator
         async def preserve_saved_fee(data):
             try:
-                await validate_commercial(compose(data), model.semantic)
+                validate_translation_metadata(data, facts)
             except ValueError as error:
                 # Earlier rejections are recorded by the bridge when it dispatches
                 # the retry. Exhaustion has no next dispatch, so record it here.

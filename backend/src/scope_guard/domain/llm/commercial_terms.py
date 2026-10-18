@@ -27,3 +27,19 @@ def current_commercial_terms(facts):
         },
         "noAdditionalCharge": bool(values.get("noAdditionalCharge", False)),
     }
+
+
+def translation_commercial_terms(facts):
+    """Native translation metadata; null represents both absent and cleared values.
+
+    A stored free-work fee is retained as a nonpayable value, not replaced by zero.
+    The full projection still records savedAgreement versus preliminaryEstimate.
+    """
+    terms = current_commercial_terms(facts)
+    return {
+        "amount": str(terms["additionalCost"])
+        if terms.get("additionalCost") not in (None, "")
+        else None,
+        "currency": terms.get("currency") or None,
+        "noAdditionalCharge": terms["noAdditionalCharge"],
+    }

@@ -6,7 +6,7 @@ from copy import deepcopy
 from uuid import uuid4
 
 import pytest
-from fixtures.llm_ledger import APPROVED, ReviewLedger
+from fixtures.llm_ledger import ReviewLedger
 from fixtures.llm_review import PROSE, facts, order
 
 from scope_guard.domain.llm.runtime import Binding, GatewayFailure, ProviderResponse
@@ -19,38 +19,25 @@ class RecordingStore(ReviewLedger):
     pass
 
 
-async def run(stage, source, outputs, store, *, reviews=None):
-    review_index = 0
-
+async def run(stage, source, outputs, store):
     class Adapter:
         async def request(self, request, timeout):
-            nonlocal review_index
-            reviewing = request.schema_name.startswith("semantic_review_")
-            if reviewing:
-                value = (reviews or [APPROVED])[min(review_index, len(reviews or [APPROVED]) - 1)]
-                review_index += 1
-                return ProviderResponse(json.dumps(value), input_tokens=100, output_tokens=50)
-            index = (
-                sum(
-                    not c["request"].schema_name.startswith("semantic_review_") for c in store.calls
-                )
-                - 1
-            )
+            index = len(store.calls) - 1
             value = deepcopy(outputs[min(index, len(outputs) - 1)])
             if "labels" not in request.schema.get("properties", {}):
                 value.pop("labels", None)
+            if (
+                "commercialTerms" in request.schema.get("properties", {})
+                and "commercialTerms" not in value
+            ):
+                from scope_guard.domain.llm.commercial_terms import translation_commercial_terms
+
+                value["commercialTerms"] = translation_commercial_terms(source)
             return ProviderResponse(
-                json.dumps(
-                    value,
-                    ensure_ascii=False,
-                ),
-                input_tokens=100,
-                output_tokens=50,
+                json.dumps(value, ensure_ascii=False), input_tokens=100, output_tokens=50
             )
 
     binding = Binding(uuid4(), uuid4(), 1, "gpt-5.4-nano", "high" if stage == "reply" else "medium")
-    for attempt in range(1, 4):
-        store.review_slot(binding, stage, attempt)
     return await StructuredStageRunner(ProviderGateway(store, Adapter()), store).run(
         binding,
         stage,
@@ -136,7 +123,15 @@ def test_duplicate_exhaustion_is_bounded_and_preserves_frozen_materials():
 @pytest.mark.parametrize("status", ["pending", "accepted"])
 @pytest.mark.parametrize(
     "version",
-    ["workflow-v1", "workflow-v2", "workflow-v3", "workflow-v4", "workflow-v5", "workflow-v6"],
+    [
+        "workflow-v1",
+        "workflow-v2",
+        "workflow-v3",
+        "workflow-v4",
+        "workflow-v5",
+        "workflow-v6",
+        "workflow-v9-translation-commercial-terms",
+    ],
 )
 def test_old_prompt_version_fails_before_runner_or_accepted_output_reuse(status, version):
     class Store:

@@ -3,7 +3,10 @@
 import json
 
 from scope_guard.domain.change_orders.estimation import project_timing
-from scope_guard.domain.llm.commercial_terms import current_commercial_terms
+from scope_guard.domain.llm.commercial_terms import (
+    current_commercial_terms,
+    translation_commercial_terms,
+)
 from scope_guard.integrations.documents.localization import reviewed_stage_labels
 from scope_guard.integrations.llm.prompts.reply_tone_skills_v1 import REPLY_TONE_SKILLS
 
@@ -76,7 +79,11 @@ or bilingual labels. Do not generate replies or rewrite analysis.
 TRANSLATION = """Translate established saved material text including manual edits
 and ancillary terms faithfully into the resolved client language. Do not reassess
 scope, confidence, additional work, effort, fees, currency, dates or commercial
-terms. currentCommercialTerms is authoritative: the saved amount/currency pair
+terms. Return the input commercialTerms object unchanged in the structured response.
+Its amount is a decimal string or null, currency is its saved code or null, and
+noAdditionalCharge is the saved boolean. Null means missing/cleared, not zero or
+free work. Translate only the requested text. currentCommercialTerms is authoritative:
+the saved amount/currency pair
 overrides older prices in saved prose and historical estimates. Translate language
 only; never convert currencies or recalculate from project rates. Spanish does not
 imply EUR and English does not imply USD. Use the saved pair wherever the text
@@ -179,6 +186,7 @@ def stage_source(stage, facts):
         # and text are authoritative; sending both caused the D1 stale-price invention.
         source["analysis"] = selected(accepted, ("verdict", "citations", "hasAdditionalWork"))
         source["currentCommercialTerms"] = current_commercial_terms(facts)
+        source["commercialTerms"] = translation_commercial_terms(facts)
         source["project"] = {
             k: v
             for k, v in source["project"].items()
