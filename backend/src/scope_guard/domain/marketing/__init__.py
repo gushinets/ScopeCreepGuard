@@ -140,7 +140,7 @@ def calculate(snapshot: Snapshot, report_date: date) -> dict[str, Any]:
         and o["status"] in ("succeeded", "failed", "cancelled")
     ]
     kinds = ("check", "regeneration", "translation", "estimate")
-    terminal = [o for o in terminal if o["kind"] in (*kinds, "agreement")]
+    terminal = [o for o in terminal if o["kind"] in kinds]
     for kind in (*kinds, "operation"):
         observed = terminal if kind == "operation" else [o for o in terminal if o["kind"] == kind]
         counts = Counter(o["status"] for o in observed)

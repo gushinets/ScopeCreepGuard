@@ -119,6 +119,30 @@ def test_empty_denominators():
     assert row["time_to_value_median_seconds"] is None
 
 
+def test_agreement_preparation_is_not_an_agreed_product_operation():
+    snapshot = Snapshot(
+        at(3),
+        profiles=[{"id": "a", "registered_at": at(1)}],
+        operations=[
+            {
+                "id": kind,
+                "profile_id": "a",
+                "kind": kind,
+                "created_at": at(2),
+                "finished_at": at(2) + timedelta(seconds=1),
+                "status": status,
+            }
+            for kind, status in (("check", "succeeded"), ("agreement", "failed"))
+        ],
+    )
+    row = calculate(snapshot, date(2026, 1, 2))
+    assert row["operations_succeeded"] == row["check_succeeded"] == 1
+    assert row["operations_failed"] == 0
+    assert row["operation_success_percent"] == 100
+    assert row["operation_duration_sample_size"] == 1
+    assert row["dau"] == 0  # neither preparation nor an unsaved check is activity
+
+
 def test_midnight_rolling_window_and_exact_retention_days():
     day = datetime(2026, 2, 1, tzinfo=UTC)
     snapshot = Snapshot(
