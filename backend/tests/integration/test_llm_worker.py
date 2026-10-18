@@ -248,9 +248,18 @@ def test_worker_publishes_once_and_preserves_late_edit(disposable_url, target):
                 assert metrics["regeneration_succeeded"] == 1
                 assert metrics["translation_succeeded"] == 1
                 assert metrics["estimate_succeeded"] == 1
+                # Preparation stays in the ledger; the KPI covers four product kinds.
+                assert metrics["operations_succeeded"] == 5
+                assert metrics["operation_duration_sample_size"] == 5
                 assert (
-                    metrics["operations_succeeded"] == 6
-                )  # includes the explicit agreement command
+                    await work.session.scalar(
+                        text(
+                            "SELECT count(*) FROM llm_operations "
+                            "WHERE kind='agreement' AND status='succeeded'"
+                        )
+                    )
+                    == 1
+                )
         await database.close()
 
     asyncio.run(exercise())
