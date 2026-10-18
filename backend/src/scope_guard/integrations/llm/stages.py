@@ -9,7 +9,7 @@ from typing import Literal
 
 from babel.units import format_unit
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
-from pydantic_ai import Agent, NativeOutput
+from pydantic_ai import Agent, ModelRetry, NativeOutput
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from scope_guard.domain.llm.commercial_terms import current_commercial_terms
@@ -19,10 +19,12 @@ from scope_guard.integrations.llm.detection import clean, detector, evidence, fo
 from scope_guard.integrations.llm.preservation import (
     preserve_translation,
     recognized_schedule_language,
+    validate_translation_commercial_terms,
 )
 from scope_guard.integrations.llm.prompts.workflow_v2 import stage_prompt
 from scope_guard.integrations.llm.pydanticai_model import GatewayResponsesModel
 from scope_guard.integrations.llm.semantic_review import (
+    SemanticReviewer,
     cosmetic_reply,
     without_schedule,
 )
@@ -255,7 +257,7 @@ def validate_text(
     accepted = facts.get("analysis") or {}
     terms = accepted.get("changeOrder") or accepted.get("estimate") or accepted
     saved_order = facts.get("document", {}).get("changeOrder") or {}
-    if facts.get("action") == "regenerate":
+    if facts.get("action") in ("regenerate", "translate"):
         terms = dict(current_commercial_terms(facts))
         if terms["noAdditionalCharge"]:
             terms["additionalCost"] = "0"
@@ -308,6 +310,7 @@ def validate_text(
 
 def validate_stage(stage, data, facts, *, reviewed_labels=False):
     raw = data.model_dump() if isinstance(data, BaseModel) else data
+    validate_translation_commercial_terms(stage, raw, facts)
     locale, target = facts["locale"], facts["selection"]["selectedLanguage"]
     accepted = facts.get("analysis") or {}
     if stage == "analysis":
@@ -357,7 +360,9 @@ def validate_stage(stage, data, facts, *, reviewed_labels=False):
                 if facts.get("action") == "translate":
                     reply = facts["document"]["reply"]
                     source = reply["text"] if field == reply["tone"] else reply["generated"][field]
-                    preserve_translation(field, source, raw[field], reply["language"], target)
+                    preserve_translation(
+                        field, source, raw[field], reply["language"], target, money=False
+                    )
         elif stage == "change_order":
             applicable = accepted.get("hasAdditionalWork", accepted["verdict"] == "out_of_scope")
             if raw["applicable"] != (applicable and accepted["verdict"] != "in_scope"):
@@ -376,7 +381,12 @@ def validate_stage(stage, data, facts, *, reviewed_labels=False):
                 source = (facts.get("document", {}).get("changeOrder") or {}).get(field, "")
                 if facts.get("action") == "translate":
                     preserve_translation(
-                        field, source, raw[field], facts["document"]["reply"]["language"], target
+                        field,
+                        source,
+                        raw[field],
+                        facts["document"]["reply"]["language"],
+                        target,
+                        money=False,
                     )
             label_group = " ".join(raw["labels"].values())
             for field, label in raw["labels"].items():
@@ -438,10 +448,43 @@ class StructuredStageRunner:
             raw = data.model_dump()
             return {**raw, "labels": dict(labels)} if labels else raw
 
+        async def validate_commercial(raw, attempt):
+            validate_translation_commercial_terms(stage, raw, facts)
+            if facts.get("action") == "translate" and stage in ("replies", "change_order"):
+                decision = await SemanticReviewer(self.gateway, self.store).review(
+                    binding, stage, facts, raw, attempt, commercial_only=True
+                )
+                if decision.decision != "accept":
+                    terms = current_commercial_terms(facts)
+                    fields = ", ".join(v.field for v in decision.violations)
+                    observed = (
+                        ", ".join(
+                            sorted(
+                                {
+                                    f"{amount} {unit}"
+                                    for violation in decision.violations
+                                    for unit, amount in mentions(
+                                        raw.get(violation.field, ""),
+                                        facts["selection"]["selectedLanguage"],
+                                    )
+                                    if unit != "hours"
+                                }
+                            )
+                        )
+                        or "no recognized fee"
+                    )
+                    raise ValueError(
+                        f"{fields}.commercial_terms: The saved payable total is "
+                        f"{terms.get('additionalCost')} {terms.get('currency')}. "
+                        f"Your text states {observed}. Translate without changing "
+                        "the saved total or separately saved deposits/installments."
+                    )
+
         if record.get("candidate"):
             try:
                 value = schema.model_validate_json(record["candidate"])
                 raw = compose(value)
+                await validate_commercial(raw, binding.semantic_start)
                 return raw
             except (ValueError, TypeError) as error:
                 message = (
@@ -468,6 +511,18 @@ class StructuredStageRunner:
             instructions=instructions,
             retries={"output": remaining - 1},
         )
+
+        @agent.output_validator
+        async def preserve_saved_fee(data):
+            try:
+                await validate_commercial(compose(data), model.semantic)
+            except ValueError as error:
+                # Earlier rejections are recorded by the bridge when it dispatches
+                # the retry. Exhaustion has no next dispatch, so record it here.
+                if model.semantic >= 3:
+                    await self.gateway.validation_feedback(binding, str(error))
+                raise ModelRetry(str(error)) from None
+            return data
 
         try:
             result = await agent.run(user)

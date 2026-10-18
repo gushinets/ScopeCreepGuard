@@ -8,7 +8,9 @@ def current_commercial_terms(facts):
     order = (facts.get("document") or {}).get("changeOrder")
     saved = order is not None
     analysis = facts.get("analysis") or {}
-    values = order if saved else (analysis.get("estimate") or analysis)
+    values = (
+        order if saved else (analysis.get("estimate") or analysis.get("changeOrder") or analysis)
+    )
     return {
         "source": "savedAgreement" if saved else "preliminaryEstimate",
         "preliminary": not saved,
