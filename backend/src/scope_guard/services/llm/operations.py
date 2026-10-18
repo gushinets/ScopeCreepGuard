@@ -22,12 +22,6 @@ STAGES = {
 
 def operation_stages(kind):
     stages = STAGES[kind]
-    if kind == "translate":
-        return tuple(
-            key
-            for stage in stages
-            for key in (stage, *(f"{stage}_review_{attempt}" for attempt in range(1, 4)))
-        )
     return stages
 
 
@@ -185,8 +179,6 @@ class LlmOperations:
                 minimum = (
                     2 if kind in ("check", "translate") or frozen.get("prepareEstimate") else 1
                 )
-                if kind == "translate" and frozen["document"].get("changeOrder") is not None:
-                    minimum = 4  # Each material stage also needs its commercial review.
                 if minimum * worst_call > Decimal(self.policy["maxCost"]):
                     error = {"code": "errors.providerBudgetUnavailable", "status": 503}
             if self.limiter and not self.limiter.allow(
@@ -246,7 +238,7 @@ class LlmOperations:
                         if frozen.get("prepareEstimate")
                         else operation_stages(kind)
                     )
-                    if not stage.startswith("change_order")
+                    if stage != "change_order"
                     or kind != "translate"
                     or frozen["document"].get("changeOrder") is not None
                 ),
@@ -291,6 +283,8 @@ class LlmOperations:
         steps = await self.store.steps(identifier)
         return {
             **pending(row),
+            # Older completed operations may still contain v9 internal review rows.
+            # Keep their public status stable; new translations create no such rows.
             "stages": {
                 s["stage_key"]: s["status"] for s in steps if "_review_" not in s["stage_key"]
             },

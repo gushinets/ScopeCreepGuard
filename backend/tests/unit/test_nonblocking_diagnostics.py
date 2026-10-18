@@ -50,7 +50,7 @@ def test_exact_retained_translated_hours_parser_mismatch_is_diagnostic():
         **dict.fromkeys(("warm", "neutral", "firm"), "12 horas adicionales"),
     }
     result = asyncio.run(run("replies", source, [candidate], store))
-    assert result == candidate and len(store.calls) == 2
+    assert result == candidate and len(store.calls) == 1
     observations = local_observations(
         Binding(uuid4(), uuid4(), 1, "model", "medium"), "replies", result, source
     )

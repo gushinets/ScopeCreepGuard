@@ -33,9 +33,10 @@ pytestmark = pytest.mark.integration
         ("free", "change_order"),
         ("cleared", "replies"),
         ("exhausted", "change_order"),
-        ("context_exhausted", "change_order"),
-        ("budget", "change_order"),
         ("late", "replies"),
+        ("prose_wrong", "replies"),
+        ("prose_repeated", "change_order"),
+        ("prose_omitted", "replies"),
     ],
 )
 def test_translation_saved_authority_correction_and_publication(disposable_url, scenario, affected):
@@ -88,26 +89,7 @@ def test_translation_saved_authority_correction_and_publication(disposable_url, 
             async def request(self, request, timeout):
                 calls.append(request)
                 stage = request.schema_name.removesuffix("_v1")
-                if request.schema_name == "semantic_review_v2":
-                    payload = json.loads(request.messages[-1]["content"])
-                    rejected = any(
-                        "240 euros" in text
-                        for text in payload["candidate"].values()
-                        if isinstance(text, str)
-                    )
-                    value = {
-                        "decision": "reject" if rejected else "accept",
-                        "violations": [
-                            {
-                                "field": "warm" if payload["stage"] == "replies" else "rationale",
-                                "rule": "commercial_terms",
-                                "feedback": "Preserve saved price and currency.",
-                            }
-                        ]
-                        if rejected
-                        else [],
-                    }
-                    return ProviderResponse(json.dumps(value), input_tokens=100, output_tokens=25)
+                assert request.schema_name != "semantic_review_v2", "No mandatory semantic review"
                 value = output(request.schema_name, "en", "es" if translating else "en")
                 if not translating and stage == "replies":
                     value.update(
@@ -117,15 +99,30 @@ def test_translation_saved_authority_correction_and_publication(disposable_url, 
                     if scenario == "late" and stage == affected:
                         entered.set()
                         await release.wait()
-                    bad = (
-                        scenario == "budget"
-                        or stage == affected
-                        and (
-                            request.semantic_attempt == 1
-                            or scenario in ("exhausted", "context_exhausted")
-                        )
+                    payload = json.loads(
+                        next(m["content"] for m in request.messages if m["role"] == "user")
                     )
-                    prose = "Estos cambios cuestan 240 euros." if bad else good
+                    expected_terms = {
+                        "amount": None if scenario == "cleared" else fee[0],
+                        "currency": None if scenario == "cleared" else fee[1],
+                        "noAdditionalCharge": scenario == "free",
+                    }
+                    assert payload["commercialTerms"] == expected_terms
+                    assert "hourlyRate" not in payload["project"]
+                    assert "currency" not in payload["project"]
+                    value["commercialTerms"] = dict(expected_terms)
+                    bad = stage == affected and (
+                        request.semantic_attempt == 1 or scenario == "exhausted"
+                    )
+                    if bad and not scenario.startswith("prose_"):
+                        value["commercialTerms"].update(amount="999", currency="RUB")
+                    elif scenario == "manual":
+                        value["commercialTerms"]["amount"] = "175.350"
+                    prose = {
+                        "prose_wrong": "Estos cambios cuestan 240 euros.",
+                        "prose_repeated": "240 USD. 240 USD. 240 USD.",
+                        "prose_omitted": "Estos cambios requieren aprobación.",
+                    }.get(scenario, good)
                     if stage == "replies":
                         value.update(dict.fromkeys(("warm", "neutral", "firm"), prose))
                     else:
@@ -248,38 +245,47 @@ def test_translation_saved_authority_correction_and_publication(disposable_url, 
             await job
             status = await operations.status(owner, operation_id)
             saved = await workflow.draft(owner, draft_id)
-            if scenario in ("exhausted", "context_exhausted", "budget", "late"):
+            if scenario in ("exhausted", "late"):
                 assert status["status"] == "failed", status
                 assert saved["draftDocument"] == previous["draftDocument"]
                 assert saved["revision"] == previous["revision"]
                 assert status["error"]["code"] == (
-                    "errors.operationBudgetExceeded"
-                    if scenario == "budget"
-                    else "errors.semanticAttemptsExhausted"
-                    if scenario in ("exhausted", "context_exhausted")
+                    "errors.semanticAttemptsExhausted"
+                    if scenario == "exhausted"
                     else "errors.draftConflict"
                 )
             else:
                 assert status["status"] == "succeeded", status
                 result = saved["draftDocument"]
-                assert result["reply"]["text"] == good
-                assert result["changeOrder"]["rationale"] == good
+                expected_prose = {
+                    "prose_wrong": "Estos cambios cuestan 240 euros.",
+                    "prose_repeated": "240 USD. 240 USD. 240 USD.",
+                    "prose_omitted": "Estos cambios requieren aprobación.",
+                }.get(scenario, good)
+                assert result["reply"]["text"] == expected_prose
+                assert result["changeOrder"]["rationale"] == expected_prose
+                assert "commercialTerms" not in result
+                assert "commercialTerms" not in result["reply"]
+                assert "commercialTerms" not in result["changeOrder"]
+                assert (
+                    saved["analysisRun"]["resultSnapshot"]
+                    == previous["analysisRun"]["resultSnapshot"]
+                )
                 for field in ("additionalCost", "currency", "estimatedHours", "noAdditionalCharge"):
                     assert result["changeOrder"][field] == order[field]
                 if scenario == "cleared":
                     assert (
                         result["changeOrder"]["description"] == result["changeOrder"]["note"] == ""
                     )
-            generated = [c for c in calls if not c.schema_name.startswith("semantic_review_")]
-            if scenario == "budget":
-                assert len(calls) == 8
-                assert all(c.semantic_attempt <= 3 for c in generated)
-            else:
-                assert sum(c.schema_name == affected + "_v1" for c in calls) == (
-                    3 if scenario in ("exhausted", "context_exhausted") else 2
-                )
-                assert sum(c.schema_name != affected + "_v1" for c in generated) == 1
-            assert len(calls) <= 8
+            assert all(c.schema_name in ("replies_v1", "change_order_v1") for c in calls)
+            assert sum(c.schema_name == affected + "_v1" for c in calls) == (
+                1 if scenario.startswith("prose_") else 3 if scenario == "exhausted" else 2
+            )
+            assert sum(c.schema_name != affected + "_v1" for c in calls) == 1
+            assert len(calls) <= 4
+            steps = await store.steps(operation_id)
+            assert {s["stage_key"] for s in steps} == {"replies", "change_order"}
+            assert all("commercialTerms" not in (s["accepted_result"] or {}) for s in steps)
             async with database.new_uow() as work:
                 ledger = (
                     (
@@ -298,11 +304,38 @@ def test_translation_saved_authority_correction_and_publication(disposable_url, 
             assert len(ledger) == len(calls)
             assert all(c["input_tokens"] == 100 and c["output_tokens"] == 25 for c in ledger)
             assert all(c["estimated_cost"] > 0 for c in ledger)
-            if scenario != "budget":
-                assert sum(c["validation_status"] == "rejected" for c in ledger) == (
-                    3 if scenario in ("exhausted", "context_exhausted") else 1
+            assert sum(c["validation_status"] == "rejected" for c in ledger) == (
+                0 if scenario.startswith("prose_") else 3 if scenario == "exhausted" else 1
+            )
+            if scenario == "prose_wrong":
+                # Intentional scope limitation: wrong prose is published, then observed only.
+                from scope_guard.domain.llm.runtime import Binding
+                from scope_guard.integrations.llm.diagnostics import local_observations
+
+                step = next(s for s in steps if s["stage_key"] == affected)
+                observations = local_observations(
+                    Binding(operation_id, step["id"], 1, "controlled", "medium"),
+                    affected,
+                    step["accepted_result"],
+                    frozen,
                 )
+                assert any(
+                    o.rule == "commercial_terms" and o.outcome == "finding" for o in observations
+                )
+                assert (await operations.status(owner, operation_id))["status"] == "succeeded"
+                assert (await workflow.draft(owner, draft_id))["draftDocument"] == saved[
+                    "draftDocument"
+                ]
             before_replay = len(calls)
+            if scenario == "original":
+                # A completed old-version operation replays its persisted result;
+                # it must not reinterpret responses under the new native contract.
+                async with database.new_uow() as work:
+                    await work.session.execute(
+                        text("UPDATE llm_steps SET prompt_version=:version WHERE operation_id=:id"),
+                        {"version": "workflow-v9-translation-commercial-terms", "id": operation_id},
+                    )
+                    await work.commit()
             assert (await operations.admit(owner, draft_id, "translate", command))[
                 "operationId"
             ] == str(operation_id)

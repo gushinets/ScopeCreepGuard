@@ -605,7 +605,7 @@ class LlmTransactionRepository:
                 await self.session.execute(
                     text(
                         "SELECT stage_key FROM llm_steps WHERE operation_id=:id AND "
-                        "status='accepted' AND stage_key NOT LIKE '%_review_%' "
+                        "status='accepted' "
                         "ORDER BY stage_key"
                     ),
                     {"id": operation["id"]},
