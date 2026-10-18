@@ -109,7 +109,7 @@ def test_complete_check_atomic_refresh_and_actual_d1_translation(disposable_url,
             if stage == "change_order_v1":
                 value.pop("labels", None)
                 if mode == "translate":
-                    # Replay actual invalid attempt 1 and faithful attempt 2.
+                    # Retain the historical prose candidates; content stays diagnostic.
                     value = deepcopy(D1["candidates"][min(co_attempts, 1)])
                     value.pop("labels", None)
                     co_attempts += 1
@@ -120,6 +120,14 @@ def test_complete_check_atomic_refresh_and_actual_d1_translation(disposable_url,
                         description=D1["saved"]["description"],
                         timelineImpact="3 días naturales después de la aprobación",
                     )
+            if facts.get("action") == "translate":
+                assert facts["commercialTerms"] == {
+                    "amount": "175.35",
+                    "currency": "USD",
+                    "noAdditionalCharge": True,
+                }
+                assert "commercialTerms" in body["text"]["format"]["schema"]["properties"]
+                value["commercialTerms"] = deepcopy(facts["commercialTerms"])
             return httpx.Response(200, json=provider_response(value, len(wire), True))
 
         adapter = LiteLLMResponsesAdapter("synthetic", transport=httpx.MockTransport(http))
@@ -209,8 +217,10 @@ def test_complete_check_atomic_refresh_and_actual_d1_translation(disposable_url,
         )
         await save(document=document)
         mode = "translate"
+        calls_before_translation = len(wire)
         translated = await operate("translate", language="en")
         assert translated["status"] == "succeeded", translated["error"]
+        assert len(wire) == calls_before_translation + 2
         reloaded = await workflow.draft(owner, draft_id)
         order = reloaded["draftDocument"]["changeOrder"]
         assert (order["additionalCost"], order["currency"], order["estimatedHours"]) == (
@@ -221,11 +231,14 @@ def test_complete_check_atomic_refresh_and_actual_d1_translation(disposable_url,
         assert order["description"] == D1["candidates"][0]["description"]
         assert order["timelineImpact"] == D1["candidates"][0]["timelineImpact"]
         assert co_attempts == 1
+        assert order["noAdditionalCharge"] is True
         assert len(await workflow.histories(owner, project_id)) == 1
         before = deepcopy(reloaded)
         mode = "bad_schedule"
+        calls_before_translation = len(wire)
         rejected = await operate("translate", language="es")
         assert rejected["status"] == "succeeded"
+        assert len(wire) == calls_before_translation + 2
         assert (await workflow.draft(owner, draft_id))["draftDocument"]["changeOrder"][
             "timelineImpact"
         ] == "3 días naturales después de la aprobación"
