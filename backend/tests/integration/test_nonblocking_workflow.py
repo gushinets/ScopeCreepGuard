@@ -408,7 +408,7 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
             {
                 "operationId": str(uuid4()),
                 "expectedRevision": draft["revision"],
-                "changes": {"draftDocument": changed},
+                "patch": {"reply.text": "New manual reply"},
             },
         )
         await worker.process_one()

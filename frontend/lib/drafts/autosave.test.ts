@@ -118,7 +118,7 @@ describe('serialized Draft autosave', () => {
     saver.edit({ requestText: 'local conflict' })
     saver.save = async () => { throw Object.assign(new Error('conflict'), { status: 409 }) }
     await expect(saver.flush()).rejects.toThrow('conflict')
-    expect(saver.status).toBe('conflict')
+    expect(saver.status).toBe('failed')
     expect(saver.local.requestText).toBe('local conflict')
     saver.resolve({ ...draft(), revision: '9', requestText: 'server text' }, true)
     expect(saver.local.requestText).toBe('local conflict')

@@ -10634,7 +10634,35 @@
             "title": "Expectedrevision"
           },
           "changes": {
-            "$ref": "#/components/schemas/WorkingChanges"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkingChanges"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "patch": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patch"
           },
           "reason": {
             "type": "string",
@@ -10653,8 +10681,7 @@
         "type": "object",
         "required": [
           "operationId",
-          "expectedRevision",
-          "changes"
+          "expectedRevision"
         ],
         "title": "SaveWorkingDraft"
       },

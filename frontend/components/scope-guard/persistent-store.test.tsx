@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, renderHook, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, renderHook, screen, waitFor } from '@testing-library/react'
 import { NextIntlClientProvider } from 'next-intl'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -9,6 +9,8 @@ import { commercialSignature } from '@/lib/change-order/commercial-signature'
 import type { EditableDraft } from '@/lib/change-order/document'
 import { PersistentStoreProvider } from './persistent-store'
 import { ResultPanel } from './result-panel'
+import { SaveFeedback } from './save-feedback'
+import { applyUserPatch } from '@/lib/drafts/user-patch'
 import { useStore } from './store'
 
 const router = { replace: vi.fn() }
@@ -28,7 +30,7 @@ beforeEach(() => {
     if (url === '/api/v2/projects/p1/draft' || url === '/api/v2/drafts/d1') {
       if (init?.method === 'PUT') {
         const body = JSON.parse(String(init.body))
-        saved = { ...saved, ...body.changes, revision: String(BigInt(saved.revision) + BigInt(1)) }
+        saved = { ...(body.patch ? applyUserPatch(saved, body.patch) : { ...saved, ...body.changes }), revision: String(BigInt(saved.revision) + BigInt(1)) }
       }
       return Response.json({ draft: saved })
     }
@@ -358,9 +360,44 @@ it('retries the failed autosave payload without adding an empty edit', async () 
   expect(hook.result.current.workflow?.status).toBe('failed')
   fail = false
   await act(async () => { await hook.result.current.workflow?.retrySave() })
-  expect(bodies).toHaveLength(2)
+  expect(bodies).toHaveLength(4)
   expect(bodies[1]).toEqual(bodies[0])
   expect(saved.requestText).toBe('Retry this exact edit')
+})
+
+it('renders persistent failure feedback and Retry, while continued typing stays local', async () => {
+  const originalFetch = vi.mocked(fetch).getMockImplementation()!
+  let fail = true
+  const bodies: Record<string, unknown>[] = []
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (String(input) === '/api/v2/drafts/d1' && init?.method === 'PUT') {
+      bodies.push(JSON.parse(String(init.body)))
+      if (fail) return Response.json({ error: 'errors.requestFailed' }, { status: 503 })
+    }
+    return originalFetch(input, init)
+  })
+  const withFeedback = ({ children }: { children: ReactNode }) => wrapper({ children: <>{children}<SaveFeedback /></> })
+  const hook = renderHook(() => useStore(), { wrapper: withFeedback })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  expect(screen.getByRole('status').textContent).toBe('Saved')
+  vi.useFakeTimers()
+  act(() => hook.result.current.setRequestText('Unsaved first'))
+  expect(screen.getByRole('status').textContent).toBe(en.workflow.saving)
+  await act(async () => { await vi.advanceTimersByTimeAsync(2750) })
+  expect(bodies).toHaveLength(3)
+  expect(screen.getByRole('alert').textContent).toBe(en.workflow.failed)
+  act(() => hook.result.current.setRequestText('Newest local text'))
+  await act(async () => { await vi.advanceTimersByTimeAsync(30_000) })
+  expect(bodies).toHaveLength(3)
+  expect(saved.requestText).toBe('Server-confirmed request')
+  fail = false
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: en.workflow.retrySave })) })
+  expect(saved.requestText).toBe('Newest local text')
+  expect(bodies[3]).toEqual(bodies[0])
+  expect(bodies[4].patch).toEqual({ requestText: 'Newest local text' })
+  expect(bodies.every(body => !('changes' in body))).toBe(true)
+  expect(screen.getByRole('status').textContent).toBe('Saved')
+  vi.useRealTimers()
 })
 
 it('logs an autosave conflict without exposing its document content', async () => {
@@ -376,8 +413,8 @@ it('logs an autosave conflict without exposing its document content', async () =
     act(() => hook.result.current.setRequestText('Do not log this request text'))
     await act(async () => { await expect(hook.result.current.workflow?.complete()).rejects.toThrow('errors.draftConflict') })
     await waitFor(() => expect(log).toHaveBeenCalled())
-    const event = JSON.parse(String(log.mock.calls.find(([entry]) => String(entry).includes('draft_autosave_conflict'))?.[0]))
-    expect(event).toMatchObject({ event: 'draft_autosave_conflict', draftId: 'd1', projectId: 'p1', revision: '3', error: 'errors.draftConflict' })
+    const event = JSON.parse(String(log.mock.calls.find(([entry]) => String(entry).includes('draft_autosave_failed'))?.[0]))
+    expect(event).toMatchObject({ event: 'draft_autosave_failed', draftId: 'd1', projectId: 'p1', revision: '3', error: 'errors.draftConflict' })
     expect(JSON.stringify(event)).not.toContain('Do not log this request text')
   } finally { log.mockRestore() }
 })
@@ -396,4 +433,20 @@ it('offers recovery without automatically replacing the saved request', async ()
   expect(saved.requestText).toBe('Server-confirmed request')
   await act(async () => hook.result.current.saveDraft())
   expect(saved.requestText).toBe('Unconfirmed text')
+})
+
+it('does not discover or clear recovery belonging to a different user or Draft', async () => {
+  const foreignUser = 'scg:unconfirmed:u2:d1:tab'
+  const foreignDraft = 'scg:unconfirmed:u1:d2:tab'
+  const buffer = { version: 1, draftId: 'd1', baseRevision: '3', changes: { requestText: 'Private foreign text', draftDocument: saved.draftDocument }, attempt: null, pendingPatch: { requestText: 'Private foreign text' } }
+  localStorage.setItem(foreignUser, JSON.stringify(buffer))
+  localStorage.setItem(foreignDraft, JSON.stringify({ ...buffer, draftId: 'd2' }))
+  const hook = renderHook(() => useStore(), { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  expect(hook.result.current.workflow?.recovery).toBeNull()
+  expect(hook.result.current.requestText).toBe('Server-confirmed request')
+  act(() => hook.result.current.setRequestText('My own edit'))
+  await act(async () => hook.result.current.saveDraft())
+  expect(localStorage.getItem(foreignUser)).toContain('Private foreign text')
+  expect(localStorage.getItem(foreignDraft)).toContain('Private foreign text')
 })

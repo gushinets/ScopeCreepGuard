@@ -3,6 +3,50 @@ from copy import deepcopy
 import pytest
 
 
+def test_user_patch_preserves_provenance_and_treats_commercial_values_as_one_edit():
+    from scope_guard.domain.drafts.workflow import WorkflowError, apply_user_patch, empty_document
+
+    document = empty_document()
+    document["reply"]["generated"]["neutral"] = "AI source"
+    document["changeOrder"] = {
+        "description": "original",
+        "language": "en",
+        "currency": "USD",
+        "additionalCost": "10.00",
+        "noAdditionalCharge": False,
+        "aiValues": {"description": "AI original"},
+    }
+    base = {"requestText": "request", "draftDocument": document}
+    updated = apply_user_patch(base, {"reply.text": "", "changeOrder.description": "manual"})
+    assert updated["draftDocument"]["reply"]["generated"] == document["reply"]["generated"]
+    assert updated["draftDocument"]["changeOrder"]["aiValues"] == {"description": "AI original"}
+    assert base["draftDocument"]["changeOrder"]["description"] == "original"
+    for path in (
+        "reply.generated",
+        "reply.language",
+        "changeOrder.aiValues",
+        "changeOrder.language",
+        "id",
+        "analysisIsStale",
+    ):
+        with pytest.raises(WorkflowError):
+            apply_user_patch(base, {path: "forged"})
+    with pytest.raises(WorkflowError):
+        apply_user_patch(base, {"changeOrder.currency": "EUR"})
+    with pytest.raises(WorkflowError):
+        apply_user_patch(base, {"reply.text": None})
+    updated = apply_user_patch(
+        base,
+        {
+            "changeOrder.currency": "EUR",
+            "changeOrder.additionalCost": "",
+            "changeOrder.noAdditionalCharge": True,
+        },
+    )
+    assert updated["draftDocument"]["changeOrder"]["additionalCost"] == ""
+    assert updated["draftDocument"]["changeOrder"]["noAdditionalCharge"] is True
+
+
 def test_versioned_document_rejects_analysis_and_invalid_money():
     from scope_guard.domain.drafts.workflow import WorkflowError, empty_document, validate_document
 

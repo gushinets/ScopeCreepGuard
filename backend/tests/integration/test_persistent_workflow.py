@@ -978,6 +978,66 @@ def test_atomic_saves_conflicts_and_completed_retries(disposable_url, monkeypatc
         assert len(rejected) == 1 and rejected[0].status == 409
         async with factory() as work:
             assert len(await work.workflow.revisions(owner, UUID(draft["id"]))) == 3
+        # User patches alone resolve stale revisions under the same locks/CAS.
+        from scope_guard.services.drafts.workflow import WorkflowService
+
+        service = WorkflowService(factory)
+        identifier = UUID(draft["id"])
+        historical = await service.revisions(owner, identifier)
+
+        def command(patch):
+            return {"expectedRevision": "1", "operationId": str(uuid4()), "patch": patch}
+
+        first = command({"reply.text": "tab A"})
+        a = await service.save(owner, identifier, first)
+        b = await service.save(owner, identifier, command({"reply.tone": "firm"}))
+        assert b["draftDocument"]["reply"]["text"] == "tab A"
+        assert b["draftDocument"]["reply"]["tone"] == "firm"
+        latest = await service.save(owner, identifier, command({"reply.text": "tab B"}))
+        assert latest["draftDocument"]["reply"]["text"] == "tab B"
+        assert int(latest["revision"]) == int(a["revision"]) + 2
+        # Lost response, then replay after a newer command: canonical current
+        # state is returned, and the receipt prevents a second application.
+        replay = await service.save(owner, identifier, first)
+        assert replay["revision"] == latest["revision"]
+        assert replay["draftDocument"]["reply"]["text"] == "tab B"
+        duplicate = command({"requestText": "one logical save"})
+        responses = await asyncio.gather(
+            *[service.save(owner, identifier, duplicate) for _ in range(2)]
+        )
+        assert responses[0]["revision"] == responses[1]["revision"]
+        assert int(responses[0]["revision"]) == int(latest["revision"]) + 1
+        cleared = await service.save(owner, identifier, command({"reply.text": ""}))
+        assert cleared["draftDocument"]["reply"]["text"] == ""
+        concurrent_fields = await asyncio.gather(
+            service.save(owner, identifier, command({"requestText": "concurrent request"})),
+            service.save(owner, identifier, command({"reply.tone": "warm"})),
+        )
+        current = await service.draft(owner, identifier)
+        assert current["requestText"] == "concurrent request"
+        assert current["draftDocument"]["reply"]["tone"] == "warm"
+        assert int(current["revision"]) == int(cleared["revision"]) + 2
+        assert len(concurrent_fields) == 2
+        for invalid in (
+            {"analysisIsStale": False},
+            {"reply.generated": "forged"},
+            {"changeOrder.additionalCost": "100"},
+        ):
+            with pytest.raises(WorkflowError):
+                await service.save(owner, identifier, command(invalid))
+        with pytest.raises(WorkflowError) as foreign:
+            await service.save(uuid4(), identifier, command({"reply.text": "foreign"}))
+        assert foreign.value.status == 404
+        with pytest.raises(WorkflowError) as mismatch:
+            await service.save(owner, identifier, {**first, "patch": {"reply.text": "different"}})
+        assert mismatch.value.code == "errors.operationMismatch"
+        with pytest.raises(WorkflowError) as stale_restore:
+            await service.restore(
+                owner, identifier, 1, {"expectedRevision": "1", "operationId": str(uuid4())}
+            )
+        assert stale_restore.value.status == 409
+        assert (await service.revisions(owner, identifier))[-len(historical) :] == historical
+        assert await service.histories(owner, UUID(project["id"])) == []
         await database.close()
 
     asyncio.run(exercise())

@@ -5,6 +5,26 @@ from scope_guard_api.main import create_app
 from scope_guard.core.config import Settings
 
 
+def test_explicit_edit_contract_preserves_omission_and_clear_and_forbids_mixed_payloads():
+    from pydantic import ValidationError
+    from scope_guard_api.schemas.workflow import SaveWorkingDraft
+
+    identity = {"expectedRevision": "1", "operationId": "22222222-2222-4222-8222-222222222222"}
+    parsed = SaveWorkingDraft.model_validate({**identity, "patch": {"reply.text": ""}})
+    assert parsed.to_wire() == {**identity, "patch": {"reply.text": ""}}
+    for payload in (
+        {},
+        {"patch": None},
+        {"patch": {}},
+        {"patch": {"analysisIsStale": False}},
+        {"patch": {"reply.text": None}},
+        {"changes": {}, "patch": {"reply.text": "text"}},
+        {"changes": None, "patch": {"reply.text": "text"}},
+    ):
+        with pytest.raises(ValidationError):
+            SaveWorkingDraft.model_validate({**identity, **payload})
+
+
 def test_v2_requires_authentication_and_retires_unsafe_legacy_routes():
     app = create_app(Settings(_env_file=None, workflow_v2=True))
     with TestClient(app) as client:
