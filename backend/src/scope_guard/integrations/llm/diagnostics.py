@@ -1,5 +1,6 @@
 """Durable, read-only content observations, executed after user publication."""
 
+import asyncio
 import re
 from copy import deepcopy
 from datetime import UTC, datetime
@@ -8,6 +9,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from scope_guard.domain.llm.reply_similarity import (
+    REPLY_SIMILARITY_THRESHOLD,
+    previous_reply,
+    reply_similarity,
+)
 from scope_guard.domain.llm.runtime import PROMPT_VERSION, Binding, GatewayFailure, digest
 from scope_guard.integrations.llm.semantic_review import SemanticReviewer
 
@@ -24,6 +30,10 @@ class Observation(BaseModel):
     confidence: float | None = Field(default=None, ge=0, le=1)
     expected: str | None = None
     observed: str | None = None
+    score: float | None = None
+    threshold: float | None = None
+    attempt: int | None = None
+    novelty_exhausted: bool | None = None
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -60,7 +70,7 @@ def local_observation(binding, stage, check):
         return [Observation(**base, field="*", rule="content", outcome="diagnostic_error")]
 
 
-def local_observations(binding, stage, candidate, facts):
+def local_observations(binding, stage, candidate, facts, *, novelty=None):
     from scope_guard.integrations.llm.preservation import preserve_translation
     from scope_guard.integrations.llm.stages import validate_stage, validate_text
 
@@ -99,6 +109,38 @@ def local_observations(binding, stage, candidate, facts):
                 )
             )
     observations = [o for check in checks for o in local_observation(binding, stage, check)]
+    if stage == "reply" and facts.get("action") == "regenerate":
+        try:
+            score = reply_similarity(previous_reply(facts), candidate["text"])
+            observations.append(
+                Observation(
+                    operation_id=binding.operation_id,
+                    stage_id=binding.step_id,
+                    stage=stage,
+                    field="text",
+                    rule="reply_similarity",
+                    outcome="uncertain"
+                    if score is None
+                    else "finding"
+                    if score >= REPLY_SIMILARITY_THRESHOLD
+                    else "pass",
+                    score=score,
+                    threshold=REPLY_SIMILARITY_THRESHOLD,
+                    attempt=(novelty or {}).get("exhaustedAttempt", (novelty or {}).get("attempt")),
+                    novelty_exhausted=(novelty or {}).get("exhausted"),
+                )
+            )
+        except ValueError:
+            observations.append(
+                Observation(
+                    operation_id=binding.operation_id,
+                    stage_id=binding.step_id,
+                    stage=stage,
+                    field="text",
+                    rule="reply_similarity",
+                    outcome="diagnostic_error",
+                )
+            )
     unique = {(o.field, o.rule, o.outcome): o for o in observations}
     return list(unique.values())
 
@@ -136,7 +178,14 @@ async def execute_diagnostics(runner, operation):
         if record["prompt_version"] != PROMPT_VERSION:
             raise GatewayFailure("workflowVersionUnavailable")
         await store.freeze_stage(binding, digest({"sourceStep": str(source["id"])}))
-        observations = local_observations(binding, stage, candidate, facts)
+        observations = await asyncio.to_thread(
+            local_observations,
+            binding,
+            stage,
+            candidate,
+            facts,
+            novelty=(source.get("feedback") or {}).get("novelty"),
+        )
         if stage != "analysis":
             try:
                 decision = await SemanticReviewer(runner.gateway, store).review(

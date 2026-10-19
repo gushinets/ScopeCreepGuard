@@ -1,6 +1,8 @@
 """Typed fixed-stage runner with bounded PydanticAI corrections and domain checks."""
 
+import asyncio
 import json
+import logging
 import re
 from decimal import Decimal
 from functools import lru_cache
@@ -16,6 +18,12 @@ from scope_guard.domain.llm.commercial_terms import (
     current_commercial_terms,
     translation_commercial_terms,
 )
+from scope_guard.domain.llm.reply_similarity import (
+    MAX_REPLY_COMPARISON_LENGTH,
+    REPLY_SIMILARITY_THRESHOLD,
+    previous_reply,
+    reply_similarity,
+)
 from scope_guard.domain.llm.runtime import GatewayFailure
 from scope_guard.integrations.documents.localization import reviewed_stage_labels
 from scope_guard.integrations.llm.detection import clean, detector, evidence, foreign_evidence
@@ -25,10 +33,7 @@ from scope_guard.integrations.llm.preservation import (
 )
 from scope_guard.integrations.llm.prompts.workflow_v2 import stage_prompt
 from scope_guard.integrations.llm.pydanticai_model import GatewayResponsesModel
-from scope_guard.integrations.llm.semantic_review import (
-    cosmetic_reply,
-    without_schedule,
-)
+from scope_guard.integrations.llm.semantic_review import without_schedule
 from scope_guard.integrations.llm.terms import mentions
 
 Position = Literal["in_scope", "borderline", "out_of_scope"]
@@ -89,7 +94,7 @@ class RepliesStage(StrictStage):
 
 class ReplyStage(StrictStage):
     scopePosition: Position
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=MAX_REPLY_COMPARISON_LENGTH)
 
 
 class LabelsStage(StrictStage):
@@ -372,19 +377,10 @@ def validate_stage(stage, data, facts, *, reviewed_labels=False):
         if stage in ("replies", "reply"):
             fields = ("warm", "neutral", "firm") if stage == "replies" else ("text",)
             for field in fields:
-                if stage == "reply":
-                    reply = facts["document"]["reply"]
-                    previous = reply.get("text") or reply["generated"].get(reply["tone"], "")
-                    if " ".join(raw[field].split()) == " ".join(previous.split()):
-                        raise ValueError(
-                            "text.unchanged_reply: provide a new formulation while preserving "
-                            "language, scope position, facts and commercial terms"
-                        )
-                    if cosmetic_reply(previous, raw[field]):
-                        raise ValueError(
-                            "text.cosmetic_reply: provide a new formulation "
-                            "preserving facts and terms"
-                        )
+                if stage == "reply" and facts.get("action") == "regenerate":
+                    score = reply_similarity(previous_reply(facts), raw[field])
+                    if score is not None and score >= REPLY_SIMILARITY_THRESHOLD:
+                        raise ValueError("text.reply_similarity: provide a new formulation")
                 validate_text(field, raw[field], target, facts)
                 if facts.get("action") == "translate":
                     reply = facts["document"]["reply"]
@@ -462,6 +458,57 @@ class StructuredStageRunner:
 
     async def run(self, binding, stage, facts, record):
         schema = TYPES[stage]
+        novelty_enabled = stage == "reply" and facts.get("action") == "regenerate"
+        novelty = (record.get("feedback") or {}).get("novelty") if novelty_enabled else None
+
+        async def check_novelty(raw, attempt):
+            nonlocal novelty
+            if not novelty_enabled:
+                return
+            # SequenceMatcher has quadratic worst cases. Keep lease renewal and
+            # cancellation responsive even for bounded, repetitive user text.
+            score = await asyncio.to_thread(reply_similarity, previous_reply(facts), raw["text"])
+            novelty = {
+                "candidate": raw,
+                "score": score,
+                "threshold": REPLY_SIMILARITY_THRESHOLD,
+                "attempt": attempt,
+                "exhausted": False,
+            }
+            # Commit before ModelRetry: dispatching the next call clears candidate.
+            await self.store.remember_reply(binding, novelty)
+            log_novelty(novelty, attempt)
+            if score is not None and score >= REPLY_SIMILARITY_THRESHOLD:
+                raise ValueError(
+                    "text.reply_similarity: substantially change wording and sentence structure; "
+                    "preserve selected language and tone, accepted scope position, factual claims, "
+                    "current prices and currency, deadlines and agreed obligations. "
+                    "Do not invent new conditions to reduce textual similarity."
+                )
+
+        def log_novelty(state, attempt):
+            logging.getLogger("scope_guard").info(
+                "reply_similarity",
+                extra={
+                    "score": state["score"],
+                    "threshold": state["threshold"],
+                    "attempt": attempt,
+                    "novelty_exhausted": state["exhausted"],
+                },
+            )
+
+        async def exhausted():
+            nonlocal novelty
+            if novelty and novelty["score"] is not None:
+                # Only a novelty rejection permits fallback, never a provider failure.
+                if novelty["score"] >= REPLY_SIMILARITY_THRESHOLD:
+                    raw = schema.model_validate(novelty["candidate"]).model_dump()
+                    novelty = {**novelty, "exhausted": True, "exhaustedAttempt": 3}
+                    await self.store.remember_reply(binding, novelty)
+                    log_novelty(novelty, 3)
+                    return raw
+            raise GatewayFailure("semanticAttemptsExhausted")
+
         labels = (
             reviewed_stage_labels(facts["selection"]["selectedLanguage"])
             if stage == "change_order"
@@ -487,6 +534,7 @@ class StructuredStageRunner:
                 value = schema.model_validate_json(record["candidate"])
                 raw = compose(value)
                 validate_translation_metadata(value, facts)
+                await check_novelty(raw, record.get("semantic_attempt", binding.semantic_start))
                 return raw
             except (ValueError, TypeError) as error:
                 message = (
@@ -502,10 +550,10 @@ class StructuredStageRunner:
                 await self.store.feedback(binding, record["feedback"])
         remaining = 3 - binding.semantic_start
         if remaining <= 0:
-            raise GatewayFailure("semanticAttemptsExhausted")
+            return await exhausted()
         instructions, user = prompt(stage, facts)
-        if record.get("feedback"):
-            user += "\nValidation feedback: " + json.dumps(record["feedback"])
+        if (record.get("feedback") or {}).get("rule"):
+            user += "\nValidation feedback: " + json.dumps({"rule": record["feedback"]["rule"]})
         model = GatewayResponsesModel(self.gateway, binding, record.get("prepared_request"))
         agent = Agent(
             model=model,
@@ -518,6 +566,7 @@ class StructuredStageRunner:
         async def preserve_saved_fee(data):
             try:
                 validate_translation_metadata(data, facts)
+                await check_novelty(compose(data), model.semantic)
             except ValueError as error:
                 # Earlier rejections are recorded by the bridge when it dispatches
                 # the retry. Exhaustion has no next dispatch, so record it here.
@@ -528,6 +577,18 @@ class StructuredStageRunner:
 
         try:
             result = await agent.run(user)
-        except UnexpectedModelBehavior:
+        except UnexpectedModelBehavior as error:
+            if (
+                novelty_enabled
+                and model.semantic >= 3
+                and str(error).startswith("Exceeded maximum output retries (")
+            ):
+                # JSON/schema failures never reach the output validator; the last
+                # rejection has no subsequent dispatch to record its feedback.
+                if not novelty or novelty["attempt"] != model.semantic:
+                    await self.gateway.validation_feedback(
+                        binding, "output.structure: output retry budget exhausted"
+                    )
+                return await exhausted()
             raise GatewayFailure("semanticAttemptsExhausted") from None
         return compose(result.output)

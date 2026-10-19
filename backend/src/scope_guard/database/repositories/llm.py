@@ -402,7 +402,9 @@ class LlmSQLStore:
             await work.session.execute(
                 text(
                     "UPDATE llm_steps SET status='accepted', "
-                    "accepted_result=CAST(:result AS jsonb),candidate=NULL,feedback=NULL "
+                    "accepted_result=CAST(:result AS jsonb),candidate=NULL,"
+                    "feedback=CASE WHEN feedback ? 'novelty' THEN jsonb_build_object("
+                    "'novelty',(feedback->'novelty')-'candidate') ELSE NULL END "
                     "WHERE id=:id "
                     "AND operation_id=:op AND status<>'accepted'"
                 ),
@@ -413,6 +415,10 @@ class LlmSQLStore:
                     "UPDATE provider_calls SET validation_status='accepted' "
                     "WHERE id=(SELECT id FROM provider_calls WHERE step_id=:step "
                     "AND status='completed' "
+                    "AND semantic_attempt=coalesce((SELECT CASE WHEN "
+                    "(feedback->'novelty'->>'exhausted')::boolean THEN "
+                    "(feedback->'novelty'->>'attempt')::integer END FROM llm_steps "
+                    "WHERE id=:step),semantic_attempt) "
                     "ORDER BY physical_index DESC LIMIT 1)"
                 ),
                 {"step": binding.step_id},
@@ -420,12 +426,31 @@ class LlmSQLStore:
             work.session.info["marketing_metrics_dirty"] = True
             await work.commit()
 
+    async def remember_reply(self, binding, novelty):
+        """Private unaccepted fallback, durable across candidate clearing and retries."""
+        async with self.factory() as work:
+            await self.owned(work, binding)
+            await work.session.execute(
+                text(
+                    "UPDATE llm_steps SET feedback=coalesce(feedback,'{}'::jsonb) || "
+                    "CAST(:state AS jsonb) WHERE id=:id AND operation_id=:op "
+                    "AND stage_key='reply' AND status<>'accepted'"
+                ),
+                {
+                    "id": binding.step_id,
+                    "op": binding.operation_id,
+                    "state": encode({"novelty": novelty}),
+                },
+            )
+            await work.commit()
+
     async def feedback(self, binding, error):
         async with self.factory() as work:
             await self.owned(work, binding)
             await work.session.execute(
                 text(
-                    "UPDATE llm_steps SET feedback=CAST(:error AS jsonb) "
+                    "UPDATE llm_steps SET feedback=coalesce(feedback,'{}'::jsonb) || "
+                    "CAST(:error AS jsonb) "
                     "WHERE id=:id AND status<>'accepted'"
                 ),
                 {"id": binding.step_id, "error": encode(error)},
@@ -461,7 +486,7 @@ class LlmSQLStore:
             rule = await one(
                 work,
                 "SELECT stage_key,feedback FROM llm_steps WHERE operation_id=:id "
-                "AND status<>'accepted' AND feedback IS NOT NULL "
+                "AND status<>'accepted' AND feedback ? 'rule' "
                 "ORDER BY semantic_attempt DESC LIMIT 1",
                 {"id": identifier},
             )

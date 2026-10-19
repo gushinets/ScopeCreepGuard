@@ -247,13 +247,13 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                     value["text"] = (
                         PROSE[target]
                         if previous != PROSE[target]
-                        else PROSE[target]
-                        + " "
-                        + {
-                            "en": "Please confirm whether to prepare that proposal for review.",
-                            "ru": "Подтвердите, пожалуйста, необходимость подготовки "
-                            "отдельного предложения.",
-                            "es": "Confirme si debemos preparar esa propuesta para su revisión.",
+                        else {
+                            "en": "Before proceeding, please authorize a proposal covering Arrow "
+                            "integration and email notifications as extra work.",
+                            "ru": "Просим разрешить подготовку предложения по интеграции Arrow "
+                            "и почтовым уведомлениям как дополнительным задачам.",
+                            "es": "Para continuar, autorice una propuesta que incluya la "
+                            "integración de Arrow y las notificaciones por correo como extras.",
                         }[target]
                     )
             if (
@@ -396,7 +396,15 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
             assert await worker.process_one()
             regenerated = await operations.status(owner, UUID(pending["operationId"]))
             assert regenerated["status"] == "succeeded", regenerated
-            assert len(bodies) - before_calls == 1
+            assert (
+                len(bodies) - before_calls
+                == {
+                    "different": 1,
+                    "once": 2,
+                    "whitespace": 2,
+                    "always": 3,
+                }[regeneration_mode]
+            )
             assert bodies[-1]["text"]["format"]["name"] == "reply_v1"
             assert "now included" not in json.dumps(bodies[-1]["input"])
             after = await workflow.draft(owner, draft_id)

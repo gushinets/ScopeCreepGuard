@@ -132,6 +132,13 @@ def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, 
                         events.append("user provider entered")
                         user_entered.set()
                     value = output(request.schema_name, "en", "en")
+                    if request.schema_name == "reply_v1":
+                        # This lane test needs one accepted reformulation; novelty
+                        # retry/exhaustion behavior has its own controlled fixtures.
+                        value["text"] = (
+                            "Please authorize a separate proposal for these additions "
+                            "before we proceed."
+                        )
                 return ProviderResponse(json.dumps(value), input_tokens=100, output_tokens=25)
 
             async def close(self):
