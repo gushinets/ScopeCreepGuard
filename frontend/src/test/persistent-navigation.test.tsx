@@ -61,6 +61,45 @@ function expectUrl(id: string | null) {
   expect(window.history.state.usr).toEqual({ retained: true })
 }
 
+it.each([false, true])('ignores a superseded project selection failure (new selection installed: %s)', async installed => {
+  const original = vi.mocked(fetch).getMockImplementation()!
+  let failSecond!: (response: Response) => void
+  let finishThird!: (response: Response) => void
+  const second = new Promise<Response>(resolve => { failSecond = resolve })
+  const third = new Promise<Response>(resolve => { finishThird = resolve })
+  vi.mocked(fetch).mockImplementation((request, init) => {
+    if (String(request) === '/api/v2/projects/p2/draft') return second
+    if (String(request) === '/api/v2/projects/p3/draft') return third
+    return original(request, init)
+  })
+  const hook = renderHook(useStore, { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  act(() => hook.result.current.selectProject('p2'))
+  await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/v2/projects/p2/draft', expect.anything()))
+  act(() => hook.result.current.selectProject('p3'))
+  if (installed) {
+    await act(async () => finishThird(Response.json({ draft: drafts.get('d3') })))
+    await waitFor(() => expect(hook.result.current.currentDraftId).toBe('d3'))
+  }
+  await act(async () => failSecond(Response.json({ error: 'errors.requestFailed' }, { status: 503 })))
+  expect(hook.result.current.draftError).toBe('')
+  if (!installed) await act(async () => finishThird(Response.json({ draft: drafts.get('d3') })))
+  await waitFor(() => expect(hook.result.current.currentDraftId).toBe('d3'))
+  expect(hook.result.current.draftError).toBe('')
+})
+
+it('reports a failed project selection when it is still current', async () => {
+  const original = vi.mocked(fetch).getMockImplementation()!
+  vi.mocked(fetch).mockImplementation((request, init) => String(request) === '/api/v2/projects/p2/draft'
+    ? Promise.resolve(Response.json({ error: 'errors.requestFailed' }, { status: 503 }))
+    : original(request, init))
+  const hook = renderHook(useStore, { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  act(() => hook.result.current.selectProject('p2'))
+  await waitFor(() => expect(hook.result.current.draftError).toBe('errors.requestFailed'))
+  expect(hook.result.current.currentDraftId).toBe('d1')
+})
+
 it('clears operation progress when another project replaces the active editor', async () => {
   const original = vi.mocked(fetch).getMockImplementation()!
   let release!: () => void

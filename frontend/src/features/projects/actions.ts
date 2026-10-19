@@ -55,6 +55,11 @@ export function useProjectActions(editor: DraftEditor, resources: ReturnType<typ
     resources.upsert(project)
     await select(project.id); show('history')
   }
-  return { selectProject: (id: string, destination?: 'check' | 'edit_project') => { void select(id, destination).catch(editor.report) },
+  function selectProject(id: string, destination?: 'check' | 'edit_project') {
+    const selection = select(id, destination)
+    const run = editor.navigation.current
+    void selection.catch(failure => { if (run === editor.navigation.current) editor.report(failure) })
+  }
+  return { selectProject,
     select, createProject, updateProject, deleteProject, archivedProjects: async () => (await projectsApi.list(true)).projects, openArchived }
 }
