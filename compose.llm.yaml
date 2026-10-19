@@ -4,7 +4,7 @@ services:
   backend:
     environment:
       SCOPE_GUARD_LLM_WORKFLOW: "true"
-      SCOPE_GUARD_MIGRATION_TARGET: 0005_llm_workflow
+      SCOPE_GUARD_MIGRATION_TARGET: 0007_nonblocking_llm
       SCOPE_GUARD_OPENAI_MODEL: ${SCOPE_GUARD_OPENAI_MODEL:?Explicit provider model required}
       SCOPE_GUARD_LLM_INPUT_RATE_BOUND: ${SCOPE_GUARD_LLM_INPUT_RATE_BOUND:?Conservative USD per input token bound required}
       SCOPE_GUARD_LLM_OUTPUT_RATE_BOUND: ${SCOPE_GUARD_LLM_OUTPUT_RATE_BOUND:?Conservative USD per output token bound required}

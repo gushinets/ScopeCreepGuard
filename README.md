@@ -1,18 +1,19 @@
 # Scope Creep Guard
 
-Scope Creep Guard runs as a Next.js frontend, a FastAPI backend, and PostgreSQL.
-Runtime data flows `frontend -> backend API -> PostgreSQL`. Next.js owns the UI,
-localization, page guards, editable document state, and the same-origin gateway.
-FastAPI owns all 24 public API operations, PDF export, scope extraction, and database access.
+Scope Creep Guard runs as a React/Vite frontend, a FastAPI backend, and PostgreSQL.
+Runtime data flows `browser -> Nginx /api -> backend API -> PostgreSQL`. React owns
+the UI, localization, page guards and editable document state. Nginx serves static
+assets and forwards API requests on the same public origin.
+FastAPI owns public API operations, PDF export, scope extraction and database access.
 Backend SQLAlchemy models and Alembic are the only active migration authority.
 
 Implementation plans live in [docs/architecture/plans/](docs/architecture/plans/README.md).
 See [application ownership](docs/architecture/ownership.md) for current boundaries.
 
 ```text
-frontend/          Next.js source, assets, tests, tools and Dockerfile
+frontend/          React source, assets, tests, Vite and static Nginx Dockerfile
 apps/api/          FastAPI composition root, Dockerfile and guarded entrypoint
-apps/worker/       Future service-only worker contract
+apps/worker/       Durable export and LLM worker entrypoints
 backend/           Pure domain, services, persistence, integrations and Alembic
 pyproject.toml     Python workspace; root uv.lock pins both packages
 ci/contracts/      Generated FastAPI OpenAPI contract snapshot
@@ -27,9 +28,10 @@ docker-compose.dokploy.yml  Standalone production/Dokploy configuration
 
 Use Node >=22.13.0, pnpm 10.34.1, Python 3.12, uv 0.11.19, and Docker
 Compose >=2.24.0. Create `frontend/.env.local` from `frontend/.env.example` and
-configure `AUTH_SECRET` plus `SCOPE_GUARD_API_ORIGIN`. Configure the same auth
-secret, `SCOPE_GUARD_DATABASE_URL`, and any `OPENAI_API_KEY` in `backend/.env`.
-The frontend never receives database credentials.
+configure `SCOPE_GUARD_API_ORIGIN` (defaults to http://127.0.0.1:8000 in development).
+Configure `AUTH_SECRET`, `SCOPE_GUARD_DATABASE_URL`, and any `OPENAI_API_KEY` only
+in the backend/worker environment. The browser uses `/api`; no browser tokens or
+backend secrets are bundled. Do not prefix private settings with `VITE_`.
 
 API writes with an `Origin` header require an exact entry in
 `SCOPE_GUARD_ALLOWED_ORIGINS`. `SCOPE_GUARD_API_ORIGIN` is a server-only FastAPI
@@ -37,17 +39,24 @@ target. Root `.env*` files configure Compose; keep secrets and certificates out 
 
 ## Run locally
 
-For the integrated stack:
+The React application requires the persistent workflow and compatible
+`0007_nonblocking_llm` schema. Before production cutover, follow the existing
+[workflow rollout](docs/architecture/draft-workflow.md) backup/backfill/verification
+procedure. Base Compose remains an infrastructure/legacy API smoke configuration;
+it does not silently activate persistent workflows. With explicit disposable or
+operator-approved database, private export storage and LLM configuration:
 
 ```sh
-docker compose up --build -d
+docker compose -f compose.yaml -f compose.workflow.yaml -f compose.llm.yaml up --build -d
 ```
 
 Startup order is PostgreSQL health, API entrypoint migration under a database advisory lock, FastAPI
-readiness, then Next.js. Stop it with:
+readiness, then Nginx on port 3000. Run API and worker images from the same release.
+Restart `app` after replacing the backend container if its address changes: Nginx
+resolves the configured upstream at startup. Stop the same stack with:
 
 ```sh
-docker compose down
+docker compose -f compose.yaml -f compose.workflow.yaml -f compose.llm.yaml down
 ```
 
 For separate development, start PostgreSQL, then run the guarded migration from
@@ -70,6 +79,16 @@ corepack pnpm dev
 
 Frontend uses port 3000 and backend uses 8000. `/health/live` has no integration
 dependency; `/health/ready` checks database connectivity without mutating schema.
+Enable `SCOPE_GUARD_WORKFLOW_V2=true` and `SCOPE_GUARD_LLM_WORKFLOW=true` for the
+API and run the existing LLM/export workers against that same development database.
+From `backend/`, run `uv run python ../apps/worker/main.py` in separate terminals
+with `SCOPE_GUARD_WORKER_ROLE=llm` and `SCOPE_GUARD_WORKER_ROLE=export` respectively.
+See [worker configuration](apps/worker/README.md).
+Vite forwards `/api` without changing the browser Origin. Production uses only
+static assets: `docker build --target runner -t scope-guard-frontend frontend`.
+Set `SCOPE_GUARD_API_ORIGIN` to the reachable FastAPI origin in the runtime container;
+the Nginx entrypoint validates and substitutes this server setting. `pnpm start`
+is a local preview, not the production server.
 
 ## Legacy database adoption
 
@@ -97,11 +116,9 @@ Frontend:
 
 ```sh
 corepack pnpm test
-node --test scripts/docker-entrypoint.test.mjs
 corepack pnpm lint
 corepack pnpm api:types:check
-corepack pnpm exec next typegen
-corepack pnpm exec tsc --noEmit
+corepack pnpm typecheck
 corepack pnpm build
 ```
 
@@ -122,14 +139,18 @@ database. Validate deployment configuration with all three Compose entry points.
 
 Dokploy uses `docker-compose.dokploy.yml` by itself. Configure its public domain
 for the `app` service on port 3000; FastAPI stays internal on 8000 behind the
-Next.js gateway.
+Nginx gateway. Page routes use SPA fallback; unknown `/api` routes keep API errors,
+missing assets return 404, HTML revalidates and hashed assets cache immutably.
 
-PDF export supports saved drafts and unsaved edits without implicit saving. Scope
+The persistent frontend exports finalized History agreements as durable PDFs.
+The retained legacy API also supports saved drafts and unsaved PDF previews.
+Scope
 uploads accept TXT, Markdown and text PDFs up to 5 MiB, 200 pages and 100,000 UTF-16
 units; extracted text remains editable before saving. Monetary strings retain their
 entered precision; changing currency performs no conversion or rate lookup.
-See [ANY-641 verification](docs/architecture/any-641-verification.md). ANY-642 can
-reassess proxy topology, integrated journeys and production resource budgets.
+See the [React migration record](docs/architecture/plans/2026-10-19-react-frontend-migration.md)
+for current container/browser checks and the historical
+[ANY-641 verification](docs/architecture/any-641-verification.md) for legacy API evidence.
 
 The API entrypoint waits up to 120 seconds for PostgreSQL, then acquires the
 existing transaction advisory lock (642000001) without a replica-wait timeout.

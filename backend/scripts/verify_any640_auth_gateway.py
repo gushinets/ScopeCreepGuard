@@ -1,4 +1,4 @@
-"""Production Next.js -> FastAPI -> disposable PostgreSQL authentication journey."""
+"""Production SPA proxy -> FastAPI -> disposable PostgreSQL authentication journey."""
 
 import json
 import os
@@ -24,7 +24,6 @@ def main(generation=False, drafts=False):
             AUTH_SECRET="any640-synthetic-contract-secret-at-least-32-characters",
             SCOPE_GUARD_PRODUCTION="true",
             OPENAI_API_KEY="",
-            NEXT_TELEMETRY_DISABLED="1",
             SCG_AUTH_REALTIME="1",
         )
         with socket.socket() as listener:
@@ -38,9 +37,9 @@ def main(generation=False, drafts=False):
             process = subprocess.Popen(
                 [
                     "node",
-                    "node_modules/next/dist/bin/next",
-                    "start",
-                    "--hostname",
+                    "node_modules/vite/bin/vite.js",
+                    "preview",
+                    "--host",
                     "127.0.0.1",
                     "--port",
                     str(port),
@@ -80,14 +79,14 @@ def main(generation=False, drafts=False):
             try:
                 for _ in range(200):
                     if process.poll() is not None:
-                        raise RuntimeError("Owned Next.js server failed to start")
+                        raise RuntimeError("Owned SPA server failed to start")
                     try:
                         if request("/api/auth/me")[0] == 401:
                             break
                     except OSError:
                         time.sleep(0.1)
                 else:
-                    raise RuntimeError("Owned Next.js startup timed out")
+                    raise RuntimeError("Owned SPA startup timed out")
                 body = {"email": " Owner@Example.Test ", "password": "synthetic-password"}
                 status, headers, result = request("/api/auth/register", "POST", body)
                 assert status == 201
@@ -100,7 +99,9 @@ def main(generation=False, drafts=False):
                 )
                 assert request("/api/auth/register", "POST", body)[0] == 409
                 assert json.loads(request("/api/auth/me", cookie=cookie)[2])["user"] == user
-                assert request("/login", cookie=cookie)[0] == 307
+                assert (
+                    request("/login", cookie=cookie)[0] == 200
+                )  # Browser router owns page guards.
                 assert (
                     request("/api/auth/login", "POST", {**body, "password": "wrong-password"})[0]
                     == 401
@@ -162,8 +163,8 @@ def main(generation=False, drafts=False):
                     database.execute("DELETE FROM users")
                 status, headers, _ = request("/login", cookie=cookie)
                 assert status == 200 and "location" not in headers
-                assert "Max-Age=0" in headers["set-cookie"]
-                assert request("/api/auth/me", cookie=cookie)[0] == 401
+                status, headers, _ = request("/api/auth/me", cookie=cookie)
+                assert status == 401 and "Max-Age=0" in headers["set-cookie"]
                 assert request("/api/projects", cookie=cookie)[0] == 401
                 print(
                     "Gateway journeys: 15 auth and 14 project checks passed; "

@@ -59,3 +59,6 @@ __pycache__/
 .superpowers/
 output/
 *.crt
+
+/frontend/dist/
+/.playwright-cli/

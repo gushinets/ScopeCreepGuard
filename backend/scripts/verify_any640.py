@@ -8,12 +8,17 @@ import sys
 import tempfile
 import time
 import urllib.request
-from contextlib import ExitStack, contextmanager
+from contextlib import contextmanager
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend" / "tests"))
-from integration.support import DisposablePostgres, prepare_alembic  # noqa: E402
+from integration.support import (  # noqa: E402
+    DisposablePostgres as DisposablePostgres,
+)
+from integration.support import (  # noqa: E402
+    prepare_alembic as prepare_alembic,
+)
 
 
 @contextmanager
@@ -61,37 +66,14 @@ def main() -> int:
     parser.add_argument("--update-fixtures", action="store_true")
     parser.add_argument("--suite", choices=("contracts", "frontend"), default="contracts")
     args = parser.parse_args()
-    with DisposablePostgres() as server, server.database() as url, server.database() as legacy_url:
-        prepare_alembic(url)
-        prepare_alembic(legacy_url)
-        env = dict(os.environ)
-        env.update(
-            DATABASE_URL="",
-            OPENAI_API_KEY="",
-            SCOPE_GUARD_DATABASE_URL=url,
-            AUTH_SECRET="any640-synthetic-contract-secret-at-least-32-characters",
-            SCOPE_GUARD_PRODUCTION="false",
+    if args.suite == "frontend":
+        completed = subprocess.run(
+            ["node", "node_modules/vitest/vitest.mjs", "run"],
+            cwd=ROOT / "frontend",
+            check=False,
         )
-        if args.suite == "frontend":
-            # Invoke Node directly: no shell interpretation of the generated URL.
-            with ExitStack() as stack:
-                origin = stack.enter_context(auth_server(env))
-                env["SCOPE_GUARD_API_ORIGIN"] = origin
-                legacy_env = {
-                    **env,
-                    "SCOPE_GUARD_DATABASE_URL": legacy_url,
-                    "AUTH_SECRET": "integration-test-secret-at-least-32-characters",
-                    "SCG_AUTH_REALTIME": "1",
-                }
-                env["SCG_LEGACY_API_ORIGIN"] = stack.enter_context(auth_server(legacy_env))
-                completed = subprocess.run(
-                    ["node", "node_modules/vitest/vitest.mjs", "run"],
-                    cwd=ROOT / "frontend",
-                    env=env,
-                    check=False,
-                )
-            if completed.returncode:
-                return completed.returncode
+        if completed.returncode:
+            return completed.returncode
     return subprocess.run(
         [sys.executable, "-m", "pytest", "tests/unit/test_http_contracts.py", "-q"],
         cwd=ROOT / "backend",

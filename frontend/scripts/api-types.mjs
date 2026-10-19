@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import openapiTS, { astToString } from 'openapi-typescript'
 
-const output = new URL('../lib/api/generated.ts', import.meta.url)
+const output = new URL('../src/shared/api/generated.ts', import.meta.url)
 const source = new URL('../../ci/contracts/openapi.json', import.meta.url)
 const generated = astToString(await openapiTS(source))
 if (process.argv.includes('--check')) {

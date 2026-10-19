@@ -15,18 +15,13 @@ services:
       context: ./frontend
       target: runner
     environment:
-      NODE_ENV: production
-      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET must be set}
+      SCOPE_GUARD_API_ORIGIN: http://backend:8000
     depends_on:
       backend:
         condition: service_healthy
     init: true
     healthcheck:
-      test:
-        - CMD
-        - node
-        - -e
-        - "fetch('http://127.0.0.1:3000/login').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/health/live"]
       interval: 10s
       timeout: 5s
       retries: 10
