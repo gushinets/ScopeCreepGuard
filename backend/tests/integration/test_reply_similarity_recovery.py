@@ -28,6 +28,8 @@ pytestmark = pytest.mark.integration
     "mode",
     [
         "similar",
+        "long",
+        "cached_long",
         "malformed",
         "no_valid",
         "restart",
@@ -102,7 +104,7 @@ def test_regeneration_durable_fallback_and_publication(disposable_url, mode):
         requests = []
         entered = asyncio.Event()
         interrupt = mode == "restart"
-        cache_interrupt = mode in ("cached", "cached_final")
+        cache_interrupt = mode in ("cached", "cached_final", "cached_long")
 
         class Adapter:
             async def request(self, request, timeout):
@@ -130,6 +132,8 @@ def test_regeneration_durable_fallback_and_publication(disposable_url, mode):
                                 "scopePosition": "out_of_scope",
                                 "text": "Please authorize a proposal for Arrow integration."
                                 if mode == "accept_error"
+                                else "ba " * 1000
+                                if mode in ("long", "cached_long")
                                 else previous
                                 + " "
                                 + ("Thanks.", "Thank you.", "Much appreciated.")[
@@ -172,6 +176,8 @@ def test_regeneration_durable_fallback_and_publication(disposable_url, mode):
         # A selected manual edit is the reference, not the generated slot.
         document = deepcopy(current["draftDocument"])
         document["reply"]["text"] += " Please send written approval."
+        if mode in ("long", "cached_long"):
+            document["reply"]["text"] = "ab " * 1000
         await workflow.save(
             owner,
             draft_id,
@@ -209,7 +215,7 @@ def test_regeneration_durable_fallback_and_publication(disposable_url, mode):
 
         if cache_interrupt:
             store.complete = pause_after_checkpoint
-        if mode in ("restart", "cached", "cached_final"):
+        if mode in ("restart", "cached", "cached_final", "cached_long"):
             running = asyncio.create_task(worker.process_one())
             await asyncio.wait_for(entered.wait(), 30)
             running.cancel()
@@ -265,13 +271,20 @@ def test_regeneration_durable_fallback_and_publication(disposable_url, mode):
             expected = previous + (
                 " Thank you." if mode in ("malformed", "restart") else " Much appreciated."
             )
+            if mode in ("long", "cached_long"):
+                expected = "ba " * 1000
             assert after["draftDocument"]["reply"]["text"] == expected
             assert after["draftDocument"]["reply"]["generated"]["neutral"] == expected
             novelty = step["feedback"]["novelty"]
             assert "candidate" not in novelty
-            assert novelty["exhausted"] is True and novelty["score"] >= 0.72
+            if mode in ("long", "cached_long"):
+                assert novelty["exhausted"] is False and novelty["score"] is None
+                assert novelty["skippedReason"] == "comparison_limit"
+                assert novelty["comparisonLimit"] == 2048 and novelty["attempt"] == 1
+            else:
+                assert novelty["exhausted"] is True and novelty["score"] >= 0.72
+                assert novelty["attempt"] == (2 if mode in ("malformed", "restart") else 3)
             assert novelty["threshold"] == 0.72
-            assert novelty["attempt"] == (2 if mode in ("malformed", "restart") else 3)
             from scope_guard.domain.llm.runtime import Binding
             from scope_guard.integrations.llm.diagnostics import local_observations
 
@@ -283,7 +296,12 @@ def test_regeneration_durable_fallback_and_publication(disposable_url, mode):
                 novelty=novelty,
             )
             finding = next(o for o in observations if o.rule == "reply_similarity")
-            assert finding.outcome == "finding" and finding.novelty_exhausted is True
+            if mode in ("long", "cached_long"):
+                assert finding.outcome == "uncertain"
+                assert finding.skipped_reason == "comparison_limit"
+                assert finding.comparison_limit == 2048
+            else:
+                assert finding.outcome == "finding" and finding.novelty_exhausted is True
             assert finding.score == novelty["score"]
         async with database.new_uow() as work:
             calls = (
@@ -308,7 +326,7 @@ def test_regeneration_durable_fallback_and_publication(disposable_url, mode):
                 else 2
                 if mode == "provider_error"
                 else 1
-                if mode == "accept_error"
+                if mode in ("accept_error", "long", "cached_long")
                 else 3
             )
         )

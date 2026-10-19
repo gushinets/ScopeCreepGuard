@@ -176,16 +176,16 @@ def test_comparison_limit_never_truncates():
 def test_comparison_keeps_worker_heartbeat_responsive(monkeypatch):
     import threading
 
-    from scope_guard.domain.llm.reply_similarity import reply_similarity
+    from scope_guard.domain.llm.reply_similarity import compare_replies
     from scope_guard.integrations.llm import stages
 
     renewed = threading.Event()
 
     def slow_comparison(previous, candidate):
         assert renewed.wait(2), "comparison blocked the lease heartbeat"
-        return reply_similarity(previous, candidate)
+        return compare_replies(previous, candidate)
 
-    monkeypatch.setattr(stages, "reply_similarity", slow_comparison)
+    monkeypatch.setattr(stages, "compare_replies", slow_comparison)
 
     async def exercise():
         async def heartbeat():
@@ -237,3 +237,82 @@ def test_similarity_diagnostics_and_logs_contain_numeric_metadata_without_reply(
     finding = next(o for o in observations if o.rule == "reply_similarity")
     assert finding.score == 1.0 and finding.threshold == 0.72
     assert finding.attempt == 3 and finding.novelty_exhausted is True
+
+
+@pytest.mark.parametrize(
+    ("previous", "candidate"),
+    [
+        ("a" * 2049, "b"),
+        ("a", "b" * 2049),
+        ("ab" * 4000, "ba" * 4000),
+        ("a" * 32768, "a" * 32768),
+        ("\ufb03" * 683, "x"),
+        ("\ufb03" * 12000, "x"),
+        ("ß" * 1025, "x"),
+    ],
+    ids=[
+        "long-reference",
+        "long-candidate",
+        "repetitive",
+        "long-duplicate",
+        "nfkc-expansion",
+        "nfkc-expansion-past-reply-limit",
+        "casefold-expansion",
+    ],
+)
+def test_long_replies_skip_without_starting_quadratic_comparison(monkeypatch, previous, candidate):
+    from scope_guard.domain.llm import reply_similarity as similarity
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("quadratic matcher must not run above the safe comparison limit")
+
+    monkeypatch.setattr(similarity, "SequenceMatcher", forbidden)
+    assert similarity.reply_similarity(previous, candidate) is None
+
+
+def test_comparison_limit_applies_to_normalized_length():
+    from scope_guard.domain.llm.reply_similarity import reply_similarity
+
+    assert reply_similarity("abc", "! " * 3000 + "ABC") == 1.0
+    assert reply_similarity("a" * 2048, "a" * 2047 + "b") == 0.99951171875
+
+
+@pytest.mark.parametrize("long_side", ["previous", "candidate"])
+def test_long_reply_skip_is_logged_and_diagnosed(long_side, caplog):
+    import logging
+    from uuid import uuid4
+
+    from scope_guard.domain.llm.reply_similarity import compare_replies
+    from scope_guard.domain.llm.runtime import Binding
+    from scope_guard.integrations.llm.diagnostics import local_observations
+
+    source, store = facts(action="regenerate"), RecordingStore()
+    candidate = {"scopePosition": "out_of_scope", "text": PROSE["en"]}
+    if long_side == "previous":
+        source["document"]["reply"]["text"] = "ab" * 4000
+    else:
+        candidate["text"] = "ba " * 10922
+    with caplog.at_level(logging.INFO, logger="scope_guard"):
+        assert asyncio.run(run("reply", source, [candidate], store)) == candidate
+    assert len(store.calls) == 1 and not store.feedbacks
+    record = next(r for r in caplog.records if r.msg == "reply_similarity")
+    assert record.score is None and record.novelty_skipped_reason == "comparison_limit"
+    assert record.comparison_limit == 2048 and record.novelty_exhausted is False
+    observations = local_observations(
+        Binding(uuid4(), uuid4(), 1, "model", "high"), "reply", candidate, source
+    )
+    finding = next(o for o in observations if o.rule == "reply_similarity")
+    assert finding.score is None and finding.outcome == "uncertain"
+    assert finding.skipped_reason == "comparison_limit" and finding.comparison_limit == 2048
+    assert compare_replies("", "new").skipped_reason == "empty_previous"
+    assert compare_replies("old", "new").skipped_reason is None
+
+
+def test_long_reference_does_not_relax_structural_validation():
+    from scope_guard.domain.llm.runtime import GatewayFailure
+
+    source, store = facts(action="regenerate"), RecordingStore()
+    source["document"]["reply"]["text"] = "ab" * 4000
+    with pytest.raises(GatewayFailure, match="semanticAttemptsExhausted"):
+        asyncio.run(run("reply", source, [{"scopePosition": "out_of_scope", "text": ""}], store))
+    assert len(store.calls) == 3

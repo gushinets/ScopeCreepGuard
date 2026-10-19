@@ -10,9 +10,10 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from scope_guard.domain.llm.reply_similarity import (
+    MAX_REPLY_COMPARISON_LENGTH,
     REPLY_SIMILARITY_THRESHOLD,
+    compare_replies,
     previous_reply,
-    reply_similarity,
 )
 from scope_guard.domain.llm.runtime import PROMPT_VERSION, Binding, GatewayFailure, digest
 from scope_guard.integrations.llm.semantic_review import SemanticReviewer
@@ -34,6 +35,8 @@ class Observation(BaseModel):
     threshold: float | None = None
     attempt: int | None = None
     novelty_exhausted: bool | None = None
+    skipped_reason: str | None = None
+    comparison_limit: int | None = None
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -111,7 +114,8 @@ def local_observations(binding, stage, candidate, facts, *, novelty=None):
     observations = [o for check in checks for o in local_observation(binding, stage, check)]
     if stage == "reply" and facts.get("action") == "regenerate":
         try:
-            score = reply_similarity(previous_reply(facts), candidate["text"])
+            comparison = compare_replies(previous_reply(facts), candidate["text"])
+            score = comparison.score
             observations.append(
                 Observation(
                     operation_id=binding.operation_id,
@@ -128,6 +132,8 @@ def local_observations(binding, stage, candidate, facts, *, novelty=None):
                     threshold=REPLY_SIMILARITY_THRESHOLD,
                     attempt=(novelty or {}).get("exhaustedAttempt", (novelty or {}).get("attempt")),
                     novelty_exhausted=(novelty or {}).get("exhausted"),
+                    skipped_reason=comparison.skipped_reason,
+                    comparison_limit=MAX_REPLY_COMPARISON_LENGTH,
                 )
             )
         except ValueError:

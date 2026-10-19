@@ -20,7 +20,9 @@ from scope_guard.domain.llm.commercial_terms import (
 )
 from scope_guard.domain.llm.reply_similarity import (
     MAX_REPLY_COMPARISON_LENGTH,
+    MAX_REPLY_LENGTH,
     REPLY_SIMILARITY_THRESHOLD,
+    compare_replies,
     previous_reply,
     reply_similarity,
 )
@@ -94,7 +96,7 @@ class RepliesStage(StrictStage):
 
 class ReplyStage(StrictStage):
     scopePosition: Position
-    text: str = Field(min_length=1, max_length=MAX_REPLY_COMPARISON_LENGTH)
+    text: str = Field(min_length=1, max_length=MAX_REPLY_LENGTH)
 
 
 class LabelsStage(StrictStage):
@@ -465,15 +467,20 @@ class StructuredStageRunner:
             nonlocal novelty
             if not novelty_enabled:
                 return
-            # SequenceMatcher has quadratic worst cases. Keep lease renewal and
-            # cancellation responsive even for bounded, repetitive user text.
-            score = await asyncio.to_thread(reply_similarity, previous_reply(facts), raw["text"])
+            # Only short normalized replies enter the quadratic matcher. Offload
+            # even that bounded comparison so lease renewal remains responsive.
+            comparison = await asyncio.to_thread(
+                compare_replies, previous_reply(facts), raw["text"]
+            )
+            score = comparison.score
             novelty = {
                 "candidate": raw,
                 "score": score,
                 "threshold": REPLY_SIMILARITY_THRESHOLD,
                 "attempt": attempt,
                 "exhausted": False,
+                "skippedReason": comparison.skipped_reason,
+                "comparisonLimit": MAX_REPLY_COMPARISON_LENGTH,
             }
             # Commit before ModelRetry: dispatching the next call clears candidate.
             await self.store.remember_reply(binding, novelty)
@@ -494,6 +501,8 @@ class StructuredStageRunner:
                     "threshold": state["threshold"],
                     "attempt": attempt,
                     "novelty_exhausted": state["exhausted"],
+                    "novelty_skipped_reason": state.get("skippedReason"),
+                    "comparison_limit": MAX_REPLY_COMPARISON_LENGTH,
                 },
             )
 
