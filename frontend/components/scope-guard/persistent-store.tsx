@@ -68,7 +68,10 @@ export function PersistentStoreProvider({ children }: { children: ReactNode }) {
       syncDraftUrl(null)
       return
     }
-    const next = new DraftAutosave(draft, async body => (await workflowApi<{ draft: WorkingDraft }>(`drafts/${draft.id}`, body, 'PUT')).draft, () => {
+    const next = new DraftAutosave(draft, async body => {
+      const payload = body.patch ? { expectedRevision: body.expectedRevision, operationId: body.operationId, patch: body.patch, reason: body.reason } : body
+      return (await workflowApi<{ draft: WorkingDraft }>(`drafts/${draft.id}`, payload, 'PUT', AbortSignal.timeout(15_000))).draft
+    }, () => {
       if (controller.current !== next) return
       setSnapshot({ ...next.local })
       setSaveStatus(next.status)

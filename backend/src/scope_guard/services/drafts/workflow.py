@@ -18,6 +18,7 @@ from scope_guard.domain.drafts.workflow import (
     SAVE_REASONS,
     WorkflowError,
     analysis_matches,
+    apply_user_patch,
     decimal_text,
     empty_document,
     operation_hash,
@@ -209,6 +210,17 @@ class WorkflowService:
         return await self.enrich(owner, draft)
 
     async def save(self, owner, identifier, body):
+        if "patch" in body:
+            if "changes" in body or not isinstance(body["patch"], dict) or not body["patch"]:
+                raise WorkflowError("requestBodyInvalid")
+            return await self.write(
+                owner,
+                identifier,
+                body,
+                {},
+                body.get("reason", "autosave"),
+                user_patch=body["patch"],
+            )
         changes = body.get("changes")
         if not isinstance(changes, dict) or changes.keys() - {"requestText", "draftDocument"}:
             raise WorkflowError("requestBodyInvalid")
@@ -223,17 +235,42 @@ class WorkflowService:
             raise WorkflowError("requestBodyInvalid")
         return await self.write(owner, identifier, body, changes, reason)
 
-    async def write(self, owner, identifier, body, changes, reason, *, trusted=False):
+    async def write(
+        self, owner, identifier, body, changes, reason, *, trusted=False, user_patch=None
+    ):
         operation, revision, digest = key(body), expected(body), operation_hash(body)
         if reason not in SAVE_REASONS:
             raise WorkflowError("requestBodyInvalid")
         async with self.factory() as work:
             prior = await work.workflow.saved_operation(owner, identifier, operation, digest)
             if prior:
-                return await self.enrich(owner, prior)
+                current = (
+                    await work.workflow.draft(owner, identifier)
+                    if user_patch is not None
+                    else prior
+                )
+                return await self.enrich(owner, current)
             draft = await work.workflow.draft(owner, identifier, lock=True)
+            # Recheck after acquiring the existing project/Draft locks: a concurrent
+            # delivery of this command may have committed while we waited.
+            prior = await work.workflow.saved_operation(owner, identifier, operation, digest)
+            if prior:
+                return await self.enrich(owner, draft if user_patch is not None else prior)
             project = await work.workflow.project(owner, UUID(draft["projectId"]))
             active(project)
+            if user_patch is not None:
+                if trusted or reason not in {
+                    "autosave",
+                    "manual_save",
+                    "tone_change",
+                    "language_change",
+                    "change_order_edit",
+                }:
+                    raise WorkflowError("requestBodyInvalid")
+                changes = apply_user_patch(draft, user_patch)
+                # Only explicit user patches can advance from a stale revision.
+                # The repository still compares-and-swaps the locked current revision.
+                revision = int(draft["revision"])
             if int(draft["revision"]) != revision:
                 raise WorkflowError("draftConflict", 409)
             if "requestText" in changes and not trusted:

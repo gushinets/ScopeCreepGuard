@@ -14,6 +14,7 @@ import { MyDraftsView } from './my-drafts-view'
 import { PersistentStoreProvider } from './persistent-store'
 import { ArchivedProjects } from './archived-projects'
 import { ProductSession } from './product-session'
+import { SaveFeedback } from './save-feedback'
 
 const NAV: { id: View; labelKey: 'check' | 'projects' | 'history' | 'drafts' }[] = [
   { id: 'check', labelKey: 'check' },
@@ -135,6 +136,7 @@ function Body() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <SaveFeedback />
       {view === 'check' && <ScopeCheckView />}
       {view === 'projects' && <><ProjectsView /><ArchivedProjects /></>}
       {view === 'new_project' && <NewProjectView />}

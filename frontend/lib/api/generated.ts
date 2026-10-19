@@ -1900,7 +1900,11 @@ export interface components {
             operationId: string;
             /** Expectedrevision */
             expectedRevision: string;
-            changes: components["schemas"]["WorkingChanges"];
+            changes?: components["schemas"]["WorkingChanges"] | null;
+            /** Patch */
+            patch?: {
+                [key: string]: string | boolean;
+            } | null;
             /**
              * Reason
              * @default autosave

@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import ConfigDict, Field, StrictBool, StrictInt, StrictStr
+from pydantic import ConfigDict, Field, StrictBool, StrictInt, StrictStr, model_validator
 
 from scope_guard_api.schemas.analysis import AnalysisSnapshot
 from scope_guard_api.schemas.drafts import DraftEditableChangeOrder
@@ -64,10 +64,24 @@ class WorkingChanges(InputModel):
 
 
 class SaveWorkingDraft(VersionedOperation):
-    changes: WorkingChanges
+    changes: WorkingChanges | None = None
+    patch: dict[str, StrictStr | StrictBool] | None = None
     reason: Literal[
         "autosave", "manual_save", "tone_change", "language_change", "change_order_edit"
     ] = "autosave"
+
+    @model_validator(mode="after")
+    def explicit_edit(self):
+        if ("changes" in self.model_fields_set) == ("patch" in self.model_fields_set) or (
+            self.changes is None and self.patch is None
+        ):
+            raise ValueError("Provide changes or patch")
+        if self.patch is not None:
+            from scope_guard.domain.drafts.workflow import USER_PATCH_FIELDS
+
+            if not self.patch or self.patch.keys() - USER_PATCH_FIELDS:
+                raise ValueError("Invalid user edit fields")
+        return self
 
 
 class RunAnalysis(VersionedOperation):

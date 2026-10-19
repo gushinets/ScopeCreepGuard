@@ -2,6 +2,13 @@ import { expect, it, vi } from 'vitest'
 import { ERROR_CODES } from '@/lib/api/errors'
 import { WorkflowApiError, workflowApi } from './workflow-client'
 
+it.each([401, 503])('preserves HTTP %s when a gateway returns a non-JSON error body', async status => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('Gateway error', { status })))
+  try {
+    await expect(workflowApi('drafts/d1', { patch: { 'reply.text': 'kept' } }, 'PUT')).rejects.toEqual(new WorkflowApiError(ERROR_CODES.requestFailed, status))
+  } finally { vi.unstubAllGlobals() }
+})
+
 const operationId = '11111111-1111-4111-8111-111111111111'
 const pending = () => ({ operationId, statusUrl: `/api/v2/llm-operations/${operationId}`, deadlineAt: new Date(Date.now() + 180000).toISOString() })
 

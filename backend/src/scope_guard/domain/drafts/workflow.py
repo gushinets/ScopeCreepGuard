@@ -86,6 +86,46 @@ EDITOR_KEYS = EDITOR_TEXT | {
     "aiValues",
 }
 
+# Explicit user intent only. Provenance, language, identity and AI output stay server-owned.
+USER_ORDER_FIELDS = (EDITOR_TEXT - {"projectName", "createdAt", "reference"}) | {
+    "currency",
+    "noAdditionalCharge",
+}
+USER_PATCH_FIELDS = {"requestText", "reply.text", "reply.tone"} | {
+    "changeOrder." + field for field in USER_ORDER_FIELDS
+}
+COMMERCIAL_PATCH_FIELDS = {
+    "changeOrder.additionalCost",
+    "changeOrder.currency",
+    "changeOrder.noAdditionalCharge",
+}
+
+
+def apply_user_patch(draft: dict, patch: dict) -> dict:
+    if not isinstance(patch, dict) or not patch or patch.keys() - USER_PATCH_FIELDS:
+        raise WorkflowError("requestBodyInvalid")
+    if patch.keys() & COMMERCIAL_PATCH_FIELDS and not COMMERCIAL_PATCH_FIELDS <= patch.keys():
+        raise WorkflowError("documentInvalid")
+    document = deepcopy(draft["draftDocument"])
+    changes = {}
+    for path, value in patch.items():
+        if path == "requestText":
+            if not isinstance(value, str) or len(value) > 100_000:
+                raise WorkflowError("requestBodyInvalid")
+            changes[path] = value
+            continue
+        section, field = path.split(".")
+        if document.get(section) is None:
+            raise WorkflowError("documentInvalid")
+        if field == "noAdditionalCharge":
+            if type(value) is not bool:
+                raise WorkflowError("documentInvalid")
+        elif not isinstance(value, str):
+            raise WorkflowError("documentInvalid")
+        document[section][field] = value
+    changes["draftDocument"] = validate_document(document)
+    return changes
+
 
 def validate_document(value: dict) -> dict:
     if (

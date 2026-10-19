@@ -4,13 +4,15 @@ export class WorkflowApiError extends Error {
   constructor(public code: ErrorCode, public status: number, public terminal = false, public fields?: Record<string, string>) { super(code) }
 }
 
-export async function operationApi<T>(url: string, body?: unknown, method = body === undefined ? 'GET' : 'POST'): Promise<T> {
+export async function operationApi<T>(url: string, body?: unknown, method = body === undefined ? 'GET' : 'POST', signal?: AbortSignal): Promise<T> {
   let response: Response
   try {
-    response = await fetch(url, { method, cache: 'no-store', ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) })
+    response = await fetch(url, { method, cache: 'no-store', ...(signal ? { signal } : {}), ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) })
   } catch { throw new WorkflowApiError(ERROR_CODES.requestFailed, 0) }
-  const value = await response.json()
-  if (!response.ok) throw new WorkflowApiError(isErrorCode(value.error) ? value.error : ERROR_CODES.requestFailed, response.status, !!value.operationId, value.fields)
+  let value
+  try { value = await response.json() }
+  catch { throw new WorkflowApiError(ERROR_CODES.requestFailed, response.ok ? 0 : response.status) }
+  if (!response.ok) throw new WorkflowApiError(isErrorCode(value?.error) ? value.error : ERROR_CODES.requestFailed, response.status, !!value?.operationId, value?.fields)
   if (response.status === 202 && value.operationId && value.statusUrl) return pollOperation<T>(value)
   return value as T
 }
@@ -28,6 +30,6 @@ export async function pollOperation<T>(operation: Pending): Promise<T> {
   }
 }
 
-export async function workflowApi<T>(path: string, body?: unknown, method = body === undefined ? 'GET' : 'POST'): Promise<T> {
-  return operationApi(`/api/v2/${path}`, body, method)
+export async function workflowApi<T>(path: string, body?: unknown, method = body === undefined ? 'GET' : 'POST', signal?: AbortSignal): Promise<T> {
+  return operationApi(`/api/v2/${path}`, body, method, signal)
 }

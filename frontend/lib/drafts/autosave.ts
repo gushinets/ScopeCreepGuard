@@ -1,4 +1,5 @@
 import type { WorkingDocument, WorkingDraft } from './workflow-types'
+import { applyUserPatch, isUserPatch, userPatch, type UserPatch } from './user-patch'
 
 export type SaveStatus = 'saved' | 'dirty' | 'saving' | 'failed' | 'conflict'
 export type SaveReason = 'autosave' | 'manual_save' | 'tone_change' | 'language_change' | 'change_order_edit'
@@ -6,6 +7,7 @@ export interface SaveBody {
   expectedRevision: string
   operationId: string
   changes: { requestText: string; draftDocument: WorkingDocument }
+  patch?: UserPatch
   reason: SaveReason
 }
 interface Attempt { body: SaveBody; generation: number }
@@ -14,6 +16,7 @@ export interface RecoveryBuffer {
   writtenAt?: number
   version: 1; draftId: string; baseRevision: string
   changes: SaveBody['changes']; attempt: Attempt | null
+  pendingPatch?: UserPatch
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -51,10 +54,15 @@ export function parseRecoveryBuffer(value: unknown, draftId: string): RecoveryBu
     return true
   }
   if (!object(value) || value.version !== 1 || value.draftId !== draftId || typeof value.baseRevision !== 'string' || !/^[1-9][0-9]{0,18}$/.test(value.baseRevision) || !changesValid(value.changes)) return null
+  if (value.pendingPatch !== undefined && !isUserPatch(value.pendingPatch)) return null
   if (value.attempt !== null) {
     if (!object(value.attempt) || !object(value.attempt.body)) return null
     const body = value.attempt.body
-    if (body.expectedRevision !== value.baseRevision || typeof body.operationId !== 'string' || !/^[0-9a-f-]{36}$/i.test(body.operationId) || !changesValid(body.changes) || !['autosave', 'manual_save', 'tone_change', 'language_change', 'change_order_edit'].includes(String(body.reason))) return null
+    if (body.patch !== undefined && !isUserPatch(body.patch)) return null
+    const revisionValid = typeof body.expectedRevision === 'string' && /^[1-9][0-9]{0,18}$/.test(body.expectedRevision)
+    // A recovered uncertain patch retains its original command/revision even
+    // after loading a newer canonical Draft. Legacy snapshots remain strict.
+    if (!revisionValid || (!body.patch && body.expectedRevision !== value.baseRevision) || typeof body.operationId !== 'string' || !/^[0-9a-f-]{36}$/i.test(body.operationId) || !changesValid(body.changes) || !['autosave', 'manual_save', 'tone_change', 'language_change', 'change_order_edit'].includes(String(body.reason))) return null
   }
   return structuredClone(value) as unknown as RecoveryBuffer
 }
@@ -69,6 +77,7 @@ export class DraftAutosave {
   private generation = 0
   private acknowledged = 0
   private attempt: Attempt | null = null
+  private pendingPatch: UserPatch = {}
   private inFlight: Promise<void> | null = null
   private debounce: ReturnType<typeof setTimeout> | null = null
   private maximum: ReturnType<typeof setTimeout> | null = null
@@ -99,14 +108,19 @@ export class DraftAutosave {
   edit(changes: Partial<SaveBody['changes']>, reason: SaveReason = 'autosave', immediate = false) {
     if (this.disposed) return
     this.edits = Symbol('edits')
-    this.local = { ...this.local, ...structuredClone(changes) }
+    const updated = { ...this.local, ...structuredClone(changes) }
+    const patch = userPatch(this.local, updated)
+    if (!Object.keys(patch).length) return
+    this.pendingPatch = { ...this.pendingPatch, ...patch }
+    this.local = updated
     if (changes.requestText !== undefined && changes.requestText !== this.confirmed.requestText) this.local.analysisIsStale = true
     this.generation += 1
     this.reason = reason
-    if (this.status !== 'conflict') this.status = this.inFlight ? 'saving' : 'dirty'
+    const failed = this.status === 'failed'
+    if (this.status !== 'conflict' && !failed) this.status = this.inFlight ? 'saving' : 'dirty'
     this.persist()
     this.notify()
-    if (this.status === 'conflict') return
+    if (this.status === 'conflict' || failed) return
     if (this.debounce) clearTimeout(this.debounce)
     this.debounce = setTimeout(() => { void this.flush().catch(() => {}) }, immediate ? 0 : 750)
     if (!this.maximum) this.maximum = setTimeout(() => { void this.flush().catch(() => {}) }, 5000)
@@ -123,20 +137,25 @@ export class DraftAutosave {
     if (this.status === 'conflict') throw this.error ?? new Error('conflict')
     while (this.acknowledged < this.generation) {
       if (!this.inFlight) {
-        if (!this.attempt) this.attempt = {
-          generation: this.generation,
-          body: {
-            expectedRevision: this.confirmed.revision,
-            operationId: crypto.randomUUID(),
-            changes: { requestText: this.local.requestText, draftDocument: structuredClone(this.local.draftDocument) },
-            reason: this.reason,
-          },
+        if (!this.attempt) {
+          this.attempt = {
+            generation: this.generation,
+            body: {
+              expectedRevision: this.confirmed.revision,
+              operationId: crypto.randomUUID(),
+              changes: { requestText: this.local.requestText, draftDocument: structuredClone(this.local.draftDocument) },
+              patch: structuredClone(this.pendingPatch),
+              reason: this.reason,
+            },
+          }
+          this.pendingPatch = {}
         }
         this.persist()
         this.inFlight = this.send(this.attempt)
       }
       const active = this.inFlight
       try { await active } finally { if (this.inFlight === active) this.inFlight = null }
+      if (this.disposed && this.acknowledged < this.generation) throw new Error('Editor closed; changes kept locally')
     }
     return this.confirmed
   }
@@ -183,18 +202,35 @@ export class DraftAutosave {
     this.error = null
     this.notify()
     try {
-      const response = await this.save(structuredClone(attempt.body))
+      let response!: WorkingDraft
+      for (let retry = 0; ; retry++) {
+        try { response = await this.save(structuredClone(attempt.body)); break }
+        catch (error) {
+          const status = (error as { status?: number }).status
+          const transient = status === undefined || status === 0 || status === 408 || status === 429 || (status >= 500 && status <= 599)
+          if (!transient || retry >= 2 || this.disposed) throw error
+          await new Promise(resolve => setTimeout(resolve, [500, 1500][retry]))
+          if (this.disposed) throw error
+        }
+      }
       this.confirmed = response
       this.acknowledged = attempt.generation
       if (this.generation === attempt.generation) this.local = structuredClone(response)
-      else this.local = { ...response, requestText: this.local.requestText, draftDocument: { ...this.local.draftDocument, languageSelection: response.draftDocument.languageSelection }, analysisIsStale: response.analysisIsStale || this.local.requestText !== response.requestText }
+      else this.local = applyUserPatch(response, this.pendingPatch)
       this.attempt = null
       this.status = this.acknowledged === this.generation ? 'saved' : 'dirty'
       this.persist()
       if (!this.disposed) this.notify()
     } catch (error) {
       this.error = error
-      this.status = (error as { status?: number }).status === 409 ? 'conflict' : 'failed'
+      const status = (error as { status?: number }).status
+      if (status && status >= 400 && status < 500 && ![408, 429].includes(status) && attempt.body.patch) {
+        // A definitive rejection did not apply. Retry the latest intent with a
+        // fresh identity; an uncertain transport outcome keeps the original ID.
+        this.pendingPatch = { ...attempt.body.patch, ...this.pendingPatch }
+        this.attempt = null
+      }
+      this.status = 'failed'
       this.stopTimers()
       this.persist()
       if (!this.disposed) this.notify()
@@ -228,6 +264,7 @@ export class DraftAutosave {
     this.confirmed = structuredClone(server)
     this.local = structuredClone(server)
     this.attempt = null
+    this.pendingPatch = {}
     this.generation = this.acknowledged = 0
     this.status = 'saved'
     this.error = null
@@ -236,10 +273,23 @@ export class DraftAutosave {
   }
 
   recover(buffer: RecoveryBuffer) {
+    if (this.inFlight) throw new Error('Save in progress')
     if (!parseRecoveryBuffer(buffer, this.confirmed.id)) throw new Error('invalid recovery Draft')
     this.edit(buffer.changes, 'manual_save')
     this.stopTimers()
-    if (buffer.baseRevision !== this.confirmed.revision) {
+    if (buffer.pendingPatch) {
+      this.generation = 1
+      this.acknowledged = 0
+      this.status = 'dirty'
+      this.error = null
+      this.pendingPatch = structuredClone(buffer.pendingPatch)
+      this.local = applyUserPatch(this.confirmed, { ...buffer.attempt?.body.patch, ...this.pendingPatch })
+      if (buffer.attempt) {
+        const queued = Object.keys(this.pendingPatch).length > 0
+        if (queued) this.generation += 1
+        this.attempt = { ...buffer.attempt, generation: this.generation - Number(queued) }
+      }
+    } else if (buffer.baseRevision !== this.confirmed.revision) {
       this.status = 'conflict'
       this.error = Object.assign(new Error('recovery conflict'), { status: 409 })
     } else if (buffer.attempt) {
@@ -257,7 +307,7 @@ export class DraftAutosave {
       if (this.acknowledged === this.generation) {
         const existing = JSON.parse(localStorage.getItem(this.recoveryKey) ?? 'null') as RecoveryBuffer | null
         if (existing?.writerId === this.writerId) localStorage.removeItem(this.recoveryKey)
-      } else localStorage.setItem(this.recoveryKey, JSON.stringify({ version: 1, writerId: this.writerId, writtenAt: Date.now(), draftId: this.confirmed.id, baseRevision: this.confirmed.revision, changes: { requestText: this.local.requestText, draftDocument: this.local.draftDocument }, attempt: this.attempt } satisfies RecoveryBuffer))
+      } else localStorage.setItem(this.recoveryKey, JSON.stringify({ version: 1, writerId: this.writerId, writtenAt: Date.now(), draftId: this.confirmed.id, baseRevision: this.confirmed.revision, changes: { requestText: this.local.requestText, draftDocument: this.local.draftDocument }, attempt: this.attempt, pendingPatch: this.pendingPatch } satisfies RecoveryBuffer))
     } catch { /* Recovery is optional; confirmed state remains in PostgreSQL. */ }
   }
 
