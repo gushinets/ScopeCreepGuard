@@ -78,6 +78,7 @@ export class DraftAutosave {
   private acknowledged = 0
   private attempt: Attempt | null = null
   private pendingPatch: UserPatch = {}
+  private legacyRecoveryRevision: string | null = null
   private inFlight: Promise<void> | null = null
   private debounce: ReturnType<typeof setTimeout> | null = null
   private maximum: ReturnType<typeof setTimeout> | null = null
@@ -265,6 +266,7 @@ export class DraftAutosave {
     this.local = structuredClone(server)
     this.attempt = null
     this.pendingPatch = {}
+    this.legacyRecoveryRevision = null
     this.generation = this.acknowledged = 0
     this.status = 'saved'
     this.error = null
@@ -275,6 +277,24 @@ export class DraftAutosave {
   recover(buffer: RecoveryBuffer) {
     if (this.inFlight) throw new Error('Save in progress')
     if (!parseRecoveryBuffer(buffer, this.confirmed.id)) throw new Error('invalid recovery Draft')
+    if (!buffer.pendingPatch && buffer.baseRevision !== this.confirmed.revision) {
+      // A legacy snapshot cannot distinguish user intent from stale untouched
+      // fields. Preserve its original revision through persistence and reload;
+      // only explicit resolution against reviewed state may derive a patch.
+      this.stopTimers()
+      this.edits = Symbol('edits')
+      this.legacyRecoveryRevision = buffer.baseRevision
+      this.local = { ...structuredClone(this.confirmed), ...structuredClone(buffer.changes) }
+      this.generation = 1
+      this.acknowledged = 0
+      this.attempt = structuredClone(buffer.attempt)
+      this.pendingPatch = {}
+      this.error = Object.assign(new Error('recovery conflict'), { status: 409 })
+      this.status = 'conflict'
+      this.persist()
+      this.notify()
+      return
+    }
     this.edit(buffer.changes, 'manual_save')
     this.stopTimers()
     if (buffer.pendingPatch) {
@@ -289,9 +309,6 @@ export class DraftAutosave {
         if (queued) this.generation += 1
         this.attempt = { ...buffer.attempt, generation: this.generation - Number(queued) }
       }
-    } else if (buffer.baseRevision !== this.confirmed.revision) {
-      this.status = 'conflict'
-      this.error = Object.assign(new Error('recovery conflict'), { status: 409 })
     } else if (buffer.attempt) {
       const queued = JSON.stringify(buffer.attempt.body.changes) !== JSON.stringify(buffer.changes)
       if (queued) this.generation += 1
@@ -307,7 +324,7 @@ export class DraftAutosave {
       if (this.acknowledged === this.generation) {
         const existing = JSON.parse(localStorage.getItem(this.recoveryKey) ?? 'null') as RecoveryBuffer | null
         if (existing?.writerId === this.writerId) localStorage.removeItem(this.recoveryKey)
-      } else localStorage.setItem(this.recoveryKey, JSON.stringify({ version: 1, writerId: this.writerId, writtenAt: Date.now(), draftId: this.confirmed.id, baseRevision: this.confirmed.revision, changes: { requestText: this.local.requestText, draftDocument: this.local.draftDocument }, attempt: this.attempt, pendingPatch: this.pendingPatch } satisfies RecoveryBuffer))
+      } else localStorage.setItem(this.recoveryKey, JSON.stringify({ version: 1, writerId: this.writerId, writtenAt: Date.now(), draftId: this.confirmed.id, baseRevision: this.legacyRecoveryRevision ?? this.confirmed.revision, changes: { requestText: this.local.requestText, draftDocument: this.local.draftDocument }, attempt: this.attempt, ...(this.legacyRecoveryRevision ? {} : { pendingPatch: this.pendingPatch }) } satisfies RecoveryBuffer))
     } catch { /* Recovery is optional; confirmed state remains in PostgreSQL. */ }
   }
 

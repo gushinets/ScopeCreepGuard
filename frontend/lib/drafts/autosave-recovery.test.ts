@@ -1,11 +1,54 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest'
-import { DraftAutosave, parseRecoveryBuffer, type SaveBody } from './autosave'
+import { DraftAutosave, parseRecoveryBuffer, type RecoveryBuffer, type SaveBody } from './autosave'
 import { applyUserPatch } from './user-patch'
 import type { WorkingDraft } from './workflow-types'
 
 const draft = (): WorkingDraft => ({ id: 'draft', projectId: 'project', revision: '1', requestText: '', analysisIsStale: true, lastAnalysisRunId: null, draftDocument: { version: 2, reply: { text: '', tone: 'neutral', language: 'en', generated: { warm: '', neutral: '', firm: '' } }, changeOrder: null }, createdAt: '', updatedAt: '', analysisRun: null })
 afterEach(() => { vi.useRealTimers(); localStorage.clear() })
+
+it.each([false, true])('keeps stale legacy snapshots revision-bound across reloads (uncertain command: %s)', async uncertain => {
+  const key = 'owner:draft:legacy'
+  const stale = draft()
+  stale.requestText = 'old request'
+  stale.draftDocument.reply.text = 'old reply'
+  const legacy: RecoveryBuffer = {
+    version: 1, draftId: stale.id, baseRevision: '1',
+    changes: { requestText: stale.requestText, draftDocument: stale.draftDocument },
+    attempt: uncertain ? { generation: 1, body: { expectedRevision: '1', operationId: crypto.randomUUID(), changes: { requestText: stale.requestText, draftDocument: stale.draftDocument }, reason: 'autosave' } } : null,
+  }
+  localStorage.setItem(key, JSON.stringify(legacy))
+  const server = draft()
+  server.revision = '9'
+  server.requestText = 'newer server request'
+  server.draftDocument.reply.text = 'newer server reply'
+  const save = vi.fn(async (body: SaveBody) => ({ ...applyUserPatch(server, body.patch!), revision: '10' }))
+  for (let reload = 0; reload < 3; reload++) {
+    const restored = parseRecoveryBuffer(JSON.parse(localStorage.getItem(key)!), 'draft')!
+    const saver = new DraftAutosave(server, save, () => {}, key)
+    saver.recover(restored)
+    expect(saver.status).toBe('conflict')
+    expect(saver.local.requestText).toBe(stale.requestText)
+    expect(saver.confirmed).toEqual(server)
+    await expect(saver.flush()).rejects.toThrow('recovery conflict')
+    saver.edit({ draftDocument: { ...saver.local.draftDocument, reply: { ...saver.local.draftDocument.reply, text: `unresolved local edit ${reload}` } } })
+    const persisted = parseRecoveryBuffer(JSON.parse(localStorage.getItem(key)!), 'draft')!
+    expect(persisted.baseRevision).toBe('1')
+    expect(persisted.pendingPatch).toBeUndefined()
+    expect(persisted.attempt).toEqual(legacy.attempt)
+    if (reload === 2) {
+      // Only explicit resolution against reviewed server state may derive intent.
+      saver.resolve(server, true)
+      await saver.flush()
+      expect(save).toHaveBeenCalledTimes(1)
+      expect(save.mock.calls[0][0].expectedRevision).toBe('9')
+      expect(saver.local.requestText).toBe('old request')
+      expect(saver.local.draftDocument.reply.text).toBe('unresolved local edit 2')
+      expect(localStorage.getItem(key)).toBeNull()
+    } else expect(save).not.toHaveBeenCalled()
+    saver.dispose()
+  }
+})
 
 it.each([0, 503])('bounds transport retries (%s), keeps newer typing and reuses the uncertain command', async status => {
   vi.useFakeTimers()

@@ -83,3 +83,21 @@ durability depends on browser storage availability. No production build or broad
 unrelated suite was required; only focused checks ran. No paid provider calls,
 application-database migration/mutation, commits, pushes, PRs or Linear writes.
 Follow-up owner: reviewer of this uncommitted branch.
+
+## PR #33 review correction — stale legacy recovery
+
+The review reproduced a stale pre-upgrade snapshot being converted into patch
+intent before its revision check. That persisted conversion could bypass the
+legacy conflict guard on a second Restore after reload. Recovery now checks this
+case before calling edit(), preserves the original base revision and uncertain
+command, and persists no derived pendingPatch until explicit conflict resolution.
+Further local edits remain revision-bound as well. Explicit resolution clears the
+legacy boundary before deriving intent against reviewed server state. Modern patch
+buffers retain their existing automatic stale-revision recovery.
+
+Regression: legacy buffers with/without uncertain commands fail on the original
+implementation (base revision incorrectly becomes 9), then pass after the fix;
+each exercises three reloads, local editing while conflicted, blocked flushes and
+explicit resolution. Final checks: 51 focused frontend tests passed across the
+autosave, recovery, persistent-store and transport suites; TypeScript, changed-file
+ESLint and diff whitespace checks passed. No backend/API contract changes.
