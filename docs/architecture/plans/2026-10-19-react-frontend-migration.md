@@ -361,3 +361,12 @@ and after C installs, and a still-current 503 that must remain visible. Both
 stale cases failed before the fix; all 19 navigation tests pass after it.
 Focused ESLint, all 90 module boundaries and TypeScript pass. No container or
 backend change; the full migration suite was not repeated for this narrow fix.
+
+### CI follow-up — backend contract-test line length
+
+The attached GitHub Actions log reports all 917 backend tests passed, followed
+by Ruff E501 at test_http_contracts.py:54. The migrated translation path made
+the expression 101 characters long. Split the path into a local variable;
+no test semantics or production behavior changed. Local verification:
+Ruff check backend/apps/api passed; all 373 files pass Ruff format --check;
+all 20 tests in test_http_contracts.py pass. Full CI has not yet rerun on this fix.
