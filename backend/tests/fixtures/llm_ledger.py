@@ -70,3 +70,8 @@ class ReviewLedger:
             c for c in reversed(self.calls) if c["request"].binding.step_id == binding.step_id
         )
         call["rejected"] = True
+
+    async def remember_reply(self, binding, novelty):
+        step = next((r for r in self.records.values() if r["id"] == binding.step_id), None)
+        if step:
+            step["feedback"] = {**(step.get("feedback") or {}), "novelty": novelty}

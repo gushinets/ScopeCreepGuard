@@ -129,7 +129,9 @@ def test_invalid_structured_review_fails_closed_without_recursive_repairs(decisi
     with pytest.raises(GatewayFailure, match="providerOutputIncomplete") as caught:
         asyncio.run(
             exercise(
-                PROSE["en"] + " Please approve the proposal.", "scope_position", decision=decision
+                "Please authorize a proposal for Arrow integration before we proceed.",
+                "scope_position",
+                decision=decision,
             )
         )
     assert len(caught.value.store.calls) == 2
@@ -210,7 +212,7 @@ def test_saved_decisions_and_candidate_injection_are_untrusted_review_data():
         "estimatedHours": "9.5",
         "timelineImpact": "Delivery subject to approval.",
     }
-    candidate = PROSE["en"] + " Please approve the separate proposal."
+    candidate = "Please authorize a proposal for Arrow integration before we proceed."
     result, store, _, _ = asyncio.run(
         exercise(candidate, "scope_position", decision=APPROVED, source=source)
     )
@@ -252,7 +254,7 @@ def test_uncertain_review_corrects_or_exhausts_with_every_call_accounted():
         "decision": "uncertain",
         "violations": [{"field": "text", "rule": "uncertain", "feedback": "Insufficient support."}],
     }
-    candidate = PROSE["en"] + " Please review the proposal."
+    candidate = "Please authorize a proposal for Arrow integration before we proceed."
     value, store, saved, source = asyncio.run(exercise(candidate, "uncertain", decision=decision))
     assert value["text"] == candidate and source == saved
     assert len(store.calls) == 2

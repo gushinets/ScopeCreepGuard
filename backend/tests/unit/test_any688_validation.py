@@ -89,7 +89,7 @@ def test_source_neutral_values_and_verified_quote_preserve_original_model_input(
 
 @pytest.mark.parametrize("suffix", ["Thank you.", "Thanks!", "  THANK YOU!  "])
 def test_cosmetic_suffix_regeneration_is_rejected(suffix):
-    with pytest.raises(ValueError, match="cosmetic_reply|unchanged_reply"):
+    with pytest.raises(ValueError, match="reply_similarity"):
         validate_stage(
             "reply",
             {"scopePosition": "out_of_scope", "text": PROSE["en"] + " " + suffix},

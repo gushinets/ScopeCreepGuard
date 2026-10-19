@@ -103,10 +103,9 @@ def test_duplicate_regeneration_corrects_only_reply_and_records_rejection(first)
             store,
         )
     )
-    # Content novelty is diagnosed after publication, never a generator retry.
-    assert value["text"] == first
+    assert value["text"] == revised
     assert source == saved
-    assert len(store.calls) == 1 and not store.feedbacks
+    assert len(store.calls) == 2 and store.feedbacks
 
 
 def test_duplicate_exhaustion_is_bounded_and_preserves_frozen_materials():
@@ -116,8 +115,8 @@ def test_duplicate_exhaustion_is_bounded_and_preserves_frozen_materials():
         run("reply", source, [{"scopePosition": "out_of_scope", "text": PROSE["en"]}], store)
     )
     assert value["text"] == PROSE["en"]
-    assert source == saved and len(store.calls) == 1
-    assert not store.feedbacks
+    assert source == saved and len(store.calls) == 3
+    assert store.feedbacks and all("text.reply_similarity" in f["rule"] for f in store.feedbacks)
 
 
 @pytest.mark.parametrize("status", ["pending", "accepted"])
