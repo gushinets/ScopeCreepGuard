@@ -13,3 +13,5 @@ docker build -f apps/api/Dockerfile -t scope-guard-backend:ci .
 docker build --target runner -t scope-guard-frontend:ci frontend
 (cd backend && uv sync --locked --all-packages --all-groups --python 3.12)
 (cd backend && uv run --no-sync python scripts/verify_any641_runtime.py --containers --backend-image scope-guard-backend:ci --frontend-image scope-guard-frontend:ci)
+(cd backend && uv run --no-sync python scripts/verify_react_proxy.py --image scope-guard-frontend:ci)
+(cd backend && uv run --no-sync python scripts/verify_react_compose.py --backend-image scope-guard-backend:ci --frontend-image scope-guard-frontend:ci)

@@ -1,7 +1,14 @@
 # Application ownership
 
-`frontend` owns UI/localization, browser/editor state, page guards and the
-same-origin gateway. It forwards legacy and versioned API operations once, preserving
+`frontend/src/app` owns startup, routing and feature composition; `pages` composes
+screens. Features own session, project resources, the active draft editor/autosave,
+analysis operations, immutable history and Change Order commands. Shared modules
+own transport/errors/generated types, UI, storage adapters, public config and RU/EN
+localization. Imports flow app/pages -> features -> shared, with checked public
+feature exports and no runtime cycles. There is one persistent application; the
+legacy store and frontend feature flag have been removed.
+
+The static Nginx runtime owns the same-origin gateway. It forwards legacy and versioned API operations once, preserving
 headers/cookies/cancellation without retries or fallback. It has no database,
 provider-key or migration responsibility.
 

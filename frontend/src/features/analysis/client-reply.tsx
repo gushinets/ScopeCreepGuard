@@ -1,0 +1,233 @@
+import { useEffect, useRef, useState } from 'react'
+import { CheckCheck, Copy, LoaderCircle, RotateCcw } from 'lucide-react'
+import { useTranslations } from 'use-intl'
+import { Button } from '@/shared/ui/button'
+import { cn } from '@/shared/ui/utils'
+import type { ReplyDocument } from '@/features/drafts/contracts'
+import type { AnalysisResult, Tone } from '@/shared/api/models'
+
+const TONES: Tone[] = ['warm', 'neutral', 'firm']
+
+function toneLabelKey(tone: Tone) {
+  return `reply.${tone}` as const
+}
+
+export function ClientReply({
+  result,
+  projectId,
+  request,
+  document: controlledDocument,
+  onDocumentChange,
+  disabled = false,
+  onRegenerate,
+}: {
+  result: AnalysisResult
+  projectId: string
+  request: string
+  document?: ReplyDocument
+  onDocumentChange?: (reply: ReplyDocument) => void
+  disabled?: boolean
+  onRegenerate?: () => Promise<void>
+}) {
+  const t = useTranslations()
+  const [localDocument, setLocalDocument] = useState<ReplyDocument>({ tone: 'neutral', text: result.replies.neutral, generated: result.replies })
+  const document = controlledDocument ?? localDocument
+  const { tone, text } = document
+  function update(next: ReplyDocument) {
+    if (onDocumentChange) onDocumentChange(next)
+    else setLocalDocument(next)
+  }
+  function setText(next: string) { update({ ...document, text: next }) }
+  const isActive = useRef(true)
+  useEffect(() => { isActive.current = true; return () => { isActive.current = false } }, [])
+  const [copied, setCopied] = useState(false)
+  const [isRegenerating, setIsRegenerating] = useState(false)
+  const [regenerationFailed, setRegenerationFailed] = useState(false)
+  // Track whether the current text was user-edited so tone/regenerate is intentional.
+  const lastGenerated = useRef(result.replies.neutral)
+
+  function applyTone(next: Tone) {
+    if (isRegenerating) return
+    const edited = text !== document.generated[tone]
+    if (edited) {
+      const ok = window.confirm(t('reply.confirmReplace'))
+      if (!ok) return
+    }
+    update({ ...document, tone: next, text: document.generated[next] })
+    lastGenerated.current = document.generated[next]
+    setRegenerationFailed(false)
+  }
+
+  async function regenerate() {
+    const edited = text !== lastGenerated.current
+    if (edited) {
+      const ok = window.confirm(t('reply.confirmReplace'))
+      if (!ok) return
+    }
+
+    const previousReply = text
+    setIsRegenerating(true)
+    setRegenerationFailed(false)
+
+    try {
+      if (onRegenerate) { await onRegenerate(); return }
+      const response = await fetch('/api/replies/regenerate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId, request, tone, previousReply, ...(result.clientLanguage ? { documentLanguage: result.clientLanguage } : {}) }),
+      })
+      if (!response.ok) throw new Error(`Reply regeneration failed: ${response.status}`)
+
+      const body: unknown = await response.json()
+      if (
+        !body ||
+        typeof body !== 'object' ||
+        Array.isArray(body) ||
+        typeof (body as Record<string, unknown>).reply !== 'string' ||
+        (body as Record<string, string>).reply.trim().length === 0
+      ) {
+        throw new Error('Reply regeneration returned an invalid response')
+      }
+
+      const reply = (body as { reply: string }).reply
+      if (!isActive.current) return
+      update({ ...document, text: reply, generated: { ...document.generated, [tone]: reply } })
+      lastGenerated.current = reply
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: 'client_reply_regeneration_failed',
+          projectId,
+          message: error instanceof Error ? error.message : 'Unknown regeneration error',
+        }),
+      )
+      setRegenerationFailed(true)
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: 'client_reply_clipboard_failed',
+          message: error instanceof Error ? error.message : 'Unknown clipboard error',
+        }),
+      )
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 2200)
+  }
+
+  return (
+    <section
+      aria-labelledby="reply-heading"
+      className="rounded-lg border border-border bg-card p-4"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 id="reply-heading" className="text-sm font-semibold text-foreground">
+          {t('reply.heading')}
+        </h3>
+
+        <div
+          role="radiogroup"
+          aria-label={t('reply.toneAria')}
+          className="inline-flex rounded-lg border border-border bg-muted p-0.5"
+        >
+          {TONES.map((toneOption) => (
+            <button
+              key={toneOption}
+              type="button"
+              role="radio"
+              aria-checked={tone === toneOption}
+              disabled={disabled || isRegenerating}
+              onClick={() => applyTone(toneOption)}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                tone === toneOption
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {t(toneLabelKey(toneOption))}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <label htmlFor="reply-text" className="sr-only">
+        {t('reply.editableLabel')}
+      </label>
+      <textarea
+        id="reply-text"
+        disabled={disabled || isRegenerating}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={12}
+        className="mt-3 w-full resize-y rounded-lg border border-input bg-background p-3 font-sans text-sm leading-relaxed text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+      />
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          onClick={copy}
+          className="h-9"
+          aria-live="polite"
+        >
+          {copied ? (
+            <>
+              <CheckCheck className="text-inscope-foreground" aria-hidden="true" />
+              {t('reply.copied')}
+            </>
+          ) : (
+            <>
+              <Copy aria-hidden="true" />
+              {t('reply.copy')}
+            </>
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void regenerate()}
+          disabled={isRegenerating}
+          className="h-9"
+        >
+          {isRegenerating ? (
+            <>
+              <LoaderCircle className="animate-spin" aria-hidden="true" />
+              {t('reply.regenerating')}
+            </>
+          ) : (
+            <>
+              <RotateCcw aria-hidden="true" />
+              {t('reply.regenerate')}
+            </>
+          )}
+        </Button>
+        <p className="ml-auto text-xs text-muted-foreground">
+          {t('reply.sendYourself')}
+        </p>
+      </div>
+
+      {copied && (
+        <p
+          className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-inscope-text"
+          role="status"
+        >
+          <CheckCheck className="size-3.5" aria-hidden="true" />
+          {t('reply.copiedStatus')}
+        </p>
+      )}
+
+      {regenerationFailed && (
+        <p className="mt-2 text-xs font-medium text-destructive" role="alert">
+          {t('reply.regenerateError')}
+        </p>
+      )}
+    </section>
+  )
+}

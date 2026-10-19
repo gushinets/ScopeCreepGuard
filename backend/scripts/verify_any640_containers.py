@@ -1,6 +1,7 @@
 """Build and HTTP-smoke owned containers; never attach an application database."""
 
 import json
+import os
 import subprocess
 import time
 import urllib.error
@@ -28,6 +29,7 @@ def container(image, port, environment):
         "-d",
         "--label",
         "scope-guard.disposable=" + owner,
+        *([] if os.name == "nt" else ["--add-host", "host.docker.internal:host-gateway"]),
         "-p",
         f"127.0.0.1::{port}",
     ]
@@ -104,10 +106,7 @@ def main():
             "scg-any640-frontend-check",
             3000,
             {
-                "AUTH_SECRET": "synthetic-container-secret-32-characters",
-                "SCOPE_GUARD_ALLOWED_ORIGINS": allowed,
                 "SCOPE_GUARD_API_ORIGIN": backend_from_container,
-                "OPENAI_API_KEY": "",
             },
         ) as frontend:
             wait_ready(frontend + "/login")
@@ -128,10 +127,7 @@ def main():
             "scg-any640-frontend-check",
             3000,
             {
-                "AUTH_SECRET": "synthetic-container-secret-32-characters",
-                "SCOPE_GUARD_ALLOWED_ORIGINS": allowed,
                 "SCOPE_GUARD_API_ORIGIN": "http://127.0.0.1:9",
-                "OPENAI_API_KEY": "",
             },
         ) as frontend:
             wait_ready(frontend + "/login")
@@ -139,8 +135,20 @@ def main():
                 status, headers, body = request(frontend + path)
                 assert status == 503 and json.loads(body) == {"error": "errors.requestFailed"}
                 assert headers["cache-control"] == "private, no-store"
-    print("Container builds and production HTTP smoke: 11 checks passed; owned containers removed.")
-    print("Independent deployment smoke passed; full browser workflows remain a later-slice gate.")
+    subprocess.run(
+        [
+            __import__("sys").executable,
+            "backend/scripts/verify_react_proxy.py",
+            "--image",
+            "scg-any640-frontend-check",
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+    print(
+        "Container builds, production HTTP smoke and static proxy checks passed; "
+        "owned containers removed."
+    )
     return 0
 
 

@@ -68,7 +68,7 @@ def image_service(image, network, name, environment, port):
 
 
 @contextmanager
-def next_server(environment):
+def spa_server(environment):
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
@@ -76,9 +76,9 @@ def next_server(environment):
         process = subprocess.Popen(
             [
                 "node",
-                "node_modules/next/dist/bin/next",
-                "start",
-                "--hostname",
+                "node_modules/vite/bin/vite.js",
+                "preview",
+                "--host",
                 "127.0.0.1",
                 "--port",
                 str(port),
@@ -248,7 +248,6 @@ def main():
             SCOPE_GUARD_AUTH_SECRET=SECRET,
             AUTH_SECRET=SECRET,
             SCOPE_GUARD_PRODUCTION="false",
-            NEXT_TELEMETRY_DISABLED="1",
         )
         if arguments.containers:
             network = "scg-any641-" + uuid4().hex
@@ -276,9 +275,7 @@ def main():
                     network,
                     "scg-any641-frontend-" + uuid4().hex,
                     {
-                        "AUTH_SECRET": SECRET,
                         "SCOPE_GUARD_API_ORIGIN": f"http://{backend_name}:8000",
-                        "NEXT_TELEMETRY_DISABLED": "1",
                     },
                     3000,
                 )
@@ -286,7 +283,7 @@ def main():
         else:
             backend = stack.enter_context(auth_server(env))
             env["SCOPE_GUARD_API_ORIGIN"] = backend
-            origin = stack.enter_context(next_server(env))
+            origin = stack.enter_context(spa_server(env))
         with httpx.Client(trust_env=False, timeout=45) as client:
             wait_ready(client, backend, "/health/live")
             wait_ready(client, origin, "/login")

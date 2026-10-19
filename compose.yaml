@@ -14,14 +14,8 @@ services:
     extends: {file: compose.services.yaml, service: app}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
-    env_file:
-      - {path: frontend/.env, required: false}
-      - {path: frontend/.env.local, required: false}
     environment:
-      SCOPE_GUARD_ALLOWED_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3000}","http://127.0.0.1:${FRONTEND_PORT:-3000}"]'
       SCOPE_GUARD_API_ORIGIN: http://backend:8000
-      OPENAI_API_KEY: ""
-      SCOPE_GUARD_OPENAI_API_KEY: ""
 
   backend:
     extends: {file: compose.services.yaml, service: backend}
