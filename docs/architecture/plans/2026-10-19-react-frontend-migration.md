@@ -350,3 +350,14 @@ run directly with the already installed tools. Preview services and their
 exact disposable database were stopped and removed at the user's request.
 Local AGENT.md / WORKLOG.md, private fixture state and output remain ignored.
 Publication targets codex/react-frontend-migration -> main; no merge authorized.
+
+### PR #36 review follow-up — superseded project selection errors
+
+Confirmed review discussion r4319875484: a delayed failure for project B could
+report against a newer project C because only selection success was guarded.
+The UI selection handler now captures its navigation token and reports failures
+only while that token is current. Added three regression cases: stale 503 before
+and after C installs, and a still-current 503 that must remain visible. Both
+stale cases failed before the fix; all 19 navigation tests pass after it.
+Focused ESLint, all 90 module boundaries and TypeScript pass. No container or
+backend change; the full migration suite was not repeated for this narrow fix.
