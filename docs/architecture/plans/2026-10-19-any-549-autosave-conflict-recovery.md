@@ -101,3 +101,14 @@ each exercises three reloads, local editing while conflicted, blocked flushes an
 explicit resolution. Final checks: 51 focused frontend tests passed across the
 autosave, recovery, persistent-store and transport suites; TypeScript, changed-file
 ESLint and diff whitespace checks passed. No backend/API contract changes.
+
+## PR #33 CI correction — patch result typing
+
+The supplied CI log shows all 867 backend tests passing, followed by mypy failing
+at apply_user_patch: inferred dictionary values were strings, but draftDocument
+is a dictionary. Reproduced the same error locally; explicitly annotated the
+heterogeneous changes dictionary as dict[str, object]. Runtime behavior and API
+contracts are unchanged. After the correction both Linux and win32 mypy passes
+check all 228 source files successfully; 12 affected API/domain tests, backend/API
+Ruff checks and formatting (367 files), and diff whitespace checks pass. The full
+CI script was not rerun locally; GitHub CI will validate the pushed correction.

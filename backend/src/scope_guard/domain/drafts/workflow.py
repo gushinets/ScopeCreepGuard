@@ -107,7 +107,7 @@ def apply_user_patch(draft: dict, patch: dict) -> dict:
     if patch.keys() & COMMERCIAL_PATCH_FIELDS and not COMMERCIAL_PATCH_FIELDS <= patch.keys():
         raise WorkflowError("documentInvalid")
     document = deepcopy(draft["draftDocument"])
-    changes = {}
+    changes: dict[str, object] = {}
     for path, value in patch.items():
         if path == "requestText":
             if not isinstance(value, str) or len(value) > 100_000:
