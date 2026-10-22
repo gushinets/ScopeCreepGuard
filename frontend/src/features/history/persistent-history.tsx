@@ -122,7 +122,7 @@ export function PersistentHistoryView({ projectId, onProjectChange }: { projectI
     finally { setRestoring(null) }
   }
   const available = [...projects, ...archived.filter(project => !projects.some(active => active.id === project.id))]
-  return <section><div className="screen-heading"><div><h1>{t('history.title')}</h1><p>{t('history.listHelp')}</p></div></div>
+  return <section><div className="screen-heading"><div><h1>{t('history.title')}</h1></div></div>
     {loading && <p role="status">{t('history.loadingProjects')}</p>}
     {failed && <p role="alert">{t('history.archivesFailed')} <Button variant="ghost" onClick={() => { setLoading(true); setAttempt(value => value + 1) }}>{t('result.tryAgain')}</Button></p>}
     {!loading && !available.length && <p className="collection-empty">{t('design.historyEmpty')}</p>}

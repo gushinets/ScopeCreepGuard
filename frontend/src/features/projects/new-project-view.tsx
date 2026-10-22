@@ -127,7 +127,7 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
 
   return <div className="project-editor">
     <button type="button" onClick={() => setView('projects')} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft className="size-4" aria-hidden="true" />{t('projects.backToProjects')}</button>
-    <div className="screen-heading mt-5"><div><h1>{t(project ? 'projects.editTitle' : 'projects.newTitle')}</h1><p>{t('projects.newDescription')}</p></div></div>
+    <div className="screen-heading mt-5"><div><h1>{t(project ? 'projects.editTitle' : 'projects.newTitle')}</h1></div></div>
     <div className="project-editor-grid"><form ref={form} noValidate onSubmit={submit} className="project-editor-form">
       <section className="form-section"><h2>{t('design.projectDetails')}</h2><div className="form-grid two">
       {field('name', t('projects.nameLabel'), fields.name, (v) => change('name', v), { error: errors.name && t(errors.name), placeholder: t('projects.namePlaceholder') })}
