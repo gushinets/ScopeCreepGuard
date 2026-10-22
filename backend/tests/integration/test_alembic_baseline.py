@@ -156,14 +156,13 @@ def test_guarded_migrate_upgrades_known_baseline_to_test_only_future_head(
     shutil.copytree(
         root / "alembic",
         future_alembic,
-        ignore=shutil.ignore_patterns(
-            "0002_workflow_expand.py",
-            "0003_workflow_constraints.py",
-            "0004_workflow_retire.py",
-            "0005_llm_workflow.py",
-            "0006_profile_metrics.py",
-            "0007_nonblocking_llm.py",
-        ),
+        ignore=shutil.ignore_patterns("versions", "__pycache__"),
+    )
+    # This synthetic lineage must never inherit production descendants.
+    (future_alembic / "versions").mkdir()
+    shutil.copy(
+        root / "alembic/versions/0001_existing_drizzle_schema.py",
+        future_alembic / "versions/0001_existing_drizzle_schema.py",
     )
     shutil.copy(
         root / "tests/fixtures/alembic_future/0002_revision_probe.py",

@@ -912,9 +912,7 @@ def test_completed_check_archive_and_agreement_are_independent(disposable_url, m
             lambda: ProjectUnitOfWork(database.new_uow()),
         )
         content = agreement["contentSnapshot"]["document"]
-        preview = await documents.preview(
-            owner, UUID(project["id"]), None, freeze_object(content)
-        )
+        preview = await documents.preview(owner, UUID(project["id"]), None, freeze_object(content))
         assert thaw_json(preview.editor) == content
         with pytest.raises(ProjectError):
             await documents.preview(uuid4(), UUID(project["id"]), None, freeze_object(content))
