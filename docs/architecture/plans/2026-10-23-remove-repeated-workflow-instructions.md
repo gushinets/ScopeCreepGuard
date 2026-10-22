@@ -1,0 +1,6 @@
+# Remove repeated workflow instructions
+
+- Branch/base: current `codex/design-onboarding`; preserve existing changes. User requests removal of static teaching copy repeated beside the contextual guide.
+- Scope: remove idle assessment instruction block and duplicate empty-request instruction below the primary action; remove the idle History detail teaching block. Preserve field labels/placeholders, actionable validation/errors, results/rationale, controls and the single contextual onboarding guide. No business logic/API/DB changes.
+- Steps: inspect static instruction rendering; remove repeated blocks and unused translations in both languages; verify existing frontend tests/lint/build and browser rendering where available; publish to existing PR under continuing authorization.
+- Verification/handoff: implemented. Docker build/typecheck/lint passed, 376 frontend tests passed (Python interoperability test excluded from Node-only image). RU/EN desktop/mobile browser verified a single guide, no repeated idle instructions, skip/reload and primary action availability. No API/DB/business logic changes or paid AI calls. See [evidence](../evidence/2026-10-23-remove-repeated-workflow-instructions/README.md). Owner: current task.
