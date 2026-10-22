@@ -5,7 +5,7 @@ import { useTranslations } from 'use-intl'
 import { useOnboarding } from './context'
 import { guideConnector, placeGuide, type Box, type Point } from './placement'
 
-const targets: Record<number, string> = { 0: '[data-onboarding="create-project"]', 1: '#project-scope', 2: '#request-input', 4: '[data-onboarding="assessment"]' }
+const targets: Record<number, string> = { 0: '[data-onboarding="create-project"]', 1: '#project-scope', 2: '#request-input', 4: '[data-onboarding="tab-scope"]', 5: '[data-onboarding="tab-reply"]', 6: '[data-onboarding="tab-agreement"]' }
 type Anchor = { target: HTMLElement; slot: HTMLElement }
 type Layout = { mode: 'measuring' | 'inline' | 'floating'; point?: Point; inView: boolean; line?: ReturnType<typeof guideConnector> }
 
@@ -29,10 +29,10 @@ function textAndControlBounds(card: HTMLElement, target: HTMLElement): Box[] {
 
 /** The workspace mounts exactly one guide; pages expose only targets and slots. */
 export function OnboardingGuide() {
-  const { state, finishTip, skip, dismissFinal } = useOnboarding()
+  const { state, resultStep, send, skip } = useOnboarding()
   const t = useTranslations()
   const active = state?.status === 'not_started' || state?.status === 'in_progress'
-  const step = finishTip ? 4 : active && state.step !== 3 ? state.step : null
+  const step = active ? state.step === 3 ? resultStep : state.step : null
   const [anchor, setAnchor] = useState<Anchor | null>(null)
   const [layout, setLayout] = useState<Layout>({ mode: 'measuring', inView: false })
   const card = useRef<HTMLElement>(null)
@@ -104,13 +104,14 @@ export function OnboardingGuide() {
   }, [anchor, step, t])
 
   if (step === null || !anchor) return null
-  const current = step === 4 ? 4 : step + 1
+  const current = step >= 4 ? step : step + 1
+  const finish = () => { void send('result_viewed') }
   const floating = layout.mode === 'floating'
   const content = <aside ref={card} className="coachmark" role="dialog" aria-modal="false" aria-labelledby="onboarding-title" aria-describedby="onboarding-description" data-onboarding-card data-floating={floating} data-measuring={layout.mode === 'measuring'} style={floating ? { ...layout.point, visibility: layout.inView ? 'visible' : 'hidden' } : undefined}>
-    <div className="coachmark-header"><span>{t('onboarding.progress', { current, total: 4 })}</span><button type="button" className="coachmark-close" onClick={step === 4 ? dismissFinal : skip} aria-label={t(step === 4 ? 'design.closeGuide' : 'onboarding.skip')}><X size={17} aria-hidden="true" /></button></div>
+    <div className="coachmark-header"><span>{t('onboarding.progress', { current, total: 6 })}</span><button type="button" className="coachmark-close" onClick={skip} aria-label={t('onboarding.skip')}><X size={17} aria-hidden="true" /></button></div>
     <h2 id="onboarding-title">{t(`onboarding.step${step}Title` as 'onboarding.step0Title')}</h2>
     <p id="onboarding-description">{t(`onboarding.step${step}Body` as 'onboarding.step0Body')}</p>
-    <div className="coachmark-footer"><div className="coachmark-progress" aria-hidden="true">{[1, 2, 3, 4].map(index => <span key={index} data-complete={index < current} data-current={index === current} />)}</div>{step === 4 && <button type="button" onClick={dismissFinal} className="coachmark-done">{t('onboarding.done')}</button>}</div>
+    <div className="coachmark-footer"><div className="coachmark-progress" aria-hidden="true">{[1, 2, 3, 4, 5, 6].map(index => <span key={index} data-complete={index < current} data-current={index === current} />)}</div>{step === 6 && <button type="button" onClick={finish} className="coachmark-done">{t('onboarding.done')}</button>}</div>
   </aside>
   return <>{createPortal(content, layout.mode === 'inline' ? anchor.slot : document.body)}{layout.line && floating && layout.inView && createPortal(<svg className="guide-connector" aria-hidden="true"><path d={layout.line.path} /><circle cx={layout.line.x} cy={layout.line.y} r="4" /></svg>, document.body)}</>
 }

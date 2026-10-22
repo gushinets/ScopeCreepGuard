@@ -4,12 +4,12 @@ import { apiJson } from '@/shared/api/client'
 
 type State = { status: 'not_started' | 'in_progress' | 'completed' | 'skipped'; step: number }
 type Event = 'form_opened' | 'project_saved' | 'check_submitted' | 'result_viewed' | 'skip'
-const Context = createContext<{ state: State | null; finishTip: boolean; send: (event: Event) => Promise<void>; skip: () => void; dismissFinal: () => void }>({ state: null, finishTip: false, send: async () => {}, skip: () => {}, dismissFinal: () => {} })
+const Context = createContext<{ state: State | null; resultStep: number | null; setResultStep: (step: number | null) => void; send: (event: Event) => Promise<void>; skip: () => void }>({ state: null, resultStep: null, setResultStep: () => {}, send: async () => {}, skip: () => {} })
 const terminal = (state: State | null) => state?.status === 'completed' || state?.status === 'skipped'
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State | null>(null)
-  const [finishTip, setFinishTip] = useState(false)
+  const [resultStep, setResultStep] = useState<number | null>(null)
   const latest = useRef<State | null>(null)
   const dismissed = useRef(false)
   const pending = useRef<Event[]>([])
@@ -40,7 +40,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
           if (terminal(next)) { pending.current = []; break }
         }
         if (!next) return
-        if (event === 'result_viewed' && next.status === 'completed' && !dismissed.current && alive.current) setFinishTip(true)
         accept(next)
       } catch { /* Guidance never blocks project or draft operations. */ }
     })
@@ -59,10 +58,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const skip = () => {
     dismissed.current = true
     setState(null)
-    setFinishTip(false)
     void send('skip')
   }
-  return <Context value={{ state: dismissed.current ? null : state, finishTip, send, skip, dismissFinal: () => setFinishTip(false) }}>{children}</Context>
+  return <Context value={{ state: dismissed.current ? null : state, resultStep, setResultStep, send, skip }}>{children}</Context>
 }
 
 export const useOnboarding = () => useContext(Context)

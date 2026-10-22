@@ -1,4 +1,3 @@
-import { AgreementHost } from '@/features/change-orders'
 import { useTranslations } from 'use-intl'
 import { useProjects } from '@/features/projects'
 import { useWorkspaceNavigation } from '@/shared/ui/navigation'
@@ -13,8 +12,8 @@ export function ScopeCheckView() {
   const { setView } = useWorkspaceNavigation()
   const t = useTranslations()
   if (workflow?.legacyRevision) return <LegacyStateView />
-  return <AgreementHost><div>
+  return <div>
     <div className="screen-heading"><div><h1>{t('nav.check')}</h1></div>{selectedProject && <Button variant="outline" onClick={() => setView('edit_project')}>{t('projects.editTitle')}</Button>}</div>
     {!selectedProject ? <RequestPanel /> : <div className="check-workbench"><RequestPanel /><div className="assessment-workspace"><ResultPanel /></div></div>}
-  </div></AgreementHost>
+  </div>
 }
