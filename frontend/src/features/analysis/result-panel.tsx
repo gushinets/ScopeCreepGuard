@@ -50,11 +50,7 @@ function PanelFrame({ children }: { children: React.ReactNode }) {
 function EmptyState() {
   const t = useTranslations()
   const { termsChanged } = useAnalysis()
-  return <section className="result-placeholder">
-    {termsChanged && <p role="status" className="mb-4 rounded-md bg-borderline-soft p-3 text-sm">{t('projects.termsChanged')}</p>}
-    <h2>{t('design.resultWorkspace')}</h2>
-    <p>{t('result.emptyBeforeAction')} {t('check.checkScope')}. {t('result.emptyAfterAction')}</p>
-  </section>
+  return termsChanged ? <p role="status" className="mb-4 rounded-md bg-borderline-soft p-3 text-sm">{t('projects.termsChanged')}</p> : null
 }
 
 function LoadingState() {

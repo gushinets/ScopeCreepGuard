@@ -190,11 +190,6 @@ export function RequestPanel() {
           <ShieldCheck aria-hidden="true" />
           {busy ? t('check.checking') : t('check.checkScope')}
         </Button>
-        {requestEmpty && (
-          <p className="text-xs text-muted-foreground">
-            {t('check.requestRequiredHint')}
-          </p>
-        )}
       </div>
     </section>
   )
