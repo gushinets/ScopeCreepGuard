@@ -26,7 +26,8 @@ export interface ProjectsValue {
   createProject: (input: NewProjectInput) => Promise<Project>
   updateProject: (id: string, input: NewProjectInput, details?: ProjectDetails) => Promise<Project>
   deleteProject: (id: string) => Promise<void>
-  archivedProjects: () => Promise<Project[]>
+  restoreProject: (id: string) => Promise<void>
+  archivedProjects: () => Promise<PersistentProject[]>
   openArchived: (project: Project) => Promise<void>
 }
 export const [ProjectsContext, useProjects] = featureContext<ProjectsValue>('Projects')

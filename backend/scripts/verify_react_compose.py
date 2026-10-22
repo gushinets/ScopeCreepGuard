@@ -60,7 +60,7 @@ def main():
         "SCOPE_GUARD_PRODUCTION": "false",
         "SCOPE_GUARD_WORKFLOW_V2": "true",
         "SCOPE_GUARD_LLM_WORKFLOW": "false",
-        "SCOPE_GUARD_MIGRATION_TARGET": "0007_nonblocking_llm",
+        "SCOPE_GUARD_MIGRATION_TARGET": "0008_contextual_onboarding",
         "SCOPE_GUARD_OPENAI_API_KEY": "",
     }
     for volume in config.get("volumes", {}).values():

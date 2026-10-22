@@ -752,7 +752,8 @@ def test_expansion_and_resumable_backfill(disposable_url, monkeypatch):
     engine.dispose()
 
 
-def test_completed_check_archive_and_agreement_are_independent(disposable_url, monkeypatch):
+@pytest.mark.parametrize("target", ["0004_workflow_retire", "head"])
+def test_completed_check_archive_and_agreement_are_independent(disposable_url, monkeypatch, target):
     import asyncio
     import json
     from pathlib import Path
@@ -771,6 +772,8 @@ def test_completed_check_archive_and_agreement_are_independent(disposable_url, m
                 "test','hash') RETURNING id"
             )
         )
+    with engine.begin() as connection:
+        migrate(connection, target=target)
     fixture = json.loads((Path(__file__).parents[1] / "fixtures/contracts.json").read_text())
 
     class Generator:
@@ -876,6 +879,59 @@ def test_completed_check_archive_and_agreement_are_independent(disposable_url, m
         assert (await service.agreement(owner, UUID(agreement["id"])))["contentSnapshot"][
             "document"
         ]["description"] == "Extra page"
+        # Ordinary deletion archives the project and never removes immutable records.
+        await service.archive_project(owner, UUID(project["id"]))
+        await service.archive_project(owner, UUID(project["id"]))
+        assert await service.projects(owner) == []
+        archived_projects = await service.projects(owner, archived=True)
+        assert [item["id"] for item in archived_projects] == [project["id"]]
+        assert len(archived_projects[0]["history"]) == 2
+        assert (await service.history(owner, UUID(history["id"])))["checkSnapshot"] == history[
+            "checkSnapshot"
+        ]
+        assert (await service.agreements(owner, UUID(history["id"])))[0]["id"] == agreement["id"]
+        assert (await service.agreement(owner, UUID(agreement["id"])))["contentSnapshot"][
+            "document"
+        ]["description"] == "Extra page"
+        # Reading History or the retained draft cannot reactivate an archived project.
+        await service.project_draft(owner, UUID(project["id"]))
+        assert await service.projects(owner) == []
+        assert await service.projects(uuid4(), archived=True) == []
+        with pytest.raises(WorkflowError):
+            await service.history(uuid4(), UUID(history["id"]))
+        # Direct PDF previews remain owned and read-only after project archival;
+        # they do not require finalization, an active draft, or private export storage.
+        from scope_guard.database.repositories.draft_persistence import DraftUnitOfWork
+        from scope_guard.database.repositories.projects import ProjectUnitOfWork
+        from scope_guard.domain.drafts.values import freeze_object, thaw_json
+        from scope_guard.services.documents.use_cases import DocumentUseCases
+        from scope_guard.services.projects.use_cases import ProjectError
+
+        documents = DocumentUseCases(
+            lambda: DraftUnitOfWork(database.new_uow()),
+            lambda: ProjectUnitOfWork(database.new_uow()),
+        )
+        content = agreement["contentSnapshot"]["document"]
+        preview = await documents.preview(
+            owner, UUID(project["id"]), None, freeze_object(content)
+        )
+        assert thaw_json(preview.editor) == content
+        with pytest.raises(ProjectError):
+            await documents.preview(uuid4(), UUID(project["id"]), None, freeze_object(content))
+        assert await service.projects(owner) == []
+        assert len(await service.histories(owner, UUID(project["id"]))) == 2
+        retained = await service.project_draft(owner, UUID(project["id"]))
+        with pytest.raises(WorkflowError):
+            await service.restore_project(uuid4(), UUID(project["id"]))
+        await service.restore_project(owner, UUID(project["id"]))
+        await service.restore_project(owner, UUID(project["id"]))
+        assert await service.projects(owner, archived=True) == []
+        assert [item["id"] for item in await service.projects(owner)] == [project["id"]]
+        assert await service.project_draft(owner, UUID(project["id"])) == retained
+        assert len(await service.histories(owner, UUID(project["id"]))) == 2
+        assert (await service.agreement(owner, UUID(agreement["id"])))["contentSnapshot"][
+            "document"
+        ] == content
         await database.close()
 
     asyncio.run(exercise())

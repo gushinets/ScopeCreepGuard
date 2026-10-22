@@ -2,6 +2,7 @@ import { type DraftEditor, type WorkflowOperations, WorkflowApiError, type Worki
 import type { AnalysisResult } from '@/shared/api/models'
 import { ERROR_CODES } from '@/shared/api/errors'
 import { featureContext } from '@/shared/ui/feature-context'
+import { downloadChangeOrder } from './download'
 
 export function useAgreementCommands(editor: DraftEditor, commands: WorkflowOperations) {
   async function createEstimate() {
@@ -22,6 +23,14 @@ export function useAgreementCommands(editor: DraftEditor, commands: WorkflowOper
     })
     if (!applied) throw new WorkflowApiError(ERROR_CODES.draftConflict, 409)
   }
-  return { createEstimate, prepareAgreement }
+  async function downloadAgreementPdf(signal: AbortSignal) {
+    const saved = await editor.flush()
+    signal.throwIfAborted()
+    if (!saved.draftDocument.changeOrder) throw new WorkflowApiError(ERROR_CODES.pdfDocumentMissing, 400)
+    // The existing preview renderer accepts the exact saved editor content. It
+    // neither finalizes an agreement nor mutates immutable History snapshots.
+    return downloadChangeOrder({ draft: saved.draftDocument.changeOrder, projectId: saved.projectId, persistentWorkflow: true }, signal)
+  }
+  return { createEstimate, prepareAgreement, downloadAgreementPdf }
 }
 export const [AgreementContext, useAgreements] = featureContext<ReturnType<typeof useAgreementCommands>>('Change Order')

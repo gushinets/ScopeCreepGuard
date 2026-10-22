@@ -1,5 +1,6 @@
+import { OnboardingSlot } from '@/features/onboarding'
 import { useState } from 'react'
-import { ChevronDown, FolderPlus, ShieldCheck } from 'lucide-react'
+import { ChevronDown, FolderPlus, ShieldCheck, ArrowRight } from 'lucide-react'
 import { useTranslations } from 'use-intl'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/ui/utils'
@@ -41,27 +42,14 @@ export function RequestPanel() {
   const [scopeOpen, setScopeOpen] = useState(false)
 
   if (!selectedProject) {
-    return (
-      <div className="rounded-xl border border-border bg-card p-6 text-center">
-        <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
-          <FolderPlus className="size-6 text-muted-foreground" aria-hidden="true" />
-        </span>
-        <h3 className="mt-4 text-base font-semibold text-foreground">
-          {t('check.noProjectTitle')}
-        </h3>
-        <p className="mt-1.5 text-sm text-muted-foreground text-pretty">
-          {t('check.noProjectDescription')}
-        </p>
-        <Button
-          type="button"
-          className="mt-4 h-9"
-          onClick={() => setView('new_project')}
-        >
-          <FolderPlus aria-hidden="true" />
-          {t('projects.newProject')}
-        </Button>
-      </div>
-    )
+    return <div className="first-project project-start">
+      <section className="first-project-copy">
+        <h2>{t('projects.emptyTitle')}</h2>
+        <p>{t('check.noProjectDescription')}</p>
+        <Button type="button" data-onboarding="create-project" onClick={() => setView('new_project')}><FolderPlus size={16} aria-hidden="true" />{t('projects.createFirst')}<ArrowRight size={16} aria-hidden="true" /></Button>
+        <OnboardingSlot step={0} />
+      </section>
+    </div>
   }
 
   const hasScope = selectedProject.scope.trim().length > 0
@@ -69,7 +57,7 @@ export function RequestPanel() {
   const busy = status === 'loading'
 
   return (
-    <div className="flex flex-col gap-4">
+    <section className="request-workspace flex flex-col gap-4"><h2 className="request-title">{t('design.sourceMaterial')}</h2>
       {/* Project selector */}
       <div>
         <label
@@ -170,13 +158,14 @@ export function RequestPanel() {
                 key={ex.key}
                 type="button"
                 onClick={() => loadExample(t(exampleTextKey(ex.key)))}
-                className="rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="rounded border border-border bg-card px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {t(exampleLabelKey(ex.key))}
               </button>
             ))}
           </div>
         </div>
+        <OnboardingSlot step={2} />
         <textarea
           id="request-input"
           readOnly={!!workflow?.archived}
@@ -207,6 +196,6 @@ export function RequestPanel() {
           </p>
         )}
       </div>
-    </div>
+    </section>
   )
 }

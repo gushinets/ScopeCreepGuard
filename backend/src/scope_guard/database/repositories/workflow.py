@@ -202,7 +202,16 @@ class WorkflowSQLRepository:
 
     async def update_project(self, owner, identifier, values):
         current = await self.project(owner, identifier, lock=True)
-        if values == {"archived": True}:
+        if values == {"archived": False}:
+            if current["archivedAt"]:
+                await self.session.execute(
+                    text(
+                        "UPDATE projects SET archived_at=NULL,updated_at=now() "
+                        "WHERE id=:id AND user_id=:owner"
+                    ),
+                    {"id": identifier, "owner": owner},
+                )
+        elif values == {"archived": True}:
             if current["archivedAt"]:
                 return current
             await self.session.execute(

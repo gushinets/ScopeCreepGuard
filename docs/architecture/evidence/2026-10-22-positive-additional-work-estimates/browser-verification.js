@@ -1,0 +1,17 @@
+async(page) => {
+ const results=[];
+ for(const [locale,email] of [['en','auto-pdf-en-1792674371005@example.test'],['ru','auto-pdf-ru-1792674406418@example.test']]) {
+  const context=await page.context().browser().newContext({viewport:{width:1440,height:1000}}),tab=await context.newPage(),base='http://localhost:3100',check=(v,m)=>{if(!v)throw Error(m)};
+  await context.request.post(base+'/api/locale',{data:{locale}});await context.request.post(base+'/api/auth/login',{data:{email,password:'Auto-pdf-test-42'}});
+  let archived=(await(await context.request.get(base+'/api/v2/projects?archived=true')).json()).projects[0];if (!archived) { const active=(await(await context.request.get(base+'/api/v2/projects')).json()).projects[0]; await context.request.delete(base+`/api/v2/projects/${active.id}`); archived=(await(await context.request.get(base+'/api/v2/projects?archived=true')).json()).projects[0]; }
+  await tab.goto(base+'/history');await Promise.all([tab.waitForResponse(r=>r.url().endsWith(`/projects/${archived.id}/restore`) && r.request().method()==='POST'),tab.getByRole('button',{name:locale==='en'?'Restore':'Восстановить',exact:true}).click()]);
+  const savedDraft=(await(await context.request.get(base+`/api/v2/projects/${archived.id}/draft`)).json()).draft;
+  const configured=await context.request.patch(base+`/api/v2/projects/${archived.id}`,{data:{operationId:crypto.randomUUID(),expectedRevision:savedDraft.revision,name:archived.name,industry:archived.industry,scope:archived.scope,startDate:archived.startDate,clientName:archived.clientName,clientEmail:archived.clientEmail,endDate:archived.endDate,pricingModel:'hourly',currency:'USD',hourlyRate:'30',fixedPrice:''}});check(configured.ok(),'commercial fixture configuration');
+  await tab.goto(base+'/drafts');await tab.locator('.draft-rows button').first().click();await tab.locator('#request-input').fill(locale==='en'?'Please add Arrow as another supplier and email alerts for every price change. zero-estimate-regression':'Добавьте поставщика Arrow и уведомления по электронной почте о каждом изменении цены. zero-estimate-regression');
+  await Promise.all([tab.waitForResponse(r=>r.url().endsWith('/analyses') && r.request().method()==='POST'),tab.getByRole('button',{name:locale==='en'?'Check scope':'Проверить запрос',exact:true}).click()]);const prepare=tab.getByRole('button',{name:locale==='en'?'Prepare agreement':'Подготовить соглашение',exact:true});await prepare.waitFor({timeout:60000});await prepare.click();await tab.locator('#co-description').waitFor({timeout:60000});
+  check(Number(await tab.locator('#co-estimatedHours').inputValue())===8,'new hours missing: '+await tab.locator('#co-estimatedHours').inputValue()+' '+locale);check(Number(await tab.locator('#co-additionalCost').inputValue())===240,'new cost missing');check(await tab.locator('#co-currency').inputValue()==='USD','currency changed');
+  await tab.locator('#co-estimatedHours').scrollIntoViewIfNeeded();await tab.screenshot({path:`output/local/restored-estimate-${locale}.png`});await tab.reload();await tab.locator('#co-estimatedHours').waitFor();check(Number(await tab.locator('#co-estimatedHours').inputValue())===8,'reload lost hours');
+  await context.request.delete(base+`/api/v2/projects/${archived.id}`);await context.close();results.push({locale,restoreThenDraft:true,newRequestHours:8,newRequestCost:240,currency:'USD',reload:true});
+ }
+ return results;
+}

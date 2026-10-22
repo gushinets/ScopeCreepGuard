@@ -1,9 +1,10 @@
+import { Brand } from '@/shared/ui/brand'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useSession } from './session'
 import { publicDestination } from '@/shared/config/navigation'
 import { useTranslations } from 'use-intl'
 import { useState } from 'react'
-import { LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
+import { LockKeyhole, Mail } from 'lucide-react'
 import { LanguageSwitcher } from '@/shared/i18n/language-switcher'
 import { Button } from '@/shared/ui/button'
 import { ERROR_CODES, assertErrorCode, type ErrorCode } from '@/shared/api/errors'
@@ -106,36 +107,11 @@ export function AuthForm({ mode }: AuthFormProps) {
     void navigate(publicDestination(params.get('returnTo')), { replace: true })
   }
 
-  return (
-    <main className="min-h-screen overflow-hidden bg-background text-foreground">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_20%,oklch(0.93_0.03_158),transparent_34%),radial-gradient(circle_at_80%_0%,oklch(0.92_0.02_250),transparent_30%),linear-gradient(135deg,oklch(0.99_0.002_250),oklch(0.96_0.006_250))]" />
-      <div className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_26rem]">
-        <section className="max-w-2xl">
-          <div className="mb-6 flex justify-start">
-            <LanguageSwitcher />
-          </div>
-          <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-card/70 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">
-            <ShieldCheck className="size-4 text-foreground" aria-hidden="true" />
-            {t('brand.name')}
-          </span>
-          <h1 className="mt-6 text-4xl font-semibold tracking-tight text-foreground text-balance sm:text-6xl">
-            {t('auth.heroTitle')}
-          </h1>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground text-pretty">
-            {t('auth.heroDescription')}
-          </p>
-        </section>
-
-        <section className="rounded-2xl border border-border bg-card/85 p-6 shadow-sm backdrop-blur">
-          <div>
-            <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-              {description}
-            </p>
-          </div>
-
+  return <main className="auth-shell">
+    <section className="auth-access">
+      <div className="auth-access-header"><Brand /><LanguageSwitcher /></div>
+      <div className="auth-form-surface">
+        <h1>{title}</h1><p>{description}</p>
           <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
             <div>
               <label
@@ -186,7 +162,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             </div>
 
             {error && (
-              <p className="rounded-lg bg-outscope-soft px-3 py-2 text-sm text-outscope-text">
+              <p role="alert" className="rounded-lg bg-outscope-soft px-3 py-2 text-sm text-outscope-text">
                 {t(error)}
               </p>
             )}
@@ -213,8 +189,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               {isRegister ? t('auth.signIn') : t('auth.createOne')}
             </Link>
           </p>
-        </section>
       </div>
-    </main>
-  )
+    </section>
+  </main>
 }

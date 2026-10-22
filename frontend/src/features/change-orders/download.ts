@@ -3,11 +3,11 @@ import { apiFetch, ApiClientError } from '@/shared/api/client'
 import { ERROR_CODES } from '@/shared/api/errors'
 
 export async function downloadChangeOrder(input: {
-  draft: EditableDraft; projectId: string; draftId?: string | null; savedUnchanged?: boolean
+  draft: EditableDraft; projectId: string; draftId?: string | null; savedUnchanged?: boolean; persistentWorkflow?: boolean
 }, signal?: AbortSignal): Promise<{ blob: Blob; filename: string }> {
   const response = input.draftId && input.savedUnchanged
     ? await apiFetch(`/api/drafts/${encodeURIComponent(input.draftId)}/pdf`, { cache: 'no-store', signal })
-    : await apiFetch('/api/change-orders/pdf', {
+    : await apiFetch(input.persistentWorkflow ? '/api/v2/change-orders/pdf' : '/api/change-orders/pdf', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
       body: JSON.stringify({ projectId: input.projectId, ...(input.draftId ? { draftId: input.draftId } : {}), changeOrder: input.draft }),
     })
