@@ -345,10 +345,29 @@ def validate_text(
     # structured review evaluates actual sentences, conditions and saved decisions.
 
 
+def validate_positive_estimate(stage, raw, facts):
+    accepted = facts.get("analysis") or {}
+    additional = (
+        raw.get("hasAdditionalWork") if stage == "analysis" else accepted.get("hasAdditionalWork")
+    )
+    project = facts["project"]
+    price_field = "hourlyRate" if project.get("pricingModel") == "hourly" else "fixedPrice"
+    if (
+        stage in ("analysis", "estimate")
+        and additional is True
+        and project.get("pricingModel") in ("hourly", "fixed")
+        and project.get("currency")
+        and Decimal(str(project.get(price_field) or "0")) > 0
+        and (raw["estimatedHours"] <= 0 or Decimal(raw["additionalCost"]) <= 0)
+    ):
+        raise ValueError("estimate.positive: additional work requires positive hours and cost")
+
+
 def validate_stage(stage, data, facts, *, reviewed_labels=False):
     raw = data.model_dump() if isinstance(data, BaseModel) else data
     locale, target = facts["locale"], facts["selection"]["selectedLanguage"]
     accepted = facts.get("analysis") or {}
+    validate_positive_estimate(stage, raw, facts)
     if stage == "analysis":
         for field in ("summary", "reasoning", "suggestion"):
             if raw[field]:
@@ -536,6 +555,7 @@ class StructuredStageRunner:
         def compose(data):
             raw = data.model_dump()
             raw.pop("commercialTerms", None)
+            validate_positive_estimate(stage, raw, facts)
             return {**raw, "labels": dict(labels)} if labels else raw
 
         if record.get("candidate"):

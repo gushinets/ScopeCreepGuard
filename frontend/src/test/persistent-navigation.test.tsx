@@ -61,6 +61,51 @@ function expectUrl(id: string | null) {
   expect(window.history.state.usr).toEqual({ retained: true })
 }
 
+it.each([0, 3])('recovers an unavailable account-specific draft link with %i active projects', async count => {
+  projects = projects.slice(0, count)
+  window.history.replaceState(window.history.state, '', '/?keep=value&draft=other-account#reply')
+  const original = vi.mocked(fetch).getMockImplementation()!
+  vi.mocked(fetch).mockImplementation((request, init) => String(request) === '/api/v2/legacy-drafts/other-account'
+    ? Promise.resolve(Response.json({ error: 'errors.draftNotFound' }, { status: 404 }))
+    : original(request, init))
+  const hook = renderHook(useStore, { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  expect(hook.result.current.projectError).toBe('')
+  expect(hook.result.current.draftError).toBe('')
+  expect(hook.result.current.currentDraftId).toBe(count ? 'd1' : null)
+  expect(hook.result.current.workflow.legacyRevision).toBeNull()
+  expectUrl(count ? 'd1' : null)
+  expect(vi.mocked(fetch).mock.calls.every(([, init]) => !init?.method || init.method === 'GET')).toBe(true)
+})
+
+it.each(['current', 'legacy'])('does not hide a %s draft server failure behind an empty workspace', async phase => {
+  window.history.replaceState(window.history.state, '', '/?keep=value&draft=unavailable#reply')
+  const original = vi.mocked(fetch).getMockImplementation()!
+  const failing = phase === 'current' ? '/api/v2/drafts/unavailable' : '/api/v2/legacy-drafts/unavailable'
+  vi.mocked(fetch).mockImplementation((request, init) => String(request) === failing
+    ? Promise.resolve(Response.json({ error: 'errors.requestFailed' }, { status: 503 }))
+    : original(request, init))
+  const hook = renderHook(useStore, { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  expect(hook.result.current.projectError).toBe('errors.requestFailed')
+  expect(hook.result.current.currentDraftId).toBeNull()
+  expectUrl('unavailable')
+})
+
+it('keeps the current draft when a later draft link is unavailable', async () => {
+  const original = vi.mocked(fetch).getMockImplementation()!
+  vi.mocked(fetch).mockImplementation((request, init) => String(request) === '/api/v2/legacy-drafts/missing'
+    ? Promise.resolve(Response.json({ error: 'errors.draftNotFound' }, { status: 404 }))
+    : original(request, init))
+  const hook = renderHook(useStore, { wrapper })
+  await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  await act(async () => hook.result.current.openDraft('missing'))
+  expect(hook.result.current.currentDraftId).toBe('d1')
+  expect(hook.result.current.requestText).toBe('Request 1')
+  expect(hook.result.current.draftError).toBe('')
+  expectUrl('d1')
+})
+
 it.each([false, true])('ignores a superseded project selection failure (new selection installed: %s)', async installed => {
   const original = vi.mocked(fetch).getMockImplementation()!
   let failSecond!: (response: Response) => void

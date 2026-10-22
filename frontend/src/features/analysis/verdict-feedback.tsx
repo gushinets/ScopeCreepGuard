@@ -1,3 +1,4 @@
+import { Check, X, CircleHelp } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslations } from 'use-intl'
 import { Button } from '@/shared/ui/button'
@@ -19,10 +20,10 @@ const accuracyStyles: Record<EvaluationAccuracy, string> = {
     'border-borderline-border bg-borderline-soft text-borderline-text aria-pressed:ring-2 aria-pressed:ring-borderline',
 }
 
-const accuracyPrefix: Record<EvaluationAccuracy, string> = {
-  correct: '👍',
-  wrong: '👎',
-  debatable: '🤔',
+const accuracyPrefix = {
+  correct: <Check className="size-4" aria-hidden="true" />,
+  wrong: <X className="size-4" aria-hidden="true" />,
+  debatable: <CircleHelp className="size-4" aria-hidden="true" />,
 }
 
 export function VerdictFeedback() {
@@ -108,7 +109,7 @@ export function VerdictFeedback() {
     return (
       <section
         aria-labelledby="feedback-heading"
-        className="rounded-lg border border-border bg-card p-4"
+        className="verdict-feedback"
       >
         <h3 id="feedback-heading" className="text-sm font-semibold text-foreground">
           {t('feedback.heading')}
@@ -131,7 +132,7 @@ export function VerdictFeedback() {
   return (
     <section
       aria-labelledby="feedback-heading"
-      className="rounded-lg border border-border bg-card p-4"
+      className="verdict-feedback"
     >
       <h3 id="feedback-heading" className="text-sm font-semibold text-foreground">
         {t('feedback.heading')}

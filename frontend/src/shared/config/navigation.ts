@@ -21,7 +21,10 @@ export function workspacePath(view: View, search = '', hash = '', projectId?: st
   const paths = { check: '/', projects: '/projects', new_project: '/projects/new',
     edit_project: projectId ? `/projects/${encodeURIComponent(projectId)}/edit` : '/projects',
     history: '/history', drafts: '/drafts' }
-  return `${paths[view]}${search}${hash}`
+  const query = new URLSearchParams(search)
+  if (view === 'history' && projectId) query.set('historyProject', projectId)
+  else if (view !== 'history') query.delete('historyProject')
+  return `${paths[view]}${query.size ? `?${query}` : ''}${hash}`
 }
 
 export function pageView(pathname: string): View {

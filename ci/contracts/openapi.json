@@ -2557,6 +2557,487 @@
         }
       }
     },
+    "/api/v2/change-orders/pdf": {
+      "post": {
+        "tags": [
+          "technical-services"
+        ],
+        "summary": "Preview Pdf",
+        "operationId": "preview_pdf_api_v2_change_orders_pdf_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "projectId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "title": "Projectid"
+                  },
+                  "draftId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Draftid"
+                  },
+                  "changeOrder": {
+                    "properties": {
+                      "createdAt": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Createdat"
+                      },
+                      "language": {
+                        "type": "string",
+                        "title": "Language"
+                      },
+                      "projectName": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Projectname"
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Description"
+                      },
+                      "estimatedHours": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Estimatedhours"
+                      },
+                      "additionalCost": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Additionalcost"
+                      },
+                      "timelineImpact": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Timelineimpact"
+                      },
+                      "rationale": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Rationale"
+                      },
+                      "note": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Note"
+                      },
+                      "providerName": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Providername"
+                      },
+                      "clientName": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Clientname"
+                      },
+                      "clientEmail": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Clientemail"
+                      },
+                      "endDate": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Enddate"
+                      },
+                      "additionalTerms": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Additionalterms"
+                      },
+                      "clientApproverName": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Clientapprovername"
+                      },
+                      "approvalDate": {
+                        "type": "string",
+                        "maxLength": 100000,
+                        "title": "Approvaldate"
+                      },
+                      "noAdditionalCharge": {
+                        "type": "boolean",
+                        "title": "Noadditionalcharge"
+                      },
+                      "reference": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 100000
+                          }
+                        ],
+                        "title": "Reference"
+                      },
+                      "changeOrderLabels": {
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "title": {
+                                "type": "string",
+                                "title": "Title"
+                              },
+                              "draft": {
+                                "type": "string",
+                                "title": "Draft"
+                              },
+                              "documentNumber": {
+                                "type": "string",
+                                "title": "Documentnumber"
+                              },
+                              "created": {
+                                "type": "string",
+                                "title": "Created"
+                              },
+                              "project": {
+                                "type": "string",
+                                "title": "Project"
+                              },
+                              "provider": {
+                                "type": "string",
+                                "title": "Provider"
+                              },
+                              "client": {
+                                "type": "string",
+                                "title": "Client"
+                              },
+                              "clientEmail": {
+                                "type": "string",
+                                "title": "Clientemail"
+                              },
+                              "requestedChange": {
+                                "type": "string",
+                                "title": "Requestedchange"
+                              },
+                              "commercialTerms": {
+                                "type": "string",
+                                "title": "Commercialterms"
+                              },
+                              "estimatedEffort": {
+                                "type": "string",
+                                "title": "Estimatedeffort"
+                              },
+                              "additionalFee": {
+                                "type": "string",
+                                "title": "Additionalfee"
+                              },
+                              "noAdditionalCharge": {
+                                "type": "string",
+                                "title": "Noadditionalcharge"
+                              },
+                              "scheduleImpact": {
+                                "type": "string",
+                                "title": "Scheduleimpact"
+                              },
+                              "additionalTerms": {
+                                "type": "string",
+                                "title": "Additionalterms"
+                              },
+                              "approval": {
+                                "type": "string",
+                                "title": "Approval"
+                              },
+                              "approvedBy": {
+                                "type": "string",
+                                "title": "Approvedby"
+                              },
+                              "date": {
+                                "type": "string",
+                                "title": "Date"
+                              },
+                              "draftFooter": {
+                                "type": "string",
+                                "title": "Draftfooter"
+                              },
+                              "introduction": {
+                                "type": "string",
+                                "title": "Introduction"
+                              },
+                              "outsideScopeFree": {
+                                "type": "string",
+                                "title": "Outsidescopefree"
+                              },
+                              "endDate": {
+                                "type": "string",
+                                "title": "Enddate"
+                              },
+                              "rationale": {
+                                "type": "string",
+                                "title": "Rationale"
+                              },
+                              "terms": {
+                                "type": "string",
+                                "title": "Terms"
+                              },
+                              "note": {
+                                "type": "string",
+                                "title": "Note"
+                              },
+                              "page": {
+                                "type": "string",
+                                "title": "Page"
+                              },
+                              "hours": {
+                                "type": "string",
+                                "title": "Hours"
+                              }
+                            },
+                            "type": "object",
+                            "required": [
+                              "title",
+                              "draft",
+                              "documentNumber",
+                              "created",
+                              "project",
+                              "provider",
+                              "client",
+                              "clientEmail",
+                              "requestedChange",
+                              "commercialTerms",
+                              "estimatedEffort",
+                              "additionalFee",
+                              "noAdditionalCharge",
+                              "scheduleImpact",
+                              "additionalTerms",
+                              "approval",
+                              "approvedBy",
+                              "date",
+                              "draftFooter",
+                              "introduction",
+                              "outsideScopeFree",
+                              "endDate",
+                              "rationale",
+                              "terms",
+                              "note",
+                              "page",
+                              "hours"
+                            ],
+                            "title": "ChangeOrderLabels"
+                          }
+                        ]
+                      },
+                      "aiValues": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": {
+                              "type": "string",
+                              "maxLength": 100000
+                            },
+                            "propertyNames": {
+                              "enum": [
+                                "description",
+                                "estimatedHours",
+                                "additionalCost",
+                                "currency",
+                                "timelineImpact",
+                                "rationale",
+                                "note",
+                                "manualPrice",
+                                "manualEffort",
+                                "manualRationale"
+                              ]
+                            },
+                            "type": "object"
+                          }
+                        ],
+                        "title": "Aivalues"
+                      },
+                      "currency": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "RUB",
+                              "USD",
+                              "EUR"
+                            ],
+                            "title": "Currency"
+                          },
+                          {
+                            "type": "string",
+                            "const": ""
+                          },
+                          {
+                            "items": {},
+                            "type": "array"
+                          }
+                        ],
+                        "title": "Currency"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "createdAt",
+                      "language",
+                      "projectName",
+                      "description",
+                      "estimatedHours",
+                      "additionalCost",
+                      "timelineImpact",
+                      "rationale",
+                      "note",
+                      "providerName",
+                      "clientName",
+                      "clientEmail",
+                      "endDate",
+                      "additionalTerms",
+                      "clientApproverName",
+                      "approvalDate",
+                      "noAdditionalCharge",
+                      "currency"
+                    ],
+                    "title": "DraftEditableChangeOrder"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "projectId",
+                  "changeOrder"
+                ],
+                "title": "PreviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Change Order PDF",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request Entity Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/scope/extract": {
       "post": {
         "tags": [
@@ -5908,6 +6389,59 @@
         }
       }
     },
+    "/api/v2/projects/{identifier}/restore": {
+      "post": {
+        "tags": [
+          "persistent-workflow"
+        ],
+        "summary": "Restore Project",
+        "operationId": "restore_project_api_v2_projects__identifier__restore_post",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/scope_guard_api__schemas__workflow__ProjectResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/projects/{identifier}/draft": {
       "get": {
         "tags": [
@@ -7563,6 +8097,86 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/profile/onboarding": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Onboarding",
+        "operationId": "onboarding_api_v2_profile_onboarding_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingState"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Advance Onboarding",
+        "operationId": "advance_onboarding_api_v2_profile_onboarding_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingState"
+                }
               }
             }
           },
@@ -9626,6 +10240,53 @@
           "ok"
         ],
         "title": "OkResponse"
+      },
+      "OnboardingEvent": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "form_opened",
+              "project_saved",
+              "check_submitted",
+              "result_viewed",
+              "skip"
+            ],
+            "title": "Event"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event"
+        ],
+        "title": "OnboardingEvent"
+      },
+      "OnboardingState": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "in_progress",
+              "completed",
+              "skipped"
+            ],
+            "title": "Status"
+          },
+          "step": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Step"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "step"
+        ],
+        "title": "OnboardingState"
       },
       "Operation": {
         "properties": {

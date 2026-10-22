@@ -1,9 +1,9 @@
+import { OnboardingSlot, useOnboarding } from '@/features/onboarding'
 import { supportedClientLanguage, PDF_CLIENT_LANGUAGES } from '@/shared/i18n/client-language'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Info,
   LoaderCircle,
-  ShieldQuestion,
   TriangleAlert,
 } from 'lucide-react'
 import { useLocale, useTranslations } from 'use-intl'
@@ -11,7 +11,7 @@ import { commercialSignature } from '@/features/change-orders/contracts'
 import { Button } from '@/shared/ui/button'
 import { ScopeAssessment } from '@/features/analysis/scope-assessment'
 import { ClientReply } from '@/features/analysis/client-reply'
-import { ChangeOrder } from '@/features/change-orders'
+import { ChangeOrder, AgreementSurface } from '@/features/change-orders'
 import { VerdictFeedback } from '@/features/analysis/verdict-feedback'
 import { useProjects } from '@/features/projects'
 import { useDrafts } from '@/features/drafts'
@@ -19,23 +19,29 @@ import { useAnalysis } from './operations'
 import { useSession } from '@/features/auth'
 import { useAgreements } from '@/features/change-orders'
 import { useWorkspaceNavigation } from '@/shared/ui/navigation'
+import { invalidAiEstimate } from './model/invalid-estimate'
 
 export function ResultPanel() {
   const { status, result, runCheck, analysisProject: selectedProject, draftSessionId, draftDocument } = { ...useProjects(), ...useDrafts(), ...useAnalysis(), ...useSession(), ...useAgreements(), ...useWorkspaceNavigation() }
+
+  const onboarding = useOnboarding()
+  useEffect(() => {
+    if (status === 'result' && result && selectedProject && onboarding.state?.step === 3) void onboarding.send('result_viewed')
+  }, [status, result, selectedProject, onboarding.state?.step, onboarding.send])
 
   if (status === 'idle') return <EmptyState />
   if (status === 'loading') return <LoadingState />
   if (status === 'error') return <ErrorState onRetry={runCheck} />
   if (status === 'short_scope') return <ShortScopeState />
   if (status === 'result' && result && selectedProject) {
-    return <ResultState key={`${draftSessionId}:${result.clientLanguage}:${draftDocument?.languageSelection?.requestHash ?? ''}`} />
+    return <><OnboardingSlot step={4} /><ResultState key={`${draftSessionId}:${result.clientLanguage}:${draftDocument?.languageSelection?.requestHash ?? ''}`} /></>
   }
   return <EmptyState />
 }
 
 function PanelFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[24rem] flex-col rounded-xl border border-border bg-card/40 p-4 sm:p-6">
+    <div className="flex min-h-[14rem] flex-col rounded-xl border border-border bg-card/40 p-4 sm:p-6">
       {children}
     </div>
   )
@@ -43,31 +49,12 @@ function PanelFrame({ children }: { children: React.ReactNode }) {
 
 function EmptyState() {
   const t = useTranslations()
-  const { termsChanged } = { ...useProjects(), ...useDrafts(), ...useAnalysis(), ...useSession(), ...useAgreements(), ...useWorkspaceNavigation() }
-
-  return (
-    <PanelFrame>
-      {termsChanged && <p role="status" className="mb-4 rounded-lg bg-borderline-soft p-3 text-sm">{t('projects.termsChanged')}</p>}
-      <div className="m-auto max-w-sm text-center">
-        <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
-          <ShieldQuestion
-            className="size-6 text-muted-foreground"
-            aria-hidden="true"
-          />
-        </span>
-        <h3 className="mt-4 text-base font-semibold text-foreground">
-          {t('result.emptyTitle')}
-        </h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground text-pretty">
-          {t('result.emptyBeforeAction')}{' '}
-          <span className="font-medium text-foreground">
-            {t('check.checkScope')}
-          </span>
-          . {t('result.emptyAfterAction')}
-        </p>
-      </div>
-    </PanelFrame>
-  )
+  const { termsChanged } = useAnalysis()
+  return <section className="result-placeholder">
+    {termsChanged && <p role="status" className="mb-4 rounded-md bg-borderline-soft p-3 text-sm">{t('projects.termsChanged')}</p>}
+    <h2>{t('design.resultWorkspace')}</h2>
+    <p>{t('result.emptyBeforeAction')} {t('check.checkScope')}. {t('result.emptyAfterAction')}</p>
+  </section>
 }
 
 function LoadingState() {
@@ -141,7 +128,7 @@ function ShortScopeState() {
 }
 
 function ResultState() {
-  const { result, analysisProject: selectedProject, selectedProject: currentProject, currentHistoryEntryId, analyzedRequest, user, createEstimate, prepareAgreement, regenerate, changeClientLanguage, draftDocument, currentDraftId, draftSessionId, updateReply, updateChangeOrder, isSavingDraft, isDraftDirty, workflow } =
+  const { result, analysisProject: selectedProject, selectedProject: currentProject, currentHistoryEntryId, analyzedRequest, user, createEstimate, prepareAgreement, downloadAgreementPdf, regenerate, changeClientLanguage, draftDocument, currentDraftId, draftSessionId, updateReply, updateChangeOrder, isSavingDraft, isDraftDirty, workflow } =
     { ...useProjects(), ...useDrafts(), ...useAnalysis(), ...useSession(), ...useAgreements(), ...useWorkspaceNavigation() }
   const t = useTranslations()
   const locale = useLocale()
@@ -156,7 +143,7 @@ function ResultState() {
 
   const material = result
 
-  const needsEstimate = !!draftDocument?.changeOrder && (!material.estimateValid || material.commercialSignature !== commercialSignature(currentProject ?? selectedProject, draftDocument.changeOrder.endDate || selectedProject.endDate || ''))
+  const needsEstimate = !!draftDocument?.changeOrder && (invalidAiEstimate(draftDocument.changeOrder, material.hasAdditionalWork) || !material.estimateValid || material.commercialSignature !== commercialSignature(currentProject ?? selectedProject, draftDocument.changeOrder.endDate || selectedProject.endDate || ''))
 
   async function refreshEstimate() {
     if (!selectedProject) return
@@ -192,10 +179,8 @@ function ResultState() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="result-content">
       <ScopeAssessment result={result} request={analyzedRequest} />
-
-      <VerdictFeedback key={currentHistoryEntryId ?? 'unlabeled'} />
 
       <ClientReply
         key={material.clientLanguage}
@@ -211,14 +196,15 @@ function ResultState() {
       {estimateError && <p role="alert" className="text-sm text-outscope-text">{estimateError}</p>}
 
       {needsEstimate && <Button type="button" variant="outline" className="self-start" disabled={generating || !!workflow?.archived} onClick={() => void refreshEstimate()}>{generating ? t('result.generatingChangeOrder') : t('result.refreshEstimate')}</Button>}
+      {showChangeOrder && draftDocument?.changeOrder && <a className="inline-flex w-fit items-center rounded-md border border-border px-3 py-2 text-sm" href="#agreement-workspace">{t('changeOrder.heading')}</a>}
       {showChangeOrder && user && draftDocument?.changeOrder ? (
-        <ChangeOrder result={material} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId ?? draftSessionId} userId={user.id} draft={draftDocument.changeOrder} onDraftChange={updateChangeOrder} disabled={generating || !!workflow?.archived || false} draftId={currentDraftId} savedUnchanged={!isDraftDirty} durableWorkflow />
+        <AgreementSurface><ChangeOrder result={material} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId ?? draftSessionId} userId={user.id} draft={draftDocument.changeOrder} onDraftChange={updateChangeOrder} disabled={generating || !!workflow?.archived || false} draftId={currentDraftId} savedUnchanged={!isDraftDirty} durableWorkflow onDownloadPdf={downloadAgreementPdf} /></AgreementSurface>
       ) : (
         <Button type="button" variant="outline" className="h-9 self-start" onClick={() => void openChangeOrder()} disabled={generating || !!workflow?.archived}>
           {generating ? t('result.generatingChangeOrder') : t('result.prepareAgreement')}
         </Button>
       )}
-      <section className="rounded-lg border border-border p-3">
+      <section className="client-language-control rounded-lg bg-muted p-4">
         <label htmlFor="co-document-language" className="text-sm font-medium">{t('result.documentLanguage')}</label>
         <p className="mt-2 text-xs text-muted-foreground">{t('result.clientLanguageHint', { language: languageName(material.clientLanguage ?? 'en') })}</p>
         <div className="mt-2 flex gap-2">
@@ -229,6 +215,7 @@ function ResultState() {
         </div>
         <p id="client-language-feedback" role={languageError ? 'alert' : undefined} className="mt-2 text-xs text-muted-foreground">{languageError || t('result.supportedClientLanguages')}</p>
       </section>
+      <VerdictFeedback key={currentHistoryEntryId ?? 'unlabeled'} />
     </div>
   )
 }

@@ -1,15 +1,15 @@
+import { ChevronDown, ChevronRight, RotateCcw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'use-intl'
 import { Button } from '@/shared/ui/button'
-import { workflowApi, WorkflowApiError } from '@/features/drafts/contracts'
+import { workflowApi } from '@/features/drafts/contracts'
 import type { Agreement, ArchivedCheck, DocumentExport } from '@/features/drafts/contracts'
-import { ChangeOrderDocumentPreview } from '@/features/change-orders'
-import { useProjects } from '@/features/projects'
-import { useDrafts } from '@/features/drafts'
+import { AgreementPdfDownload, ChangeOrderDocumentPreview, downloadChangeOrder } from '@/features/change-orders'
+import { useProjects, type PersistentProject } from '@/features/projects'
 import { useHistory } from './operations'
 import { ScopeAssessment } from '@/features/analysis'
+import { ArchivedDraft } from './archived-draft'
 
-const readinessLabels = { description: 'changeOrder.descriptionLabel', estimatedHours: 'changeOrder.hoursLabel', additionalCost: 'changeOrder.costLabel', currency: 'changeOrder.currencyLabel' } as const
 
 function ExportItem({ initial }: { initial: DocumentExport }) {
   const t = useTranslations()
@@ -59,39 +59,84 @@ function AgreementItem({ agreement, archived, refresh }: { agreement: Agreement;
       operation.current[kind] = crypto.randomUUID(); setError(false)
     } catch { setError(true) } finally { setBusy(false) }
   }
-  return <section className="mt-4 rounded border p-4"><h3 className="font-medium">{agreement.reference}</h3><p>{t(`workflow.agreement.${agreement.status}`)}</p><p className="mb-3 text-sm">{t('workflow.notAcceptance')}</p><ChangeOrderDocumentPreview draft={agreement.contentSnapshot.document} /><div className="mt-3 flex gap-2"><Button disabled={busy || archived || agreement.status !== 'finalized'} onClick={() => void action('export')}>{t('workflow.exportPdf')}</Button><Button disabled={busy || agreement.status !== 'finalized'} variant="outline" onClick={() => void action('void')}>{t('workflow.void')}</Button></div>{error && <p role="alert" className="mt-2">{t('errors.requestFailed')}</p>}<ul className="mt-3 space-y-2">{exports.map(item => <ExportItem key={item.id} initial={item} />)}</ul></section>
+  return <section className="mt-4 rounded border p-4"><h3 className="font-medium">{agreement.reference}</h3><p>{t(`workflow.agreement.${agreement.status}`)}</p><p className="mb-3 text-sm">{t('workflow.notAcceptance')}</p><ChangeOrderDocumentPreview draft={agreement.contentSnapshot.document} /><div className="mt-3 flex flex-wrap gap-2"><Button disabled={busy || archived || agreement.status !== 'finalized'} onClick={() => void action('export')}>{t('workflow.exportPdf')}</Button><Button disabled={busy || agreement.status !== 'finalized'} variant="outline" onClick={() => void action('void')}>{t('workflow.void')}</Button></div>{error && <p role="alert" className="mt-2">{t('errors.requestFailed')}</p>}<ul className="mt-3 space-y-2">{exports.map(item => <ExportItem key={item.id} initial={item} />)}</ul></section>
 }
 
-export function PersistentHistoryView() {
-  const { selectedProject, workflow, draftDocument, complete, openHistory } = { ...useProjects(), ...useDrafts(), ...useHistory() }
+export function HistoryProjectDetails({ projectId }: { projectId?: string | null } = {}) {
+  const { selectedProject: activeProject, projects, archivedProjects } = useProjects()
+  const [archived, setArchived] = useState<PersistentProject[]>([])
+  const [, setArchivesFailed] = useState(false)
+  const [archivesLoading, setArchivesLoading] = useState(true)
+  const available = [...projects, ...archived]
+  const selectedProject = available.find(project => project.id === (projectId ?? activeProject?.id)) ?? (archivesLoading && projectId ? null : available[0] ?? null)
+  const { openHistory } = useHistory()
+  const loadArchives = useRef(archivedProjects)
+  useEffect(() => {
+    let active = true
+    void loadArchives.current().then(value => { if (active) { setArchived(value); setArchivesFailed(false) } }).catch(() => { if (active) setArchivesFailed(true) }).finally(() => { if (active) setArchivesLoading(false) })
+    return () => { active = false }
+  }, [])
   const t = useTranslations()
-  const [selected, setSelected] = useState<ArchivedCheck | null>(null)
+  const [selectedRecord, setSelected] = useState<ArchivedCheck | null>(null)
+  const selected = selectedRecord?.projectId === selectedProject?.id ? selectedRecord : null
   const [agreements, setAgreements] = useState<Agreement[]>([])
   const [error, setError] = useState(false)
   const [busy, setBusy] = useState(false)
-  const finalizeKey = useRef(crypto.randomUUID())
-  const [finalizeFields, setFinalizeFields] = useState<Record<string, string>>({})
   async function refresh(id = selected?.id) {
     if (id) setAgreements((await workflowApi<{ changeOrders: Agreement[] }>(`history/${id}/change-orders`)).changeOrders)
   }
   async function open(id: string) {
-    setFinalizeFields({})
-    setBusy(true)
-    try { setSelected((await workflowApi<{ entry: ArchivedCheck }>(`history/${id}`)).entry); await refresh(id); setError(false); finalizeKey.current = crypto.randomUUID() } catch { setError(true) } finally { setBusy(false) }
-  }
-  async function finalize() {
-    if (!selected) return
-    setBusy(true)
-    setFinalizeFields({})
-    try { await workflowApi(`history/${selected.id}/change-orders`, { operationId: finalizeKey.current }); await refresh(); finalizeKey.current = crypto.randomUUID(); setError(false) } catch (failure) { setError(true); if (failure instanceof WorkflowApiError) setFinalizeFields(failure.fields ?? {}) } finally { setBusy(false) }
-  }
-  async function archiveEdits() {
-    if (!workflow) return
     setBusy(true)
     try {
-      await complete()
-      setSelected(null); setAgreements([]); setFinalizeFields({}); setError(false)
+      const [saved, documents] = await Promise.all([
+        workflowApi<{ entry: ArchivedCheck }>(`history/${id}`),
+        workflowApi<{ changeOrders: Agreement[] }>(`history/${id}/change-orders`),
+      ])
+      setSelected(saved.entry); setAgreements(documents.changeOrders); setError(false)
     } catch { setError(true) } finally { setBusy(false) }
   }
-  return <section className="mx-auto max-w-3xl"><h2 className="text-xl font-semibold">{t('history.title')}</h2><p className="mt-2 text-sm">{t('workflow.historyHelp')}</p>{workflow && draftDocument?.changeOrder && !workflow.legacyRevision && <div className="mt-3"><p className="text-sm text-muted-foreground">{t('workflow.archiveEditsHelp')}</p><Button className="mt-2" variant="outline" disabled={busy || workflow.archived} onClick={() => void archiveEdits()}>{t('workflow.archiveEdits')}</Button></div>}{!selectedProject ? <p>{t('history.selectProject')}</p> : <ul className="mt-4 space-y-3">{selectedProject.history.map(entry => <li key={entry.id} className="rounded border p-3"><p>{entry.request}</p><p className="mt-1 text-sm">{entry.summary}</p><Button className="mt-2" variant="outline" disabled={busy} onClick={() => void open(entry.id)}>{t('workflow.viewCheck')}</Button></li>)}</ul>}{error && <p role="alert">{t('errors.requestFailed')}</p>}{Object.keys(finalizeFields).length > 0 && <ul role="alert" className="mt-2 text-sm">{Object.entries(finalizeFields).map(([field, reason]) => <li key={field}>{t(reason === 'positive' ? 'changeOrder.readiness.positive' : 'changeOrder.readiness.required', { field: t(readinessLabels[field as keyof typeof readinessLabels] ?? 'changeOrder.descriptionLabel') })}</li>)}</ul>}{selected && <article className="mt-6 rounded border bg-card p-4"><h3 className="font-semibold">{selected.summary}</h3>{selected.sourceKind === 'legacy_unverified' ? <p className="mt-3">{t('workflow.legacyHistory')}</p> : <>{openHistory && <Button className="mt-3" disabled={busy || !!workflow.archived} variant="outline" onClick={() => { setBusy(true); void openHistory(selected.id).catch(() => setError(true)).finally(() => setBusy(false)) }}>{t('workflow.reopen')}</Button>}<div className="mt-4">{selected.checkSnapshot.analysis ? <ScopeAssessment result={selected.checkSnapshot.analysis} request={selected.checkSnapshot.requestText} /> : <p className="whitespace-pre-wrap">{selected.checkSnapshot.requestText}</p>}</div><h4 className="mt-4 font-medium">{t('workflow.archivedScope')}</h4><p className="whitespace-pre-wrap">{selected.checkSnapshot.projectSnapshot?.scope}</p><h4 className="mt-4 font-medium">{t('reply.heading')}</h4><p className="whitespace-pre-wrap">{selected.checkSnapshot.draftDocument?.reply.text}</p>{selected.checkSnapshot.draftDocument?.changeOrder && <div className="mt-4"><ChangeOrderDocumentPreview draft={selected.checkSnapshot.draftDocument.changeOrder} /><Button className="mt-3" disabled={busy || !!workflow?.archived || agreements.some(item => item.status === 'finalized')} onClick={() => void finalize()}>{t('workflow.finalize')}</Button></div>}</>}{agreements.map(agreement => <AgreementItem key={`${agreement.id}:${agreement.revision}`} agreement={agreement} archived={!!workflow?.archived} refresh={() => refresh()} />)}</article>}</section>
+  return <section><div className="history-layout"><div>{selectedProject?.archivedAt && <div className="border-b border-border p-4"><Button variant="outline" onClick={() => { setSelected(null); setAgreements([]); setError(false) }}>{t('history.savedDraft')}</Button></div>}{!selectedProject ? <p>{t('history.selectProject')}</p> : selectedProject.history.length === 0 ? <p className="collection-empty">{t('design.historyEmpty')}</p> : <ul className="history-list">{selectedProject.history.map(entry => <li key={entry.id} data-selected={selected?.id === entry.id}><p>{entry.request}</p><p className="mt-1 text-sm">{entry.summary}</p><Button className="mt-2" variant="outline" disabled={busy} onClick={() => void open(entry.id)}>{t('workflow.viewCheck')}</Button></li>)}</ul>}</div><div>{error && <p role="alert">{t('errors.requestFailed')}</p>}{!selected && selectedProject?.archivedAt && <ArchivedDraft key={selectedProject.id} project={selectedProject} />}{!selected && !selectedProject?.archivedAt && <div className="result-placeholder"><h2>{t('design.historyDetailTitle')}</h2><p>{t('design.historyDetailBody')}</p></div>}{selected && <article className="history-detail"><h2>{selected.summary}</h2>{selected.sourceKind === 'legacy_unverified' ? <p className="mt-3">{t('workflow.legacyHistory')}</p> : <>{openHistory && <Button className="mt-3" disabled={busy || !!selectedProject?.archivedAt || selectedProject?.id !== activeProject?.id} variant="outline" onClick={() => { setBusy(true); void openHistory(selected.id).catch(() => setError(true)).finally(() => setBusy(false)) }}>{t('workflow.reopen')}</Button>}<div className="mt-4">{selected.checkSnapshot.analysis ? <ScopeAssessment result={selected.checkSnapshot.analysis} request={selected.checkSnapshot.requestText} /> : <p className="whitespace-pre-wrap">{selected.checkSnapshot.requestText}</p>}</div><h4 className="mt-4 font-medium">{t('workflow.archivedScope')}</h4><p className="whitespace-pre-wrap">{selected.checkSnapshot.projectSnapshot?.scope}</p><h4 className="mt-4 font-medium">{t('reply.heading')}</h4><p className="whitespace-pre-wrap">{selected.checkSnapshot.draftDocument?.reply.text}</p>{selected.checkSnapshot.draftDocument?.changeOrder && <div className="mt-4"><ChangeOrderDocumentPreview draft={selected.checkSnapshot.draftDocument.changeOrder} /><div className="mt-3 flex flex-wrap gap-2"><AgreementPdfDownload language={selected.checkSnapshot.draftDocument.changeOrder.language} download={signal => downloadChangeOrder({ draft: selected.checkSnapshot.draftDocument!.changeOrder!, projectId: selected.projectId, persistentWorkflow: true }, signal)} /></div></div>}</>}{agreements.map(agreement => <AgreementItem key={`${agreement.id}:${agreement.revision}`} agreement={agreement} archived={!!selectedProject?.archivedAt} refresh={() => refresh()} />)}</article>}</div></div></section>
+}
+
+
+export function PersistentHistoryView({ projectId, onProjectChange }: { projectId?: string | null; onProjectChange?: (id: string) => void } = {}) {
+  const t = useTranslations()
+  const { projects, archivedProjects, restoreProject } = useProjects()
+  const [archived, setArchived] = useState<PersistentProject[]>([])
+  const [expanded, setExpanded] = useState<string | null>(projectId ?? null)
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+  const [restoring, setRestoring] = useState<string | null>(null)
+  const [restoreFailed, setRestoreFailed] = useState<string | null>(null)
+  const load = useRef(archivedProjects)
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let active = true
+    void load.current().then(value => { if (active) { setArchived(value); setFailed(false) } }).catch(() => { if (active) setFailed(true) }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [attempt])
+  async function restore(id: string) {
+    setRestoring(id); setRestoreFailed(null)
+    try { await restoreProject(id); setArchived(current => current.filter(project => project.id !== id)) }
+    catch { setRestoreFailed(id) }
+    finally { setRestoring(null) }
+  }
+  const available = [...projects, ...archived.filter(project => !projects.some(active => active.id === project.id))]
+  return <section><div className="screen-heading"><div><h1>{t('history.title')}</h1><p>{t('history.listHelp')}</p></div></div>
+    {loading && <p role="status">{t('history.loadingProjects')}</p>}
+    {failed && <p role="alert">{t('history.archivesFailed')} <Button variant="ghost" onClick={() => { setLoading(true); setAttempt(value => value + 1) }}>{t('result.tryAgain')}</Button></p>}
+    {!loading && !available.length && <p className="collection-empty">{t('design.historyEmpty')}</p>}
+    <ul className="history-projects">{available.map(project => <li key={project.id} className="border-b border-border">
+      <div className="flex items-center gap-3 py-3">
+        <button type="button" aria-expanded={expanded === project.id} aria-controls={`history-details-${project.id}`} onClick={() => { setExpanded(current => current === project.id ? null : project.id); onProjectChange?.(project.id) }} className="flex min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
+          {expanded === project.id ? <ChevronDown aria-hidden="true" className="size-4 shrink-0" /> : <ChevronRight aria-hidden="true" className="size-4 shrink-0" />}
+          <span className="min-w-0 flex-1"><span className="block truncate font-medium">{project.name}</span><span className="mt-1 line-clamp-1 text-sm text-muted-foreground">{project.clientName ? `${project.clientName} · ` : ''}{project.scope}</span></span>
+          {project.archivedAt && <span className="ml-auto hidden shrink-0 text-xs text-muted-foreground sm:block">{t('history.archived')}</span>}
+        </button>
+        {project.archivedAt && <Button variant="outline" disabled={restoring !== null} onClick={() => void restore(project.id)}><RotateCcw aria-hidden="true" />{t(restoring === project.id ? 'history.restoring' : 'history.restoreProject')}</Button>}
+      </div>
+      {restoreFailed === project.id && <p role="alert" className="pb-3 text-sm text-outscope-text">{t('history.restoreFailed')}</p>}
+      {expanded === project.id && <div id={`history-details-${project.id}`} className="pb-6"><h2 className="mb-2 text-base font-semibold">{t('history.projectOverview')}</h2><p className="mb-5 whitespace-pre-wrap text-sm">{project.scope}</p><HistoryProjectDetails key={`${project.id}:${project.archivedAt ?? 'active'}`} projectId={project.id} /></div>}
+    </li>)}</ul>
+  </section>
 }

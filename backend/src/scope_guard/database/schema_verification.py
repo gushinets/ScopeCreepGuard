@@ -291,10 +291,16 @@ def inspect_profile_schema(connection: Connection) -> dict:
     return actual
 
 
-def verify_profile_schema(connection: Connection, *, nonblocking=False) -> None:
+def verify_profile_schema(connection: Connection, *, nonblocking=False, onboarding=False) -> None:
     verify_managed_schema(connection)
     expected = json.loads(
-        Path(__file__).with_name("0006_profile_metrics_schema.json").read_text(encoding="utf-8")
+        Path(__file__)
+        .with_name(
+            "0008_contextual_onboarding_schema.json"
+            if onboarding
+            else "0006_profile_metrics_schema.json"
+        )
+        .read_text(encoding="utf-8")
     )
     if nonblocking:
         for constraint in expected["tables"]["llm_operations"]["constraints"]:
@@ -323,7 +329,9 @@ def verify_llm_schema(connection: Connection) -> None:
     revisions = (
         connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalars().all()
     )
-    if revisions == ["0007_nonblocking_llm"]:
+    if revisions == ["0008_contextual_onboarding"]:
+        verify_onboarding_schema(connection)
+    elif revisions == ["0007_nonblocking_llm"]:
         verify_nonblocking_schema(connection)
     elif revisions == ["0006_profile_metrics"]:
         verify_profile_schema(connection)
@@ -332,10 +340,19 @@ def verify_llm_schema(connection: Connection) -> None:
 
 
 def verify_nonblocking_schema(connection):
-    verify_profile_schema(connection, nonblocking=True)
+    revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one()
+    if revision == "0008_contextual_onboarding":
+        verify_onboarding_schema(connection)
+    else:
+        verify_profile_schema(connection, nonblocking=True)
+
+
+def verify_onboarding_schema(connection):
+    verify_profile_schema(connection, onboarding=True)
 
 
 REVISION_VALIDATORS["0007_nonblocking_llm"] = verify_nonblocking_schema
+REVISION_VALIDATORS["0008_contextual_onboarding"] = verify_onboarding_schema
 REVISION_VALIDATORS["0005_llm_workflow"] = _verify_llm_schema_v5
 REVISION_VALIDATORS["0006_profile_metrics"] = verify_profile_schema
 

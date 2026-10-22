@@ -125,7 +125,7 @@ export function ClientReply({
   return (
     <section
       aria-labelledby="reply-heading"
-      className="rounded-lg border border-border bg-card p-4"
+      className="client-reply-editor"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 id="reply-heading" className="text-sm font-semibold text-foreground">
@@ -148,7 +148,7 @@ export function ClientReply({
               className={cn(
                 'rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 tone === toneOption
-                  ? 'bg-card text-foreground shadow-sm'
+                  ? 'bg-card text-foreground'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
@@ -166,7 +166,7 @@ export function ClientReply({
         disabled={disabled || isRegenerating}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        rows={12}
+        rows={6}
         className="mt-3 w-full resize-y rounded-lg border border-input bg-background p-3 font-sans text-sm leading-relaxed text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
       />
 

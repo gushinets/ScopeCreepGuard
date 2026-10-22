@@ -1,17 +1,20 @@
-import { RequestPanel } from '@/features/analysis/request-panel'
-import { ResultPanel } from '@/features/analysis/result-panel'
-import { LegacyStateView } from '@/features/drafts'
-import { useDrafts } from '@/features/drafts'
+import { AgreementHost } from '@/features/change-orders'
+import { useTranslations } from 'use-intl'
+import { useProjects } from '@/features/projects'
+import { useWorkspaceNavigation } from '@/shared/ui/navigation'
+import { Button } from '@/shared/ui/button'
+import { RequestPanel } from './request-panel'
+import { ResultPanel } from './result-panel'
+import { LegacyStateView, useDrafts } from '@/features/drafts'
 
 export function ScopeCheckView() {
-  const { workflow } = { ...useDrafts() }
+  const { selectedProject } = useProjects()
+  const { workflow } = useDrafts()
+  const { setView } = useWorkspaceNavigation()
+  const t = useTranslations()
   if (workflow?.legacyRevision) return <LegacyStateView />
-  return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-      <div className="lg:sticky lg:top-24 lg:self-start">
-        <RequestPanel />
-      </div>
-      <div><ResultPanel /></div>
-    </div>
-  )
+  return <AgreementHost><div>
+    <div className="screen-heading"><div><h1>{t('nav.check')}</h1><p>{selectedProject ? t('design.checkIntro', { project: selectedProject.name }) : t('design.firstCheckIntro')}</p></div>{selectedProject && <Button variant="outline" onClick={() => setView('edit_project')}>{t('projects.editTitle')}</Button>}</div>
+    {!selectedProject ? <RequestPanel /> : <div className="check-workbench"><RequestPanel /><div className="assessment-workspace"><ResultPanel /></div></div>}
+  </div></AgreementHost>
 }

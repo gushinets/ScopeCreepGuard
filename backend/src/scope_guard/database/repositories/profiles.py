@@ -15,6 +15,41 @@ class Profiles:
     def __init__(self, session):
         self.session = session
 
+    async def onboarding(self, owner, event=None):
+        from scope_guard.domain.profiles.onboarding import transition
+
+        supported = await self.session.scalar(
+            text(
+                "SELECT count(*)=2 FROM information_schema.columns "
+                "WHERE table_schema='public' AND table_name='profiles' "
+                "AND column_name IN ('onboarding_status','onboarding_step')"
+            )
+        )
+        if not supported:
+            raise WorkflowError("profileUnavailable", 503)
+        row = (
+            await self.session.execute(
+                text(
+                    "SELECT onboarding_status,onboarding_step FROM profiles WHERE user_id=:owner"
+                    + (" FOR UPDATE" if event else "")
+                ),
+                {"owner": owner},
+            )
+        ).one_or_none()
+        if row is None:
+            raise WorkflowError("profileNotFound", 404)
+        status, step = row
+        if event is not None:
+            status, step = transition(status, step, event)
+            await self.session.execute(
+                text(
+                    "UPDATE profiles SET onboarding_status=:status,onboarding_step=:step "
+                    "WHERE user_id=:owner"
+                ),
+                {"owner": owner, "status": status, "step": step},
+            )
+        return {"status": status, "step": step}
+
     async def get(self, owner, *, lock=False):
         if not await profiles_supported(self.session):
             raise WorkflowError("profileUnavailable", 503)

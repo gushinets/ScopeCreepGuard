@@ -48,7 +48,8 @@ def test_scope_multipart_contract_and_validation():
 
 
 @pytest.mark.parametrize("optional_draft", [{}, {"draftId": None}])
-def test_unsaved_export_has_no_save_proof_or_llm(optional_draft):
+@pytest.mark.parametrize("workflow_v2", [False, True])
+def test_unsaved_export_has_no_save_proof_or_llm(optional_draft, workflow_v2):
     from scope_guard_api.dependencies import document_use_cases
 
     class UseCases:
@@ -58,12 +59,12 @@ def test_unsaved_export_has_no_save_proof_or_llm(optional_draft):
 
             return DocumentSource(change_order, None)
 
-    app = create_app(Settings(_env_file=None))
+    app = create_app(Settings(_env_file=None, workflow_v2=workflow_v2))
     app.dependency_overrides[current_owner] = lambda: {"id": OWNER}
     app.dependency_overrides[document_use_cases] = UseCases
     with TestClient(app) as client:
         response = client.post(
-            "/api/change-orders/pdf",
+            "/api/v2/change-orders/pdf" if workflow_v2 else "/api/change-orders/pdf",
             json={
                 "projectId": OWNER,
                 "changeOrder": editor(additionalCost="2.675"),
@@ -72,6 +73,7 @@ def test_unsaved_export_has_no_save_proof_or_llm(optional_draft):
         )
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/pdf"
+        assert response.headers["cache-control"] == "private, no-store"
         assert (
             response.headers["content-disposition"]
             == f'attachment; filename="change-order-{OWNER}.pdf"'
@@ -79,6 +81,8 @@ def test_unsaved_export_has_no_save_proof_or_llm(optional_draft):
         assert "2.675" in " ".join(
             page.extract_text() for page in PdfReader(BytesIO(response.content)).pages
         )
+        if workflow_v2:
+            assert client.post("/api/change-orders/pdf").status_code == 426
 
 
 def test_openapi_describes_pdf_and_multipart():

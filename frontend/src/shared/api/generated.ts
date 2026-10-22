@@ -269,6 +269,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/change-orders/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Pdf */
+        post: operations["preview_pdf_api_v2_change_orders_pdf_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/scope/extract": {
         parameters: {
             query?: never;
@@ -425,6 +442,23 @@ export interface paths {
         head?: never;
         /** Update Project */
         patch: operations["update_project_api_v2_projects__identifier__patch"];
+        trace?: never;
+    };
+    "/api/v2/projects/{identifier}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Project */
+        post: operations["restore_project_api_v2_projects__identifier__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v2/projects/{identifier}/draft": {
@@ -849,6 +883,24 @@ export interface paths {
         put?: never;
         /** Evaluate */
         post: operations["evaluate_api_v2_analyses__identifier__evaluation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/profile/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Onboarding */
+        get: operations["onboarding_api_v2_profile_onboarding_get"];
+        put?: never;
+        /** Advance Onboarding */
+        post: operations["advance_onboarding_api_v2_profile_onboarding_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1558,6 +1610,24 @@ export interface components {
              * @constant
              */
             ok: true;
+        };
+        /** OnboardingEvent */
+        OnboardingEvent: {
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "form_opened" | "project_saved" | "check_submitted" | "result_viewed" | "skip";
+        };
+        /** OnboardingState */
+        OnboardingState: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "not_started" | "in_progress" | "completed" | "skipped";
+            /** Step */
+            step: number;
         };
         /** Operation */
         Operation: {
@@ -3944,6 +4014,231 @@ export interface operations {
             };
         };
     };
+    preview_pdf_api_v2_change_orders_pdf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Projectid
+                     * Format: uuid
+                     */
+                    projectId: string;
+                    /** Draftid */
+                    draftId?: string | null;
+                    /** DraftEditableChangeOrder */
+                    changeOrder: {
+                        /** Createdat */
+                        createdAt: string;
+                        /** Language */
+                        language: string;
+                        /** Projectname */
+                        projectName: string;
+                        /** Description */
+                        description: string;
+                        /** Estimatedhours */
+                        estimatedHours: string;
+                        /** Additionalcost */
+                        additionalCost: string;
+                        /** Timelineimpact */
+                        timelineImpact: string;
+                        /** Rationale */
+                        rationale: string;
+                        /** Note */
+                        note: string;
+                        /** Providername */
+                        providerName: string;
+                        /** Clientname */
+                        clientName: string;
+                        /** Clientemail */
+                        clientEmail: string;
+                        /** Enddate */
+                        endDate: string;
+                        /** Additionalterms */
+                        additionalTerms: string;
+                        /** Clientapprovername */
+                        clientApproverName: string;
+                        /** Approvaldate */
+                        approvalDate: string;
+                        /** Noadditionalcharge */
+                        noAdditionalCharge: boolean;
+                        /** Reference */
+                        reference?: string;
+                        changeOrderLabels?: {
+                            /** Title */
+                            title: string;
+                            /** Draft */
+                            draft: string;
+                            /** Documentnumber */
+                            documentNumber: string;
+                            /** Created */
+                            created: string;
+                            /** Project */
+                            project: string;
+                            /** Provider */
+                            provider: string;
+                            /** Client */
+                            client: string;
+                            /** Clientemail */
+                            clientEmail: string;
+                            /** Requestedchange */
+                            requestedChange: string;
+                            /** Commercialterms */
+                            commercialTerms: string;
+                            /** Estimatedeffort */
+                            estimatedEffort: string;
+                            /** Additionalfee */
+                            additionalFee: string;
+                            /** Noadditionalcharge */
+                            noAdditionalCharge: string;
+                            /** Scheduleimpact */
+                            scheduleImpact: string;
+                            /** Additionalterms */
+                            additionalTerms: string;
+                            /** Approval */
+                            approval: string;
+                            /** Approvedby */
+                            approvedBy: string;
+                            /** Date */
+                            date: string;
+                            /** Draftfooter */
+                            draftFooter: string;
+                            /** Introduction */
+                            introduction: string;
+                            /** Outsidescopefree */
+                            outsideScopeFree: string;
+                            /** Enddate */
+                            endDate: string;
+                            /** Rationale */
+                            rationale: string;
+                            /** Terms */
+                            terms: string;
+                            /** Note */
+                            note: string;
+                            /** Page */
+                            page: string;
+                            /** Hours */
+                            hours: string;
+                        };
+                        /** Aivalues */
+                        aiValues?: {
+                            [key: string]: string;
+                        };
+                        /** Currency */
+                        currency: ("RUB" | "USD" | "EUR") | "" | unknown[];
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Change Order PDF */
+            200: {
+                headers: {
+                    "Content-Disposition"?: string;
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     scope_extract_api_scope_extract_post: {
         parameters: {
             query?: never;
@@ -5483,6 +5778,46 @@ export interface operations {
             };
         };
     };
+    restore_project_api_v2_projects__identifier__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["scope_guard_api__schemas__workflow__ProjectResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     project_draft_api_v2_projects__identifier__draft_get: {
         parameters: {
             query?: never;
@@ -6687,6 +7022,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    onboarding_api_v2_profile_onboarding_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingState"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    advance_onboarding_api_v2_profile_onboarding_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardingEvent"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingState"];
                 };
             };
             /** @description Validation Error */

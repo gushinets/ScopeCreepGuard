@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useBlocker, useLocation, useNavigate } from 'react-router'
 import { useSession } from '@/features/auth'
 import { ProjectsContext, useProjectResources, useProjectActions, type ProjectsValue } from '@/features/projects'
-import { DraftsContext, useDraftEditor, WorkflowOperations, workflowApi, WorkflowApiError, draftErrorCode, type WorkingDraft, type WorkingRevision, type DraftsValue } from '@/features/drafts'
+import { DraftsContext, useDraftEditor, WorkflowOperations, workflowApi, readDraftLink, draftErrorCode, type WorkingDraft, type DraftsValue } from '@/features/drafts'
 import { AnalysisContext, useAnalysisOperations, type AnalysisValue } from '@/features/analysis'
 import { AgreementContext, useAgreementCommands } from '@/features/change-orders'
 import { HistoryContext, useHistoryCommands } from '@/features/history'
@@ -49,10 +49,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     await editor.beforeNavigate()
   }
   const projects = useProjectActions(editor, resources, commands, beforeTransition, show)
-  const agreements = useAgreementCommands(editor, commands)
   const history = useHistoryCommands(editor, commands, entry => {
     resources.setProjects(current => current.map(project => project.id === entry.projectId ? { ...project, history: [entry, ...project.history.filter(item => item.id !== entry.id)] } : project))
   }, () => show('check'))
+  const agreements = useAgreementCommands(editor, commands)
   const [loading, setLoading] = useState(true)
   const [projectError, setProjectError] = useState<ErrorCode | ''>('')
   const blocker = useBlocker(() => !internal.current && (!!formGuard.current || !!editor.controller.current && editor.controller.current.status !== 'saved'))
@@ -77,14 +77,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           const data = await workflowApi<{ draft: WorkingDraft }>(`projects/${encodeURIComponent(decodeURIComponent(editProject))}/draft`)
           if (active) start.editor.install(data.draft)
         } else if (id) {
-          try {
-            const data = await workflowApi<{ draft: WorkingDraft }>(`drafts/${encodeURIComponent(id)}`)
-            if (active) start.editor.install(data.draft)
-          } catch (failure) {
-            if (!(failure instanceof WorkflowApiError) || failure.status !== 404) throw failure
-            const legacy = await workflowApi<{ revision: WorkingRevision & { projectId: string } }>(`legacy-drafts/${encodeURIComponent(id)}`)
-            const current = await workflowApi<{ draft: WorkingDraft }>(`projects/${legacy.revision.projectId}/draft`)
-            if (active) { start.editor.install(current.draft, id); start.editor.setLegacyRevision(legacy.revision) }
+          const linked = await readDraftLink(id)
+          if (!active) return
+          if (linked) {
+            start.editor.install(linked.draft, linked.legacy ? id : undefined)
+            start.editor.setLegacyRevision(linked.legacy)
+          } else {
+            const fallback = loaded[0] ? (await workflowApi<{ draft: WorkingDraft }>(`projects/${loaded[0].id}/draft`)).draft : null
+            if (active) start.editor.install(fallback)
           }
         } else if (loaded[0]) {
           const data = await workflowApi<{ draft: WorkingDraft }>(`projects/${loaded[0].id}/draft`)
@@ -122,15 +122,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const run = ++editor.navigation.current
     await beforeTransition()
     try {
-      let legacy: (WorkingRevision & { projectId: string }) | null = null
-      let draft: WorkingDraft
-      try { draft = (await workflowApi<{ draft: WorkingDraft }>(`drafts/${encodeURIComponent(id)}`)).draft }
-      catch (failure) {
-        if (!(failure instanceof WorkflowApiError) || failure.status !== 404) throw failure
-        legacy = (await workflowApi<{ revision: WorkingRevision & { projectId: string } }>(`legacy-drafts/${encodeURIComponent(id)}`)).revision
-        draft = (await workflowApi<{ draft: WorkingDraft }>(`projects/${legacy.projectId}/draft`)).draft
-      }
+      const linked = await readDraftLink(id)
       if (run !== editor.navigation.current) return
+      if (!linked) { syncDraftUrl(editor.controller.current?.confirmed.id ?? null); return }
+      const { draft, legacy } = linked
       editor.install(draft, legacy ? id : undefined); editor.setLegacyRevision(legacy); analysis.resetStatus()
       if (navigateToCheck) show('check')
     } catch (failure) { editor.report(failure); throw failure }
