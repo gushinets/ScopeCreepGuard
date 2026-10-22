@@ -14,7 +14,7 @@ export function ScopeCheckView() {
   const t = useTranslations()
   if (workflow?.legacyRevision) return <LegacyStateView />
   return <AgreementHost><div>
-    <div className="screen-heading"><div><h1>{t('nav.check')}</h1><p>{selectedProject ? t('design.checkIntro', { project: selectedProject.name }) : t('design.firstCheckIntro')}</p></div>{selectedProject && <Button variant="outline" onClick={() => setView('edit_project')}>{t('projects.editTitle')}</Button>}</div>
+    <div className="screen-heading"><div><h1>{t('nav.check')}</h1></div>{selectedProject && <Button variant="outline" onClick={() => setView('edit_project')}>{t('projects.editTitle')}</Button>}</div>
     {!selectedProject ? <RequestPanel /> : <div className="check-workbench"><RequestPanel /><div className="assessment-workspace"><ResultPanel /></div></div>}
   </div></AgreementHost>
 }

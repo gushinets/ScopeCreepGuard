@@ -45,7 +45,6 @@ export function RequestPanel() {
     return <div className="first-project project-start">
       <section className="first-project-copy">
         <h2>{t('projects.emptyTitle')}</h2>
-        <p>{t('check.noProjectDescription')}</p>
         <Button type="button" data-onboarding="create-project" onClick={() => setView('new_project')}><FolderPlus size={16} aria-hidden="true" />{t('projects.createFirst')}<ArrowRight size={16} aria-hidden="true" /></Button>
         <OnboardingSlot step={0} />
       </section>
