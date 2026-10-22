@@ -132,6 +132,10 @@
     "openaiNotice": "Checking sends this project's scope and your request text to OpenAI for analysis. Review the result before sending anything to your client."
   },
   "result": {
+    "tabsLabel": "Check results",
+    "tabScope": "Scope",
+    "tabReply": "Client reply",
+    "tabAgreement": "Agreement",
     "emptyTitle": "Ready when you are",
     "loading": "Comparing the request against your scope…",
     "errorTitle": "Analysis didn't complete",
@@ -448,8 +452,12 @@
     "step2Body": "Paste their message and run a check.",
     "step3Title": "Checking the request",
     "step3Body": "Your assessment and client reply will appear here.",
-    "step4Title": "Your assessment is ready",
-    "step4Body": "Review the verdict and its rationale. Below, you’ll find a reply you can edit and copy."
+    "step4Title": "Scope: the assessment",
+    "step4Body": "The verdict and its rationale are here. Open Client reply to review the message.",
+    "step5Title": "Client reply",
+    "step5Body": "Edit or copy the reply, choose its tone and language. Switch to Agreement when you need a document.",
+    "step6Title": "Agreement",
+    "step6Body": "Prepare and edit the document here. Changes save automatically; the PDF download is below the agreement. You can switch tabs at any time."
   },
   "design": {
     "workspace": "Workspace",

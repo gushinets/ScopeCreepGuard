@@ -87,6 +87,7 @@ it.each(['2027-02-01', ''])('restores current persisted estimate provenance for 
   const withResult = ({ children }: { children: ReactNode }) => wrapper({ children: <>{children}<ResultPanel /></> })
   const hook = renderHook(() => useStore(), { wrapper: withResult })
   await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+  fireEvent.click(await screen.findByRole('tab', { name: en.result.tabAgreement }))
   expect(screen.getByRole('button', { name: en.changeOrder.downloadPdf })).toBeTruthy()
   expect(hook.result.current.result?.commercialSignature).toBe(signature)
   expect(screen.queryByRole('button', { name: en.result.createChangeOrder })).toBeNull()
@@ -495,6 +496,7 @@ it.each([false, true])('autosaves agreement edits and downloads their exact cont
  try {
   const withEditor = ({ children }: { children: ReactNode }) => wrapper({ children: <>{children}<ResultPanel /></> })
   const hook = renderHook(() => useStore(), { wrapper: withEditor })
+  fireEvent.click(await screen.findByRole('tab', { name: en.result.tabAgreement }))
   await screen.findByRole('button', { name: en.changeOrder.downloadPdf })
   fireEvent.change(document.querySelector('#co-description')!, { target: { value: 'Manual extra work' } })
   fireEvent.change(document.querySelector('#co-additionalCost')!, { target: { value: '777.25' } })

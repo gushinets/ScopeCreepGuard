@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { IntlProvider } from 'use-intl'
 import en from '@/shared/i18n/messages/en.json'
 import { OnboardingProvider, OnboardingGuide, OnboardingSlot, SkipOnboarding, useOnboarding } from './index'
+import { useEffect } from 'react'
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
@@ -14,6 +15,57 @@ function Actions() {
 function mount() {
   return render(<IntlProvider locale="en" messages={en}><OnboardingProvider><Actions /></OnboardingProvider></IntlProvider>)
 }
+
+function ResultTabs() {
+  const { setResultStep } = useOnboarding()
+  useEffect(() => { setResultStep(4); return () => setResultStep(null) }, [setResultStep])
+  return <>{(['scope', 'reply', 'agreement'] as const).map((tab, index) => <div key={tab}>
+    <button data-onboarding={`tab-${tab}`} onClick={() => setResultStep(index + 4)}>{tab}</button><OnboardingSlot step={index + 4} />
+  </div>)}<SkipOnboarding /><OnboardingGuide /></>
+}
+function mountResults() {
+  return render(<IntlProvider locale="en" messages={en}><OnboardingProvider><ResultTabs /></OnboardingProvider></IntlProvider>)
+}
+
+it('explains actual tab switches with one guide and persists completion only on acknowledgement', async () => {
+  let status = 'in_progress'
+  const fetcher = vi.fn(async (_path, init?: RequestInit) => {
+    if (init?.method === 'POST') status = 'completed'
+    return Response.json({ status, step: status === 'completed' ? 4 : 3 })
+  })
+  vi.stubGlobal('fetch', fetcher)
+  const first = mountResults()
+  await screen.findByText(en.onboarding.step4Title)
+  fireEvent.click(screen.getByText('reply', { selector: 'button' }))
+  await screen.findByText(en.onboarding.step5Title)
+  expect(screen.getAllByRole('dialog')).toHaveLength(1)
+  expect(status).toBe('in_progress')
+  fireEvent.click(screen.getByText('agreement', { selector: 'button' }))
+  await screen.findByText(en.onboarding.step6Title)
+  expect(status).toBe('in_progress')
+  fireEvent.click(screen.getByRole('button', { name: en.onboarding.done }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(fetcher).toHaveBeenCalledWith('/api/v2/profile/onboarding', expect.objectContaining({ body: JSON.stringify({ event: 'result_viewed' }) }))
+  first.unmount()
+  mountResults()
+  await act(async () => {})
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+it.each(['scope', 'reply', 'agreement'])('skips the result tour from %s and cannot reactivate on another tab', async tab => {
+  let skipped = false
+  vi.stubGlobal('fetch', vi.fn(async (_path, init?: RequestInit) => {
+    if (init?.method === 'POST') skipped = true
+    return Response.json({ status: skipped ? 'skipped' : 'in_progress', step: 3 })
+  }))
+  mountResults()
+  await screen.findByRole('dialog')
+  fireEvent.click(screen.getByText(tab, { selector: 'button' }))
+  fireEvent.click(screen.getAllByRole('button', { name: en.onboarding.skip })[0])
+  await waitFor(() => expect(skipped).toBe(true))
+  fireEvent.click(screen.getByText('reply', { selector: 'button' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
 
 it.each([0, 1, 2, 3])('dismisses immediately and saves skip at step %s', async step => {
   const fetcher = vi.fn(async (_path, init?: RequestInit) => Response.json(init?.method === 'POST' ? { status: 'skipped', step } : { status: step ? 'in_progress' : 'not_started', step }))
@@ -49,15 +101,15 @@ it('uses one shared card across action steps, with progress inside that card', a
     return Response.json({ status: step ? 'in_progress' : 'not_started', step })
   }))
   mount()
-  await screen.findByText('Step 1 of 4')
+  await screen.findByText('Step 1 of 6')
   expect(screen.getAllByRole('dialog')).toHaveLength(1)
   expect(screen.queryByText('Getting started')).toBeNull()
   fireEvent.click(screen.getByText('Open form'))
-  await screen.findByText('Step 2 of 4')
+  await screen.findByText('Step 2 of 6')
   expect(screen.getAllByRole('dialog')).toHaveLength(1)
   expect(screen.queryByText('Create a project')).toBeNull()
   fireEvent.click(screen.getByText('Saved'))
-  await screen.findByText('Step 3 of 4')
+  await screen.findByText('Step 3 of 6')
   expect(screen.getAllByRole('dialog')).toHaveLength(1)
   expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
 })
