@@ -1,0 +1,7 @@
+# Fix onboarding test collection in backend CI
+
+- Branch/base: current `codex/design-onboarding`, HEAD `fb69bf2`; clean initial tree. Preserve prior work, no branch replacement.
+- Problem: unit and integration tests both use `test_onboarding.py`. Default pytest import mode loads both as `test_onboarding`, causing an import-file mismatch before tests run.
+- Scope: give the unit transition test module a unique name. Do not remove coverage, clear caches as a substitute, or change global pytest import mode/runtime behavior.
+- Steps: reproduce the two-file collection failure in Docker; rename the unit module to `test_onboarding_transitions.py`; collect the entire backend suite with `--require-integration`; run the renamed unit tests and PostgreSQL onboarding regressions using an owned disposable database.
+- Verification/handoff: reproduced the exact import-file mismatch in Docker with both original modules. After the unit-module rename, full `pytest --require-integration --collect-only -q` succeeded: 942 tests collected, exit 0. Six transition unit cases and two real PostgreSQL onboarding migration/persistence cases passed using owned disposable databases. Test contents and application behavior are unchanged. Full backend execution/lint/typecheck CI was not rerun; this fixes the reported collection blocker, not a claim that all subsequent CI stages are green. Owner: current task. Follow-up: user authorized commit/push of this fix to the existing PR #37.
