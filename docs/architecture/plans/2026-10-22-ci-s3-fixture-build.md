@@ -1,0 +1,7 @@
+# Diagnose and harden the test S3 image build
+
+- Branch/base: current `codex/design-onboarding`, published HEAD `2796ba0`; preserve prior work.
+- Reported CI: 943 tests passed, test S3-server image build failed before S3 assertions. Captured Docker stderr is omitted from the pytest failure, so the log does not establish the build failure's cause.
+- Steps: reproduce the exact Docker build with plain progress; surface build/runtime stderr on subprocess failures; fix the verified infrastructure cause without skipping S3 coverage; run real conditional upload and restart persistence checks plus targeted static checks; commit and push the follow-up to PR #37.
+- Scope: owned test storage fixture and diagnostics. Do not alter production S3 behavior, skip tests or weaken conditional writes/ownership checks.
+- Verification/handoff: previous local build interrupted with Docker RPC EOF; original CI cause cannot be reconstructed because stderr was hidden. Retained the same pinned source release and added bounded Go concurrency/soft memory target plus BuildKit caches. Cold build passed; actual Docker MinIO conditional upload/restart persistence plus diagnostic regressions passed (3 tests). Separate Docker diagnostic tests and targeted Ruff/format checks passed. See [verification record](../evidence/2026-10-22-ci-s3-fixture-build/README.md) for environment details and limitations. Owner: current task. User has authorized publication to existing PR #37.

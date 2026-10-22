@@ -14,19 +14,26 @@ from scope_guard.integrations.storage.s3 import S3ObjectStorage
 pytestmark = pytest.mark.integration
 
 
+def docker(*args):
+    result = subprocess.run(["docker", *args], capture_output=True, text=True)
+    if result.returncode:
+        pytest.fail(
+            f"docker {args[0]} failed (exit {result.returncode})\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+            pytrace=False,
+        )
+    return result.stdout.strip()
+
+
 def test_conditional_s3_upload_and_storage_restart():
     token = uuid4().hex
     name = "scg-s3-test-" + token
-
-    def docker(*args):
-        return subprocess.run(
-            ["docker", *args], check=True, capture_output=True, text=True
-        ).stdout.strip()
 
     root = Path(__file__).resolve().parents[3]
     image = "scope-guard-s3-test:release20250422"
     docker(
         "build",
+        "--progress=plain",
         "-f",
         str(Path(__file__).with_name("storage-server.Dockerfile")),
         "-t",
