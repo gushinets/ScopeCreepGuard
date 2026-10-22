@@ -11,7 +11,7 @@ import { commercialSignature } from '@/features/change-orders/contracts'
 import { Button } from '@/shared/ui/button'
 import { ScopeAssessment } from '@/features/analysis/scope-assessment'
 import { ClientReply } from '@/features/analysis/client-reply'
-import { ChangeOrder, AgreementSurface } from '@/features/change-orders'
+import { ChangeOrder } from '@/features/change-orders'
 import { VerdictFeedback } from '@/features/analysis/verdict-feedback'
 import { useProjects } from '@/features/projects'
 import { useDrafts } from '@/features/drafts'
@@ -22,19 +22,14 @@ import { useWorkspaceNavigation } from '@/shared/ui/navigation'
 import { invalidAiEstimate } from './model/invalid-estimate'
 
 export function ResultPanel() {
-  const { status, result, runCheck, analysisProject: selectedProject, draftSessionId, draftDocument } = { ...useProjects(), ...useDrafts(), ...useAnalysis(), ...useSession(), ...useAgreements(), ...useWorkspaceNavigation() }
-
-  const onboarding = useOnboarding()
-  useEffect(() => {
-    if (status === 'result' && result && selectedProject && onboarding.state?.step === 3) void onboarding.send('result_viewed')
-  }, [status, result, selectedProject, onboarding.state?.step, onboarding.send])
+  const { status, result, runCheck, analysisProject: selectedProject, draftSessionId } = { ...useProjects(), ...useDrafts(), ...useAnalysis(), ...useSession(), ...useAgreements(), ...useWorkspaceNavigation() }
 
   if (status === 'idle') return <EmptyState />
   if (status === 'loading') return <LoadingState />
   if (status === 'error') return <ErrorState onRetry={runCheck} />
   if (status === 'short_scope') return <ShortScopeState />
   if (status === 'result' && result && selectedProject) {
-    return <><OnboardingSlot step={4} /><ResultState key={`${draftSessionId}:${result.clientLanguage}:${draftDocument?.languageSelection?.requestHash ?? ''}`} /></>
+    return <ResultState key={draftSessionId} />
   }
   return <EmptyState />
 }
@@ -128,9 +123,16 @@ function ResultState() {
     { ...useProjects(), ...useDrafts(), ...useAnalysis(), ...useSession(), ...useAgreements(), ...useWorkspaceNavigation() }
   const t = useTranslations()
   const locale = useLocale()
+  const [tab, setTab] = useState<'scope' | 'reply' | 'agreement'>('scope')
+  const { setResultStep } = useOnboarding()
+  useEffect(() => {
+    setResultStep(tab === 'scope' ? 4 : tab === 'reply' ? 5 : 6)
+    return () => setResultStep(null)
+  }, [tab, setResultStep])
   const languageName = (code: string) => new Intl.DisplayNames([locale], { type: 'language' }).of(code) ?? code
   const [showChangeOrder, setShowChangeOrder] = useState(!!currentDraftId && !!draftDocument?.changeOrder)
   const [documentLanguage, setDocumentLanguage] = useState(result?.clientLanguage ?? '')
+  useEffect(() => { setDocumentLanguage(result?.clientLanguage ?? '') }, [result?.clientLanguage])
   const languageError = documentLanguage && !supportedClientLanguage(documentLanguage) ? t('errors.clientLanguageUnsupported') : ''
   const [generating, setGenerating] = useState(false)
   const [estimateError, setEstimateError] = useState('')
@@ -175,9 +177,30 @@ function ResultState() {
   }
 
   return (
-    <div className="result-content">
+    <div className="result-workspace">
+      <div className="result-tabs" role="tablist" aria-label={t('result.tabsLabel')}>
+        {(['scope', 'reply', 'agreement'] as const).map((name, index, tabs) => <button
+          key={name} type="button" role="tab" id={`result-tab-${name}`} aria-controls={`result-panel-${name}`}
+          aria-selected={tab === name} tabIndex={tab === name ? 0 : -1} data-onboarding={`tab-${name}`}
+          onClick={() => setTab(name)}
+          onKeyDown={event => {
+            const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null
+            if (next === null) return
+            event.preventDefault()
+            setTab(tabs[next])
+            document.getElementById(`result-tab-${tabs[next]}`)?.focus()
+          }}
+        >{t(`result.tab${name === 'scope' ? 'Scope' : name === 'reply' ? 'Reply' : 'Agreement'}`)}</button>)}
+      </div>
+      <div id="result-panel-scope" role="tabpanel" aria-labelledby="result-tab-scope" hidden={tab !== 'scope'} tabIndex={0}>
+      <OnboardingSlot step={4} />
+      <div className="result-content">
       <ScopeAssessment result={result} request={analyzedRequest} />
-
+      <VerdictFeedback key={currentHistoryEntryId ?? 'unlabeled'} />
+      </div></div>
+      <div id="result-panel-reply" role="tabpanel" aria-labelledby="result-tab-reply" hidden={tab !== 'reply'} tabIndex={0}>
+      <OnboardingSlot step={5} />
+      <div className="result-content">
       <ClientReply
         key={material.clientLanguage}
         result={material}
@@ -188,18 +211,6 @@ function ResultState() {
         projectId={selectedProject.id}
         request={analyzedRequest ?? ''}
       />
-
-      {estimateError && <p role="alert" className="text-sm text-outscope-text">{estimateError}</p>}
-
-      {needsEstimate && <Button type="button" variant="outline" className="self-start" disabled={generating || !!workflow?.archived} onClick={() => void refreshEstimate()}>{generating ? t('result.generatingChangeOrder') : t('result.refreshEstimate')}</Button>}
-      {showChangeOrder && draftDocument?.changeOrder && <a className="inline-flex w-fit items-center rounded-md border border-border px-3 py-2 text-sm" href="#agreement-workspace">{t('changeOrder.heading')}</a>}
-      {showChangeOrder && user && draftDocument?.changeOrder ? (
-        <AgreementSurface><ChangeOrder result={material} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId ?? draftSessionId} userId={user.id} draft={draftDocument.changeOrder} onDraftChange={updateChangeOrder} disabled={generating || !!workflow?.archived || false} draftId={currentDraftId} savedUnchanged={!isDraftDirty} durableWorkflow onDownloadPdf={downloadAgreementPdf} /></AgreementSurface>
-      ) : (
-        <Button type="button" variant="outline" className="h-9 self-start" onClick={() => void openChangeOrder()} disabled={generating || !!workflow?.archived}>
-          {generating ? t('result.generatingChangeOrder') : t('result.prepareAgreement')}
-        </Button>
-      )}
       <section className="client-language-control rounded-lg bg-muted p-4">
         <label htmlFor="co-document-language" className="text-sm font-medium">{t('result.documentLanguage')}</label>
         <p className="mt-2 text-xs text-muted-foreground">{t('result.clientLanguageHint', { language: languageName(material.clientLanguage ?? 'en') })}</p>
@@ -211,7 +222,20 @@ function ResultState() {
         </div>
         <p id="client-language-feedback" role={languageError ? 'alert' : undefined} className="mt-2 text-xs text-muted-foreground">{languageError || t('result.supportedClientLanguages')}</p>
       </section>
-      <VerdictFeedback key={currentHistoryEntryId ?? 'unlabeled'} />
+      </div></div>
+      <div id="result-panel-agreement" role="tabpanel" aria-labelledby="result-tab-agreement" hidden={tab !== 'agreement'} tabIndex={0}>
+      <OnboardingSlot step={6} />
+      <div className="result-content">
+      {needsEstimate && <Button type="button" variant="outline" className="self-start" disabled={generating || !!workflow?.archived} onClick={() => void refreshEstimate()}>{generating ? t('result.generatingChangeOrder') : t('result.refreshEstimate')}</Button>}
+      {showChangeOrder && user && draftDocument?.changeOrder ? (
+        <ChangeOrder result={material} projectName={selectedProject.name} projectId={selectedProject.id} historyId={currentHistoryEntryId ?? draftSessionId} userId={user.id} draft={draftDocument.changeOrder} onDraftChange={updateChangeOrder} disabled={generating || !!workflow?.archived || false} draftId={currentDraftId} savedUnchanged={!isDraftDirty} durableWorkflow onDownloadPdf={downloadAgreementPdf} />
+      ) : (
+        <Button type="button" variant="outline" className="h-9 self-start" onClick={() => void openChangeOrder()} disabled={generating || !!workflow?.archived}>
+          {generating ? t('result.generatingChangeOrder') : t('result.prepareAgreement')}
+        </Button>
+      )}
+      </div></div>
+      {estimateError && <p role="alert" className="mt-4 text-sm text-outscope-text">{estimateError}</p>}
     </div>
   )
 }

@@ -34,6 +34,10 @@ it.each(['en', 'ru'] as const)('prepares only on action and isolates failure in 
   expect(screen.getByText(analysisFixture.suggestion!)).toBeTruthy()
   expect(screen.queryByText('Hidden historical scope')).toBeNull()
   expect(screen.queryByText('Agreement editor')).toBeNull()
+  expect(screen.getByRole('tab', { name: 'Scope' }).getAttribute('aria-selected')).toBe('true')
+  expect(screen.getAllByRole('tabpanel')).toHaveLength(1)
+  fireEvent.click(screen.getByRole('tab', { name: messages.result.tabAgreement }))
+  expect(prepareAgreement).not.toHaveBeenCalled()
   fireEvent.click(screen.getByRole('button', { name: messages.result.prepareAgreement }))
   expect(prepareAgreement).toHaveBeenCalledTimes(1)
   const busy = screen.getByRole('button', { name: messages.result.generatingChangeOrder }) as HTMLButtonElement
@@ -44,6 +48,8 @@ it.each(['en', 'ru'] as const)('prepares only on action and isolates failure in 
   expect(screen.getByText('Client replies')).toBeTruthy()
   expect(screen.getByRole('alert').textContent).toBe(messages.result.changeOrderError)
   expect(screen.getByRole('button', { name: messages.result.prepareAgreement })).toBeTruthy()
+  fireEvent.click(screen.getByRole('tab', { name: messages.result.tabReply }))
+  expect(screen.getByRole('tabpanel').textContent).toContain('Client replies')
 })
 
 it('restores an existing agreement without provider work', () => {
@@ -53,9 +59,39 @@ it('restores an existing agreement without provider work', () => {
     workflow: { prepareAgreement, archived: false },
   }
   render(<IntlProvider locale="en" messages={en}><ResultPanel /></IntlProvider>)
+  fireEvent.click(screen.getByRole('tab', { name: en.result.tabAgreement }))
   expect(screen.getByText('Agreement editor')).toBeTruthy()
   expect(prepareAgreement).not.toHaveBeenCalled()
   expect(screen.queryByRole('button', { name: en.result.prepareAgreement })).toBeNull()
+})
+
+it('supports keyboard navigation and keeps panels mounted without generating', () => {
+  const prepareAgreement = vi.fn()
+  state.current = { ...state.current, result: analysisFixture, draftDocument: documentFixture, workflow: { prepareAgreement, archived: false } }
+  const view = render(<IntlProvider locale="en" messages={en}><ResultPanel /></IntlProvider>)
+  const scope = screen.getByRole('tab', { name: 'Scope' })
+  fireEvent.keyDown(scope, { key: 'ArrowRight' })
+  const reply = screen.getByRole('tab', { name: en.result.tabReply })
+  expect(document.activeElement).toBe(reply)
+  expect(screen.getByRole('tabpanel').id).toBe('result-panel-reply')
+  const select = screen.getByLabelText(en.result.documentLanguage) as HTMLSelectElement
+  fireEvent.change(select, { target: { value: 'ru' } })
+  fireEvent.keyDown(reply, { key: 'End' })
+  expect(screen.getByRole('tabpanel').id).toBe('result-panel-agreement')
+  fireEvent.keyDown(screen.getByRole('tab', { name: en.result.tabAgreement }), { key: 'ArrowLeft' })
+  expect(screen.getByLabelText(en.result.documentLanguage)).toBe(select)
+  expect(select.value).toBe('ru')
+  // Ordinary result updates must not reset the selected panel.
+  state.current = { ...state.current, result: { ...analysisFixture, clientLanguage: 'ru' } }
+  view.rerender(<IntlProvider locale="en" messages={en}><ResultPanel /></IntlProvider>)
+  expect(screen.getByRole('tabpanel').id).toBe('result-panel-reply')
+  expect(prepareAgreement).not.toHaveBeenCalled()
+  // A new check unmounts results while loading and starts at Scope.
+  state.current = { ...state.current, status: 'loading' }
+  view.rerender(<IntlProvider locale="en" messages={en}><ResultPanel /></IntlProvider>)
+  state.current = { ...state.current, status: 'result' }
+  view.rerender(<IntlProvider locale="en" messages={en}><ResultPanel /></IntlProvider>)
+  expect(screen.getByRole('tabpanel').id).toBe('result-panel-scope')
 })
 
 
