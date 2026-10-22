@@ -87,7 +87,7 @@ it.each(['2027-02-01', ''])('restores current persisted estimate provenance for 
   const withResult = ({ children }: { children: ReactNode }) => wrapper({ children: <>{children}<ResultPanel /></> })
   const hook = renderHook(() => useStore(), { wrapper: withResult })
   await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
-  expect(screen.queryByRole('button', { name: en.drafts.save })).toBeNull()
+  expect(screen.getByRole('button', { name: en.changeOrder.downloadPdf })).toBeTruthy()
   expect(hook.result.current.result?.commercialSignature).toBe(signature)
   expect(screen.queryByRole('button', { name: en.result.createChangeOrder })).toBeNull()
   hook.unmount()
@@ -447,4 +447,80 @@ it('does not discover or clear recovery belonging to a different user or Draft',
   await act(async () => hook.result.current.saveDraft())
   expect(localStorage.getItem(foreignUser)).toContain('Private foreign text')
   expect(localStorage.getItem(foreignDraft)).toContain('Private foreign text')
+})
+
+it('archives a project out of Projects and Drafts; opening its history never activates it', async () => {
+ const originalFetch = vi.mocked(fetch).getMockImplementation()!
+ let archived = false
+ vi.mocked(fetch).mockImplementation(async (input, init) => {
+  const url = String(input)
+  if (url === '/api/v2/projects/p1' && init?.method === 'DELETE') { archived = true; return Response.json({ ok: true }) }
+  if (url === '/api/v2/projects' && archived) return Response.json({ projects: [] })
+  if (url === '/api/v2/projects?archived=true') return Response.json({ projects: [{ ...project, archivedAt: '2026-10-22' }] })
+  return originalFetch(input, init)
+ })
+ const hook = renderHook(() => useStore(), { wrapper })
+ await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+ await act(async () => hook.result.current.deleteProject('p1'))
+ expect(hook.result.current.projects).toEqual([])
+ expect(hook.result.current.currentDraftId).toBeNull()
+ const readsBefore = requests.filter(url => url.endsWith('/draft')).length
+ await act(async () => hook.result.current.workflow.openArchived(project as never))
+ expect(hook.result.current.view).toBe('history')
+ expect(hook.result.current.projects).toEqual([])
+ expect(hook.result.current.currentDraftId).toBeNull()
+ expect(await hook.result.current.listDrafts()).toEqual([])
+ expect(requests.filter(url => url.endsWith('/draft')).length).toBe(readsBefore)
+ expect(window.location.search).toContain('historyProject=p1')
+})
+
+it.each([false, true])('autosaves agreement edits and downloads their exact content without manual History/finalization (stale check: %s)', async stale => {
+ analyzedDraft(); saved.analysisIsStale = stale; saved.draftDocument.changeOrder = changeOrder('2027-02-01')
+ const originalAnalysis = structuredClone(saved.analysisRun)
+ const originalFetch = vi.mocked(fetch).getMockImplementation()!
+ const createUrl = URL.createObjectURL, revokeUrl = URL.revokeObjectURL
+ Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:agreement') })
+ Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
+ const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+ let pdfRequests = 0
+ vi.mocked(fetch).mockImplementation(async (input, init) => {
+  if (String(input) === '/api/v2/change-orders/pdf') {
+   pdfRequests++
+   expect(saved.draftDocument.changeOrder).toMatchObject({ description: 'Manual extra work', additionalCost: '777.25', currency: 'EUR' })
+   expect(JSON.parse(String(init?.body))).toEqual({ projectId: 'p1', changeOrder: saved.draftDocument.changeOrder })
+   return new Response('%PDF-1.4 synthetic document', { headers: { 'content-type': 'application/pdf', 'content-disposition': 'attachment; filename="change-order-p1.pdf"' } })
+  }
+  return originalFetch(input, init)
+ })
+ try {
+  const withEditor = ({ children }: { children: ReactNode }) => wrapper({ children: <>{children}<ResultPanel /></> })
+  const hook = renderHook(() => useStore(), { wrapper: withEditor })
+  await screen.findByRole('button', { name: en.changeOrder.downloadPdf })
+  fireEvent.change(document.querySelector('#co-description')!, { target: { value: 'Manual extra work' } })
+  fireEvent.change(document.querySelector('#co-additionalCost')!, { target: { value: '777.25' } })
+  await waitFor(() => expect(saved.draftDocument.changeOrder?.additionalCost).toBe('777.25'))
+  expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Save to History' })).toBeNull()
+  expect(screen.queryByRole('button', { name: en.workflow.finalize })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: en.changeOrder.downloadPdf }))
+  await waitFor(() => expect(click).toHaveBeenCalledOnce())
+  expect(pdfRequests).toBe(1)
+  expect(vi.mocked(fetch).mock.calls.some(([url, init]) => String(url).endsWith('/history') && init?.method === 'POST')).toBe(false)
+  expect(saved.analysisRun).toEqual(originalAnalysis)
+  expect(hook.result.current.view).toBe('check')
+  expect(hook.result.current.currentDraftId).toBe('d1')
+ } finally { click.mockRestore(); Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createUrl }); Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeUrl }) }
+})
+
+it('retains edits and does not download a document when its save barrier fails', async () => {
+ analyzedDraft(); saved.draftDocument.changeOrder = changeOrder('2027-02-01')
+ const originalFetch = vi.mocked(fetch).getMockImplementation()!
+ vi.mocked(fetch).mockImplementation(async (input, init) => String(input) === '/api/v2/drafts/d1' && init?.method === 'PUT' ? Response.json({ error: 'errors.requestFailed' }, { status: 503 }) : originalFetch(input, init))
+ const hook = renderHook(() => useStore(), { wrapper })
+ await waitFor(() => expect(hook.result.current.isLoadingProjects).toBe(false))
+ act(() => hook.result.current.updateChangeOrder({ ...hook.result.current.draftDocument!.changeOrder!, description: 'Keep this unsaved edit' }))
+ await act(async () => { await expect(hook.result.current.downloadAgreementPdf(new AbortController().signal)).rejects.toThrow('errors.requestFailed') })
+ expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url) === '/api/v2/change-orders/pdf')).toBe(false)
+ expect(hook.result.current.draftDocument?.changeOrder?.description).toBe('Keep this unsaved edit')
+ expect(hook.result.current.currentDraftId).toBe('d1')
 })

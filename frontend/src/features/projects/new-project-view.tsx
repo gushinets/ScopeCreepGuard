@@ -12,6 +12,7 @@ import type { Currency, Industry, PricingModel } from '@/shared/api/models'
 import { DeleteProjectAction } from '@/features/projects/delete-project-action'
 import { useProjects } from './resources'
 import { useWorkspaceNavigation } from '@/shared/ui/navigation'
+import { OnboardingSlot, useOnboarding } from '@/features/onboarding'
 
 type Fields = { name: string; scope: string; industry: Industry; startDate: string; pricingModel: PricingModel; currency: Currency; hourlyRate: string; fixedPrice: string }
 const emptyDetails: ProjectDetails = { clientName: '', clientEmail: '', endDate: '' }
@@ -21,6 +22,8 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
   const { createProject, updateProject, selectedProject, setView, registerForm } = { ...useProjects(), ...useWorkspaceNavigation() }
   const project = edit ? selectedProject : null
   const t = useTranslations()
+  const onboarding = useOnboarding()
+  useEffect(() => { if (!edit) void onboarding.send('form_opened') }, [edit, onboarding.send])
   const [fields, setFields] = useState<Fields>({
     name: project?.name ?? '', scope: project?.scope ?? '', industry: project?.industry ?? 'Design',
     startDate: project?.startDate ?? '', pricingModel: project?.pricingModel ?? 'hourly',
@@ -104,6 +107,7 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
     setSaving(true)
     try {
       await (project ? await updateProject(project.id, { ...fields, clientName: details.clientName }, details) : await createProject({ ...fields, clientName: details.clientName, clientEmail: details.clientEmail || null, endDate: details.endDate || null }))
+      if (!project) void onboarding.send('project_saved')
     } catch (error) {
       setSaveError(assertErrorCode(error instanceof Error ? error.message : ''))
     } finally { setSaving(false) }
@@ -121,23 +125,26 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
     </div>
   }
 
-  return <div className="mx-auto max-w-2xl">
+  return <div className="project-editor">
     <button type="button" onClick={() => setView('projects')} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft className="size-4" aria-hidden="true" />{t('projects.backToProjects')}</button>
-    <h2 className="mt-4 text-xl font-semibold text-foreground">{t(project ? 'projects.editTitle' : 'projects.newTitle')}</h2>
-    <p className="mt-1 text-sm text-muted-foreground">{t('projects.newDescription')}</p>
-    <form ref={form} noValidate onSubmit={submit} className="mt-6 flex flex-col gap-5">
+    <div className="screen-heading mt-5"><div><h1>{t(project ? 'projects.editTitle' : 'projects.newTitle')}</h1><p>{t('projects.newDescription')}</p></div></div>
+    <div className="project-editor-grid"><form ref={form} noValidate onSubmit={submit} className="project-editor-form">
+      <section className="form-section"><h2>{t('design.projectDetails')}</h2><div className="form-grid two">
       {field('name', t('projects.nameLabel'), fields.name, (v) => change('name', v), { error: errors.name && t(errors.name), placeholder: t('projects.namePlaceholder') })}
       <div>
         <label htmlFor="project-industry" className="mb-1.5 block text-sm font-medium">{t('projects.industryLabel')} <span className="font-normal text-muted-foreground">{t('projects.required')}</span></label>
         <select id="project-industry" name="industry" value={fields.industry} onChange={(e) => change('industry', e.target.value as Industry)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring">{industries.map((i) => <option key={i} value={i}>{t(`industry.${i}`)}</option>)}</select>
       </div>
+      </div></section><section className="form-section"><h2>{t('design.agreedScope')}</h2>
       <div>
         <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2"><label htmlFor="project-scope" className="text-sm font-medium">{t('projects.scopeLabel')} <span className="font-normal text-muted-foreground">{t('projects.required')}</span></label><Button type="button" variant="outline" className="h-8 text-xs" onClick={() => fileInput.current?.click()}>{t('projects.uploadScope')}</Button><input ref={fileInput} type="file" accept=".txt,.md,.pdf,text/plain,application/pdf" className="hidden" onChange={upload} /></div>
-        <textarea id="project-scope" name="scope" value={fields.scope} onChange={(e) => changeScope(e.target.value)} rows={8} placeholder={t('projects.scopePlaceholder')} aria-invalid={!!errors.scope} aria-describedby={errors.scope ? 'project-scope-error' : undefined} className="w-full resize-y rounded-lg border border-input bg-background p-3 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-ring" />
+        {!edit && <OnboardingSlot step={1} />}
+        <textarea id="project-scope" name="scope" value={fields.scope} onChange={(e) => changeScope(e.target.value)} rows={9} placeholder={t('projects.scopePlaceholder')} aria-invalid={!!errors.scope} aria-describedby={errors.scope ? 'project-scope-error' : undefined} className="w-full resize-y rounded-lg border border-input bg-background p-3 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-ring" />
         {errors.scope && <p id="project-scope-error" className="text-xs text-outscope-text" role="alert">{t(errors.scope)}</p>}
         <p className="mt-1 text-xs text-muted-foreground">{t('projects.uploadHint')}</p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      </section><section className="form-section"><h2>{t('design.commercialTerms')}</h2><div className="form-grid">
+      <div className="form-grid two">
         {field('startDate', t('projects.startDate'), fields.startDate, (v) => change('startDate', v), { type: 'date', error: errors.startDate && t(errors.startDate) })}
         {field('endDate', t('projects.endDate'), details.endDate, (v) => optional('endDate', v), { type: 'date', optional: true, error: attempted && endInvalid ? t('projects.endDateError') : '' })}
       </div>
@@ -146,16 +153,18 @@ export function NewProjectView({ edit = false }: { edit?: boolean }) {
         <div><label htmlFor="project-currency" className="mb-1.5 block text-sm font-medium">{t('projects.currency')} <span className="font-normal text-muted-foreground">{t('projects.required')}</span></label><select id="project-currency" name="currency" value={fields.currency} onChange={(e) => change('currency', e.target.value as Currency)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring">{(['RUB', 'USD', 'EUR'] as const).map((c) => <option key={c}>{c}</option>)}</select></div>
       </div>
       {fields.pricingModel === 'hourly' ? field('hourlyRate', t('projects.hourlyRate'), fields.hourlyRate, (v) => change('hourlyRate', v), { type: 'number', error: errors.hourlyRate && t(errors.hourlyRate) }) : field('fixedPrice', t('projects.fixedPrice'), fields.fixedPrice, (v) => change('fixedPrice', v), { type: 'number', error: errors.fixedPrice && t(errors.fixedPrice) })}
-      <div className="grid gap-4 sm:grid-cols-2">
+      </div></section><section className="form-section"><h2>{t('design.clientDetails')}</h2>
+      <div className="form-grid two">
         {field('clientName', t('projects.clientLabel'), details.clientName, (v) => optional('clientName', v), { optional: true, placeholder: t('projects.clientPlaceholder') })}
         {field('clientEmail', t('projects.clientEmail'), details.clientEmail, (v) => optional('clientEmail', v), { optional: true, type: 'email', error: attempted && emailInvalid ? t('errors.invalidEmail') : '' })}
       </div>
+      </section>
       {uploadError && <p role="alert" className="text-sm text-outscope-text">{t(uploadError)}</p>}
       {extracting && <div role="status"><p>{t('projects.extracting')}</p><Button type="button" variant="ghost" onClick={() => { extraction.current?.abort(); extraction.current = null; setExtracting(false) }}>{t('projects.cancelExtraction')}</Button></div>}
       {uploadWarnings.map((warning) => <p role="status" key={warning.code}>{warning.code === 'pages_without_text' ? t('projects.pagesWithoutText', { pages: warning.pageNumbers.join(', ') }) : t('projects.nulRemoved')}</p>)}
       {saveError && <p role="alert" className="text-sm text-outscope-text">{t(saveError)}</p>}
-      <div className="flex gap-2"><Button type="submit" disabled={saving || extracting}>{saving ? t('projects.saving') : t('projects.save')}</Button><Button type="button" variant="ghost" onClick={() => setView('projects')}>{t('projects.cancel')}</Button></div>
-    </form>
+      <div className="project-form-actions"><Button type="submit" disabled={saving || extracting}>{saving ? t('projects.saving') : t('projects.save')}</Button><Button type="button" variant="ghost" onClick={() => setView('projects')}>{t('projects.cancel')}</Button></div>
+    </form></div>
     {project && <div className="mt-8 border-t border-border pt-5"><DeleteProjectAction project={project} disabled={saving} /></div>}
   </div>
 }

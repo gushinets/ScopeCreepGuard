@@ -1,3 +1,4 @@
+import { useOnboarding } from '@/features/onboarding'
 import { useEffect, useState } from 'react'
 import { useLocale, useTranslations } from 'use-intl'
 import { WorkflowApiError, workflowApi, type DraftEditor, type WorkflowOperations, type WorkingDraft } from '@/features/drafts'
@@ -6,6 +7,7 @@ import type { AnalysisResult, Project, EvaluationAccuracy, Verdict } from '@/sha
 import { featureContext } from '@/shared/ui/feature-context'
 
 export function useAnalysisOperations(editor: DraftEditor, commands: WorkflowOperations, refreshProjects: () => Promise<unknown>) {
+  const onboarding = useOnboarding()
   const locale = useLocale()
   const t = useTranslations()
   const [phase, setPhase] = useState<'loading' | 'error' | null>(null)
@@ -30,6 +32,7 @@ export function useAnalysisOperations(editor: DraftEditor, commands: WorkflowOpe
       if (!response.applied || !response.draft) {
         if (BigInt(current.confirmed.revision) <= BigInt(saved.revision)) current.markConflict(new WorkflowApiError(ERROR_CODES.draftConflict, 409))
       } else applied = editor.applyOperationResponse(current, edits, response.draft, saved.revision)
+      if (applied) { void onboarding.send('check_submitted') }
       if (applied && response.historyEntryId) editor.setHistoryId(response.historyEntryId)
       setPhase(null)
       if (response.historyEntryId) await refreshProjects()

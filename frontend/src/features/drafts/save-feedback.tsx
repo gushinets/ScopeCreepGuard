@@ -8,7 +8,7 @@ export function SaveFeedback() {
   if (!workflow || !currentDraftId) return null
   const failed = workflow.status === 'failed' || workflow.status === 'conflict'
   const unconfirmed = failed || !!workflow.recovery
-  return <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
+  return <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
     <p role={unconfirmed ? 'alert' : 'status'} className={unconfirmed ? 'text-sm text-outscope-text' : 'text-xs text-muted-foreground'}>
       {t(unconfirmed ? 'workflow.failed' : workflow.status === 'saved' ? 'workflow.saved' : 'workflow.saving')}
     </p>

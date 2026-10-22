@@ -1,8 +1,9 @@
-import { ArrowRight, FolderPlus, Plus } from 'lucide-react'
+import { OnboardingSlot } from '@/features/onboarding'
+import { ArrowRight, Plus } from 'lucide-react'
 import { useLocale, useTranslations } from 'use-intl'
 import { Button } from '@/shared/ui/button'
 import { localeToDateLocale, type Locale } from '@/shared/i18n/config'
-import type { Industry } from '@/shared/api/models'
+import type { Industry, Project } from '@/shared/api/models'
 import { DeleteProjectAction } from '@/features/projects/delete-project-action'
 import { useProjects } from './resources'
 import { useWorkspaceNavigation } from '@/shared/ui/navigation'
@@ -20,86 +21,28 @@ function industryLabelKey(industry: Industry) {
   return `industry.${industry}` as const
 }
 
+function terms(project: Project, locale: string) {
+  const amount = project.pricingModel === 'hourly' ? project.hourlyRate : project.fixedPrice
+  if (amount == null || amount === '' || !Number.isFinite(Number(amount))) return '—'
+  return new Intl.NumberFormat(locale, { style: project.currency ? 'currency' : 'decimal', currency: project.currency ?? undefined }).format(Number(amount))
+}
+
 export function ProjectsView() {
   const { projects, selectProject, setView } = { ...useProjects(), ...useWorkspaceNavigation() }
   const locale = useLocale()
   const t = useTranslations()
 
-  return (
-    <div className="mx-auto max-w-3xl">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">
-            {t('projects.title')}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('projects.description')}
-          </p>
-        </div>
-        <Button type="button" className="h-9" onClick={() => setView('new_project')}>
-          <Plus aria-hidden="true" />
-          {t('projects.newProject')}
-        </Button>
-      </div>
-
-      {projects.length === 0 ? (
-        <div className="mt-8 rounded-xl border border-dashed border-border bg-card/50 p-10 text-center">
-          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
-            <FolderPlus className="size-6 text-muted-foreground" aria-hidden="true" />
-          </span>
-          <h3 className="mt-4 text-base font-semibold text-foreground">
-            {t('projects.emptyTitle')}
-          </h3>
-          <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground text-pretty">
-            {t('projects.emptyDescription')}
-          </p>
-          <Button
-            type="button"
-            className="mt-4 h-9"
-            onClick={() => setView('new_project')}
-          >
-            <Plus aria-hidden="true" />
-            {t('projects.createFirst')}
-          </Button>
-        </div>
-      ) : (
-        <ul className="mt-6 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
-          {projects.map((p) => (
-            <li key={p.id} className="flex items-center">
-              <button
-                type="button"
-                onClick={() => {
-                  selectProject(p.id)
-                  setView('check')
-                }}
-                className="flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {p.name}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {t(industryLabelKey(p.industry))} ·{' '}
-                    {p.lastChecked
-                      ? t('projects.lastChecked', {
-                          date: formatDate(p.lastChecked, locale),
-                        })
-                      : t('projects.notCheckedYet')}
-                  </p>
-                </div>
-                <ArrowRight
-                  className="size-4 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
-              </button>
-              <Button type="button" variant="ghost" className="mr-3" onClick={() => selectProject(p.id, 'edit_project')}>
-                {t('projects.edit')}
-              </Button>
-              <div className="mr-3"><DeleteProjectAction project={p} /></div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
+  return <section>
+    <div className="screen-heading"><div><h1>{t('projects.title')}</h1><p>{t('projects.description')}</p></div>{projects.length > 0 && <Button type="button" data-onboarding="create-project" onClick={() => setView('new_project')}><Plus size={16} aria-hidden="true" />{t('projects.newProject')}</Button>}</div>
+    {projects.length > 0 && <OnboardingSlot step={0} />}
+    {projects.length === 0 ? <div className="collection-empty project-start"><h2>{t('projects.emptyTitle')}</h2><p>{t('projects.emptyDescription')}</p><Button data-onboarding="create-project" onClick={() => setView('new_project')}><Plus size={16} aria-hidden="true" />{t('projects.createFirst')}<ArrowRight size={16} aria-hidden="true" /></Button><OnboardingSlot step={0} /></div> :
+    <table className="project-table"><thead><tr><th>{t('projects.nameLabel')}</th><th className="project-terms">{t('design.projectTerms')}</th><th>{t('design.lastCheck')}</th><th><span className="sr-only">{t('design.projectActions')}</span></th></tr></thead><tbody>
+      {projects.map(project => <tr key={project.id}>
+        <td><button className="project-identity" onClick={() => selectProject(project.id)}>{project.name}</button><small>{project.clientName ? `${project.clientName} · ` : ''}{t(industryLabelKey(project.industry))}</small></td>
+        <td className="project-terms">{terms(project, locale)}<small>{t(project.pricingModel === 'hourly' ? 'projects.hourly' : 'projects.fixed')}</small></td>
+        <td className="text-sm">{project.lastChecked ? formatDate(project.lastChecked, locale) : t('projects.notCheckedYet')}</td>
+        <td><div className="project-actions"><Button variant="ghost" onClick={() => selectProject(project.id, 'edit_project')}>{t('projects.edit')}</Button><DeleteProjectAction project={project} /></div></td>
+      </tr>)}
+    </tbody></table>}
+  </section>
 }

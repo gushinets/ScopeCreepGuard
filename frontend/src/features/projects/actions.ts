@@ -52,8 +52,12 @@ export function useProjectActions(editor: DraftEditor, resources: ReturnType<typ
     show('projects')
   }
   async function openArchived(project: Project) {
-    resources.upsert(project)
-    await select(project.id); show('history')
+    await beforeTransition()
+    show('history', project.id)
+  }
+  async function restoreProject(id: string) {
+    const result = await workflowApi<{ project: PersistentProject }>(`projects/${encodeURIComponent(id)}/restore`, {}, 'POST')
+    resources.upsert(result.project)
   }
   function selectProject(id: string, destination?: 'check' | 'edit_project') {
     const selection = select(id, destination)
@@ -61,5 +65,5 @@ export function useProjectActions(editor: DraftEditor, resources: ReturnType<typ
     void selection.catch(failure => { if (run === editor.navigation.current) editor.report(failure) })
   }
   return { selectProject,
-    select, createProject, updateProject, deleteProject, archivedProjects: async () => (await projectsApi.list(true)).projects, openArchived }
+    select, createProject, updateProject, deleteProject, restoreProject, archivedProjects: async () => (await projectsApi.list(true)).projects, openArchived }
 }

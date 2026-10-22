@@ -2,3 +2,6 @@ export { AgreementContext, useAgreements, useAgreementCommands } from './operati
 export { ChangeOrder } from './change-order'
 export { ChangeOrderDocumentPreview } from './change-order-document-preview'
 export type { EditableDraft } from './model/document'
+export { AgreementHost, AgreementSurface } from './surface'
+export { AgreementPdfDownload } from './agreement-pdf-download'
+export { downloadChangeOrder } from './download'

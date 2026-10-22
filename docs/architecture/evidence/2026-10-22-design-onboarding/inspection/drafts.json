@@ -1,0 +1,1079 @@
+[
+  {
+    "width": 1440,
+    "height": 900,
+    "metrics": {
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "page": {
+        "height": 900,
+        "screens": 1,
+        "words": 76,
+        "img": 0,
+        "video": 0,
+        "canvas": 0,
+        "svg": 10,
+        "sections": 1,
+        "horizontalOverflow": 0,
+        "overflowCulprits": [],
+        "uiFragments": 0,
+        "uiAbuse": false,
+        "realPictures": 0,
+        "videoCount": 0,
+        "uiPictures": 0,
+        "pictureSamples": [],
+        "blendText": 0,
+        "sideScrollers": 0,
+        "brokenImages": [],
+        "emoji": [],
+        "videosNoPoster": 0
+      },
+      "hero": {
+        "text": "My drafts",
+        "words": 2,
+        "chars": 9,
+        "lines": 1,
+        "size": 26,
+        "vw": 1.8,
+        "font": "IBM Plex Sans",
+        "weight": 500,
+        "tracking": -0.02,
+        "leading": 1.2,
+        "top": 129,
+        "tag": "h1",
+        "kind": "heading",
+        "align": "left",
+        "position": "left"
+      },
+      "h1": {
+        "text": "My drafts",
+        "words": 2,
+        "lines": 1,
+        "size": 26,
+        "font": "IBM Plex Sans"
+      },
+      "headings": [],
+      "headingSummary": {
+        "count": 0,
+        "maxLines": 0,
+        "over2Lines": 0,
+        "statements": 0,
+        "centered": 0,
+        "medianWords": null,
+        "mixedFontHeadings": 0
+      },
+      "type": {
+        "families": [
+          {
+            "family": "IBM Plex Sans",
+            "share": 1,
+            "mono": false
+          }
+        ],
+        "familyCount": 1,
+        "sizes": [
+          12,
+          13,
+          14,
+          16,
+          26
+        ],
+        "sizeCount": 5,
+        "notLoaded": [],
+        "body": {
+          "font": "IBM Plex Sans",
+          "size": 13,
+          "leading": 1.5,
+          "weight": 400,
+          "tracking": 0,
+          "contrast": 5.7
+        },
+        "measureChars": 110,
+        "max": {
+          "size": 26,
+          "vw": 1.8,
+          "font": "IBM Plex Sans",
+          "text": "My drafts"
+        },
+        "monoShare": 0,
+        "monoProseShare": 0,
+        "monoFamilies": [],
+        "monoSamples": [],
+        "microLabels": 0,
+        "microLabelShare": 0,
+        "microSamples": [],
+        "upperShare": 0.01,
+        "centerShare": 0.02,
+        "smallText": 2
+      },
+      "eyebrows": [],
+      "numbered": [],
+      "color": {
+        "bodyBg": "#ffffff",
+        "bodyBgHsl": {
+          "h": 0,
+          "s": 0,
+          "l": 1
+        },
+        "dark": false,
+        "sectionBgs": [
+          {
+            "color": "#edf2f3",
+            "top": 0,
+            "hsl": {
+              "h": 190,
+              "s": 0.2,
+              "l": 0.94
+            }
+          },
+          {
+            "color": "#ffffff",
+            "top": 64,
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 1
+            }
+          }
+        ],
+        "textColors": [
+          {
+            "color": "#5b696b",
+            "share": 0.71
+          },
+          {
+            "color": "#192729",
+            "share": 0.29
+          }
+        ],
+        "button": {
+          "bg": "#dfe7e9",
+          "hsl": {
+            "h": 192,
+            "s": 0.19,
+            "l": 0.89
+          },
+          "fg": "#192729"
+        },
+        "lowContrast": []
+      },
+      "buttons": {
+        "count": 1,
+        "inHero": 1,
+        "radius": 6,
+        "height": 40,
+        "withShadow": 0,
+        "withGradient": 0,
+        "mono": 0,
+        "upper": 0,
+        "heroLabels": [
+          "My drafts"
+        ]
+      },
+      "surfaces": {
+        "shadowStatic": 0,
+        "shadowOverlay": 0,
+        "shadowSamples": [],
+        "gradients": 0,
+        "scrims": 0,
+        "gradientSamples": [],
+        "gradientText": 0,
+        "hairlines": 1,
+        "hairlineSamples": [
+          "li 1138px"
+        ],
+        "outlinedBoxes": 1,
+        "dashed": 0,
+        "blurred": 0,
+        "roundedBoxes": 1,
+        "boxRadius": 16,
+        "squareMedia": 0,
+        "roundedMedia": 0,
+        "mediaRadius": 0,
+        "textShadow": 0,
+        "cardRows": []
+      },
+      "heroMedia": [],
+      "nav": {
+        "links": 0,
+        "fixed": true,
+        "height": 844,
+        "floatingPill": false,
+        "blur": false
+      },
+      "fontsLoaded": [
+        "ibm plex sans"
+      ]
+    },
+    "layout": {
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "pageH": 900,
+      "margins": {
+        "left": 18,
+        "right": 41
+      },
+      "sections": [],
+      "gaps": [],
+      "h1s": [
+        {
+          "text": "My drafts",
+          "size": 26,
+          "top": 129,
+          "firstScreen": true
+        }
+      ],
+      "edgeText": [],
+      "edges": [
+        {
+          "x": 261,
+          "n": 1
+        }
+      ],
+      "leftBlocks": 1,
+      "bodySize": 13,
+      "stage": false,
+      "explains": false,
+      "slivers": [],
+      "voidShare": 0.47,
+      "voidBox": {
+        "x": 180,
+        "y": 420,
+        "w": 1260,
+        "h": 480
+      }
+    },
+    "app": {
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "dark": false,
+      "ground": "#ffffff",
+      "sidebar": {
+        "w": 228,
+        "tag": "aside",
+        "links": 5,
+        "share": 0.16
+      },
+      "topbar": {
+        "h": 64
+      },
+      "canvas": {
+        "left": 24,
+        "right": 35
+      },
+      "hero": {
+        "text": "My drafts",
+        "words": 2,
+        "chars": 9,
+        "lines": 1,
+        "size": 26,
+        "vw": 1.8,
+        "font": "IBM Plex Sans",
+        "weight": 500,
+        "tracking": -0.02,
+        "leading": 1.2,
+        "top": 129,
+        "tag": "h1",
+        "kind": "heading",
+        "align": "left",
+        "position": "left"
+      },
+      "charts": 0,
+      "layout": {
+        "panels": 1,
+        "firstScreen": 1,
+        "ragged": [],
+        "voids": [
+          {
+            "gap": 495,
+            "at": 396,
+            "panel": "My drafts"
+          }
+        ]
+      },
+      "tiles": 0,
+      "panels": {
+        "count": 2,
+        "radii": [
+          [
+            16,
+            1
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "heavyBorders": 0,
+        "borderSamples": [],
+        "heavyShadows": 0,
+        "softShadows": 0,
+        "shadowSamples": [],
+        "glass": 0
+      },
+      "chips": {
+        "count": 0,
+        "hues": 0,
+        "samples": []
+      },
+      "numbers": {
+        "cells": 0,
+        "leftAligned": 0,
+        "figures": 0,
+        "tabularShare": null,
+        "kpiMax": null
+      },
+      "rows": null,
+      "chartHues": 0,
+      "placeholders": [],
+      "type": {
+        "under13": 0.1,
+        "tiny": 0,
+        "tinySamples": [],
+        "sizes": [
+          12,
+          13,
+          14,
+          16,
+          26
+        ]
+      },
+      "title": {
+        "text": "My drafts",
+        "size": 26,
+        "top": 129
+      }
+    },
+    "findings": [
+      {
+        "level": "WARN",
+        "id": "hero-void",
+        "width": 1440,
+        "message": "47% of the first screen is one empty block (1260×480px at 180,420).",
+        "fix": "Place the void on purpose or fill it: move the picture, the film or one fact into it, grow the headline to meet it, or shrink the screen to its content. A void reads as placed only when something closes it on the far side and it is the screen's one rest."
+      },
+      {
+        "level": "WARN",
+        "id": "panel-void",
+        "width": 1440,
+        "message": "1 card(s) hold a blank band inside: 495px in \"My drafts\".",
+        "fix": "A card stretches to its neighbour only when it has content to fill. Keep a legend or a note directly under its chart (only an action or a total may sit at a stretched card's foot), let a short card keep its own height (align-items: start), and let a filtered block shrink to its rows."
+      }
+    ],
+    "frames": []
+  },
+  {
+    "width": 768,
+    "height": 1024,
+    "metrics": {
+      "viewport": {
+        "w": 768,
+        "h": 1024
+      },
+      "page": {
+        "height": 1024,
+        "screens": 1,
+        "words": 65,
+        "img": 0,
+        "video": 0,
+        "canvas": 0,
+        "svg": 10,
+        "sections": 1,
+        "horizontalOverflow": 0,
+        "overflowCulprits": [],
+        "uiFragments": 0,
+        "uiAbuse": false,
+        "realPictures": 0,
+        "videoCount": 0,
+        "uiPictures": 0,
+        "pictureSamples": [],
+        "blendText": 0,
+        "sideScrollers": 0,
+        "brokenImages": [],
+        "emoji": [],
+        "videosNoPoster": 0
+      },
+      "hero": {
+        "text": "My drafts",
+        "words": 2,
+        "chars": 9,
+        "lines": 1,
+        "size": 26,
+        "vw": 3.4,
+        "font": "IBM Plex Sans",
+        "weight": 500,
+        "tracking": -0.02,
+        "leading": 1.2,
+        "top": 128,
+        "tag": "h1",
+        "kind": "heading",
+        "align": "left",
+        "position": "left"
+      },
+      "h1": {
+        "text": "My drafts",
+        "words": 2,
+        "lines": 1,
+        "size": 26,
+        "font": "IBM Plex Sans"
+      },
+      "headings": [
+        {
+          "text": "My drafts",
+          "words": 2,
+          "chars": 9,
+          "lines": 1,
+          "size": 26,
+          "vw": 3.4,
+          "font": "IBM Plex Sans",
+          "weight": 500,
+          "tracking": -0.025,
+          "leading": 1.2,
+          "upper": false,
+          "italic": false,
+          "mono": false,
+          "align": "left",
+          "position": "left",
+          "widthRatio": 0.45,
+          "top": 128,
+          "tag": "h1",
+          "kind": "heading"
+        }
+      ],
+      "headingSummary": {
+        "count": 1,
+        "maxLines": 1,
+        "over2Lines": 0,
+        "statements": 0,
+        "centered": 0,
+        "medianWords": null,
+        "mixedFontHeadings": 0
+      },
+      "type": {
+        "families": [
+          {
+            "family": "IBM Plex Sans",
+            "share": 1,
+            "mono": false
+          }
+        ],
+        "familyCount": 1,
+        "sizes": [
+          12,
+          13,
+          14,
+          26
+        ],
+        "sizeCount": 4,
+        "notLoaded": [],
+        "body": {
+          "font": "IBM Plex Sans",
+          "size": 13,
+          "leading": 1.5,
+          "weight": 400,
+          "tracking": 0,
+          "contrast": 5.7
+        },
+        "measureChars": 108,
+        "max": {
+          "size": 26,
+          "vw": 3.4,
+          "font": "IBM Plex Sans",
+          "text": "My drafts"
+        },
+        "monoShare": 0,
+        "monoProseShare": 0,
+        "monoFamilies": [],
+        "monoSamples": [],
+        "microLabels": 0,
+        "microLabelShare": 0,
+        "microSamples": [],
+        "upperShare": 0.01,
+        "centerShare": 0.01,
+        "smallText": 2
+      },
+      "eyebrows": [
+        {
+          "text": "Saved",
+          "above": "My drafts",
+          "upper": false,
+          "tracked": false,
+          "mono": false,
+          "pill": false,
+          "size": 12,
+          "top": 96
+        }
+      ],
+      "numbered": [],
+      "color": {
+        "bodyBg": "#ffffff",
+        "bodyBgHsl": {
+          "h": 0,
+          "s": 0,
+          "l": 1
+        },
+        "dark": false,
+        "sectionBgs": [
+          {
+            "color": "#edf2f3",
+            "top": 0,
+            "hsl": {
+              "h": 190,
+              "s": 0.2,
+              "l": 0.94
+            }
+          },
+          {
+            "color": "#ffffff",
+            "top": 68,
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 1
+            }
+          }
+        ],
+        "textColors": [
+          {
+            "color": "#5b696b",
+            "share": 0.71
+          },
+          {
+            "color": "#192729",
+            "share": 0.29
+          }
+        ],
+        "button": null,
+        "lowContrast": []
+      },
+      "buttons": {
+        "count": 0,
+        "inHero": 0,
+        "withShadow": 0,
+        "withGradient": 0,
+        "mono": 0,
+        "upper": 0,
+        "heroLabels": []
+      },
+      "surfaces": {
+        "shadowStatic": 0,
+        "shadowOverlay": 0,
+        "shadowSamples": [],
+        "gradients": 0,
+        "scrims": 0,
+        "gradientSamples": [],
+        "gradientText": 0,
+        "hairlines": 1,
+        "hairlineSamples": [
+          "li 720px"
+        ],
+        "outlinedBoxes": 0,
+        "dashed": 0,
+        "blurred": 0,
+        "roundedBoxes": 0,
+        "boxRadius": 0,
+        "squareMedia": 0,
+        "roundedMedia": 0,
+        "mediaRadius": 0,
+        "textShadow": 0,
+        "cardRows": []
+      },
+      "heroMedia": [],
+      "nav": {
+        "links": 0,
+        "fixed": false,
+        "height": 0,
+        "floatingPill": false,
+        "blur": false
+      },
+      "fontsLoaded": [
+        "ibm plex sans"
+      ]
+    },
+    "layout": {
+      "viewport": {
+        "w": 768,
+        "h": 1024
+      },
+      "pageH": 1024,
+      "margins": {
+        "left": 20,
+        "right": 23
+      },
+      "sections": [],
+      "gaps": [],
+      "h1s": [
+        {
+          "text": "My drafts",
+          "size": 26,
+          "top": 128,
+          "firstScreen": true
+        }
+      ],
+      "edgeText": [],
+      "edges": [
+        {
+          "x": 24,
+          "n": 1
+        }
+      ],
+      "leftBlocks": 1,
+      "bodySize": 13,
+      "stage": false,
+      "explains": false,
+      "slivers": [],
+      "voidShare": 0,
+      "voidBox": null
+    },
+    "app": {
+      "viewport": {
+        "w": 768,
+        "h": 1024
+      },
+      "dark": false,
+      "ground": "#ffffff",
+      "sidebar": null,
+      "topbar": {
+        "h": 60
+      },
+      "canvas": {
+        "left": 20,
+        "right": 23
+      },
+      "hero": {
+        "text": "My drafts",
+        "words": 2,
+        "chars": 9,
+        "lines": 1,
+        "size": 26,
+        "vw": 3.4,
+        "font": "IBM Plex Sans",
+        "weight": 500,
+        "tracking": -0.02,
+        "leading": 1.2,
+        "top": 128,
+        "tag": "h1",
+        "kind": "heading",
+        "align": "left",
+        "position": "left"
+      },
+      "charts": 0,
+      "layout": {
+        "panels": 1,
+        "firstScreen": 1,
+        "ragged": [],
+        "voids": []
+      },
+      "tiles": 0,
+      "panels": {
+        "count": 1,
+        "radii": [
+          [
+            0,
+            1
+          ]
+        ],
+        "heavyBorders": 0,
+        "borderSamples": [],
+        "heavyShadows": 0,
+        "softShadows": 0,
+        "shadowSamples": [],
+        "glass": 0
+      },
+      "chips": {
+        "count": 0,
+        "hues": 0,
+        "samples": []
+      },
+      "numbers": {
+        "cells": 0,
+        "leftAligned": 0,
+        "figures": 0,
+        "tabularShare": null,
+        "kpiMax": null
+      },
+      "rows": null,
+      "chartHues": 0,
+      "placeholders": [],
+      "type": {
+        "under13": 0.1,
+        "tiny": 0,
+        "tinySamples": [],
+        "sizes": [
+          12,
+          13,
+          14,
+          16,
+          26
+        ]
+      },
+      "title": {
+        "text": "My drafts",
+        "size": 26,
+        "top": 128
+      }
+    },
+    "findings": [],
+    "frames": []
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "metrics": {
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "page": {
+        "height": 844,
+        "screens": 1,
+        "words": 62,
+        "img": 0,
+        "video": 0,
+        "canvas": 0,
+        "svg": 10,
+        "sections": 1,
+        "horizontalOverflow": 0,
+        "overflowCulprits": [],
+        "uiFragments": 0,
+        "uiAbuse": false,
+        "realPictures": 0,
+        "videoCount": 0,
+        "uiPictures": 0,
+        "pictureSamples": [],
+        "blendText": 0,
+        "sideScrollers": 0,
+        "brokenImages": [],
+        "emoji": [],
+        "videosNoPoster": 0
+      },
+      "hero": {
+        "text": "My drafts",
+        "words": 2,
+        "chars": 9,
+        "lines": 1,
+        "size": 24,
+        "vw": 6.2,
+        "font": "IBM Plex Sans",
+        "weight": 500,
+        "tracking": -0.02,
+        "leading": 1.2,
+        "top": 128,
+        "tag": "h1",
+        "kind": "heading",
+        "align": "left",
+        "position": "left"
+      },
+      "h1": {
+        "text": "My drafts",
+        "words": 2,
+        "lines": 1,
+        "size": 24,
+        "font": "IBM Plex Sans"
+      },
+      "headings": [
+        {
+          "text": "My drafts",
+          "words": 2,
+          "chars": 9,
+          "lines": 1,
+          "size": 24,
+          "vw": 6.2,
+          "font": "IBM Plex Sans",
+          "weight": 500,
+          "tracking": -0.025,
+          "leading": 1.2,
+          "upper": false,
+          "italic": false,
+          "mono": false,
+          "align": "left",
+          "position": "center",
+          "widthRatio": 0.89,
+          "top": 128,
+          "tag": "h1",
+          "kind": "heading"
+        }
+      ],
+      "headingSummary": {
+        "count": 1,
+        "maxLines": 1,
+        "over2Lines": 0,
+        "statements": 0,
+        "centered": 0,
+        "medianWords": null,
+        "mixedFontHeadings": 0
+      },
+      "type": {
+        "families": [
+          {
+            "family": "IBM Plex Sans",
+            "share": 1,
+            "mono": false
+          }
+        ],
+        "familyCount": 1,
+        "sizes": [
+          12,
+          13,
+          14,
+          24
+        ],
+        "sizeCount": 4,
+        "notLoaded": [],
+        "body": {
+          "font": "IBM Plex Sans",
+          "size": 13,
+          "leading": 1.5,
+          "weight": 400,
+          "tracking": 0,
+          "contrast": 5.7
+        },
+        "measureChars": 54,
+        "max": {
+          "size": 24,
+          "vw": 6.2,
+          "font": "IBM Plex Sans",
+          "text": "My drafts"
+        },
+        "monoShare": 0,
+        "monoProseShare": 0,
+        "monoFamilies": [],
+        "monoSamples": [],
+        "microLabels": 0,
+        "microLabelShare": 0,
+        "microSamples": [],
+        "upperShare": 0.01,
+        "centerShare": 0.01,
+        "smallText": 2
+      },
+      "eyebrows": [
+        {
+          "text": "Saved",
+          "above": "My drafts",
+          "upper": false,
+          "tracked": false,
+          "mono": false,
+          "pill": false,
+          "size": 12,
+          "top": 96
+        }
+      ],
+      "numbered": [],
+      "color": {
+        "bodyBg": "#ffffff",
+        "bodyBgHsl": {
+          "h": 0,
+          "s": 0,
+          "l": 1
+        },
+        "dark": false,
+        "sectionBgs": [
+          {
+            "color": "#edf2f3",
+            "top": 0,
+            "hsl": {
+              "h": 190,
+              "s": 0.2,
+              "l": 0.94
+            }
+          },
+          {
+            "color": "#ffffff",
+            "top": 72,
+            "hsl": {
+              "h": 0,
+              "s": 0,
+              "l": 1
+            }
+          }
+        ],
+        "textColors": [
+          {
+            "color": "#5b696b",
+            "share": 0.74
+          },
+          {
+            "color": "#192729",
+            "share": 0.26
+          }
+        ],
+        "button": null,
+        "lowContrast": []
+      },
+      "buttons": {
+        "count": 0,
+        "inHero": 0,
+        "withShadow": 0,
+        "withGradient": 0,
+        "mono": 0,
+        "upper": 0,
+        "heroLabels": []
+      },
+      "surfaces": {
+        "shadowStatic": 0,
+        "shadowOverlay": 0,
+        "shadowSamples": [],
+        "gradients": 0,
+        "scrims": 0,
+        "gradientSamples": [],
+        "gradientText": 0,
+        "hairlines": 1,
+        "hairlineSamples": [
+          "li 350px"
+        ],
+        "outlinedBoxes": 0,
+        "dashed": 0,
+        "blurred": 0,
+        "roundedBoxes": 0,
+        "boxRadius": 0,
+        "squareMedia": 0,
+        "roundedMedia": 0,
+        "mediaRadius": 0,
+        "textShadow": 0,
+        "cardRows": []
+      },
+      "heroMedia": [],
+      "nav": {
+        "links": 0,
+        "fixed": false,
+        "height": 0,
+        "floatingPill": false,
+        "blur": false
+      },
+      "fontsLoaded": [
+        "ibm plex sans"
+      ]
+    },
+    "layout": {
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "pageH": 844,
+      "margins": {
+        "left": 20,
+        "right": 20
+      },
+      "sections": [],
+      "gaps": [],
+      "h1s": [
+        {
+          "text": "My drafts",
+          "size": 24,
+          "top": 128,
+          "firstScreen": true
+        }
+      ],
+      "edgeText": [],
+      "edges": [
+        {
+          "x": 20,
+          "n": 1
+        }
+      ],
+      "leftBlocks": 1,
+      "bodySize": 13,
+      "stage": false,
+      "explains": false,
+      "slivers": [],
+      "voidShare": 0,
+      "voidBox": null
+    },
+    "app": {
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "dark": false,
+      "ground": "#ffffff",
+      "sidebar": null,
+      "topbar": {
+        "h": 64
+      },
+      "canvas": {
+        "left": 20,
+        "right": -108
+      },
+      "hero": {
+        "text": "My drafts",
+        "words": 2,
+        "chars": 9,
+        "lines": 1,
+        "size": 24,
+        "vw": 6.2,
+        "font": "IBM Plex Sans",
+        "weight": 500,
+        "tracking": -0.02,
+        "leading": 1.2,
+        "top": 128,
+        "tag": "h1",
+        "kind": "heading",
+        "align": "left",
+        "position": "left"
+      },
+      "charts": 0,
+      "layout": {
+        "panels": 1,
+        "firstScreen": 1,
+        "ragged": [],
+        "voids": []
+      },
+      "tiles": 0,
+      "panels": {
+        "count": 1,
+        "radii": [
+          [
+            0,
+            1
+          ]
+        ],
+        "heavyBorders": 0,
+        "borderSamples": [],
+        "heavyShadows": 0,
+        "softShadows": 0,
+        "shadowSamples": [],
+        "glass": 0
+      },
+      "chips": {
+        "count": 0,
+        "hues": 0,
+        "samples": []
+      },
+      "numbers": {
+        "cells": 0,
+        "leftAligned": 0,
+        "figures": 0,
+        "tabularShare": null,
+        "kpiMax": null
+      },
+      "rows": null,
+      "chartHues": 0,
+      "placeholders": [],
+      "type": {
+        "under13": 0.11,
+        "tiny": 0,
+        "tinySamples": [],
+        "sizes": [
+          12,
+          13,
+          14,
+          16,
+          24
+        ]
+      },
+      "title": {
+        "text": "My drafts",
+        "size": 24,
+        "top": 128
+      }
+    },
+    "findings": [],
+    "frames": []
+  }
+]

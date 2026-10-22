@@ -89,6 +89,12 @@ async def saved_pdf(
 
 
 @router.post(
+    "/api/v2/change-orders/pdf",
+    response_class=Response,
+    responses=PDF_RESPONSE,
+    openapi_extra=body_contract(PreviewBody),
+)
+@router.post(
     "/api/change-orders/pdf",
     response_class=Response,
     responses=PDF_RESPONSE,

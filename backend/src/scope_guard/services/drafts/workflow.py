@@ -443,6 +443,12 @@ class WorkflowService:
             await work.workflow.update_project(owner, identifier, {"archived": True})
             await work.commit()
 
+    async def restore_project(self, owner, identifier):
+        async with self.factory() as work:
+            await work.workflow.update_project(owner, identifier, {"archived": False})
+            await work.commit()
+        return await self.project(owner, identifier)
+
     def allowance(self, owner):
         if self.limiter and not self.limiter.allow(str(owner), int(time.time() * 1000)):
             raise WorkflowError("analysisRateLimited", 429)

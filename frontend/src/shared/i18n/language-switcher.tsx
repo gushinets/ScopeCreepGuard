@@ -33,7 +33,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           className={cn(
             'rounded-md px-2.5 py-1 text-xs font-medium uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             currentLocale === locale
-              ? 'bg-card text-foreground shadow-sm'
+              ? 'bg-card text-foreground'
               : 'text-muted-foreground hover:text-foreground',
           )}
         >

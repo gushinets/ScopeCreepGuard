@@ -30,13 +30,12 @@ export function MyDraftsView() {
     finally { setOpeningId(null) }
   }
 
-  return <section className="mx-auto max-w-2xl">
-    <h2 className="text-xl font-semibold">{t('drafts.title')}</h2>
-    <p className="mt-1 text-sm text-muted-foreground">{t('drafts.description')}</p>
+  return <section>
+    <div className="screen-heading"><div><h1>{t('drafts.title')}</h1><p>{t('drafts.description')}</p></div></div>
     {loading ? <p role="status" className="mt-6 text-sm text-muted-foreground">{t('drafts.loading')}</p> :
       error ? <div className="mt-6"><p role="alert" className="text-sm text-outscope-text">{t(error)}</p><Button type="button" variant="outline" className="mt-3" onClick={() => { setLoading(true); setError(''); setRefresh((value) => value + 1) }}>{t('drafts.retry')}</Button></div> :
-      drafts.length === 0 ? <div className="mt-6 rounded-xl border border-dashed border-border bg-card/50 p-8 text-center"><h3 className="font-semibold">{t('drafts.emptyTitle')}</h3><p className="mt-1 text-sm text-muted-foreground">{t('drafts.emptyDescription')}</p></div> :
-      <ul className="mt-5 divide-y divide-border rounded-lg border border-border bg-card">
+      drafts.length === 0 ? <div className="collection-empty"><h3 className="font-semibold">{t('drafts.emptyTitle')}</h3><p className="mt-1 text-sm text-muted-foreground">{t('drafts.emptyDescription')}</p></div> :
+      <ul className="draft-rows">
         {drafts.map((draft) => <li key={draft.id}>
           <button type="button" disabled={!!openingId} onClick={() => void open(draft.id)} className="block w-full min-w-0 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60">
             <span className="block truncate text-sm font-medium">{draft.requestPreview}</span>

@@ -9,6 +9,7 @@ export function useHistoryCommands(editor: DraftEditor, commands: WorkflowOperat
     const response = await commands.run<{ entry: ArchivedCheck }>(`drafts/${saved.id}/history`, { expectedRevision: saved.revision })
     editor.setHistoryId(response.entry.id)
     onEntry({ ...response.entry, projectId: response.entry.projectId ?? saved.projectId })
+    return response.entry
   }
   async function openHistory(identifier: string) {
     if (!window.confirm(t('workflow.confirmReopen'))) return

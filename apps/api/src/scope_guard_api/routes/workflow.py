@@ -74,6 +74,11 @@ async def archive_project(identifier: UUID, owner: Owner, service: Service):
     return {"ok": True}
 
 
+@router.post("/projects/{identifier}/restore", response_model=ProjectResponse)
+async def restore_project(identifier: UUID, owner: Owner, service: Service):
+    return {"project": await service.restore_project(UUID(owner["id"]), identifier)}
+
+
 @router.get(
     "/projects/{identifier}/draft", response_model=DraftResponse, response_model_exclude_unset=True
 )

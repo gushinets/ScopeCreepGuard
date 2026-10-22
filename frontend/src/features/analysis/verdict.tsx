@@ -50,12 +50,6 @@ const bannerStyles: Record<Verdict, string> = {
   out_of_scope: 'bg-outscope-soft border-outscope-border',
 }
 
-const iconWrapStyles: Record<Verdict, string> = {
-  in_scope: 'bg-inscope text-inscope-foreground',
-  borderline: 'bg-borderline text-borderline-foreground',
-  out_of_scope: 'bg-outscope text-outscope-foreground',
-}
-
 const textStyles: Record<Verdict, string> = {
   in_scope: 'text-inscope-text',
   borderline: 'text-borderline-text',
@@ -81,14 +75,7 @@ export function VerdictBanner({
       role="status"
     >
       <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            'flex size-9 shrink-0 items-center justify-center rounded-full',
-            iconWrapStyles[verdict],
-          )}
-        >
-          <Icon className="size-5" aria-hidden="true" />
-        </span>
+        <Icon className={cn('size-6 shrink-0 mt-0.5', textStyles[verdict])} aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h3 className={cn('text-lg font-semibold', textStyles[verdict])}>

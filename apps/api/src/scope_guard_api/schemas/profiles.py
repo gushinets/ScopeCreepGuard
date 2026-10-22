@@ -8,6 +8,16 @@ from scope_guard_api.schemas.shared import WireModel
 Name = Annotated[StrictStr, Field(max_length=250)]
 
 
+class OnboardingEvent(WireModel):
+    model_config = ConfigDict(extra="forbid")
+    event: Literal["form_opened", "project_saved", "check_submitted", "result_viewed", "skip"]
+
+
+class OnboardingState(WireModel):
+    status: Literal["not_started", "in_progress", "completed", "skipped"]
+    step: Annotated[int, Field(ge=0, le=4)]
+
+
 class ProfilePreferences(WireModel):
     model_config = ConfigDict(extra="forbid")
     locale: Literal["ru", "en"] | None = None

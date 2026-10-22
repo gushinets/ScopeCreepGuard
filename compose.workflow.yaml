@@ -4,7 +4,7 @@ services:
     environment:
       SCOPE_GUARD_DATABASE_URL: ${SCOPE_GUARD_DATABASE_URL:?Explicit shared API/worker database URL required}
       SCOPE_GUARD_WORKFLOW_V2: "true"
-      SCOPE_GUARD_MIGRATION_TARGET: 0007_nonblocking_llm
+      SCOPE_GUARD_MIGRATION_TARGET: 0008_contextual_onboarding
       SCOPE_GUARD_EXPORT_BUCKET: ${SCOPE_GUARD_EXPORT_BUCKET:?Private export bucket required}
       SCOPE_GUARD_EXPORT_ENDPOINT: ${SCOPE_GUARD_EXPORT_ENDPOINT:-}
       SCOPE_GUARD_EXPORT_REGION: ${SCOPE_GUARD_EXPORT_REGION:-us-east-1}
