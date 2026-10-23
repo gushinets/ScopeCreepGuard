@@ -16,13 +16,16 @@ localStorage is an explicit recovery buffer for unconfirmed edits only. See the
 | drafts | Stable UUID, unique project, request text, analysis reference/staleness, version 2 JSON editor and positive BIGINT revision. |
 | draft_revisions | Immutable full working-state/context snapshots; unique Draft/revision and Draft/operation, parameter hash, reason/actor/time. |
 | analysis_runs | Frozen request/context/source revision/user/languages; immutable original result, status/model/prompt/error, key/hash and execution timestamps. Execution purpose lives in its immutable creation event. |
-| history_entries | Explicit immutable completed-check snapshot, exact source DraftRevision, original analysis, saving user/key/hash/time. Existing UUIDs and evaluation links survive. |
+| history_entries | Immutable original completed-check snapshot plus explicit archives of edited materials, exact source DraftRevision, original analysis, saving user/key/hash/time. Existing UUIDs and evaluation links survive. |
 | change_orders | Immutable finalized content/reference from History, optimistic finalized/voided state, revision/actor/timestamps/key/hash. |
 | document_exports | Durable queue and private object metadata from finalized agreement; versions/language, lease/attempt/error, checksum/type/size, key/hash/timestamps. |
 | activity_events | Immutable semantic references, revision/changed fields, actor, operation key and versioned limited payload. |
 | evaluation_cases | Existing quality feedback/constraints plus original immutable analysis reference; inputs/results are derived on the server. |
 
-Composite references bind links to the correct project and owner. History references
+Composite workflow/profile references bind links to the correct project and owner.
+This is not a blanket LLM constraint: llm_operations owner/project/draft/run and
+provider_calls operation/step use independent single-column FKs; their mutual
+consistency also depends on service/repository checks (migration 0005). History references
 `draft_revisions(draft_id, revision)`, never the changing current revision. Restrict
 deletion protects retained records. Ordinary removal archives a project; no physical
 deletion API or finite retention policy is enabled.
@@ -39,7 +42,11 @@ exactly-once; result application is at most once. Regeneration uses persisted ed
 reply; translation uses edited materials and frozen scope. Estimate refresh preserves
 manual terms and the original analysis reference.
 
-History is created only by explicit completion against a fresh persisted revision.
+The completed check automatically publishes its original History snapshot against
+a persisted revision. Explicit completion may additionally archive edited materials
+for that same analysis; the original snapshot is never overwritten. Repeated commands
+and identical snapshots are deduplicated. One analysis can therefore have multiple
+History entries.
 Viewing archives never changes Draft. Server references are globally unique; only
 one active finalized agreement is permitted per archive. Void explicitly before
 replacement. Finalization does not establish client acceptance or send anything.
