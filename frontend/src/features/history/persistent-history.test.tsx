@@ -95,3 +95,13 @@ it.each([{ locale: 'en', messages: en }, { locale: 'ru', messages: ru }] as cons
  await screen.findByRole('button', { name: /Active project/ })
  expect(state.restore).toHaveBeenCalledWith('archived')
 })
+
+
+it('does not substitute active history when the explicitly selected archive fails to load', async () => {
+ state.archives.mockRejectedValue(new Error('offline'))
+ state.history = [{ id: 'active-check', request: 'Unrelated active request', summary: 'Other project' } as ArchivedCheck]
+ render(<IntlProvider locale="en" messages={en}><PersistentHistoryView projectId="missing-archive" /></IntlProvider>)
+ await screen.findByRole('alert')
+ expect(screen.queryByText('Unrelated active request')).toBeNull()
+ expect(screen.queryByRole('button', { name: en.workflow.viewCheck })).toBeNull()
+})
