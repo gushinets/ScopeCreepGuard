@@ -1,0 +1,38 @@
+# Authoritative service definition; included with repository project_directory.
+services:
+  backend:
+    image: ${SCOPE_GUARD_API_IMAGE:-scope-guard-api:local}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runner
+      args:
+        SOURCE_REVISION: ${SOURCE_REVISION:-unknown}
+    init: true
+    env_file:
+    - path: ${SCOPE_GUARD_LOCAL_ENV_FILE:-.env}
+      required: false
+    - path: ${SCOPE_GUARD_LOCAL_OVERRIDE_ENV_FILE:-.env.local}
+      required: false
+    - path: ${SCOPE_GUARD_BACKEND_ENV_FILE:-backend/.env}
+      required: false
+    extends:
+      file: docker/compose/runtime.yaml
+      service: runtime
+    ports:
+    - ${BACKEND_PORT:-8000}:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s

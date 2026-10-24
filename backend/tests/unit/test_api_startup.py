@@ -38,7 +38,14 @@ def test_startup_waits_then_passes_explicit_adoption(monkeypatch):
     assert startup.main(["--database-url-env", "SCOPE_GUARD_DATABASE_URL"]) == 0
     assert calls == [
         "ready",
-        ["migrate", "--database-url-env", "SCOPE_GUARD_DATABASE_URL", "--adopt-legacy"],
+        [
+            "migrate",
+            "--database-url-env",
+            "SCOPE_GUARD_DATABASE_URL",
+            "--target",
+            "head",
+            "--adopt-legacy",
+        ],
     ]
 
 

@@ -1,36 +1,4 @@
-x-database-url: &database-url postgres://scopeguard:scopeguard_dev_password@postgres:5432/scope_creep_guard
-
-services:
-  postgres:
-    extends: {file: compose.services.yaml, service: postgres}
-    environment:
-      POSTGRES_DB: scope_creep_guard
-      POSTGRES_USER: scopeguard
-      POSTGRES_PASSWORD: scopeguard_dev_password
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-
-  app:
-    extends: {file: compose.services.yaml, service: app}
-    ports:
-      - "${FRONTEND_PORT:-3000}:3000"
-    environment:
-      SCOPE_GUARD_API_ORIGIN: http://backend:8000
-
-  backend:
-    extends: {file: compose.services.yaml, service: backend}
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
-    env_file:
-      - {path: .env, required: false}
-      - {path: .env.local, required: false}
-      - {path: backend/.env, required: false}
-    environment:
-      SCOPE_GUARD_PRODUCTION: "true"
-      SCOPE_GUARD_LOG_LEVEL: ${SCOPE_GUARD_LOG_LEVEL:-INFO}
-      SCOPE_GUARD_DATABASE_URL: *database-url
-      SCOPE_GUARD_ADOPT_LEGACY: ${SCOPE_GUARD_ADOPT_LEGACY:-false}
-      SCOPE_GUARD_ALLOWED_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3000}","http://127.0.0.1:${FRONTEND_PORT:-3000}"]'
-
-volumes:
-  scope_creep_guard_postgres:
+# Explicit composition; include interpolation inherits the selected root environment.
+include:
+- path: compose.services.yaml
+  env_file: docker/compose/interpolation.env

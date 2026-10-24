@@ -146,165 +146,255 @@ docs/               Описание продукта, интерфейса, а�
 Границы модулей описаны в [распределении ответственности](docs/architecture/ownership.md),
 фоновая обработка в [инструкции по обработчикам задач](apps/worker/README.md).
 
-## Локальный запуск
+## Запуск через Docker
 
-### Что понадобится
+Нужны Docker Engine с Linux-контейнерами и **Docker Compose 2.24+** в режиме
+Compose (не Swarm). Каталог `compose.services.yaml` собирает единственные определения служб из
+`docker/compose/`; общие серверные настройки находятся в `runtime.yaml`.
+[Механизм include](https://docs.docker.com/compose/how-tos/multiple-compose-files/include/)
+позволяет выбирать службы без копирования определений. `extends` используется
+только для общих настроек среды: Compose 2.24 не поддерживает наследование
+служб с зависимостями. Файлы запуска находятся
+в корне, поэтому контексты сборки, пути и имя проекта совпадают.
 
-- Docker с Compose **2.24 или новее**.
-- Ключ OpenAI API и явно выбранная модель. Для неё нужно задать верхние границы
-  цены входных и выходных токенов в **долларах США за токен**.
-- Закрытый S3-совместимый бакет и доступ к нему для экспорта PDF.
-- Для запуска без контейнеров приложений: Node.js **22.13 или новее**,
-  pnpm **10.34.1**, Python **3.12** и uv. В CI закреплена версия uv **0.11.19**.
+### Настройка
 
-Интерфейсу React нужен режим с сохранением состояния операций и схема
-`0007_nonblocking_llm`. Базовая конфигурация Compose запускает инфраструктуру
-и прежний режим API. Для полного приложения нужны оба файла дополнений.
+Для новой локальной установки скопируйте `.env.example` в `.env` и задайте:
 
-### Все службы через Docker Compose
-
-Для **новой локальной базы разработки** скопируйте [.env.example](.env.example)
-в `.env` в корне репозитория и настройте переменные:
-
-| Переменная | Значение или назначение |
+| Переменные | Назначение |
 | --- | --- |
-| `AUTH_SECRET` | Случайный секрет длиной не менее 32 символов |
-| `SCOPE_GUARD_DATABASE_URL` | `postgres://scopeguard:scopeguard_dev_password@postgres:5432/scope_creep_guard` для этого локального окружения Compose |
-| `OPENAI_API_KEY` | Ключ доступа к провайдеру |
-| `SCOPE_GUARD_OPENAI_MODEL` | Модель для генерации |
-| `SCOPE_GUARD_LLM_INPUT_RATE_BOUND` | Верхняя граница цены входного токена, долларов США за токен |
-| `SCOPE_GUARD_LLM_OUTPUT_RATE_BOUND` | Верхняя граница цены выходного токена, долларов США за токен |
-| `SCOPE_GUARD_LLM_MAX_COST` | Бюджет одной операции; по умолчанию `1.00` доллар США |
-| `SCOPE_GUARD_EXPORT_BUCKET` | Существующий закрытый бакет для PDF |
-| `SCOPE_GUARD_EXPORT_ENDPOINT` | Адрес S3-совместимого сервиса, если нужен |
-| `SCOPE_GUARD_EXPORT_REGION` | Регион хранилища; по умолчанию `us-east-1` |
-| `SCOPE_GUARD_EXPORT_ACCESS_KEY`, `SCOPE_GUARD_EXPORT_SECRET_KEY` | Ключи хранилища, если среда запуска не предоставляет их стандартным способом |
+| `AUTH_SECRET` | Случайный секрет не короче 32 символов |
+| `OPENAI_API_KEY`, `SCOPE_GUARD_OPENAI_MODEL` | Ключ и явно выбранная модель |
+| `SCOPE_GUARD_LLM_INPUT_RATE_BOUND`, `SCOPE_GUARD_LLM_OUTPUT_RATE_BOUND` | Положительные консервативные цены в USD **за токен** |
+| `SCOPE_GUARD_LLM_MAX_COST` | Лимит операции, по умолчанию USD 1 |
+| `SCOPE_GUARD_DATABASE_URL` | Общая база API, мигратора и обработчиков; внутри Compose хост `postgres`, не `localhost` |
+| `SCOPE_GUARD_EXPORT_BUCKET` | Существующий закрытый S3-совместимый бакет |
+| `SCOPE_GUARD_EXPORT_ENDPOINT`, `SCOPE_GUARD_EXPORT_REGION` | Адрес совместимого сервиса и регион |
+| `SCOPE_GUARD_EXPORT_ACCESS_KEY`, `SCOPE_GUARD_EXPORT_SECRET_KEY` | Доступ к бакету либо стандартная identity среды |
+| `SCOPE_GUARD_ALLOWED_ORIGINS` | JSON-массив разрешённых адресов; измените при смене порта интерфейса |
 
-Compose должен получить эти значения при подстановке переменных: из корневого
-`.env`, окружения оболочки или файла, указанного через `--env-file`.
-Параметр `env_file` внутри службы сам по себе не заполняет обязательные
-подстановки `${...}` в конфигурации Compose. Цены токенов задаются десятичными
-числами за один токен.
+Локальные PostgreSQL-реквизиты по умолчанию сохранены: `scopeguard`,
+`scopeguard_dev_password`, база `scope_creep_guard`. При их изменении настройте
+`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` и соответствующий URL вместе.
+Изменение переменных PostgreSQL не меняет пароль в существующей базе.
+`SCOPE_GUARD_PRODUCTION=false` подходит для локального HTTP; для HTTPS нужен `true`.
+
+При подстановке Compose окружение оболочки имеет приоритет над явным `--env-file`
+или корневым `.env`. Вложенные include-модели получают эту среду и пустой
+`docker/compose/interpolation.env`, чтобы повторно не загрузить другой `.env`.
+Локальные серверные контейнеры дополнительно читают `.env`,
+`.env.local`, `backend/.env` в этом порядке; явный блок `environment` службы
+имеет приоритет над этими файлами. Обязательные подстановки берутся из окружения
+Compose, а не из `env_file` службы. Для воспроизводимости используйте один явный
+`--env-file`; Dokploy вообще не загружает локальные `env_file` контейнеров.
+Значение `SCOPE_GUARD_MIGRATION_TARGET` больше не управляет выпуском.
+
+### Полный стек и отдельные приложения
+
+Команды выполняются из корня. Здесь `scopecreepguard` — имя **нового** проекта;
+для существующей установки подставьте её прежнее имя во всех командах.
 
 ```sh
-docker compose -f compose.yaml -f compose.workflow.yaml -f compose.llm.yaml config --quiet
-docker compose -f compose.yaml -f compose.workflow.yaml -f compose.llm.yaml up --build -d
+docker compose -p scopecreepguard -f compose.yaml config --quiet
+docker compose -p scopecreepguard -f compose.yaml up --build -d --wait
 ```
 
-[Откройте приложение](http://localhost:3000), создайте аккаунт и добавьте первый
-проект. Новый аккаунт начинает с пустого рабочего пространства. Локальный API
-доступен на порту 8000; оба фоновых обработчика используют общую базу PostgreSQL.
+Откройте [интерфейс](http://localhost:3000). API доступен на порту 8000.
+Полный стек включает PostgreSQL, мигратор, API, интерфейс и оба обработчика.
+Объектное хранилище предоставляется отдельно. Запуск сам по себе не отправляет
+платные задачи ИИ.
 
-Чтобы остановить службы и сохранить том базы данных:
+| Команда | Запускаемые службы |
+| --- | --- |
+| `docker compose -p scopecreepguard -f compose.postgres.yaml up -d --wait` | PostgreSQL |
+| `docker compose -p scopecreepguard -f compose.backend.yaml up --build -d --wait` | PostgreSQL → migrate → backend |
+| `docker compose -p scopecreepguard -f compose.frontend.yaml up --build -d --wait` | PostgreSQL → migrate → backend → app |
+| `docker compose -p scopecreepguard -f compose.llm-worker.yaml up --build -d --wait` | PostgreSQL → migrate → llm-worker |
+| `docker compose -p scopecreepguard -f compose.export-worker.yaml up --build -d --wait` | PostgreSQL → migrate → export-worker |
+
+Компоненты используют те же имена служб, сеть и том, что полный стек с тем же
+`-p`. Предупреждение об оставшихся службах при выборе компонента ожидаемо;
+не добавляйте `--remove-orphans`. Компонентная проверка не доказывает готовность
+всего приложения. PostgreSQL и migrate не требуют ключа провайдера; серверные
+приложения используют общий набор обязательных настроек из примера.
+
+Всегда выбирайте файл явно: это исключает автоматический `compose.override.yaml`.
+`docker-compose.yml` оставлен как совместимый вход полного стека. Прежние
+`compose.workflow.yaml` и `compose.llm.yaml` удалены: их комбинации больше не нужны.
 
 ```sh
-docker compose -f compose.yaml -f compose.workflow.yaml -f compose.llm.yaml down
+docker compose -p scopecreepguard -f compose.yaml ps --all
+docker compose -p scopecreepguard -f compose.yaml logs --follow migrate backend app llm-worker export-worker
+docker compose -p scopecreepguard -f compose.yaml down
 ```
 
-Если в базе **уже есть рабочие данные**, сначала выполните
-[процедуру резервного копирования, миграции и переноса данных](docs/architecture/draft-workflow.md).
-API, интерфейс и обработчики должны использовать совместимые версии образов.
-Храните секреты в локальных файлах окружения или в хранилище секретов среды запуска.
+`down` сохраняет том. Не используйте `down -v` или очистку томов для установки
+с данными. В PowerShell дополнительно доступны `./scripts/dev.ps1 up`,
+`up front`, `up back`, `up postgres`, `up llm_worker`, `up export_worker`,
+`logs back`, `status`, `down` и `update`; параметр `-Project` задаёт прежнее имя.
+Эта удобная оболочка требует Python 3 и не нужна для прямых команд Compose.
+
+### Миграции и диагностика
+
+```text
+PostgreSQL healthy → migrate successful → backend / llm-worker / export-worker
+backend healthy → app
+```
+
+Одноразовый `migrate` запускает существующий защищённый Alembic-инструментарий
+из образа API. Цель — единственная head-ревизия миграций в образе выпуска;
+сейчас это `0008_contextual_onboarding`. API и обработчики проверяют совместимость,
+но не меняют схему. Обработчикам не нужен работающий API.
+
+Транзакционная advisory-блокировка PostgreSQL удерживается тем же соединением
+до проверки и commit. Ожидание ограничено 120 секундами; параметр
+`SCOPE_GUARD_MIGRATION_LOCK_TIMEOUT_SECONDS` меняет этот срок. После получения
+блокировки мигратор заново читает схему. Повторный запуск актуальной базы — no-op.
+Ошибка возвращает ненулевой код и блокирует новые зависимые контейнеры.
+
+Обычные `logs migrate` содержат execution ID, исходную и целевую ревизии,
+ожидание/получение блокировки, отдельные ревизии, no-op, длительность и результат.
+`migration_lock_timeout` означает другого держателя блокировки: проверьте его
+журнал и активные процессы PostgreSQL. Не снимайте блокировку принудительно и
+не запускайте второй инструмент изменения схемы. При завершении процесса его
+соединение закрывается, транзакция откатывается и блокировка освобождается.
+`schema_mismatch` требует проверки категории ошибки и базы оператором; секреты,
+URL подключения и сырые SQL-параметры в журнал мигратора не выводятся.
+
+Неизвестные ревизии, несовместимые схемы и понижение версии отклоняются.
+Наличие старой базы не даёт разрешения на stamp/adoption. Для Drizzle нужны
+явное `SCOPE_GUARD_ADOPT_LEGACY=true`, проверка происхождения и существующая
+[поэтапная процедура expansion/backfill/check](docs/architecture/draft-workflow.md).
+База с неперенесёнными данными может намеренно остановиться перед constraints;
+автоматический мигратор не обходит этот барьер. После перехода уберите разрешение.
+
+### Обновление существующей установки
+
+Сначала сделайте и проверьте резервную копию. Сохраняйте прежнее имя Compose-проекта.
+Проверьте фактический том, ничего не удаляя:
+
+```sh
+docker inspect --format '{{json .Mounts}}' EXISTING_POSTGRES_CONTAINER
+docker volume inspect EXISTING_DATABASE_VOLUME
+```
+
+Стандартное имя тома остаётся `<project>_scope_creep_guard_postgres`, ключ тома —
+`scope_creep_guard_postgres`. Смена `-p` создаёт другую базу: это не перенос данных.
+Для нестандартного существующего тома задайте в выбранном env-файле:
+
+```dotenv
+SCOPE_GUARD_POSTGRES_VOLUME=EXISTING_DATABASE_VOLUME
+SCOPE_GUARD_POSTGRES_VOLUME_EXTERNAL=true
+```
+
+`external=true` требует уже существующий том и не создаёт пустую замену при ошибке
+имени. Применяйте эти значения во всех командах установки. Для стандартного
+проектного тома оставьте оба параметра не заданными. До запуска проверьте
+итоговый mount и имя тома через `config`; не публикуйте полный вывод, он может
+содержать секреты. Не добавляйте произвольные overrides к include-конфигурации:
+Compose 2.24 не поддерживает все варианты такого переопределения.
+
+Обновление требует окна обслуживания. `depends_on` не останавливает старые
+работающие контейнеры; обычного `up -d` для обновления недостаточно.
+Подготовьте исходники выбранного выпуска и задайте `SOURCE_REVISION` равным
+`git rev-parse HEAD` (в PowerShell: `$env:SOURCE_REVISION = git rev-parse HEAD`).
+Зафиксируйте также локальные изменения и ID образов. Затем:
+
+```sh
+docker compose -p scopecreepguard -f compose.yaml config --quiet
+docker compose -p scopecreepguard -f compose.yaml build
+docker compose -p scopecreepguard -f compose.yaml stop app backend llm-worker export-worker
+docker compose -p scopecreepguard -f compose.yaml up -d --no-build --wait postgres
+docker compose -p scopecreepguard -f compose.yaml up --no-deps --no-build --force-recreate --abort-on-container-exit --exit-code-from migrate migrate
+# Выполняйте следующие команды ТОЛЬКО если миграция завершилась с кодом 0:
+docker compose -p scopecreepguard -f compose.yaml up -d --no-deps --no-build --force-recreate --wait backend llm-worker export-worker
+docker compose -p scopecreepguard -f compose.yaml up -d --no-deps --no-build --force-recreate --wait app
+```
+
+В POSIX-скрипте используйте `set -e` либо соединение этапов через `&&`.
+Автоматически остановиться при ошибке позволяет:
+`python scripts/stack.py update --project scopecreepguard` или
+`./scripts/dev.ps1 update -Project scopecreepguard`.
+Для опубликованных образов задайте все три `SCOPE_GUARD_*_IMAGE` неизменяемыми
+release/digest-ссылками и используйте `--pull` (PowerShell `-Pull`); в прямой
+последовательности замените `build` на `pull`.
+
+Мигратор принудительно пересоздаётся для каждого обновления, даже если предыдущий
+контейнер уже завершился успешно. При ошибке приложение остаётся остановленным,
+PostgreSQL и данные сохраняются. Исправьте причину, повторите последовательность.
+Откат образа не понижает схему: восстановление несовместимой базы требует
+проверенной резервной копии. Zero-downtime совместимость не заявляется.
+
+### Dokploy / production
+
+Используйте `docker-compose.dokploy.yml` в режиме Docker Compose с Git-источником,
+сохраняющим файлы общего каталога. Укажите в Dokploy `POSTGRES_DB`, `POSTGRES_USER`,
+`POSTGRES_PASSWORD`, соответствующий `DATABASE_URL`, `AUTH_SECRET`, ключ/модель/
+ценовые границы, закрытый бакет и JSON `SCOPE_GUARD_ALLOWED_ORIGINS` с HTTPS-адресом.
+Настройте домен на службу `app`, порт 3000. Локальные порты не публикуются,
+локальные env-файлы контейнеров исключены, production принудительно включён.
+
+Перед эксплуатацией оператор проверяет `docker compose version` на хосте
+(нужна 2.24+) и выполняет `config --quiet` с production-файлом. Новый стек
+использует тот же migration gate. Для обновления работающего стека отключите
+параллельный auto-deploy и выполните последовательность обслуживания выше,
+заменив имя проекта и файл на существующие Dokploy-значения. Доступна команда
+`python scripts/stack.py update --production --project EXISTING_PROJECT --env-file DEPLOY_ENV`.
+Обычная кнопка redeploy сама по себе не гарантирует остановку старых служб до DDL.
+В этой работе развёртывание в рабочую среду не выполняется.
+[Dokploy Compose](https://docs.dokploy.com/docs/core/docker-compose) описывает
+Git-источники, переменные среды и пользовательскую команду запуска.
 
 ## Разработка и проверки
 
-### Запуск приложений без контейнеров
-
-Сначала настройте корневой `.env`, как описано выше. Переменная `AUTH_SECRET`
-нужна Compose даже при запуске только PostgreSQL:
-
-```sh
-docker compose -f compose.yaml up -d postgres
-```
-
-В каждом терминале API и фоновых обработчиков задайте те же серверные настройки
-со следующими значениями для локальной разработки:
-
-| Переменная | Локальное значение |
-| --- | --- |
-| `SCOPE_GUARD_DATABASE_URL` | `postgres://scopeguard:scopeguard_dev_password@127.0.0.1:5432/scope_creep_guard` (замените порт, если изменён `POSTGRES_PORT`) |
-| `SCOPE_GUARD_PRODUCTION` | `false` для сеансовых cookie при локальном HTTP |
-| `SCOPE_GUARD_WORKFLOW_V2` | `true` |
-| `SCOPE_GUARD_LLM_WORKFLOW` | `true` |
-| `SCOPE_GUARD_MIGRATION_TARGET` | `0007_nonblocking_llm` |
-| `SCOPE_GUARD_ALLOWED_ORIGINS` | `["http://localhost:3000","http://127.0.0.1:3000"]` |
-
-Задайте переменные в окружении процесса: в PowerShell используется
-`$env:NAME = 'значение'`, в оболочках POSIX `export NAME='значение'`.
-Команда миграции читает окружение процесса и сама не загружает файл `.env`.
-Из каталога `backend/` установите зависимости и примените миграции к выбранной
-новой базе разработки:
+Для native-разработки нужны Node.js 22.13+, pnpm 10.34.1, Python 3.12 и uv
+0.11.19. PostgreSQL можно запустить компонентной командой выше. Для подключения
+с хоста замените `postgres` на `127.0.0.1` и опубликованный порт. Перед запуском
+API/обработчиков выполните явный миграционный этап; они не мигрируют сами:
 
 ```sh
+cd backend
 uv sync --locked --all-packages --all-groups --python 3.12
-uv run python -m scope_guard.database.cli migrate --database-url-env SCOPE_GUARD_DATABASE_URL --target 0007_nonblocking_llm
+uv run python -m scope_guard.database.startup --database-url-env SCOPE_GUARD_DATABASE_URL
 uv run uvicorn scope_guard_api.main:app --host 127.0.0.1 --port 8000 --reload --loop scope_guard.database.session:event_loop
 ```
 
-Ещё в двух терминалах из `backend/` выполните
-`uv run python ../apps/worker/main.py`. Для одного задайте
-`SCOPE_GUARD_WORKER_ROLE=llm`, для другого `SCOPE_GUARD_WORKER_ROLE=exports`.
-Они используют ту же базу. Обработчику ИИ нужны настройки провайдера,
-обработчику экспорта доступ к хранилищу. Фоновые обработчики не запускают миграции.
+Мигратор читает окружение процесса, а не `.env`. Для двух native-обработчиков
+запустите `uv run python ../apps/worker/main.py`, задав роли `llm` и `exports`.
+Для frontend настройте `frontend/.env.local`, затем выполните в `frontend/`
+`corepack pnpm install --frozen-lockfile` и `corepack pnpm dev`.
 
-Скопируйте [frontend/.env.example](frontend/.env.example) в `frontend/.env.local`.
-По умолчанию `SCOPE_GUARD_API_ORIGIN` равен `http://127.0.0.1:8000`.
-Из каталога `frontend/`:
-
-```sh
-corepack pnpm install --frozen-lockfile
-corepack pnpm dev
-```
-
-Vite запускает интерфейс на порту 3000 и передаёт запросы `/api` в FastAPI.
-Секреты сервера должны находиться только в окружении API и обработчиков.
-Не добавляйте к именам секретных переменных префикс `VITE_`.
-
-### Проверки
-
-Из каталога `frontend/`:
+Для проверки используйте **новое** имя проекта, свободные порты и отдельную базу;
+не подставляйте URL приложения. Пример: `-p scg-test-UNIQUE` с `POSTGRES_PORT=0`,
+`BACKEND_PORT=0`, `FRONTEND_PORT=0`. Подключение и секреты должны быть тестовыми.
+Только полная композиция подтверждает запуск приложения целиком.
 
 ```sh
+# Проверки из соответствующих каталогов:
+# frontend/
 corepack pnpm test
 corepack pnpm lint
-corepack pnpm api:types:check
 corepack pnpm typecheck
+corepack pnpm api:types:check
 corepack pnpm build
-```
-
-Из каталога `backend/`:
-
-```sh
+# backend/
 uv run pytest --require-integration
-uv run ruff check . ../apps/api
-uv run ruff format --check . ../apps/api
+uv run ruff check . ../apps/api ../apps/worker
+uv run ruff format --check . ../apps/api ../apps/worker
 uv run mypy src/scope_guard ../apps/api/src/scope_guard_api
 uv run python scripts/export_openapi.py --check ../ci/contracts/openapi.json
+# Из корня: CI проверяет реальные образы и точный Compose startup.
+bash ci/scripts/check-containers.sh
+bash ci/scripts/smoke-compose.sh
 ```
 
-Интеграционные тесты создают собственные временные контейнеры PostgreSQL
-и отдельные базы данных. Подробнее: [правила интеграционных проверок](backend/tests/integration/README.md),
-[браузерные сценарии](tests/e2e/README.md) и [сценарии CI](ci/README.md).
-
-### Развёртывание
-
-- Перед запуском API контейнер проверяет схему и выполняет миграции до
-  **настроенной целевой версии** под консультативной блокировкой PostgreSQL.
-  Миграциями управляет Alembic. Путь `/health/live` проверяет работу процесса,
-  `/health/ready` проверяет подключение к базе.
-- Рабочее окружение пока использует **один процесс API и одну реплику**:
-  ограничение параллельной генерации частично действует внутри процесса.
-- Nginx отдаёт статические файлы интерфейса и передаёт `/api` на сервер
-  с того же домена. Его серверная переменная `SCOPE_GUARD_API_ORIGIN` должна
-  указывать на доступный FastAPI. Если после замены контейнера API изменился
-  его адрес, перезапустите контейнер интерфейса.
-- [docker-compose.dokploy.yml](docker-compose.dokploy.yml) описывает базовую схему
-  развёртывания. Для интерфейса React отдельно настройте сохранение состояния
-  операций, версию схемы, закрытое хранилище и оба обработчика. Сам по себе
-  этот файл не включает полный режим работы приложения.
-- Для прежних баз Drizzle нужны проверенный переход под управление Alembic
-  и процедура переноса данных. Откат образов не понижает версию схемы автоматически;
-  восстановление базы выполняется из проверенной резервной копии.
+CI использует синтетический ключ без отправки задач, отдельный S3 fixture,
+уникальные проекты и только принадлежащие тесту тома. Для изоляции переменные
+`SCOPE_GUARD_LOCAL_ENV_FILE`, `SCOPE_GUARD_LOCAL_OVERRIDE_ENV_FILE` и
+`SCOPE_GUARD_BACKEND_ENV_FILE` указывают на пустой тестовый файл вместо `.env`,
+`.env.local` и `backend/.env`. Определения служб, цель миграции и зависимости
+при этом не переопределяются. Подробные команды, версии и фактически выполненные
+проверки фиксируются в [отчёте запуска](docs/architecture/2026-10-24-docker-startup-verification.md).
 
 ## Документация
 

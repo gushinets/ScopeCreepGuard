@@ -9,6 +9,8 @@ COPY . .
 RUN pnpm build
 
 FROM nginxinc/nginx-unprivileged:stable-alpine AS runner
+ARG SOURCE_REVISION=unknown
+LABEL org.opencontainers.image.revision=$SOURCE_REVISION
 ENV SCOPE_GUARD_API_ORIGIN=http://backend:8000
 ENV NGINX_ENVSUBST_FILTER=^SCOPE_GUARD_API_ORIGIN$
 COPY --from=builder /app/dist /usr/share/nginx/html

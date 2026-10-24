@@ -9,7 +9,15 @@ COPY backend/src ./backend/src
 COPY apps/api/src ./apps/api/src
 RUN uv sync --locked --package scope-guard-api --no-dev --no-editable
 
+FROM builder AS checks
+RUN uv sync --locked --all-packages --all-groups --no-editable
+# The frozen JOSE/bcrypt compatibility test executes the frontend's Node fixture.
+COPY --from=node:22-bookworm-slim /usr/local/bin/node /usr/local/bin/node
+ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+
 FROM python:3.12-slim AS runtime
+ARG SOURCE_REVISION=unknown
+LABEL org.opencontainers.image.revision=$SOURCE_REVISION
 WORKDIR /app/backend
 ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 SCOPE_GUARD_PRODUCTION=true
 RUN useradd --system --uid 10001 --create-home scopeguard

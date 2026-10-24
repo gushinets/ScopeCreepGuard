@@ -1,0 +1,29 @@
+# Authoritative service definition; included with repository project_directory.
+services:
+  app:
+    image: ${SCOPE_GUARD_FRONTEND_IMAGE:-scope-guard-frontend:local}
+    build:
+      context: ./frontend
+      target: runner
+      args:
+        SOURCE_REVISION: ${SOURCE_REVISION:-unknown}
+    init: true
+    environment:
+      SCOPE_GUARD_API_ORIGIN: http://backend:8000
+    ports:
+    - ${FRONTEND_PORT:-3000}:3000
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - -q
+      - -O
+      - /dev/null
+      - http://127.0.0.1:3000/health/live
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s

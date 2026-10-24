@@ -14,7 +14,7 @@
     "start": "vite preview --host 0.0.0.0 --port 3000",
     "lint": "eslint . && node scripts/check-boundaries.mjs",
     "test": "vitest run",
-    "db:up": "docker compose -f ../compose.yaml up -d postgres",
+    "db:up": "docker compose -f ../compose.postgres.yaml up -d --wait",
     "docker:up": "docker compose -f ../compose.yaml up --build -d",
     "docker:down": "docker compose -f ../compose.yaml down",
     "typecheck": "tsc --noEmit"

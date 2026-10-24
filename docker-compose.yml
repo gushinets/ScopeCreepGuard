@@ -1,3 +1,4 @@
-# Compatibility entry point. New commands explicitly use compose.yaml.
+# Explicit composition; include interpolation inherits the selected root environment.
 include:
-  - compose.yaml
+- path: compose.yaml
+  env_file: docker/compose/interpolation.env

@@ -1,0 +1,35 @@
+# Authoritative service definition; included with repository project_directory.
+services:
+  migrate:
+    image: ${SCOPE_GUARD_API_IMAGE:-scope-guard-api:local}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runner
+      args:
+        SOURCE_REVISION: ${SOURCE_REVISION:-unknown}
+    init: true
+    restart: 'no'
+    healthcheck:
+      disable: true
+    env_file:
+    - path: ${SCOPE_GUARD_LOCAL_ENV_FILE:-.env}
+      required: false
+    - path: ${SCOPE_GUARD_LOCAL_OVERRIDE_ENV_FILE:-.env.local}
+      required: false
+    - path: ${SCOPE_GUARD_BACKEND_ENV_FILE:-backend/.env}
+      required: false
+    environment:
+      SCOPE_GUARD_DATABASE_URL: ${SCOPE_GUARD_DATABASE_URL:-postgres://scopeguard:scopeguard_dev_password@postgres:5432/scope_creep_guard}
+      SCOPE_GUARD_ADOPT_LEGACY: ${SCOPE_GUARD_ADOPT_LEGACY:-false}
+      SCOPE_GUARD_MIGRATION_LOCK_TIMEOUT_SECONDS: ${SCOPE_GUARD_MIGRATION_LOCK_TIMEOUT_SECONDS:-120}
+    entrypoint:
+    - python
+    - -m
+    - scope_guard.database.startup
+    command:
+    - --database-url-env
+    - SCOPE_GUARD_DATABASE_URL
+    depends_on:
+      postgres:
+        condition: service_healthy

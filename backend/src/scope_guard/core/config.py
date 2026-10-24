@@ -28,7 +28,6 @@ class Settings(BaseSettings):
     llm_max_cost: Decimal = Field(default=Decimal("1.00"), gt=0, le=100)
     llm_input_rate_bound: Decimal | None = Field(default=None, gt=0)
     llm_output_rate_bound: Decimal | None = Field(default=None, gt=0)
-    migration_target: str = "0001_existing_drizzle_schema"
     export_bucket: str | None = None
     export_endpoint: str | None = None
     export_region: str = "us-east-1"
