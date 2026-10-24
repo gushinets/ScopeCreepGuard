@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useLocale, useTranslations } from 'use-intl'
 import { Button } from '@/shared/ui/button'
 import { ERROR_CODES, type ErrorCode } from '@/shared/api/errors'
@@ -12,25 +12,30 @@ import { DraftExportDialog } from './draft-export-dialog'
 export function MyDraftsView() {
   const { listDrafts, openDraft, draftError, draftProjects } = useDrafts()
   const t = useTranslations(), locale = useLocale()
-  const [query, setQuery] = useSearchParams()
+  const [query] = useSearchParams()
+  const location = useLocation(), navigate = useNavigate()
   const queryText = query.toString()
   const { filters, invalid, offset } = useMemo(() => readDraftFilters(new URLSearchParams(queryText)), [queryText])
   const [collection, setCollection] = useState<DraftCollection>({ drafts: [], total: 0, hasDrafts: false })
   const [loading, setLoading] = useState(true), [error, setError] = useState<ErrorCode | ''>('')
   const [refresh, setRefresh] = useState(0), [openingId, setOpeningId] = useState<string | null>(null)
+  const updateQuery = useCallback((next: DraftFilters, nextOffset = 0, replace = false) => {
+    const params = writeDraftFilters(new URLSearchParams(location.search), next, nextOffset)
+    void navigate({ pathname: location.pathname, search: params.size ? `?${params}` : '', hash: location.hash }, { state: location.state, replace })
+  }, [location.pathname, location.search, location.hash, location.state, navigate])
   useEffect(() => {
     if (invalid) return
     let active = true
     setLoading(true); setError('')
     void listDrafts(filters, { limit: 50, offset }).then(items => {
       if (!active) return
-      if (offset && offset >= items.total) { setQuery(current => writeDraftFilters(current, filters), { replace: true }); return }
+      if (offset && offset >= items.total) { updateQuery(filters, 0, true); return }
       setCollection(items)
     }).catch(() => { if (active) setError(ERROR_CODES.draftLoadFailed) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [listDrafts, filters, invalid, offset, refresh, setQuery])
-  function apply(next: DraftFilters) { setQuery(current => writeDraftFilters(current, next)) }
+  }, [listDrafts, filters, invalid, offset, refresh, updateQuery])
+  function apply(next: DraftFilters) { updateQuery(next) }
   const reset = () => apply(DEFAULT_DRAFT_FILTERS)
   async function open(id: string) {
     setOpeningId(id)
@@ -51,7 +56,7 @@ export function MyDraftsView() {
             <span className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground"><span>{t('drafts.createdAt')} <time dateTime={draft.createdAt}>{date(draft.createdAt)}</time></span><span>{t('drafts.updatedAt')} <time dateTime={draft.updatedAt}>{date(draft.updatedAt)}</time></span></span>
           </button>
         </li>)}</ul>
-        {collection.total > 50 && <nav aria-label={t('drafts.pagination')} className="mt-4 flex flex-wrap items-center justify-end gap-3"><span className="text-sm text-muted-foreground">{t('drafts.page', { page: offset / 50 + 1, pages: Math.ceil(collection.total / 50) })}</span><Button variant="outline" disabled={!offset} onClick={() => setQuery(current => writeDraftFilters(current, filters, offset - 50))}>{t('drafts.previous')}</Button><Button variant="outline" disabled={offset + 50 >= collection.total} onClick={() => setQuery(current => writeDraftFilters(current, filters, offset + 50))}>{t('drafts.next')}</Button></nav>}
+        {collection.total > 50 && <nav aria-label={t('drafts.pagination')} className="mt-4 flex flex-wrap items-center justify-end gap-3"><span className="text-sm text-muted-foreground">{t('drafts.page', { page: offset / 50 + 1, pages: Math.ceil(collection.total / 50) })}</span><Button variant="outline" disabled={!offset} onClick={() => updateQuery(filters, offset - 50)}>{t('drafts.previous')}</Button><Button variant="outline" disabled={offset + 50 >= collection.total} onClick={() => updateQuery(filters, offset + 50)}>{t('drafts.next')}</Button></nav>}
       </>}
     {draftError && <p role="alert" className="mt-3 text-sm text-outscope-text">{t(draftError)}</p>}
   </section>

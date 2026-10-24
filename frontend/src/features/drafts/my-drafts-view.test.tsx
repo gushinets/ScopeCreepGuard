@@ -10,9 +10,10 @@ const { store } = vi.hoisted(() => ({ store: { listDrafts: vi.fn(), openDraft: v
 vi.mock('./context', () => ({ useDrafts: () => store }))
 const item = { id: 'd1', projectId: '11111111-1111-4111-8111-111111111111', projectName: 'Project One', requestPreview: 'Saved request', verdict: null, createdAt: '2026-10-20T01:02:03Z', updatedAt: '2026-10-21T04:05:06Z' }
 const result = { drafts: [item], total: 1, hasDrafts: true }
-function Location() { return <output aria-label="Location">{useLocation().search}</output> }
+function Location() { const location = useLocation(); return <><output aria-label="Location">{location.search}</output><output aria-label="Context">{JSON.stringify({ hash: location.hash, state: location.state })}</output></> }
 function show(path = '/drafts?keep=yes') {
-  return render(<IntlProvider locale="en" messages={en}><MemoryRouter initialEntries={[path]}><MyDraftsView /><Location /></MemoryRouter></IntlProvider>)
+  const url = new URL(path, 'https://test')
+  return render(<IntlProvider locale="en" messages={en}><MemoryRouter initialEntries={[{ pathname: url.pathname, search: url.search, hash: url.hash, state: { retained: true } }]}><MyDraftsView /><Location /></MemoryRouter></IntlProvider>)
 }
 beforeEach(() => { store.listDrafts.mockReset().mockResolvedValue(result); store.openDraft.mockReset() })
 afterEach(cleanup)
@@ -92,6 +93,25 @@ it('uses pages of 50 and recovers an empty page after archiving', async () => {
   await waitFor(() => expect(store.listDrafts.mock.calls.some(call => call[1].offset === 50)).toBe(true))
   await waitFor(() => expect(store.listDrafts.mock.calls.at(-1)?.[1].offset).toBe(0))
   expect(await screen.findByText('Saved request')).toBeTruthy()
+})
+
+it('retains hash and history state through Apply, page changes, and Clear', async () => {
+  store.listDrafts.mockResolvedValue({ ...result, total: 51 })
+  show('/drafts?keep=yes#reply')
+  await screen.findByText('Saved request')
+  const context = () => expect(screen.getByLabelText('Context').textContent).toBe('{"hash":"#reply","state":{"retained":true}}')
+  fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
+  fireEvent.change(await screen.findByLabelText('Creation order'), { target: { value: 'oldest' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }))
+  await screen.findByText('Saved request')
+  context()
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(screen.getByLabelText('Location').textContent).toContain('draftPage=2'))
+  context()
+  fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
+  fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Clear filters' }))
+  await waitFor(() => expect(screen.getByLabelText('Location').textContent).toBe('?keep=yes'))
+  context()
 })
 
 it.each(['draftCreatedFrom=2026-13-40', 'draftCreatedFrom=2026-10-21&draftCreatedTo=2026-10-20', 'draftSort=unknown', 'draftPage=-1'])('shows a safe reset for invalid filter URL %s', async query => {
