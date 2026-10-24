@@ -1,4 +1,4 @@
-import type { AnalysisResult, HistoryEntry, Tone, Verdict, Project } from '@/shared/api/models'
+import type { AnalysisResult, HistoryEntry, Tone, Project } from '@/shared/api/models'
 import type { EditableDraft } from '@/shared/api/documents'
 import type { ClientMaterials } from '@/shared/api/materials'
 import type { ProjectDetails } from '@/features/projects/contracts'
@@ -58,14 +58,7 @@ export interface SavedDraft {
   analysisSnapshot: AnalysisResult
   draftDocument: DraftDocument
 }
-export interface DraftListItem {
-  id: string
-  requestPreview: string
-  projectName: string
-  verdict: Verdict | null
-  createdAt: string
-  updatedAt: string
-}
+export type DraftListItem = import('@/shared/api/generated').components['schemas']['DraftCollectionItem']
 export interface CreatedDraftResponse {
   draft: SavedDraft
   entry: HistoryEntry

@@ -38,6 +38,85 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 const wrapper = ({ children }: { children: ReactNode }) => <IntlProvider locale="en" messages={en}><PersistentStoreProvider>{children}</PersistentStoreProvider></IntlProvider>
 
+it('flushes an unanalyzed Draft before exporting its confirmed revision', async () => {
+  URL.createObjectURL = vi.fn(() => 'blob:csv'); URL.revokeObjectURL = vi.fn()
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  const original = vi.mocked(fetch).getMockImplementation()!
+  let exported = ''
+  vi.mocked(fetch).mockImplementation(async (request, init) => {
+    if (String(request).includes('/export.csv?')) { exported = saved.requestText; return new Response('csv') }
+    return original(request, init)
+  })
+  const hook = renderHook(useStore, { wrapper })
+  await waitFor(() => expect(hook.result.current.currentDraftId).toBe('d1'))
+  act(() => hook.result.current.setRequestText('My latest request'))
+  await act(async () => { await hook.result.current.exportCurrentDraft('en') })
+  expect(exported).toBe('My latest request')
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('expectedRevision=4'))).toBe(true)
+  expect(click).toHaveBeenCalledTimes(1)
+  click.mockRestore()
+})
+
+it('preserves edits and prevents stale CSV download when autosave fails', async () => {
+  const original = vi.mocked(fetch).getMockImplementation()!
+  let failed = true
+  vi.mocked(fetch).mockImplementation(async (request, init) => {
+    if (init?.method === 'PUT' && failed) return Response.json({ error: 'errors.requestFailed' }, { status: 400 })
+    if (String(request).includes('/export.csv?')) return new Response('csv')
+    return original(request, init)
+  })
+  const hook = renderHook(useStore, { wrapper })
+  await waitFor(() => expect(hook.result.current.currentDraftId).toBe('d1'))
+  act(() => hook.result.current.setRequestText('Keep my edits'))
+  await act(async () => { await expect(hook.result.current.exportCurrentDraft('en')).rejects.toThrow() })
+  expect(hook.result.current.requestText).toBe('Keep my edits')
+  expect(hook.result.current.workflow.status).toBe('failed')
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/export.csv'))).toBe(false)
+  failed = false
+  await act(async () => { await hook.result.current.workflow.retrySave() })
+  expect(saved.requestText).toBe('Keep my edits')
+})
+
+it('does not download if the user edits again while CSV is being fetched', async () => {
+  URL.createObjectURL = vi.fn(() => 'blob:csv'); URL.revokeObjectURL = vi.fn()
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  const original = vi.mocked(fetch).getMockImplementation()!
+  let release!: (response: Response) => void
+  vi.mocked(fetch).mockImplementation((request, init) => String(request).includes('/export.csv?')
+    ? new Promise(resolve => { release = resolve }) : original(request, init))
+  const hook = renderHook(useStore, { wrapper })
+  await waitFor(() => expect(hook.result.current.currentDraftId).toBe('d1'))
+  let exporting!: Promise<void>
+  act(() => { exporting = hook.result.current.exportCurrentDraft('en') })
+  const rejected = expect(exporting).rejects.toThrow()
+  await waitFor(() => expect(release).toBeTypeOf('function'))
+  act(() => hook.result.current.setRequestText('New edit during download'))
+  await act(async () => { release(new Response('csv')); await rejected })
+  expect(click).not.toHaveBeenCalled()
+  expect(hook.result.current.requestText).toBe('New edit during download')
+  click.mockRestore()
+})
+
+it('does not download a workspace export after navigating away', async () => {
+  URL.createObjectURL = vi.fn(() => 'blob:csv'); URL.revokeObjectURL = vi.fn()
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  const original = vi.mocked(fetch).getMockImplementation()!
+  let release!: (response: Response) => void
+  vi.mocked(fetch).mockImplementation((request, init) => String(request).includes('/export.csv?')
+    ? new Promise(resolve => { release = resolve }) : original(request, init))
+  const hook = renderHook(useStore, { wrapper })
+  await waitFor(() => expect(hook.result.current.currentDraftId).toBe('d1'))
+  let exporting!: Promise<void>
+  act(() => { exporting = hook.result.current.exportCurrentDraft('en') })
+  const rejected = expect(exporting).rejects.toThrow()
+  await waitFor(() => expect(release).toBeTypeOf('function'))
+  act(() => hook.result.current.setView('drafts'))
+  await waitFor(() => expect(hook.result.current.view).toBe('drafts'))
+  await act(async () => { release(new Response('csv')); await rejected })
+  expect(click).not.toHaveBeenCalled()
+  click.mockRestore()
+})
+
 function analyzedDraft() {
   saved.lastAnalysisRunId = 'analysis'
   saved.analysisIsStale = false
@@ -457,6 +536,7 @@ it('archives a project out of Projects and Drafts; opening its history never act
   const url = String(input)
   if (url === '/api/v2/projects/p1' && init?.method === 'DELETE') { archived = true; return Response.json({ ok: true }) }
   if (url === '/api/v2/projects' && archived) return Response.json({ projects: [] })
+  if (url.startsWith('/api/v2/drafts?')) return Response.json({ drafts: [], total: 0, hasDrafts: false })
   if (url === '/api/v2/projects?archived=true') return Response.json({ projects: [{ ...project, archivedAt: '2026-10-22' }] })
   return originalFetch(input, init)
  })
@@ -470,7 +550,7 @@ it('archives a project out of Projects and Drafts; opening its history never act
  expect(hook.result.current.view).toBe('history')
  expect(hook.result.current.projects).toEqual([])
  expect(hook.result.current.currentDraftId).toBeNull()
- expect(await hook.result.current.listDrafts()).toEqual([])
+ expect((await hook.result.current.listDrafts({ sort: 'newest' }, { limit: 50, offset: 0 })).drafts).toEqual([])
  expect(requests.filter(url => url.endsWith('/draft')).length).toBe(readsBefore)
  expect(window.location.search).toContain('historyProject=p1')
 })
