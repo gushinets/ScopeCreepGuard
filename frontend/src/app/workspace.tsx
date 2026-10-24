@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useBlocker, useLocation, useNavigate } from 'react-router'
 import { useSession } from '@/features/auth'
-import { ProjectsContext, useProjectResources, useProjectActions, type ProjectsValue } from '@/features/projects'
-import { DraftsContext, useDraftEditor, WorkflowOperations, workflowApi, readDraftLink, draftErrorCode, type WorkingDraft, type DraftsValue } from '@/features/drafts'
+import { ProjectsContext, useProjectResources, useProjectActions } from '@/features/projects'
+import { DraftsContext, useDraftEditor, WorkflowOperations, workflowApi, readDraftLink, draftErrorCode, fetchDraftCollection, downloadDraftCsv, type WorkingDraft, type DraftsValue } from '@/features/drafts'
 import { AnalysisContext, useAnalysisOperations, type AnalysisValue } from '@/features/analysis'
 import { AgreementContext, useAgreementCommands } from '@/features/change-orders'
 import { HistoryContext, useHistoryCommands } from '@/features/history'
 import { NavigationContext } from '@/shared/ui/navigation'
 import { pageView, workspacePath, type View } from '@/shared/config/navigation'
-import type { DraftDocument, DraftListItem } from '@/features/drafts/contracts'
+import type { DraftDocument } from '@/features/drafts/contracts'
 import type { AnalysisResult } from '@/shared/api/models'
 import type { ErrorCode } from '@/shared/api/errors'
 
@@ -130,13 +130,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (navigateToCheck) show('check')
     } catch (failure) { editor.report(failure); throw failure }
   }
-  const listDrafts = useCallback(async (): Promise<DraftListItem[]> => {
-    const current = await workflowApi<{ projects: ProjectsValue['projects'] }>('projects')
-    return Promise.all(current.projects.map(async project => {
-      const { draft } = await workflowApi<{ draft: WorkingDraft }>(`projects/${project.id}/draft`)
-      return { id: draft.id, projectName: project.name, requestPreview: draft.requestText.slice(0, 160), verdict: draft.analysisRun?.resultSnapshot?.verdict ?? null, createdAt: draft.createdAt, updatedAt: draft.updatedAt }
-    }))
-  }, [])
   const snapshot = editor.snapshot
   const selectedProject = resources.projects.find(project => project.id === snapshot?.projectId) ?? null
   const rawResult = snapshot?.analysisRun?.resultSnapshot
@@ -146,10 +139,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const draftDocument: DraftDocument | null = snapshot && result ? { version: 1, result, clientMaterials: null,
     changeOrder: snapshot.draftDocument.changeOrder, reply: snapshot.draftDocument.reply, languageSelection: snapshot.draftDocument.languageSelection,
     projectDetails: { clientName: selectedProject?.clientName ?? '', clientEmail: selectedProject?.clientEmail ?? '', endDate: selectedProject?.endDate ?? '' } } : null
-  const draftsValue: DraftsValue = { draftDocument, currentDraftId: snapshot?.id ?? null, draftSessionId: snapshot?.id ?? '',
+  const draftsValue: DraftsValue = { draftProjects: resources.projects, draftDocument, currentDraftId: snapshot?.id ?? null, draftSessionId: snapshot?.id ?? '',
     draftError: editor.draftError, isSavingDraft: editor.saveStatus === 'saving', isDraftDirty: editor.saveStatus !== 'saved',
     requestText: snapshot?.requestText ?? '', setRequestText: editor.setRequestText, loadExample: editor.setRequestText,
-    updateReply: editor.updateReply, updateChangeOrder: editor.updateChangeOrder, saveDraft: editor.flush, openDraft: activateDraft, listDrafts,
+    updateReply: editor.updateReply, updateChangeOrder: editor.updateChangeOrder, saveDraft: editor.flush, openDraft: activateDraft, listDrafts: fetchDraftCollection,
+    exportCurrentDraft: async locale => {
+      const current = editor.controller.current, navigation = editor.navigation.current
+      const locationKey = locationRef.current.key
+      if (!current || editor.recovery || editor.legacyRevision || selectedProject?.archivedAt) throw new Error('Draft export unavailable')
+      const saved = await editor.flush()
+      const edits = current.editToken
+      const stillCurrent = () => editor.controller.current === current && editor.navigation.current === navigation && locationRef.current.key === locationKey && current.editToken === edits && current.status === 'saved'
+      if (!stillCurrent()) throw new Error('Draft changed during export')
+      await downloadDraftCsv(saved.id, locale, saved.revision, stillCurrent)
+    },
     workflow: { status: editor.saveStatus, stale: snapshot?.analysisIsStale ?? true, recovery: editor.recovery,
       acceptRecovery: editor.acceptRecovery, discardRecovery: editor.discardRecovery, retrySave: editor.flush,
       compareConflict: editor.compareConflict, resolveConflict: editor.resolveConflict,
