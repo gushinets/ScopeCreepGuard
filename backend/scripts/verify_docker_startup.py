@@ -107,6 +107,9 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
 
         full = config("compose.yaml")
         assert set(full["services"]) == SERVICES
+        assert full["volumes"]["scope_creep_guard_postgres"]["name"] == (
+            project + "_scope_creep_guard_postgres"
+        )
         for component, expected in CLOSURES.items():
             selected = config(f"compose.{component}.yaml")
             assert set(selected["services"]) == expected
@@ -534,6 +537,18 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             if found.returncode == 0:
                 assert found.stdout.strip() == token
                 run("docker", "rm", "-f", "-v", storage)
+            network = run(
+                "docker",
+                "network",
+                "inspect",
+                "--format",
+                '{{index .Labels "com.docker.compose.project"}}',
+                project + "_default",
+                check=False,
+            )
+            if network.returncode == 0:
+                assert network.stdout.strip() == project
+                run("docker", "network", "rm", project + "_default")
     return results
 
 
