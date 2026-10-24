@@ -91,3 +91,13 @@ and external=true; a missing named volume fails rather than creating an empty DB
 Preserve normal Compose project-name precedence in the wrapper by supplying -p only
 when the operator explicitly selects --project. Production-only proxy forwarding
 preserves local env-file precedence.
+
+Implementation complete in f93fee5 with the explicit default-volume fallback fix in
+2e6167d. Independent review found the wrapper project-name precedence and proxy
+precedence issues; both were fixed and rechecked. Final source-labelled images and
+complete runtime matrices pass Compose 5.6.0 and 2.24.0. Backend full run: 953 passes;
+final Docker unit/API/architecture run: 806 passes; frontend: 383 passes. See
+[verification and operator handoff](../2026-10-24-docker-startup-verification.md)
+for exact source revision, image IDs, commands, failed attempts and limitations.
+No paid AI jobs, changes to pre-existing developer/production databases, merge or
+live deployment occurred.
