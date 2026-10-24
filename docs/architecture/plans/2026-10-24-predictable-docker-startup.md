@@ -112,3 +112,11 @@ preserve the original exit code if cleanup fails, and keep PostgreSQL/volumes in
 Move auth, provider and storage requirements to their consuming service fragments.
 Verify focused regression tests, minimal worker configurations on Compose 2.24 and
 5.6, and disposable failed-startup scenarios, then update this PR without deploying.
+
+Follow-up implemented in 4928b1a. Both findings reproduced, then 38 focused tests,
+813 Docker unit/API/architecture tests and the expanded Compose 2.24 runtime matrix
+passed. Tests cover failed backend/worker/frontend starts, original exit code after
+cleanup failure, minimal role-only worker config and component logs. Fresh images
+carry the follow-up revision. Independent review found no remaining actionable
+issue; exact evidence and the initial unreproduced container-reuse failure are in
+the verification report's PR 42 follow-up section. Acceptance evidence stays intact.
