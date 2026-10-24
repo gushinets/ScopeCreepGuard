@@ -2,12 +2,16 @@
 
 24 October 2026, Europe/Moscow. Infrastructure verification only; no live deployment.
 
+The PR 42 review follow-up at the end records the latest verified configuration and
+update wrapper revision, `4928b1a9c2e18f9ad59330ca2695b9233d5ad901`. The initial
+implementation evidence below is retained as an audit record.
+
 ## Provenance and preservation
 
 - Base: freshly fetched `origin/main`, `0bea6bc8c2e106f78dd2a14cbff4cb0b7e4c3d90`.
   A final fetch confirmed main had not advanced.
 - Branch: `codex/predictable-docker-startup`.
-- Final runtime/configuration revision: **`2e6167d7edbcfbc246a398e72a72f770330f7b78`**.
+- Initial runtime/configuration revision: **`2e6167d7edbcfbc246a398e72a72f770330f7b78`**.
   Tracked sources were clean during final verification. A later documentation-only
   commit records this report; it does not change tested runtime sources.
 - Installed Compose: **5.6.0**; minimum **2.24.0** tested with official,
@@ -20,7 +24,7 @@
   migrated, reset or deleted. Tests used UUID `scg-startup-test-*` projects and
   exclusively owned PostgreSQL containers/databases/volumes.
 
-Final images were built from the tested revision and carry its
+Initial verification images were built from that revision and carry its
 `org.opencontainers.image.revision` label:
 
 | Image | Local image ID |
@@ -142,3 +146,76 @@ be added as distinct tests.
   data migration, production deployment or paid job was performed.
 - The final report records local results. GitHub Actions execution is separate and
   must be inspected on the PR; remote CI success is not inferred from these runs.
+
+
+## PR 42 review follow-up
+
+Tested source/configuration revision:
+**`4928b1a9c2e18f9ad59330ca2695b9233d5ad901`**. The following commit updates only
+this report, the plan record and README wording; tested runtime/configuration files
+are unchanged. Fresh sequential builds succeeded with this revision label:
+
+| Image | Local image ID |
+| --- | --- |
+| API / migrate | `sha256:883965b0de6d33b2a75db13dcffefae8e5f4b5f4dd11513f28e978c550626e41` |
+| Workers | `sha256:e9894c09da7044ed5b60cbb338aacd7e0a241408c9c5396c36442bb4a8a5652a` |
+| Frontend | `sha256:9199a90b4bcd8537670442ff8b51df520298c0d8d966bc632fc3ea9805bf2e4b` |
+
+Both reported findings were reproduced before their fixes:
+
+- Four update tests failed because backend/worker/frontend wait errors left partial
+  releases running and cleanup was not attempted. The wrapper now stops all four
+  application services after a maintenance-stage failure. Image preparation failure
+  preserves the old release; a cleanup failure warns the operator and preserves the
+  original error code. PostgreSQL and volumes are not stopped or removed by cleanup.
+- Minimal worker configuration failed on unrelated authentication/storage settings.
+  The common runtime now contains database/workflow settings only. API auth/origins,
+  provider requirements and storage requirements live with their actual consumers.
+  Component logs select the same bounded entry point as component startup; two log
+  regressions failed before this adjustment and now pass.
+
+Verification:
+
+| Check | Result |
+| --- | --- |
+| Focused update/migration/startup/safety tests | **38 passed** |
+| Final Docker backend unit/API/architecture suite | **813 passed**, 148 integration cases deselected; OpenAPI freshness command also exited 0 |
+| Minimal worker config, Compose 5.6.0 and 2.24.0 | PASS: both workers configure without auth or the other role's variables; missing their own required settings still fails |
+| Minimal worker runtime, current Compose | PASS: both roles become healthy with unrelated values absent |
+| Current-version Docker diagnostic matrix | PASS: API/frontend startup faults stop partial releases; original lifecycle and data-preservation assertions retained |
+| Final complete runtime matrix, Compose 2.24.0 | PASS with fresh revision-labelled images, including real failed API, worker and frontend containers after successful migration |
+| Failure cleanup data preservation | PASS: only PostgreSQL remains running; registered fixture account remains present after each failure |
+| Ruff lint / format | PASS; 387 files formatted |
+| Independent review | No remaining actionable correctness findings |
+
+Commands used the existing verification harness, including:
+
+```sh
+python -m pytest backend/tests/unit/test_stack_update.py backend/tests/unit/test_migration_lifecycle.py backend/tests/unit/test_api_startup.py backend/tests/unit/test_migration_safety.py -q
+python backend/scripts/verify_docker_startup.py --config-only
+python backend/scripts/verify_docker_startup.py --compose-binary output/docker-compose-2.24.0.exe --config-only
+python backend/scripts/verify_docker_startup.py --compose-binary output/docker-compose-2.24.0.exe
+```
+
+The harness builds owned temporary fault images from the verified release images.
+All application/migration commands use the real canonical Compose configuration.
+For these fault-update cases only, the wrapper's preparation call verifies the
+already built fixture images instead of overwriting their intentional broken
+entrypoints. Before cleanup the harness confirms that peer application containers
+are actually running; afterward it requires PostgreSQL alone and preserved data.
+Fault images, containers, network and volume are ownership-checked and removed.
+No production migration, paid job or existing developer database is involved.
+
+One initial current-version run failed the original PostgreSQL container-ID reuse
+assertion. The cause was not established. The diagnostic rerun retained exactly the
+same ID through every component/full-stack transition, as did the final minimum
+version run. Per-component ID and configuration-equality assertions were added;
+no assertion was disabled or relaxed. The focused review fixes and their failure
+cases pass independently of that initial unsuccessful attempt.
+
+The full 953-test initial backend run was not repeated for this orchestration-only
+follow-up; the complete Docker unit/API/architecture suite, focused safety cases
+and actual Docker lifecycle/failure matrix above were rerun. Frontend application
+code and migration implementation were unchanged. GitHub Actions results remain
+separate from these local checks. Existing untracked acceptance evidence remains
+excluded, and nothing was merged or deployed.
