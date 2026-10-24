@@ -204,7 +204,7 @@ Initial decision: no migration. Both timestamps are required `timestamptz` colum
 - [x] Stop only this task's owned test containers when finished; retain test volumes unless explicitly authorized to remove them. Never use general Docker prune/down-volume cleanup. Preserve original acceptance reports and all unrelated files.
 - [x] Use `superpowers:verification-before-completion` and request a whole-branch code review. Address actionable defects and rerun affected checks. Record unresolved environmental limitations explicitly; do not claim unexecuted checks passed.
 - [x] Commit the feature, tests, generated contracts, plan, public docs, and sanitized evidence. Verify branch ancestry directly from exact main base, inspect staged diff for unrelated/private files, and check original checkout still has its acceptance work untouched.
-- [ ] Push `codex/any-556-draft-filters-csv`, create a PR against `main`, and attach it to this chat. State that approved Draft semantics replace ANY-556's historical History wording. Include exact base/tested SHAs, source/image evidence, actual checks and limitations, no-migration rationale, and merged infrastructure PR #42. Do not merge/deploy or change Linear.
+- [x] Push `codex/any-556-draft-filters-csv`, create a PR against `main`, and attach it to this chat. State that approved Draft semantics replace ANY-556's historical History wording. Include exact base/tested SHAs, source/image evidence, actual checks and limitations, no-migration rationale, and merged infrastructure PR #42. Do not merge/deploy or change Linear.
 
 ## Planning preflight evidence and current status
 
@@ -233,3 +233,5 @@ Initial decision: no migration. Both timestamps are required `timestamptz` colum
 - Ruling: command integration tests and actual browser journeys cover the individual export action, rather than an additional isolated button-only test.
 - Ruling: keep this plan's ignored private worklogs because the user requested their preservation. Preserve the worktree and test volume for review; only task-owned test services were stopped.
 - Snapshot pagination and in-memory export remain the approved limits; measured 5,003-row export evidence is in the report.
+
+- Delivery: [PR #43](https://github.com/gushinets/ScopeCreepGuard/pull/43) opened against `main` and attached to this chat. No merge or deployment.
