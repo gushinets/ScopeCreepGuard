@@ -19,5 +19,5 @@ services:
       retries: 30
 volumes:
   scope_creep_guard_postgres:
-    name: ${SCOPE_GUARD_POSTGRES_VOLUME:-}
+    name: ${SCOPE_GUARD_POSTGRES_VOLUME:-${COMPOSE_PROJECT_NAME}_scope_creep_guard_postgres}
     external: ${SCOPE_GUARD_POSTGRES_VOLUME_EXTERNAL:-false}
