@@ -1,7 +1,7 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from scope_guard.domain.drafts.workflow import WorkflowError
 from scope_guard.services.drafts.workflow import WorkflowService
 from starlette.responses import Response
@@ -12,6 +12,9 @@ from scope_guard_api.schemas.workflow import (
     AgreementResponse,
     AgreementsResponse,
     AnalysisResponse,
+    DraftCollectionResponse,
+    DraftExportQuery,
+    DraftListQuery,
     DraftResponse,
     ExportRequest,
     ExportResponse,
@@ -26,6 +29,7 @@ from scope_guard_api.schemas.workflow import (
     ProjectsResponse,
     ProjectUpdate,
     ProjectWrite,
+    Revision,
     RevisionResponse,
     RevisionsResponse,
     RunAnalysis,
@@ -84,6 +88,59 @@ async def restore_project(identifier: UUID, owner: Owner, service: Service):
 )
 async def project_draft(identifier: UUID, owner: Owner, service: Service):
     return {"draft": await service.project_draft(UUID(owner["id"]), identifier)}
+
+
+CSV_RESPONSE: dict = {
+    200: {
+        "content": {"text/csv": {"schema": {"type": "string", "format": "binary"}}},
+        "headers": {"Content-Disposition": {"schema": {"type": "string"}}},
+    }
+}
+
+
+def csv_download(data: bytes, filename: str) -> Response:
+    return Response(
+        data,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/drafts", response_model=DraftCollectionResponse)
+async def draft_collection(
+    owner: Owner, service: Service, query: Annotated[DraftListQuery, Query()]
+):
+    return await service.draft_collection(
+        UUID(owner["id"]), query.filters(), limit=query.limit, offset=query.offset
+    )
+
+
+@router.get("/drafts/export.csv", response_class=Response, responses=CSV_RESPONSE)
+async def export_drafts_csv(
+    owner: Owner, service: Service, query: Annotated[DraftExportQuery, Query()]
+):
+    return csv_download(
+        await service.export_drafts_csv(UUID(owner["id"]), query.filters(), query.locale),
+        f"drafts-{query.locale}.csv",
+    )
+
+
+@router.get("/drafts/{identifier}/export.csv", response_class=Response, responses=CSV_RESPONSE)
+async def export_draft_csv(
+    identifier: UUID,
+    owner: Owner,
+    service: Service,
+    locale: Literal["en", "ru"] = "en",
+    expected_revision: Annotated[Revision | None, Query(alias="expectedRevision")] = None,
+):
+    return csv_download(
+        await service.export_draft_csv(UUID(owner["id"]), identifier, locale, expected_revision),
+        f"draft-{identifier}-{locale}.csv",
+    )
 
 
 @router.get("/drafts/{identifier}", response_model=DraftResponse, response_model_exclude_unset=True)

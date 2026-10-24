@@ -45,6 +45,22 @@ def test_v2_requires_authentication_and_retires_unsafe_legacy_routes():
         assert response.headers["cache-control"] == "private, no-store"
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v2/drafts",
+        "/api/v2/drafts/export.csv",
+        "/api/v2/drafts/11111111-1111-4111-8111-111111111111/export.csv",
+    ],
+)
+def test_draft_collection_and_csv_require_auth_and_are_private(path):
+    app = create_app(Settings(_env_file=None, workflow_v2=True))
+    with TestClient(app) as client:
+        response = client.get(path)
+        assert response.status_code == 401
+        assert response.headers["cache-control"] == "private, no-store"
+
+
 def test_v2_rejects_client_supplied_analysis_even_with_valid_identifiers():
     from scope_guard_api.dependencies import current_owner
 
