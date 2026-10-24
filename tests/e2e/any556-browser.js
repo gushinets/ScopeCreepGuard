@@ -1,0 +1,74 @@
+async (page) => {
+  await page.keyboard.press('Escape');
+  await page.goto(new URL('/drafts', page.url()).href);
+  await page.getByRole('heading', { name: 'My drafts', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Next', exact: true }).waitFor();
+  const results = [];
+  const check = (ok, message) => { if (!ok) throw new Error(message); results.push(message); };
+  async function download(filename, ru = false) {
+    const trigger = page.getByRole('button', { name: ru ? 'Экспорт' : 'Export', exact: true });
+    await trigger.click();
+    const dialog = page.getByRole('dialog');
+    await dialog.waitFor();
+    const pending = page.waitForEvent('download');
+    await dialog.getByRole('button', { name: ru ? 'Скачать CSV' : 'Download CSV', exact: true }).click();
+    const saved = await pending;
+    await saved.saveAs('output/playwright/any556/' + filename);
+    await dialog.waitFor({ state: 'hidden' });
+    check(await trigger.evaluate(el => el === document.activeElement), 'Export dialog restores trigger focus: ' + filename);
+  }
+  async function apply(values) {
+    await page.getByRole('button', { name: 'Filter', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('combobox', { name: 'Project', exact: true }).selectOption(values.project ? { label: values.project } : '');
+    await dialog.getByLabel('Created from (UTC)', { exact: true }).fill(values.from || '');
+    await dialog.getByLabel('Created to (UTC)', { exact: true }).fill(values.to || '');
+    await dialog.getByRole('combobox', { name: 'Creation order', exact: true }).selectOption(values.sort || 'newest');
+    const response = page.waitForResponse(r => r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/v2/drafts');
+    await dialog.getByRole('button', { name: 'Apply filters', exact: true }).click();
+    const data = await (await response).json();
+    await dialog.waitFor({ state: 'hidden' });
+    check(await page.getByRole('button', { name: 'Filter', exact: true }).evaluate(el => el === document.activeElement), 'Filter restores trigger focus');
+    return data;
+  }
+  await page.screenshot({ path: 'output/playwright/any556/collection-en.png', fullPage: true });
+  await download('collection-all-en.csv');
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await page.getByText('Page 2 of 2', { exact: true }).waitFor();
+  check(await page.locator('.draft-rows > li').count() === 3, 'Second page contains 3 of 53 Drafts');
+  let data = await apply({ sort: 'oldest' });
+  check(data.total === 53 && data.drafts[0].projectName === 'ANY-556 Catalog', 'Oldest creation order, 53 active owned Drafts');
+  data = await apply({ from: '2026-10-20', to: '2026-10-20', sort: 'oldest' });
+  check(data.total === 51, 'Both inclusive UTC date boundaries exclude adjacent days');
+  await download('collection-day-en.csv');
+  data = await apply({ project: 'ANY-556 Website', from: '2026-10-20', to: '2026-10-20', sort: 'oldest' });
+  check(data.total === 1 && data.drafts[0].projectName === 'ANY-556 Website', 'Combined project/date/sort filters');
+  await page.screenshot({ path: 'output/playwright/any556/filtered-en.png', fullPage: true });
+  await download('collection-filtered-en.csv');
+  const filteredUrl = page.url();
+  await page.locator('.draft-rows button').first().click();
+  await page.getByRole('button', { name: 'Export Draft CSV', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'My drafts', exact: true }).click();
+  await page.locator('.draft-rows > li').first().waitFor();
+  check(new URL(page.url()).searchParams.get('draftCreatedFrom') === '2026-10-20', 'Filters survive open and return');
+  data = await apply({ from: '2027-01-01', to: '2027-01-01' });
+  check(data.total === 0, 'No-match collection');
+  await page.getByText('No Drafts match these filters', { exact: true }).waitFor();
+  await download('collection-empty-en.csv');
+  await page.getByRole('button', { name: 'Clear filters', exact: true }).click();
+  await page.getByRole('button', { name: 'Next', exact: true }).waitFor();
+  await page.getByRole('radio', { name: 'RU', exact: true }).click();
+  await page.getByRole('heading', { name: 'Мои черновики', exact: true }).waitFor();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: 'output/playwright/any556/collection-mobile-ru.png', fullPage: true });
+  check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), '390px collection has no horizontal overflow');
+  await download('collection-all-ru.csv', true);
+  await page.getByRole('button', { name: 'Фильтр', exact: true }).click();
+  await page.getByRole('dialog').waitFor();
+  await page.screenshot({ path: 'output/playwright/any556/filter-mobile-ru.png', fullPage: true });
+  await page.keyboard.press('Escape');
+  check(await page.getByRole('button', { name: 'Фильтр', exact: true }).evaluate(el => el === document.activeElement), 'Escape closes popover and restores focus');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.getByRole('radio', { name: 'EN', exact: true }).click();
+  return { results, filteredUrl, url: page.url() };
+}

@@ -13,6 +13,8 @@ entry points remain outside this directory.
 
 ## Design
 
+- [Draft filtering and CSV](design/draft-filtering-csv.md) — UTC dates, filters,
+  pagination, autosave export behavior, and the localized CSV contract.
 - [Interface-generation prompt template](design/interface-generation-prompt-template.md)
   — prompt for creating the early interface prototype.
 

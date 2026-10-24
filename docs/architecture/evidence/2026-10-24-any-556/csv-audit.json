@@ -1,0 +1,51 @@
+{
+  "collection-all-en.csv": {
+    "rows": 53,
+    "columns": 18,
+    "bytes": 9633,
+    "bom": true,
+    "postgresIdsAndRevisionsVerified": true
+  },
+  "collection-all-ru.csv": {
+    "rows": 53,
+    "columns": 18,
+    "bytes": 10036,
+    "bom": true,
+    "postgresIdsAndRevisionsVerified": true
+  },
+  "collection-day-en.csv": {
+    "rows": 51,
+    "columns": 18,
+    "bytes": 9302,
+    "bom": true,
+    "postgresIdsAndRevisionsVerified": true
+  },
+  "collection-filtered-en.csv": {
+    "rows": 1,
+    "columns": 18,
+    "bytes": 555,
+    "bom": true,
+    "postgresIdsAndRevisionsVerified": true
+  },
+  "collection-empty-en.csv": {
+    "rows": 0,
+    "columns": 18,
+    "bytes": 338,
+    "bom": true,
+    "postgresIdsAndRevisionsVerified": true
+  },
+  "single-en.csv": {
+    "rows": 1,
+    "columns": 18,
+    "bytes": 581,
+    "bom": true,
+    "postgresIdsAndRevisionsVerified": true
+  },
+  "single-after-retry-en.csv": {
+    "rows": 1,
+    "columns": 18,
+    "bytes": 555,
+    "bom": true,
+    "postgresIdsAndRevisionsVerified": true
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "baseRevision": "43b0f4bcc3605b571caefa843706a4b752b46560",
+  "testedRevision": "bc56573f3a5e17c14f8c7e9f2661249c53df0dda",
+  "project": "scg-any556-test-3f4517d449ab4abab293a9c79340a8ce",
+  "dockerVersion": "29.8.2",
+  "composeVersion": "5.6.0",
+  "sourceChangesAtAcceptance": [
+    "?? docs/design/draft-filtering-csv.md",
+    "?? tests/e2e/any556-browser.js",
+    "?? tests/e2e/any556-save-failure.js"
+  ],
+  "images": {
+    "scope-guard-api:any556": {
+      "id": "sha256:f69af051ffca956261cbe50eef8fb1f5c4b6a0b176a79109c2acb114815be26c",
+      "created": "2026-10-24T14:29:50.430409023Z",
+      "revisionLabel": "bc56573f3a5e17c14f8c7e9f2661249c53df0dda"
+    },
+    "scope-guard-worker:any556": {
+      "id": "sha256:320789a5ac554fdf9ae256262ade04b5d7d0aa6c55d47ab2dc48c6fad566401c",
+      "created": "2026-10-24T14:30:16.148644966Z",
+      "revisionLabel": "bc56573f3a5e17c14f8c7e9f2661249c53df0dda"
+    },
+    "scope-guard-frontend:any556": {
+      "id": "sha256:d090ab2dd2858186af65cbc5f6f0faa45d2e4d30715d342a37bac54df29dbd3e",
+      "created": "2026-10-24T14:28:51.919981752Z",
+      "revisionLabel": "bc56573f3a5e17c14f8c7e9f2661249c53df0dda"
+    }
+  },
+  "services": {
+    "postgres": {
+      "containerId": "3c536ba77b0fac96d3e59a8c9ab70813c6c87404d5af614d765b6c9cb8765694",
+      "imageId": "sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24",
+      "status": "running",
+      "exitCode": 0,
+      "health": "healthy",
+      "revisionLabel": null
+    },
+    "migrate": {
+      "containerId": "306f550acf559bc31e2134a64b8e2c0f3a236920c0a304e875258dc969b606e5",
+      "imageId": "sha256:f69af051ffca956261cbe50eef8fb1f5c4b6a0b176a79109c2acb114815be26c",
+      "status": "exited",
+      "exitCode": 0,
+      "health": null,
+      "revisionLabel": "bc56573f3a5e17c14f8c7e9f2661249c53df0dda"
+    },
+    "backend": {
+      "containerId": "bf23fe3cda564faf8483f216d6641490d713452ca6f10acf7e63f029b053fc85",
+      "imageId": "sha256:f69af051ffca956261cbe50eef8fb1f5c4b6a0b176a79109c2acb114815be26c",
+      "status": "running",
+      "exitCode": 0,
+      "health": "healthy",
+      "revisionLabel": "bc56573f3a5e17c14f8c7e9f2661249c53df0dda"
+    },
+    "app": {
+      "containerId": "e076b0f8c2e1a1770f14c2595b79675c92a630778c53f7adb448ed51037431fe",
+      "imageId": "sha256:d090ab2dd2858186af65cbc5f6f0faa45d2e4d30715d342a37bac54df29dbd3e",
+      "status": "running",
+      "exitCode": 0,
+      "health": "healthy",
+      "revisionLabel": "bc56573f3a5e17c14f8c7e9f2661249c53df0dda"
+    },
+    "llm-worker": {
+      "containerId": "62242d7586f3f137af9fac11d7d4426808a010d391685d63bfffa97aa74c9612",
+      "imageId": "sha256:320789a5ac554fdf9ae256262ade04b5d7d0aa6c55d47ab2dc48c6fad566401c",
+      "status": "running",
+      "exitCode": 0,
+      "health": "healthy",
+      "revisionLabel": "bc56573f3a5e17c14f8c7e9f2661249c53df0dda"
+    },
+    "export-worker": {
+      "containerId": "8c5a817803c06048ef793a17f9fe8aa75f4253d8ae0be936463c60f614f2705f",
+      "imageId": "sha256:320789a5ac554fdf9ae256262ade04b5d7d0aa6c55d47ab2dc48c6fad566401c",
+      "status": "running",
+      "exitCode": 0,
+      "health": "healthy",
+      "revisionLabel": "bc56573f3a5e17c14f8c7e9f2661249c53df0dda"
+    }
+  },
+  "privateStorageAnonymousGet": 403
+}
