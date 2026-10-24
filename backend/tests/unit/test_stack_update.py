@@ -7,13 +7,24 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.parametrize("failure_stage", ["prepare", "migration"])
+@pytest.mark.parametrize(
+    "failure_stage", ["prepare", "migration", "backend", "worker", "frontend", "success"]
+)
 def test_update_failure_never_starts_new_applications(monkeypatch, failure_stage):
     location = Path(__file__).resolve().parents[3] / "scripts/stack.py"
     spec = importlib.util.spec_from_file_location("stack_update", location)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    state = {"old_running": True, "prepared": False, "new_running": False}
+    applications = {"app", "backend", "llm-worker", "export-worker"}
+    state = {"running": set(applications), "prepared": False}
+    exit_codes = {
+        "prepare": 7,
+        "migration": 9,
+        "backend": 10,
+        "worker": 12,
+        "frontend": 11,
+        "success": 0,
+    }
 
     def docker(command, **kwargs):
         if "build" in command:
@@ -22,15 +33,69 @@ def test_update_failure_never_starts_new_applications(monkeypatch, failure_stage
             state["prepared"] = True
         elif "stop" in command:
             assert state["prepared"]
-            state["old_running"] = False
+            assert set(command[command.index("stop") + 1 :]) == applications
+            state["running"].clear()
         elif "--exit-code-from" in command:
-            assert not state["old_running"]
-            raise subprocess.CalledProcessError(9, command)
+            assert not state["running"]
+            if failure_stage == "migration":
+                raise subprocess.CalledProcessError(9, command)
         elif "up" in command and "backend" in command:
-            state["new_running"] = True
+            # Detached Compose can leave successful peers running on a failed wait.
+            state["running"].update({"backend", "llm-worker", "export-worker"})
+            if failure_stage in {"backend", "worker"}:
+                raise subprocess.CalledProcessError(exit_codes[failure_stage], command)
+        elif "up" in command and "app" in command:
+            state["running"].add("app")
+            if failure_stage == "frontend":
+                raise subprocess.CalledProcessError(11, command)
 
     monkeypatch.setattr(module.subprocess, "run", docker)
     monkeypatch.setattr("sys.argv", ["stack.py", "update", "--project", "scg-test-update"])
-    assert module.main() == (7 if failure_stage == "prepare" else 9)
-    assert not state["new_running"]
-    assert state["old_running"] == (failure_stage == "prepare")
+    assert module.main() == exit_codes[failure_stage]
+    assert state["running"] == (applications if failure_stage in {"prepare", "success"} else set())
+
+
+def test_cleanup_failure_preserves_original_startup_exit_code(monkeypatch, capsys):
+    location = Path(__file__).resolve().parents[3] / "scripts/stack.py"
+    spec = importlib.util.spec_from_file_location("stack_cleanup", location)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    startup_failed = False
+    cleanup_attempted = False
+
+    def docker(command, **kwargs):
+        nonlocal startup_failed, cleanup_attempted
+        if "up" in command and "backend" in command:
+            startup_failed = True
+            raise subprocess.CalledProcessError(17, command)
+        if "stop" in command and startup_failed:
+            cleanup_attempted = True
+            raise subprocess.CalledProcessError(23, command)
+
+    monkeypatch.setattr(module.subprocess, "run", docker)
+    monkeypatch.setattr("sys.argv", ["stack.py", "update", "--project", "scg-test-cleanup"])
+    assert module.main() == 17
+    assert cleanup_attempted
+    assert "Failed to stop application services" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("component", ["llm_worker", "export_worker"])
+def test_worker_logs_do_not_validate_unrelated_full_stack_settings(monkeypatch, component):
+    location = Path(__file__).resolve().parents[3] / "scripts/stack.py"
+    spec = importlib.util.spec_from_file_location("stack_role_logs", location)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    logs_read = []
+
+    def docker(command, **kwargs):
+        # The role-only fixture config is valid; full-stack credentials are absent.
+        filename = Path(command[command.index("-f") + 1]).name
+        if "config" in command and filename == "compose.yaml":
+            raise subprocess.CalledProcessError(2, command)
+        if "logs" in command:
+            logs_read.append(command[-1])
+
+    monkeypatch.setattr(module.subprocess, "run", docker)
+    monkeypatch.setattr("sys.argv", ["stack.py", "logs", component])
+    assert module.main() == 0
+    assert logs_read == [component.replace("_", "-")]

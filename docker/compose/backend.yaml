@@ -36,3 +36,17 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY required; use a synthetic key only for isolated no-job checks}
+      SCOPE_GUARD_OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY required}
+      SCOPE_GUARD_OPENAI_MODEL: ${SCOPE_GUARD_OPENAI_MODEL:?Explicit provider model required}
+      SCOPE_GUARD_LLM_INPUT_RATE_BOUND: ${SCOPE_GUARD_LLM_INPUT_RATE_BOUND:?Input USD per token bound required}
+      SCOPE_GUARD_LLM_OUTPUT_RATE_BOUND: ${SCOPE_GUARD_LLM_OUTPUT_RATE_BOUND:?Output USD per token bound required}
+      SCOPE_GUARD_LLM_MAX_COST: ${SCOPE_GUARD_LLM_MAX_COST:-1.00}
+      SCOPE_GUARD_EXPORT_BUCKET: ${SCOPE_GUARD_EXPORT_BUCKET:?Private export bucket required}
+      SCOPE_GUARD_EXPORT_ENDPOINT: ${SCOPE_GUARD_EXPORT_ENDPOINT:-}
+      SCOPE_GUARD_EXPORT_REGION: ${SCOPE_GUARD_EXPORT_REGION:-us-east-1}
+      SCOPE_GUARD_EXPORT_ACCESS_KEY: ${SCOPE_GUARD_EXPORT_ACCESS_KEY:-}
+      SCOPE_GUARD_EXPORT_SECRET_KEY: ${SCOPE_GUARD_EXPORT_SECRET_KEY:-}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET must be set}
+      SCOPE_GUARD_ALLOWED_ORIGINS: ${SCOPE_GUARD_ALLOWED_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000"]}

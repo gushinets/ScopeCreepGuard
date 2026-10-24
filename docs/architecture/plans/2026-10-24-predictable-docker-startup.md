@@ -101,3 +101,14 @@ final Docker unit/API/architecture run: 806 passes; frontend: 383 passes. See
 for exact source revision, image IDs, commands, failed attempts and limitations.
 No paid AI jobs, changes to pre-existing developer/production databases, merge or
 live deployment occurred.
+
+## PR 42 review follow-up
+
+Fix the confirmed partial-update cleanup and role-configuration findings without
+changing the migration lifecycle or touching acceptance evidence. First reproduce
+post-migration backend/worker/frontend startup failures and unrelated worker-setting
+requirements. Stop all application services on maintenance failure after preparation,
+preserve the original exit code if cleanup fails, and keep PostgreSQL/volumes intact.
+Move auth, provider and storage requirements to their consuming service fragments.
+Verify focused regression tests, minimal worker configurations on Compose 2.24 and
+5.6, and disposable failed-startup scenarios, then update this PR without deploying.
