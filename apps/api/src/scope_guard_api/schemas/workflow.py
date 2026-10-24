@@ -1,10 +1,20 @@
 """Versioned workflow DTOs. These are not database mappings."""
 
+import re
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import ConfigDict, Field, StrictBool, StrictInt, StrictStr, model_validator
+from pydantic import (
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictInt,
+    StrictStr,
+    field_validator,
+    model_validator,
+)
+from scope_guard.domain.drafts.collection import DraftCollectionFilter
 
 from scope_guard_api.schemas.analysis import AnalysisSnapshot
 from scope_guard_api.schemas.drafts import DraftEditableChangeOrder
@@ -19,6 +29,58 @@ class InputModel(WireModel):
         populate_by_name=True,
         extra="forbid",
     )
+
+
+class DraftFilterQuery(InputModel):
+    project_id: UUID | None = None
+    created_from: date | None = None
+    created_to: date | None = None
+    sort: Literal["newest", "oldest"] = "newest"
+
+    @field_validator("created_from", "created_to", mode="before")
+    @classmethod
+    def date_only(cls, value):
+        if value is not None and (
+            not isinstance(value, str) or not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value)
+        ):
+            raise ValueError("Expected YYYY-MM-DD")
+        return value
+
+    @model_validator(mode="after")
+    def date_range(self):
+        if self.created_to == date.max or (
+            self.created_from and self.created_to and self.created_from > self.created_to
+        ):
+            raise ValueError("Invalid creation-date range")
+        return self
+
+    def filters(self) -> DraftCollectionFilter:
+        return DraftCollectionFilter(self.project_id, self.created_from, self.created_to, self.sort)
+
+
+class DraftListQuery(DraftFilterQuery):
+    limit: Annotated[int, Field(ge=1, le=100)] = 50
+    offset: Annotated[int, Field(ge=0)] = 0
+
+
+class DraftExportQuery(DraftFilterQuery):
+    locale: Literal["en", "ru"] = "en"
+
+
+class DraftCollectionItem(WireModel):
+    id: UUID
+    project_id: UUID
+    project_name: str
+    request_preview: str
+    verdict: Literal["in_scope", "borderline", "out_of_scope"] | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class DraftCollectionResponse(WireModel):
+    drafts: list[DraftCollectionItem]
+    total: int
+    has_drafts: bool
 
 
 class Operation(InputModel):

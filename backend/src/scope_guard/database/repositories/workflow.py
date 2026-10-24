@@ -7,10 +7,19 @@ from sqlalchemy import text
 
 from scope_guard.database.repositories.activity import EventRepository, profiles_supported
 from scope_guard.domain.activity import ActivityEvent, canonical_type
+from scope_guard.domain.drafts.collection import DraftCollectionFilter
 from scope_guard.domain.drafts.workflow import DraftState, WorkflowError, empty_document
 from scope_guard.domain.drafts.workflow_repository import WorkflowRepository
 
 NAMESPACE = UUID("54954954-9549-4549-8549-549549549549")
+
+# Shared by collection JSON, collection CSV and individual CSV. Never a History join.
+DRAFT_PROJECTION = """
+    SELECT d.*, p.name AS project_name, a.result_snapshot AS analysis_result
+    FROM drafts d JOIN projects p ON p.id=d.project_id
+    LEFT JOIN analysis_runs a ON a.id=d.last_analysis_run_id AND a.project_id=d.project_id
+    WHERE p.user_id=:owner AND p.archived_at IS NULL AND d.revision IS NOT NULL
+"""
 
 
 def detached(value: dict) -> dict:
@@ -41,6 +50,47 @@ class WorkflowSQLRepository:
     async def many(self, sql: str, parameters: dict) -> list[dict]:
         values = (await self.session.execute(text(sql), parameters)).scalars().all()
         return [detached(value) for value in values]
+
+    async def draft_collection(
+        self, owner: UUID, filters: DraftCollectionFilter, *, limit: int | None, offset: int = 0
+    ) -> dict:
+        # Both expressions are code constants; untrusted ordering is never interpolated.
+        ordering = (
+            "created_at ASC,id ASC" if filters.sort == "oldest" else "created_at DESC,id DESC"
+        )
+        predicates = []
+        parameters = {"owner": owner, **filters.parameters(), "limit": limit, "offset": offset}
+        for name, expression in (
+            ("project", "project_id=:project"),
+            ("created_from", "created_at>=:created_from"),
+            ("created_before", "created_at<:created_before"),
+        ):
+            if parameters[name] is not None:
+                predicates.append(expression)
+        where = " AND ".join(predicates) or "true"
+        result = await self.one(
+            f"""WITH owned AS ({DRAFT_PROJECTION}),
+            filtered AS (SELECT * FROM owned WHERE {where}),
+            page AS (SELECT * FROM filtered ORDER BY {ordering} LIMIT :limit OFFSET :offset)
+            SELECT jsonb_build_object(
+                'drafts',COALESCE((SELECT jsonb_agg(to_jsonb(page) ORDER BY {ordering})
+                                  FROM page),'[]'::jsonb),
+                'total',(SELECT count(*) FROM filtered),
+                'has_drafts',EXISTS(SELECT 1 FROM owned))""",
+            parameters,
+        )
+        assert result is not None
+        result["drafts"] = [detached(row) for row in result["drafts"]]
+        return result
+
+    async def draft_export_row(self, owner: UUID, identifier: UUID) -> dict:
+        result = await self.one(
+            f"WITH owned AS ({DRAFT_PROJECTION}) SELECT to_jsonb(owned) FROM owned WHERE id=:id",
+            {"owner": owner, "id": identifier},
+        )
+        if result is None:
+            raise WorkflowError("draftNotFound", 404)
+        return result
 
     async def project(self, owner: UUID, identifier: UUID, *, lock=False) -> dict:
         if lock and await profiles_supported(self.session):

@@ -14,6 +14,7 @@ from scope_guard.domain.analysis.domain import (
 )
 from scope_guard.domain.analysis.normalization import parse_snapshot
 from scope_guard.domain.analysis.serialization import analysis_to_wire, materials_to_wire
+from scope_guard.domain.drafts.collection import DraftCollectionFilter
 from scope_guard.domain.drafts.workflow import (
     SAVE_REASONS,
     WorkflowError,
@@ -25,6 +26,7 @@ from scope_guard.domain.drafts.workflow import (
     validate_document,
 )
 from scope_guard.domain.projects.validation import parse_project
+from scope_guard.services.drafts.csv_export import render_drafts_csv
 
 NAMESPACE = UUID("54954954-9549-4549-8549-549549549549")
 CONTEXT_FIELDS = (
@@ -176,6 +178,39 @@ class WorkflowService:
                 run = await work.workflow.run(owner, UUID(draft["lastAnalysisRunId"]))
             return {**draft, "analysisRun": run}
         return {**draft, "analysisRun": None}
+
+    async def draft_collection(self, owner, filters: DraftCollectionFilter, *, limit=50, offset=0):
+        async with self.factory() as work:
+            result = await work.workflow.draft_collection(
+                owner, filters, limit=limit, offset=offset
+            )
+        return {
+            **result,
+            "drafts": [
+                {
+                    "id": draft["id"],
+                    "projectId": draft["projectId"],
+                    "projectName": draft["projectName"],
+                    "requestPreview": draft["requestText"][:160],
+                    "verdict": (draft.get("analysisResult") or {}).get("verdict"),
+                    "createdAt": draft["createdAt"],
+                    "updatedAt": draft["updatedAt"],
+                }
+                for draft in result["drafts"]
+            ],
+        }
+
+    async def export_drafts_csv(self, owner, filters: DraftCollectionFilter, locale):
+        async with self.factory() as work:
+            result = await work.workflow.draft_collection(owner, filters, limit=None)
+        return render_drafts_csv(result["drafts"], locale)
+
+    async def export_draft_csv(self, owner, identifier, locale, expected_revision=None):
+        async with self.factory() as work:
+            draft = await work.workflow.draft_export_row(owner, identifier)
+        if expected_revision is not None and draft["revision"] != expected_revision:
+            raise WorkflowError("draftConflict", 409)
+        return render_drafts_csv([draft], locale)
 
     async def projects(self, owner, archived=False):
         async with self.factory() as work:

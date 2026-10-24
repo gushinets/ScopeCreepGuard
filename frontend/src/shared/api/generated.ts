@@ -478,6 +478,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Draft Collection */
+        get: operations["draft_collection_api_v2_drafts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/drafts/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Drafts Csv */
+        get: operations["export_drafts_csv_api_v2_drafts_export_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/drafts/{identifier}/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Draft Csv */
+        get: operations["export_draft_csv_api_v2_drafts__identifier__export_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/drafts/{identifier}": {
         parameters: {
             query?: never;
@@ -1256,6 +1307,44 @@ export interface components {
          * @enum {string}
          */
         Currency: "RUB" | "USD" | "EUR";
+        /** DraftCollectionItem */
+        DraftCollectionItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Projectid
+             * Format: uuid
+             */
+            projectId: string;
+            /** Projectname */
+            projectName: string;
+            /** Requestpreview */
+            requestPreview: string;
+            /** Verdict */
+            verdict: ("in_scope" | "borderline" | "out_of_scope") | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+        };
+        /** DraftCollectionResponse */
+        DraftCollectionResponse: {
+            /** Drafts */
+            drafts: components["schemas"]["DraftCollectionItem"][];
+            /** Total */
+            total: number;
+            /** Hasdrafts */
+            hasDrafts: boolean;
+        };
         /** DraftEditableChangeOrder */
         DraftEditableChangeOrder: {
             /** Createdat */
@@ -5836,6 +5925,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["scope_guard_api__schemas__workflow__DraftResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    draft_collection_api_v2_drafts_get: {
+        parameters: {
+            query?: {
+                projectId?: string | null;
+                createdFrom?: string | null;
+                createdTo?: string | null;
+                sort?: "newest" | "oldest";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftCollectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    export_drafts_csv_api_v2_drafts_export_csv_get: {
+        parameters: {
+            query?: {
+                projectId?: string | null;
+                createdFrom?: string | null;
+                createdTo?: string | null;
+                sort?: "newest" | "oldest";
+                locale?: "en" | "ru";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    export_draft_csv_api_v2_drafts__identifier__export_csv_get: {
+        parameters: {
+            query?: {
+                locale?: "en" | "ru";
+                expectedRevision?: string | null;
+            };
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
             /** @description Validation Error */

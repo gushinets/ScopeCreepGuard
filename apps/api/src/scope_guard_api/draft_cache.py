@@ -12,7 +12,12 @@ class DraftReadCacheMiddleware:
         private = scope["type"] == "http" and (
             (
                 scope["method"] == "GET"
-                and (path == "/api/drafts" or path.startswith("/api/drafts/"))
+                and (
+                    path == "/api/drafts"
+                    or path.startswith("/api/drafts/")
+                    or path == "/api/v2/drafts"
+                    or path.startswith("/api/v2/drafts/")
+                )
             )
             or path in ("/api/change-orders/pdf", "/api/scope/extract")
         )
