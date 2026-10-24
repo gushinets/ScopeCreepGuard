@@ -1,0 +1,7 @@
+services:
+  app:
+    ports: !reset []
+    expose: ["3000"]
+    restart: unless-stopped
+    labels:
+      - "traefik.http.middlewares.scopecreep-no-h3.headers.customresponseheaders.Alt-Svc="

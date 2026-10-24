@@ -1,6 +1,9 @@
 import argparse
+import logging
 import os
 import sys
+import time
+from uuid import uuid4
 
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
@@ -34,6 +37,19 @@ def main(argv=None) -> int:
     parser.add_argument("--target", default="0001_existing_drizzle_schema")
     args = parser.parse_args(argv)
     engine = None
+    started = time.monotonic()
+    logger = logging.getLogger("scope_guard.migration")
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s %(levelname)s scope_guard.migration execution_id="
+            + uuid4().hex
+            + " %(message)s"
+        )
+    )
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.info("migration_execution_started operation=%s", args.operation)
     try:
         value = os.environ.get(args.database_url_env)
         if not value:
@@ -90,19 +106,66 @@ def main(argv=None) -> int:
             "workflow-check": "workflow_backfill_verified",
         }
         print(messages[args.operation])
+        logger.info(
+            "migration_complete duration_seconds=%.3f exit_code=0", time.monotonic() - started
+        )
         return 0
     except SchemaCompatibilityError as error:
-        print(str(error), file=sys.stderr)
+        # Catalog object names and database exception text may contain private data.
+        codes = sorted({item.path.split(".")[0] for item in error.differences})
+        logger.error(
+            "migration_failed code=schema_mismatch categories=%s exit_code=1", ",".join(codes)
+        )
+        print("schema_mismatch: " + ", ".join(codes), file=sys.stderr)
         return 1
     except ValueError as error:
-        print(str(error), file=sys.stderr)
+        safe_codes = {
+            "database_target_missing",
+            "unsupported_database_url",
+            "disposable_target_required",
+            "database_target_override_rejected",
+            "workflow_backfill_requires_expansion",
+            "unknown_migration_target",
+            "migration_downgrade_refused",
+            "invalid_migration_lock_timeout",
+        }
+        code = str(error) if str(error) in safe_codes else "invalid_migration_configuration"
+        logger.error("migration_failed code=%s exit_code=1", code)
+        print(code, file=sys.stderr)
         return 1
-    except (SQLAlchemyError, RuntimeError):
+    except (SQLAlchemyError, RuntimeError, TimeoutError) as error:
+        code = (
+            str(error)
+            if str(error)
+            in {
+                "migration_lock_timeout",
+                "migration_terminated",
+                "workflow_backfill_incomplete",
+                "legacy_envelope_integrity_failed",
+            }
+            else "database_operation_failed"
+        )
+        logger.error(
+            "migration_failed code=%s error_type=%s exit_code=1", code, type(error).__name__
+        )
+        print(code, file=sys.stderr)
+        return 1
+    except Exception as error:
+        # Unexpected migration/Alembic exceptions can embed private values in repr.
+        logger.error(
+            "migration_failed code=database_operation_failed error_type=%s exit_code=1",
+            type(error).__name__,
+        )
         print("database_operation_failed", file=sys.stderr)
         return 1
     finally:
         if engine is not None:
             engine.dispose()
+        logger.info(
+            "migration_execution_finished duration_seconds=%.3f", time.monotonic() - started
+        )
+        logger.removeHandler(handler)
+        handler.close()
 
 
 if __name__ == "__main__":

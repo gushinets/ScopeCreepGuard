@@ -58,3 +58,22 @@ jobs:
         run: ci/scripts/check-containers.sh
       - name: Full disposable Compose stack smoke test
         run: ci/scripts/smoke-compose.sh
+
+  compose-minimum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./ci/actions/setup-backend
+      - name: Install and verify the minimum supported Compose
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.docker/cli-plugins"
+          curl --fail --location --silent --show-error https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64 -o "$RUNNER_TEMP/docker-compose-linux-x86_64"
+          echo "43fb39c0bc24ac796123935032eddcfb57a7acd9216badeb10714c986ea1e090  $RUNNER_TEMP/docker-compose-linux-x86_64" | sha256sum --check
+          install -m 0755 "$RUNNER_TEMP/docker-compose-linux-x86_64" "$HOME/.docker/cli-plugins/docker-compose"
+          docker compose version
+      - name: Validate exact component, full-stack and deployment configurations
+        run: |
+          uv sync --locked --all-packages --all-groups --python 3.12
+          uv run python backend/scripts/verify_docker_startup.py --config-only

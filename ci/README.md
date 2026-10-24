@@ -1,22 +1,25 @@
 # CI structure
 
-`.github/workflows/ci.yml` is the GitHub dispatcher. It keeps the protected
-`rebase` job name while delegating setup and verification to this directory.
+`.github/workflows/ci.yml` dispatches setup and verification from this directory.
+The protected `rebase` job is retained. `actions/` pins Node/pnpm and Python/uv;
+`contracts/openapi.json` records the API contract.
 
-- `actions/` pins the Node/pnpm and Python/uv toolchains.
-- `ci/contracts/openapi.json` is the generated FastAPI contract snapshot.
-- `scripts/` owns CI orchestration. Application runtime scripts remain with the
-  application that owns them.
+`check-containers.sh` validates full/component/Dokploy Compose contracts, builds
+API, both worker roles and Nginx from the current revision, and checks retained
+proxy/auth/upload/PDF behavior. `smoke-compose.sh` builds the fixed-source S3 test
+fixture and runs `backend/scripts/verify_docker_startup.py` against those images.
 
-`smoke-compose.sh` always creates a `scopecreepguard-ci-*` Compose project,
-uses anonymous host ports and a synthetic authentication secret, and removes
-only that project's containers, volumes, and orphans.
+The lifecycle harness selects the documented entry points explicitly, selects empty test files through
+`SCOPE_GUARD_LOCAL_ENV_FILE`, `SCOPE_GUARD_LOCAL_OVERRIDE_ENV_FILE` and
+`SCOPE_GUARD_BACKEND_ENV_FILE` to avoid loading developer settings, supplies synthetic
+settings, and uses UUID `scg-startup-test-*` projects. It never overrides migration
+targets in release startup. Explicit historical targets are used only to prepare
+previous-release fixtures. It verifies component closures, full readiness,
+onboarding, locking/termination/failure gates, volume preservation and update
+sequencing. Cleanup is restricted to the generated test project and labelled
+storage fixture. No paid provider jobs are submitted.
 
-`check-frontend.sh` checks the standalone React build and public module boundaries,
-the unchanged OpenAPI snapshot/generated types and retained API gateway journeys.
-`check-containers.sh` builds the unprivileged static Nginx image and FastAPI image,
-checks actual proxy cookies/uploads/PDF/cancellation and runs
-`backend/scripts/verify_react_compose.py` against the Compose service definitions.
-That smoke uses its own project/database volume, enables the persistent schema,
-disables provider calls, verifies a confirmed Draft save and removes its resources.
-The required `rebase` job remains unchanged. No CI workflow contacts a paid provider.
+Backend integration tests create their own PostgreSQL containers/databases.
+`check-frontend.sh` runs the React suite, module boundaries, contract freshness,
+types and build. The compatibility `verify_react_compose.py` delegates to the same
+full lifecycle harness rather than constructing a modified service graph.

@@ -1,3 +1,4 @@
+import logging
 import re
 from pathlib import Path
 
@@ -223,16 +224,25 @@ def verify_legacy_ledger(connection: Connection) -> None:
 def migrate(connection: Connection, *, adopt_legacy: bool = False, target: str = BASELINE) -> None:
     """Upgrade an empty or managed database, or explicitly adopt a verified legacy one."""
     acquire_migration_lock(connection)
-    _, lineage, _ = _lineage(connection)
+    migration_config, lineage, head = _lineage(connection)
     if target not in lineage and target != "head":
         raise ValueError("unknown_migration_target")
     revision = current_revision(connection)
+    resolved_target = head if target == "head" else target
+    logger = logging.getLogger("scope_guard.migration")
+    logger.info("migration_start source=%s target=%s", revision or "unversioned", resolved_target)
+    if revision is not None and revision != resolved_target:
+        scripts = ScriptDirectory.from_config(migration_config)
+        ancestors = {item.revision for item in scripts.iterate_revisions(revision, "base")}
+        if resolved_target in ancestors:
+            raise ValueError("migration_downgrade_refused")
     if revision is not None:
         head = current_head(connection)
         verify_revision_schema(connection, revision=revision, head=head)
         connection.exec_driver_sql("SET LOCAL search_path TO public")
         command.upgrade(config(connection), target)
         verify_revision_schema(connection, revision=current_revision(connection), head=head)
+        logger.info("migration_noop" if revision == resolved_target else "migration_applied")
         return
     if not _has_database_objects(connection):
         connection.exec_driver_sql("SET LOCAL search_path TO public")

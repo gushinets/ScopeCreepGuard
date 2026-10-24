@@ -82,8 +82,11 @@ API writes with upgrade-required. No user/production migration was run.
 ## Durable export runtime
 
 `apps/worker/main.py` composes the backend worker, UoW, existing bounded PDF renderer
-and private S3 adapter. It never migrates. `compose.workflow.yaml` is an explicit
-rollout overlay. API and worker need the same explicit database URL.
+and private S3 adapter. It never migrates. Use the root README's full-stack or
+`compose.export-worker.yaml` entry point and migration maintenance lifecycle;
+the former `compose.workflow.yaml` overlay is retired. API and worker need the
+same explicit database URL. The historical baseline-default statement above
+describes the original rollout; current release startup targets the packaged head.
 
 Provision a private bucket. Configure `SCOPE_GUARD_EXPORT_BUCKET`, optional
 `SCOPE_GUARD_EXPORT_ENDPOINT`, `SCOPE_GUARD_EXPORT_REGION`, access/secret keys or the

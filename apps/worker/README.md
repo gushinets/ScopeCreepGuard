@@ -1,33 +1,24 @@
 # Durable workers
 
-`main.py` composes the backend ExportWorker service, PostgreSQL queue/UoW, existing
-PDF renderer and private S3 storage. The worker never runs Alembic migrations.
+`main.py` composes the LLM or PDF export worker. Both verify schema compatibility
+before polling; neither runs Alembic. Compose migration success is their startup
+gate, with no dependency on the API. The worker healthcheck requires a live polling
+loop and a recent database-backed readiness heartbeat.
 
-Use the export-worker Docker target or explicit compose.workflow.yaml overlay after
-the coordinated ANY-549 maintenance migration. API and worker share a configured
-database; configure a private bucket/credentials. Persisted leases/retries survive
-restarts and ready exports remain downloadable. Retention defaults to indefinite.
-No sending or outbox is introduced. Generation still requires one production API
-worker/replica. See [runtime and rollout details](../../docs/architecture/draft-workflow.md).
+Use `compose.llm-worker.yaml` or `compose.export-worker.yaml` with the same explicit
+project name as `compose.yaml`. See the root README for direct commands, shared
+configuration and the maintenance update procedure. Full application verification
+requires both workers, API, frontend, PostgreSQL and test object storage.
 
-ANY-663 adds `SCOPE_GUARD_WORKER_ROLE=llm` to this same entrypoint/image. This role
-composes ProviderGateway, LiteLLM Responses and PydanticAI, and claims operations
-from PostgreSQL independently of HTTP requests. It requires the workflow flags,
-shared database, provider key/model and a usable price bound; it does not require
-export storage. The default role remains export.
+The LLM role (`SCOPE_GUARD_WORKER_ROLE=llm`) uses workflow flags, shared database,
+provider key/model and conservative token-price bounds. Starting it does not submit
+a provider job. SIGTERM stops claims, drains for 30 seconds and cancels local work;
+Compose grants 40 seconds. The default role is `exports`, requiring private storage.
+Persisted leases/retries survive restarts. Ready exports remain downloadable;
+retention defaults to indefinite. No sending/outbox is introduced.
 
-For the standalone React frontend, complete the guarded migration/backfill and
-verification through compatible `0007_nonblocking_llm` before coordinated
-API/frontend/worker activation. The React application uses the persistent workflow.
-The LLM role checks schema on startup without migrating. Its persisted leases,
-fencing, accepted stages and provider-call reservations permit bounded recovery;
-SIGTERM stops claims, drains for 30 seconds and then cancels local work. Use the
-`compose.llm.yaml` overlay with `compose.workflow.yaml`; the container grace period
-is 40 seconds. See [configuration, evidence and limitations](../../docs/architecture/any-663-verification.md).
-
-For separate development, run `uv run python ../apps/worker/main.py` from
-`backend/` in two terminals: set `SCOPE_GUARD_WORKER_ROLE=llm` in one and
-`SCOPE_GUARD_WORKER_ROLE=export` in the other. Both use the same explicitly configured
-development database as the API. Configure provider/model/rate bounds for the LLM
-role and private export storage for the export role. Starting these workers does
-not migrate the database.
+For native development, run `uv run python ../apps/worker/main.py` from `backend/`
+with roles `llm` and `exports` in separate terminals, after the explicit migration
+stage. Existing legacy databases must first complete the guarded adoption and
+expansion/backfill/check procedure in
+[the rollout guide](../../docs/architecture/draft-workflow.md).

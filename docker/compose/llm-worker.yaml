@@ -1,0 +1,41 @@
+# Authoritative service definition; included with repository project_directory.
+services:
+  llm-worker:
+    image: ${SCOPE_GUARD_WORKER_IMAGE:-scope-guard-worker:local}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: export-worker
+      args:
+        SOURCE_REVISION: ${SOURCE_REVISION:-unknown}
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 40s
+    env_file:
+    - path: ${SCOPE_GUARD_LOCAL_ENV_FILE:-.env}
+      required: false
+    - path: ${SCOPE_GUARD_LOCAL_OVERRIDE_ENV_FILE:-.env.local}
+      required: false
+    - path: ${SCOPE_GUARD_BACKEND_ENV_FILE:-backend/.env}
+      required: false
+    extends:
+      file: docker/compose/runtime.yaml
+      service: runtime
+    environment:
+      SCOPE_GUARD_WORKER_ROLE: llm
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - from pathlib import Path; import time; assert time.time()-Path('/tmp/scope-guard-worker-ready').stat().st_mtime
+        < 60
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 30s

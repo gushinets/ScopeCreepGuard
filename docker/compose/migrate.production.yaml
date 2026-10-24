@@ -1,0 +1,5 @@
+services:
+  migrate:
+    env_file: !reset []
+    environment:
+      SCOPE_GUARD_DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}

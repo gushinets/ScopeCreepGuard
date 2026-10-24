@@ -188,7 +188,12 @@ def test_guarded_migrate_upgrades_known_baseline_to_test_only_future_head(
             assert connection.exec_driver_sql(
                 "SELECT to_regclass('public.revision_probe')"
             ).scalar()
-            migrations.migrate(connection)
+            # Release startup targets head. A baseline target on a newer managed
+            # database is now explicitly refused rather than silently ignored.
+            with pytest.raises(ValueError, match="migration_downgrade_refused"):
+                migrations.migrate(connection)
+            migrations.migrate(connection, target="head")
+            assert migrations.current_revision(connection) == "0002_revision_probe"
     finally:
         engine.dispose()
 

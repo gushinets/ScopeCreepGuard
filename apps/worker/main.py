@@ -1,8 +1,9 @@
-"""Export worker composition root. API owns migrations; this process only serves jobs."""
+"""Worker composition root. The one-shot migration service owns schema changes."""
 
 import asyncio
 import logging
 import signal
+from pathlib import Path
 
 from scope_guard.core.config import Settings
 from scope_guard.database.repositories.workflow import WorkflowUnitOfWork
@@ -11,16 +12,49 @@ from scope_guard.integrations.documents.technical.operations import TechnicalOpe
 from scope_guard.integrations.storage.s3 import S3ObjectStorage
 from scope_guard.services.documents.export_worker import ExportWorker
 from scope_guard.services.documents.rendering import DocumentRendering
+from sqlalchemy import text
+
+
+async def serve(worker, database):
+    """Publish readiness only while the worker loop and database remain available."""
+    marker = Path("/tmp/scope-guard-worker-ready")
+    marker.unlink(missing_ok=True)
+
+    async def heartbeat():
+        while True:
+            async with database.engine.connect() as connection:
+                await connection.execute(text("SELECT 1"))
+            marker.touch()
+            await asyncio.sleep(10)
+
+    logging.getLogger("scope_guard").info("worker_ready schema_verified=true")
+    try:
+        async with asyncio.TaskGroup() as tasks:
+            probe = tasks.create_task(heartbeat())
+
+            async def run():
+                try:
+                    await worker.run()
+                finally:
+                    probe.cancel()
+
+            tasks.create_task(run())
+    finally:
+        marker.unlink(missing_ok=True)
 
 
 async def main():
+    Path("/tmp/scope-guard-worker-ready").unlink(missing_ok=True)
     settings = Settings()
     database = create_database(settings)
     if database is None:
         raise RuntimeError("Worker requires database configuration")
+    from scope_guard.database.schema_verification import verify_nonblocking_schema
+
+    async with database.engine.begin() as connection:
+        await connection.run_sync(verify_nonblocking_schema)
     if settings.worker_role == "llm":
         from scope_guard.database.repositories.llm import LlmSQLStore
-        from scope_guard.database.schema_verification import verify_nonblocking_schema
         from scope_guard.integrations.llm.gateway import ProviderGateway
         from scope_guard.integrations.llm.litellm_adapter import LiteLLMResponsesAdapter
         from scope_guard.integrations.llm.stages import StructuredStageRunner
@@ -28,8 +62,6 @@ async def main():
 
         if not settings.llm_workflow or not settings.workflow_v2 or not settings.openai_api_key:
             raise RuntimeError("LLM worker requires workflow flags and provider configuration")
-        async with database.engine.begin() as connection:
-            await connection.run_sync(verify_nonblocking_schema)
         store = LlmSQLStore(database.new_uow)
         adapter = LiteLLMResponsesAdapter(settings.openai_api_key.get_secret_value())
         worker = LlmWorker(
@@ -44,7 +76,7 @@ async def main():
             except NotImplementedError:
                 signal.signal(sig, lambda *_: loop.call_soon_threadsafe(worker.stopping.set))
         try:
-            await worker.run()
+            await serve(worker, database)
         finally:
             await adapter.close()
             await database.close()
@@ -69,7 +101,7 @@ async def main():
         retention_days=settings.export_retention_days,
     )
     try:
-        await worker.run()
+        await serve(worker, database)
     finally:
         await database.close()
 
