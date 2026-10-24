@@ -2,6 +2,7 @@
 
 import argparse
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +20,7 @@ SERVICES = {
     "llm_worker": "llm-worker",
     "export_worker": "export-worker",
 }
+APPLICATION_SERVICES = ("app", "backend", "llm-worker", "export-worker")
 
 
 def main():
@@ -35,7 +37,7 @@ def main():
     if args.component and (args.production or args.action not in {"up", "logs"}):
         parser.error("component selection is supported only for local up or logs")
     filename = "docker-compose.dokploy.yml" if args.production else "compose.yaml"
-    if args.action == "up" and args.component:
+    if args.component:
         filename = f"compose.{COMPONENTS[args.component]}.yaml"
     base = ["docker", "compose", "-f", str(ROOT / filename)]
     if args.project:
@@ -46,12 +48,14 @@ def main():
     def compose(*command):
         subprocess.run([*base, *command], cwd=ROOT, check=True)
 
+    maintenance_started = False
     try:
         compose("config", "--quiet")
         if args.action == "update":
             # Images are prepared before stopping the old release. No volume removal.
             compose("pull" if args.pull else "build")
-            compose("stop", "app", "backend", "llm-worker", "export-worker")
+            maintenance_started = True
+            compose("stop", *APPLICATION_SERVICES)
             compose("up", "-d", "--no-build", "--wait", "postgres")
             compose(
                 "up",
@@ -86,6 +90,16 @@ def main():
         else:
             compose("down")
     except subprocess.CalledProcessError as error:
+        if maintenance_started:
+            # --wait is detached: a failed health check can leave healthy peers running.
+            try:
+                compose("stop", *APPLICATION_SERVICES)
+            except (subprocess.CalledProcessError, OSError):
+                print(
+                    "Failed to stop application services after update failure; "
+                    "inspect the stack and stop them manually before retrying.",
+                    file=sys.stderr,
+                )
         return error.returncode or 1
     return 0
 

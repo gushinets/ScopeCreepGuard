@@ -1,6 +1,7 @@
 """Verify documented Compose topology and lifecycle using disposable Docker resources."""
 
 import argparse
+import importlib.util
 import json
 import os
 import subprocess
@@ -153,6 +154,46 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
         assert compose("config", "--quiet", entry="compose.postgres.yaml").returncode == 0
         environment["AUTH_SECRET"] = saved_secret
         results.append("configuration: full/component equality, production, missing settings")
+        unrelated = {
+            "llm-worker": (
+                "AUTH_SECRET",
+                "SCOPE_GUARD_EXPORT_BUCKET",
+                "SCOPE_GUARD_EXPORT_ENDPOINT",
+                "SCOPE_GUARD_EXPORT_REGION",
+                "SCOPE_GUARD_EXPORT_ACCESS_KEY",
+                "SCOPE_GUARD_EXPORT_SECRET_KEY",
+            ),
+            "export-worker": (
+                "AUTH_SECRET",
+                "OPENAI_API_KEY",
+                "SCOPE_GUARD_OPENAI_MODEL",
+                "SCOPE_GUARD_LLM_INPUT_RATE_BOUND",
+                "SCOPE_GUARD_LLM_OUTPUT_RATE_BOUND",
+                "SCOPE_GUARD_LLM_MAX_COST",
+            ),
+        }
+        for component, keys in unrelated.items():
+            saved = dict(environment)
+            try:
+                for key in keys:
+                    environment.pop(key, None)
+                selected = config(f"compose.{component}.yaml")
+                assert set(selected["services"]) == CLOSURES[component]
+                assert selected["services"]["postgres"] == full["services"]["postgres"]
+                required = (
+                    "OPENAI_API_KEY" if component == "llm-worker" else "SCOPE_GUARD_EXPORT_BUCKET"
+                )
+                environment.pop(required)
+                assert (
+                    compose(
+                        "config", "--quiet", entry=f"compose.{component}.yaml", check=False
+                    ).returncode
+                    != 0
+                )
+            finally:
+                environment.clear()
+                environment.update(saved)
+        results.append("worker configs require only their own role settings")
         if config_only:
             return results
 
@@ -195,6 +236,7 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             )
 
         storage = project + "-storage"
+        fault_images = []
         try:
             # First use a component, establishing the same project volume/network.
             compose("up", "-d", "--no-build", "--wait", entry="compose.postgres.yaml")
@@ -238,9 +280,20 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
                 if component == "postgres":
                     continue
                 compose("stop", "app", "backend", "llm-worker", "export-worker")
-                compose("up", "-d", "--no-build", "--wait", entry=f"compose.{component}.yaml")
+                saved = dict(environment)
+                try:
+                    for key in unrelated.get(component, ()):
+                        environment.pop(key, None)
+                    compose("up", "-d", "--no-build", "--wait", entry=f"compose.{component}.yaml")
+                finally:
+                    environment.clear()
+                    environment.update(saved)
                 running = set(compose("ps", "--services", "--status", "running").stdout.split())
                 assert running == expected - {"migrate"}
+                selected_postgres = compose("ps", "-q", "postgres").stdout.strip()
+                assert selected_postgres == postgres_id, (
+                    f"PostgreSQL recreated after {component}: {postgres_id} -> {selected_postgres}"
+                )
             results.append("every component starts exactly its dependency closure")
             compose("up", "-d", "--no-build", "--wait", "--wait-timeout", "180")
             assert compose("ps", "-q", "postgres").stdout.strip() == postgres_id
@@ -434,6 +487,108 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             assert sql("SELECT count(*) FROM provider_calls") == "0"
             results.append("maintenance update reruns migration and preserves registered account")
 
+            # Fail actual application containers after successful migration. Only
+            # image preparation is substituted: these labelled fixtures are built first.
+            for failed_service, image_key in (
+                ("backend", "SCOPE_GUARD_API_IMAGE"),
+                ("llm-worker", "SCOPE_GUARD_WORKER_IMAGE"),
+                ("app", "SCOPE_GUARD_FRONTEND_IMAGE"),
+            ):
+                fault_image = project + "-failed-" + failed_service + ":fixture"
+                fault_file = Path(directory) / (failed_service + ".Dockerfile")
+                entrypoint = (
+                    ["python", "-c", "import time; time.sleep(6); raise SystemExit(17)"]
+                    if failed_service != "app"
+                    else ["sh", "-c", "exit 19"]
+                )
+                fault_file.write_text(
+                    f"FROM {environment[image_key]}\nLABEL scope-guard.disposable={token}\n"
+                    + "ENTRYPOINT "
+                    + json.dumps(entrypoint)
+                    + "\n"
+                )
+                run("docker", "build", "-f", str(fault_file), "-t", fault_image, directory)
+                fault_images.append(fault_image)
+                original_image = environment[image_key]
+                environment[image_key] = fault_image
+                spec = importlib.util.spec_from_file_location(
+                    "stack_fault", ROOT / "scripts/stack.py"
+                )
+                stack = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(stack)
+                real_run, original_argv = subprocess.run, os.sys.argv
+                partial_release_seen = []
+
+                def prepared_compose(
+                    command,
+                    *,
+                    image_key=image_key,
+                    real_run=real_run,
+                    failed_service=failed_service,
+                    partial_release_seen=partial_release_seen,
+                    **kwargs,
+                ):
+                    if "build" in command:
+                        command = [
+                            "docker",
+                            "image",
+                            "inspect",
+                            environment[image_key],
+                            worker_image,
+                        ]
+                    elif compose_binary and command[:2] == ["docker", "compose"]:
+                        command = [str(Path(compose_binary).resolve()), *command[2:]]
+                    try:
+                        return real_run(
+                            command,
+                            cwd=ROOT,
+                            env=environment,
+                            check=True,
+                            capture_output=True,
+                            text=True,
+                            timeout=240,
+                        )
+                    except subprocess.CalledProcessError:
+                        if "up" in command and failed_service in command:
+                            peers = real_run(
+                                [
+                                    "docker",
+                                    "ps",
+                                    "--filter",
+                                    "label=com.docker.compose.project=" + project,
+                                    "--format",
+                                    "{{.Names}}",
+                                ],
+                                capture_output=True,
+                                text=True,
+                                check=True,
+                            ).stdout
+                            partial_release_seen.append("-worker-" in peers or "-backend-" in peers)
+                        raise
+
+                try:
+                    subprocess.run = prepared_compose
+                    os.sys.argv = [
+                        "stack.py",
+                        "update",
+                        "--project",
+                        project,
+                        "--env-file",
+                        str(empty),
+                    ]
+                    assert stack.main() != 0
+                finally:
+                    subprocess.run, os.sys.argv = real_run, original_argv
+                    environment[image_key] = original_image
+                assert partial_release_seen == [True]
+                assert set(compose("ps", "--services", "--status", "running").stdout.split()) == {
+                    "postgres"
+                }
+                assert sql("SELECT count(*) FROM users") == "1"
+                results.append(
+                    f"failed {failed_service} startup stops all partial-release applications"
+                )
+
             sql("CREATE DATABASE scg_test_upgrade")
             upgrade_url = "postgres://scopeguard:scopeguard_dev_password@postgres/scg_test_upgrade"
             prepared = compose(
@@ -549,6 +704,17 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             if network.returncode == 0:
                 assert network.stdout.strip() == project
                 run("docker", "network", "rm", project + "_default")
+            for fixture in fault_images:
+                owner = run(
+                    "docker",
+                    "image",
+                    "inspect",
+                    "--format",
+                    '{{index .Config.Labels "scope-guard.disposable"}}',
+                    fixture,
+                )
+                assert owner.stdout.strip() == token
+                run("docker", "image", "rm", fixture)
     return results
 
 

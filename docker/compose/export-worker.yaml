@@ -23,6 +23,11 @@ services:
       service: runtime
     environment:
       SCOPE_GUARD_WORKER_ROLE: exports
+      SCOPE_GUARD_EXPORT_BUCKET: ${SCOPE_GUARD_EXPORT_BUCKET:?Private export bucket required}
+      SCOPE_GUARD_EXPORT_ENDPOINT: ${SCOPE_GUARD_EXPORT_ENDPOINT:-}
+      SCOPE_GUARD_EXPORT_REGION: ${SCOPE_GUARD_EXPORT_REGION:-us-east-1}
+      SCOPE_GUARD_EXPORT_ACCESS_KEY: ${SCOPE_GUARD_EXPORT_ACCESS_KEY:-}
+      SCOPE_GUARD_EXPORT_SECRET_KEY: ${SCOPE_GUARD_EXPORT_SECRET_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
