@@ -1,0 +1,51 @@
+[
+  {
+    "name": "ruff",
+    "command": "uv run ruff check . ../apps/api ../apps/worker",
+    "cwd": "backend",
+    "exitCode": 0,
+    "output": "All checks passed!\n"
+  },
+  {
+    "name": "format",
+    "command": "uv run ruff format --check . ../apps/api ../apps/worker",
+    "cwd": "backend",
+    "exitCode": 0,
+    "output": "390 files already formatted\n"
+  },
+  {
+    "name": "mypy",
+    "command": "uv run mypy src/scope_guard ../apps/api/src/scope_guard_api",
+    "cwd": "backend",
+    "exitCode": 0,
+    "output": "src\\scope_guard\\integrations\\llm\\rate_limit.py:8: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]\nsrc\\scope_guard\\database\\repositories\\workflow.py:1176: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]\nsrc\\scope_guard\\database\\queries\\generation.py:58: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]\nsrc\\scope_guard\\database\\queries\\generation.py:59: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]\nsrc\\scope_guard\\database\\queries\\generation.py:60: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]\nSuccess: no issues found in 232 source files\n"
+  },
+  {
+    "name": "openapi",
+    "command": "uv run python scripts/export_openapi.py --check ../ci/contracts/openapi.json",
+    "cwd": "backend",
+    "exitCode": 0,
+    "output": ""
+  },
+  {
+    "name": "frontend-types",
+    "command": "D:\\Program Files\\node.js\\corepack.cmd pnpm typecheck",
+    "cwd": "frontend",
+    "exitCode": 0,
+    "output": "\n> scopecreepguard-frontend@0.1.0 typecheck D:\\.codex\\worktrees\\any-556-draft-filters-csv\\ScopeCreepGuard\\frontend\n> tsc --noEmit\n\n"
+  },
+  {
+    "name": "frontend-lint",
+    "command": "D:\\Program Files\\node.js\\corepack.cmd pnpm lint",
+    "cwd": "frontend",
+    "exitCode": 0,
+    "output": "\n> scopecreepguard-frontend@0.1.0 lint D:\\.codex\\worktrees\\any-556-draft-filters-csv\\ScopeCreepGuard\\frontend\n> eslint . && node scripts/check-boundaries.mjs\n\nFrontend dependency boundaries passed (104 modules).\n"
+  },
+  {
+    "name": "api-types",
+    "command": "D:\\Program Files\\node.js\\corepack.cmd pnpm api:types:check",
+    "cwd": "frontend",
+    "exitCode": 0,
+    "output": "\n> scopecreepguard-frontend@0.1.0 api:types:check D:\\.codex\\worktrees\\any-556-draft-filters-csv\\ScopeCreepGuard\\frontend\n> node scripts/api-types.mjs --check\n\n"
+  }
+]

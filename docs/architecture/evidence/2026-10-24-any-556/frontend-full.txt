@@ -1,0 +1,13 @@
+
+> scopecreepguard-frontend@0.1.0 test D:\.codex\worktrees\any-556-draft-filters-csv\ScopeCreepGuard\frontend
+> vitest run
+
+
+ RUN  v4.1.10 D:/.codex/worktrees/any-556-draft-filters-csv/ScopeCreepGuard/frontend
+
+
+ Test Files  53 passed (53)
+      Tests  398 passed (398)
+   Start at  17:26:35
+   Duration  51.92s (transform 2.97s, setup 0ms, import 25.24s, tests 23.66s, environment 34.72s)
+

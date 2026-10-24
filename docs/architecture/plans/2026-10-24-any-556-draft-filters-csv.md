@@ -53,7 +53,7 @@
 
 One shared server-side current-Draft projection fits the approved scope. Browser aggregation cannot guarantee authoritative collection/export parity and repeats N+1 reads. A History-backed export would change the meaning of Draft. Neither is an acceptable alternative.
 
-**Implementation choices proposed here:** 50-row collection pages, maximum 100; offset pagination; URL-backed filter state; Base UI popover/dialog; a confirmed-revision guard for single export. These are builder decisions, not previously approved product requirements.
+**Approved implementation choices:** 50-row collection pages, maximum 100; offset pagination; URL-backed filter state; Base UI popover/dialog; a confirmed-revision guard for single export. The user selected pages of 50 and approved this plan before implementation.
 
 ### API and read interfaces
 
@@ -147,11 +147,11 @@ Initial decision: no migration. Both timestamps are required `timestamptz` colum
 
 **Interfaces:** Produce `DraftCollectionFilter`, repository `draft_collection` / `draft_export_row`, service `draft_collection`, and `DraftCollectionItem` / collection response/query DTOs described above. Consume existing `WorkflowError`, detached wire mappings, and `WorkflowWork`.
 
-- [ ] Write real-PostgreSQL failing tests using existing `disposable_url` and `WorkflowService` project/Draft creation with a generator that fails if called. Seed two owners, active/archived projects, midnight UTC boundaries, and equal timestamps. Assert IDs, counts, `hasDrafts`, exact order, project/date combined filters, limit/offset, empty owner, and owner isolation.
-- [ ] Run `uv run pytest tests/integration/test_draft_collection.py --require-integration -q` from `backend`; confirm the new interfaces are missing rather than fixture failures.
-- [ ] Implement the shared scoped projection and bounds through repository/service; add JSON route and typed validated query model. Cover an empty page separately from zero matches and use a single statement for response metadata consistency.
-- [ ] Add API tests in `backend/tests/api/test_workflow_v2.py` for auth, malformed/empty dates, datetime instead of date, leap days, reversed/max-date ranges, UUIDs, sort injection/unknown values, negative/oversize pagination, and uniform foreign/archived project behavior. Pin the repository's established 400 validation convention.
-- [ ] Run focused API/integration tests and capture EXPLAIN plans on representative data. Write the migration/index decision in the verification report. Commit only Task 1 source/tests when passing.
+- [x] Write real-PostgreSQL failing tests using existing `disposable_url` and `WorkflowService` project/Draft creation with a generator that fails if called. Seed two owners, active/archived projects, midnight UTC boundaries, and equal timestamps. Assert IDs, counts, `hasDrafts`, exact order, project/date combined filters, limit/offset, empty owner, and owner isolation.
+- [x] Run `uv run pytest tests/integration/test_draft_collection.py --require-integration -q` from `backend`; confirm the new interfaces are missing rather than fixture failures.
+- [x] Implement the shared scoped projection and bounds through repository/service; add JSON route and typed validated query model. Cover an empty page separately from zero matches and use a single statement for response metadata consistency.
+- [x] Add API tests in `backend/tests/api/test_workflow_v2.py` for auth, malformed/empty dates, datetime instead of date, leap days, reversed/max-date ranges, UUIDs, sort injection/unknown values, negative/oversize pagination, and uniform foreign/archived project behavior. Pin the repository's established 400 validation convention.
+- [x] Run focused API/integration tests and capture EXPLAIN plans on representative data. Write the migration/index decision in the verification report. Commit only Task 1 source/tests when passing.
 
 ### Task 2: Shared CSV serializer, export routes, and generated contracts
 
@@ -159,13 +159,13 @@ Initial decision: no migration. Both timestamps are required `timestamptz` colum
 
 **Interfaces:** Produce `render_drafts_csv(rows: Iterable[dict], locale: Literal['en', 'ru']) -> bytes`, service `export_drafts_csv` / `export_draft_csv`, and the two GET routes defined above. Consume Task 1 projection and filter parser. No PDF export service or object storage involved in CSV generation.
 
-- [ ] Write failing unit tests with `csv.reader` round trips for all 18 columns and their RU/EN labels/values, BOM/delimiters, multiline request and edited reply, quotes, emoji/Cyrillic, all formula-prefix classes, empty collection, no analysis/change order, explicit false/true, and exact `123456789012345.67`/`2.50` strings.
-- [ ] Run `uv run pytest tests/unit/test_draft_csv_export.py -q`; confirm missing serializer failure. Implement serialization and pure safety transformation as specified.
-- [ ] Write failing integration/API tests asserting collection/CSV IDs and order agree for every filter/sort, 51+ matching rows are all exported despite limit 50, filtered no-match headers only, single unanalyzed Draft export, saved revision check, private response headers, safe filename, and static route precedence. Reuse existing controlled analysis fixtures to prove edited reply/terms win over generated values without paid calls.
-- [ ] Implement CSV service/route reads. Do not expose unrestricted run data in responses. Assert foreign/missing/archived single reads are uniform and locale/query validation cannot bypass ownership.
-- [ ] Snapshot Draft/project/revision/run/History/change-order/export/activity/session/metrics tables before and after both export GETs; assert unchanged state, timestamps, revisions, and row counts. Save before export is tested separately as an ordinary mutation.
-- [ ] Regenerate OpenAPI: from `backend`, `uv run python scripts/export_openapi.py --output ../ci/contracts/openapi.json`; from `frontend`, `corepack pnpm api:types`. Assert OpenAPI describes CSV media type/content disposition and filter query parameters. Run both freshness checks and `tests/unit/test_openapi_export.py`.
-- [ ] Run focused tests, Ruff, and mypy for touched backend code; commit only this task's source/tests/generated contracts.
+- [x] Write failing unit tests with `csv.reader` round trips for all 18 columns and their RU/EN labels/values, BOM/delimiters, multiline request and edited reply, quotes, emoji/Cyrillic, all formula-prefix classes, empty collection, no analysis/change order, explicit false/true, and exact `123456789012345.67`/`2.50` strings.
+- [x] Run `uv run pytest tests/unit/test_draft_csv_export.py -q`; confirm missing serializer failure. Implement serialization and pure safety transformation as specified.
+- [x] Write failing integration/API tests asserting collection/CSV IDs and order agree for every filter/sort, 51+ matching rows are all exported despite limit 50, filtered no-match headers only, single unanalyzed Draft export, saved revision check, private response headers, safe filename, and static route precedence. Reuse existing controlled analysis fixtures to prove edited reply/terms win over generated values without paid calls.
+- [x] Implement CSV service/route reads. Do not expose unrestricted run data in responses. Assert foreign/missing/archived single reads are uniform and locale/query validation cannot bypass ownership.
+- [x] Snapshot Draft/project/revision/run/History/change-order/export/activity/session/metrics tables before and after both export GETs; assert unchanged state, timestamps, revisions, and row counts. Save before export is tested separately as an ordinary mutation.
+- [x] Regenerate OpenAPI: from `backend`, `uv run python scripts/export_openapi.py --output ../ci/contracts/openapi.json`; from `frontend`, `corepack pnpm api:types`. Assert OpenAPI describes CSV media type/content disposition and filter query parameters. Run both freshness checks and `tests/unit/test_openapi_export.py`.
+- [x] Run focused tests, Ruff, and mypy for touched backend code; commit only this task's source/tests/generated contracts.
 
 ### Task 3: Draft collection controls, dates, and persisted filter state
 
@@ -173,12 +173,12 @@ Initial decision: no migration. Both timestamps are required `timestamptz` colum
 
 **Interfaces:** `DraftFilters = {projectId?: string; createdFrom?: string; createdTo?: string; sort: 'newest' | 'oldest'}`; `listDrafts(filters, {limit, offset})` returns generated collection DTO; `downloadDraftCollection(filters, locale): Promise<void>` uses Task 2 CSV GET. `DraftListItem` adds `projectId` and aligns with generated summary type. Applied URL state is authoritative; transient popover edits are local.
 
-- [ ] Write failing UI tests for initial/default listing, RU/EN UTC timestamp labels including seconds, popover controls/apply/reset, combined filters, both sorts, page changes, header-only export, distinct empty/no-match/error states, retry, and stale response suppression using controllable promises.
-- [ ] Run `corepack pnpm test -- src/features/drafts/my-drafts-view.test.tsx` from `frontend` and confirm feature assertions fail before implementation.
-- [ ] Implement client/query encoding, replace N+1 `listDrafts`, and add collection UI using existing Base UI, buttons, and layout tokens. Export dialog captures applied filters and excludes limit/offset from download. Use authenticated `apiFetch`, release object URLs after download, preserve filename safety.
-- [ ] Add integration assertions to `persistent-navigation.test.tsx` and relevant request fixtures in `persistent-store.test.tsx`: filters/unrelated params/hash/history state survive open/return/back; invalid links show reset/error; collection failures do not replace editor state; account changes do not retain prior account results.
-- [ ] Add keyboard/focus tests: Tab reaches each control, Escape returns focus, dialog traps/restores focus, date errors are labeled/announced. Test archive/removal while on the last page and filter reset after no matches. Keep mobile wrapping assertions for actual browser review.
-- [ ] Run focused UI/navigation/store tests, typecheck, lint/boundary checks, and message parity checks used by existing tooling; commit passing Task 3 files only.
+- [x] Write failing UI tests for initial/default listing, RU/EN UTC timestamp labels including seconds, popover controls/apply/reset, combined filters, both sorts, page changes, header-only export, distinct empty/no-match/error states, retry, and stale response suppression using controllable promises.
+- [x] Run `corepack pnpm test -- src/features/drafts/my-drafts-view.test.tsx` from `frontend` and confirm feature assertions fail before implementation.
+- [x] Implement client/query encoding, replace N+1 `listDrafts`, and add collection UI using existing Base UI, buttons, and layout tokens. Export dialog captures applied filters and excludes limit/offset from download. Use authenticated `apiFetch`, release object URLs after download, preserve filename safety.
+- [x] Add integration assertions to `persistent-navigation.test.tsx` and relevant request fixtures in `persistent-store.test.tsx`: filters/unrelated params/hash/history state survive open/return/back; invalid links show reset/error; collection failures do not replace editor state; account changes do not retain prior account results.
+- [x] Add keyboard/focus tests: Tab reaches each control, Escape returns focus, dialog traps/restores focus, date errors are labeled/announced. Test archive/removal while on the last page and filter reset after no matches. Keep mobile wrapping assertions for actual browser review.
+- [x] Run focused UI/navigation/store tests, typecheck, lint/boundary checks, and message parity checks used by existing tooling; commit passing Task 3 files only.
 
 ### Task 4: Export the saved open Draft through autosave
 
@@ -186,24 +186,24 @@ Initial decision: no migration. Both timestamps are required `timestamptz` colum
 
 **Interfaces:** Add `exportCurrentDraft(locale: Locale): Promise<void>` to Drafts context and a public `DraftExportAction` component. It consumes existing controller/flush/navigation/edit tokens and `downloadDraftCsv(id, locale, confirmedRevision)` from the client module. Do not make `DraftsValue.saveDraft` a new user requirement.
 
-- [ ] Write failing tests: action exists without analysis/agreement; typed request/reply/terms are persisted before CSV GET; the GET contains confirmed revision; CSV fetch/download never starts on save rejection; edits and existing Retry remain available; successful retry exports the current saved edit.
-- [ ] Add pending-save/newer-edit tests proving flush drains newer queued changes; navigation/controller replacement cancels download; edits made during CSV fetch retain local values and prevent a misleading download; revision mismatch shows error without stale download; archived/legacy/recovery states cannot export as current.
-- [ ] Run focused tests to establish failures. Implement the export command and action, placing it in the workspace heading for both analyzed and unanalyzed Drafts. Reuse `SaveFeedback`; no manual save button, History writes, or AI operations.
-- [ ] Run Draft action, persistent store/navigation, `autosave.test.ts`, and `autosave-recovery.test.ts`; verify existing generation/tone/language edit protection and retry behavior still pass. Run typecheck/lint and commit passing Task 4 files only.
+- [x] Write failing tests: action exists without analysis/agreement; typed request/reply/terms are persisted before CSV GET; the GET contains confirmed revision; CSV fetch/download never starts on save rejection; edits and existing Retry remain available; successful retry exports the current saved edit.
+- [x] Add pending-save/newer-edit tests proving flush drains newer queued changes; navigation/controller replacement cancels download; edits made during CSV fetch retain local values and prevent a misleading download; revision mismatch shows error without stale download; archived/legacy/recovery states cannot export as current.
+- [x] Run focused tests to establish failures. Implement the export command and action, placing it in the workspace heading for both analyzed and unanalyzed Drafts. Reuse `SaveFeedback`; no manual save button, History writes, or AI operations.
+- [x] Run Draft action, persistent store/navigation, `autosave.test.ts`, and `autosave-recovery.test.ts`; verify existing generation/tone/language edit protection and retry behavior still pass. Run typecheck/lint and commit passing Task 4 files only.
 
 ### Task 5: Full verification, documentation, and PR
 
 **Files:** Create `docs/architecture/2026-10-24-any-556-draft-csv-verification.md`, `docs/architecture/evidence/2026-10-24-any-556/`, and `docs/design/draft-filtering-csv.md`; update this plan's checkboxes/decisions and docs index as appropriate. Add reproducible feature acceptance automation under `tests/e2e/` following existing test runner conventions; keep fixture generation scoped to disposable test data.
 
-- [ ] Run backend `uv run pytest --require-integration`, Ruff check/format check, mypy, and OpenAPI freshness from README. Run frontend `corepack pnpm test`, lint, typecheck, API-type freshness, and build. Record exact commands/exit codes/counts; failures are not passes. A baseline failure is recorded and investigated before attributing it to this change.
-- [ ] Create a unique `scg-any556-test-<UUID>` Compose project with the documented `compose.yaml`; use empty test env files, synthetic auth/provider settings, dynamically allocated ports, and a private test storage fixture following `verify_docker_startup.py`/existing S3 tests. Do not invent overlay combinations or alter migration targets. Start PostgreSQL -> one-shot migrate -> backend/workers -> frontend through documented dependencies; verify both workers healthy and storage private. Submit no paid AI operations.
-- [ ] Before acceptance, record base SHA, tested committed revision, any tracked/untracked local source modifications and their diff/hash, Docker/Compose versions, freshly built image IDs and `org.opencontainers.image.revision` labels. Assert containers run those images. Include worker/migration evidence even though CSV itself is synchronous.
-- [ ] In a real browser create two owners and multiple projects/current Drafts through the UI. Use controlled disposable PostgreSQL fixtures for exact creation boundaries/ties and analysis-dependent fields, leaving actual editing/autosave in the browser. Verify desktop/mobile layouts, keyboard/focus, UTC dates and modification changes, filters/reset, sorting, all-page collection download, no-match/empty/error states, open-edit-export, and failed-save retry with no stale download.
-- [ ] Compare downloaded CSV bytes/rows to PostgreSQL current content and the confirmed revision for both locales. Verify missing analysis export, exact decimals, archive/owner isolation, and no export side effects. Recheck Projects/History navigation, immutable saved History, one current Draft, and existing language/edit protection. Keep screenshots, query plans, test outputs, and an evidence manifest using synthetic data only.
-- [ ] Document filter parameters/pagination, inclusive UTC ranges/seconds, CSV field order/localization, exact formula-safety transformation, date maximum, current saved state/race limitations, migration rationale, and failure/retry behavior. Distinguish unit/component/full-stack/browser results.
-- [ ] Stop only this task's owned test containers when finished; retain test volumes unless explicitly authorized to remove them. Never use general Docker prune/down-volume cleanup. Preserve original acceptance reports and all unrelated files.
-- [ ] Use `superpowers:verification-before-completion` and request a whole-branch code review. Address actionable defects and rerun affected checks. Record unresolved environmental limitations explicitly; do not claim unexecuted checks passed.
-- [ ] Commit the feature, tests, generated contracts, plan, public docs, and sanitized evidence. Verify branch ancestry directly from exact main base, inspect staged diff for unrelated/private files, and check original checkout still has its acceptance work untouched.
+- [x] Run backend `uv run pytest --require-integration`, Ruff check/format check, mypy, and OpenAPI freshness from README. Run frontend `corepack pnpm test`, lint, typecheck, API-type freshness, and build. Record exact commands/exit codes/counts; failures are not passes. A baseline failure is recorded and investigated before attributing it to this change.
+- [x] Create a unique `scg-any556-test-<UUID>` Compose project with the documented `compose.yaml`; use empty test env files, synthetic auth/provider settings, dynamically allocated ports, and a private test storage fixture following `verify_docker_startup.py`/existing S3 tests. Do not invent overlay combinations or alter migration targets. Start PostgreSQL -> one-shot migrate -> backend/workers -> frontend through documented dependencies; verify both workers healthy and storage private. Submit no paid AI operations.
+- [x] Before acceptance, record base SHA, tested committed revision, any tracked/untracked local source modifications and their diff/hash, Docker/Compose versions, freshly built image IDs and `org.opencontainers.image.revision` labels. Assert containers run those images. Include worker/migration evidence even though CSV itself is synchronous.
+- [x] In a real browser create two owners and multiple projects/current Drafts through the UI. Use controlled disposable PostgreSQL fixtures for exact creation boundaries/ties and analysis-dependent fields, leaving actual editing/autosave in the browser. Verify desktop/mobile layouts, keyboard/focus, UTC dates and modification changes, filters/reset, sorting, all-page collection download, no-match/empty/error states, open-edit-export, and failed-save retry with no stale download.
+- [x] Compare downloaded CSV bytes/rows to PostgreSQL current content and the confirmed revision for both locales. Verify missing analysis export, exact decimals, archive/owner isolation, and no export side effects. Recheck Projects/History navigation, immutable saved History, one current Draft, and existing language/edit protection. Keep screenshots, query plans, test outputs, and an evidence manifest using synthetic data only.
+- [x] Document filter parameters/pagination, inclusive UTC ranges/seconds, CSV field order/localization, exact formula-safety transformation, date maximum, current saved state/race limitations, migration rationale, and failure/retry behavior. Distinguish unit/component/full-stack/browser results.
+- [x] Stop only this task's owned test containers when finished; retain test volumes unless explicitly authorized to remove them. Never use general Docker prune/down-volume cleanup. Preserve original acceptance reports and all unrelated files.
+- [x] Use `superpowers:verification-before-completion` and request a whole-branch code review. Address actionable defects and rerun affected checks. Record unresolved environmental limitations explicitly; do not claim unexecuted checks passed.
+- [x] Commit the feature, tests, generated contracts, plan, public docs, and sanitized evidence. Verify branch ancestry directly from exact main base, inspect staged diff for unrelated/private files, and check original checkout still has its acceptance work untouched.
 - [ ] Push `codex/any-556-draft-filters-csv`, create a PR against `main`, and attach it to this chat. State that approved Draft semantics replace ANY-556's historical History wording. Include exact base/tested SHAs, source/image evidence, actual checks and limitations, no-migration rationale, and merged infrastructure PR #42. Do not merge/deploy or change Linear.
 
 ## Planning preflight evidence and current status
@@ -214,7 +214,7 @@ Initial decision: no migration. Both timestamps are required `timestamptz` colum
 - Native worktree created and requested branch created at exact base; no product code, dependencies, schemas, contracts, or tests changed during planning.
 - Docker Engine read check succeeded with permission: **29.8.2**; Compose **5.6.0**. Initial restricted Docker pipe access failed; this was an access restriction, not an application failure.
 - Tests/builds/query plans/browser acceptance have **not run** during planning. Existing infrastructure verification is background context, not proof of ANY-556 behavior.
-- Plan status: ready for independent builder review, then user plan review under the requested Superpowers workflow. Implementation steps remain unchecked.
+- Plan was independently reviewed and approved before implementation. Execution and verification are recorded below.
 
 ## Follow-up ownership and limitations
 
@@ -222,3 +222,14 @@ Initial decision: no migration. Both timestamps are required `timestamptz` colum
 - No unresolved product question is needed to write this plan. Pagination size, URL keys, explicit revision guard, and upper date boundary are proposed choices that can be corrected at review.
 - Large exports initially materialize the matching collection in memory; document this limitation and measure representative data. Do not add jobs or truncate rows silently. If measurements require streaming, retain the same shared query predicates and flat CSV contract, with a read transaction that closes on cancellation.
 - Exports reflect current saved state at query time; collection listing and later export are separate reads. No cross-request snapshot, historical reconstruction, or recovery export is promised.
+
+## Execution record
+
+- Tested source revision: `bc56573f3a5e17c14f8c7e9f2661249c53df0dda`. Backend: 1,000 passed; frontend: 398 passed. Static, contract, build, disposable full-stack, PostgreSQL/CSV comparison and real-browser checks passed.
+- [Verification report](../2026-10-24-any-556-draft-csv-verification.md) records image IDs/labels, query measurements, browser evidence, resolved failures and limits. No migration was needed.
+- Independent code review found one important URL-context defect. A regression failed before the shared navigation-helper fix and passed afterward; the complete frontend suite then passed. No critical issues or deferred minor findings remained.
+- Ruling: use PowerShell for task tracking on Windows; application behavior is unaffected.
+- Ruling: pass active project options through Drafts context because importing Projects into the Draft view creates a module cycle; public feature boundaries stay valid.
+- Ruling: command integration tests and actual browser journeys cover the individual export action, rather than an additional isolated button-only test.
+- Ruling: keep this plan's ignored private worklogs because the user requested their preservation. Preserve the worktree and test volume for review; only task-owned test services were stopped.
+- Snapshot pagination and in-memory export remain the approved limits; measured 5,003-row export evidence is in the report.

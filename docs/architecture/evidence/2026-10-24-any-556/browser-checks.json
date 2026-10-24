@@ -1,0 +1,53 @@
+{
+  "single": {
+    "draftId": "efd6f221-24cb-4a16-ad07-349697550813",
+    "projectId": "647c8417-03f6-401e-a5e6-a5a0764aef40",
+    "confirmedRevision": "2",
+    "request": "Current edited request before export\nUnicode Юникод, \"quoted\"; text",
+    "analysis": null,
+    "exportStatus": 200,
+    "filename": "draft-efd6f221-24cb-4a16-ad07-349697550813-en.csv"
+  },
+  "collection": {
+    "results": [
+      "Export dialog restores trigger focus: collection-all-en.csv",
+      "Second page contains 3 of 53 Drafts",
+      "Filter restores trigger focus",
+      "Oldest creation order, 53 active owned Drafts",
+      "Filter restores trigger focus",
+      "Both inclusive UTC date boundaries exclude adjacent days",
+      "Export dialog restores trigger focus: collection-day-en.csv",
+      "Filter restores trigger focus",
+      "Combined project/date/sort filters",
+      "Export dialog restores trigger focus: collection-filtered-en.csv",
+      "Filters survive open and return",
+      "Filter restores trigger focus",
+      "No-match collection",
+      "Export dialog restores trigger focus: collection-empty-en.csv",
+      "390px collection has no horizontal overflow",
+      "Export dialog restores trigger focus: collection-all-ru.csv",
+      "Escape closes popover and restores focus"
+    ],
+    "filteredUrl": "http://127.0.0.1:53042/drafts?draft=f33e4c0f-1a6e-4f74-bbb1-659bacf736a6&draftProject=647c8417-03f6-401e-a5e6-a5a0764aef40&draftCreatedFrom=2026-10-20&draftCreatedTo=2026-10-20&draftSort=oldest",
+    "url": "http://127.0.0.1:53042/drafts?draft=efd6f221-24cb-4a16-ad07-349697550813"
+  },
+  "failedSave": {
+    "failedSaveCsvRequests": 0,
+    "failedSaveDownloads": 0,
+    "editsPreserved": true,
+    "retryExportUrl": "http://127.0.0.1:53042/api/v2/drafts/efd6f221-24cb-4a16-ad07-349697550813/export.csv?locale=en&expectedRevision=3",
+    "retryDownloadStatus": 200
+  },
+  "keyboard": {
+    "reversedDateRangeRejected": true,
+    "invalidDateFocus": true,
+    "tabAndShiftTabTrapped": true,
+    "escapeRestoresFocus": true
+  },
+  "neighbors": {
+    "activeProjects": 53,
+    "foreignProjectVisible": false,
+    "historyNavigation": true,
+    "mobileViewport": "390x844"
+  }
+}
