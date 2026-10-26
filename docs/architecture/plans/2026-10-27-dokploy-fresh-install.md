@@ -66,3 +66,13 @@
   the project directory explicitly for references written outside the repository.
 - Preserve and disable obsolete Next.js file patches before rebuilding the Python
   and React release. Keep the prior database volume untouched.
+
+## Python build bootstrap follow-up
+
+- Base: main `a63d9b3fd4fde61664de01b0ea01a9d81bbad2f9`; branch
+  `codex/uv-container-bootstrap`, reviewed through a pull request.
+- Server build-only attempts stalled in `pip install uv==0.11.19`, including a
+  host-network diagnostic. The old application and database stayed running.
+- Copy the same uv version from Astral's official distroless image, pinned by
+  its multi-platform digest. This removes the pip bootstrap download without
+  changing Python dependencies, application code or runtime networking.

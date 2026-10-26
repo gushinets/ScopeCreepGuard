@@ -1,7 +1,7 @@
 FROM python:3.12-slim AS builder
 WORKDIR /app
 ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
-RUN pip install --no-cache-dir uv==0.11.19
+COPY --from=ghcr.io/astral-sh/uv:0.11.19@sha256:b46b03ddfcfbf8f547af7e9eaefdf8a39c8cebcba7c98858d3162bd28cf536f6 /uv /uvx /bin/
 COPY pyproject.toml uv.lock ./
 COPY backend/pyproject.toml ./backend/pyproject.toml
 COPY apps/api/pyproject.toml ./apps/api/pyproject.toml
