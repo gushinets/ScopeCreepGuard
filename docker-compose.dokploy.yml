@@ -1,4 +1,4 @@
-# Explicit composition; include interpolation inherits the selected root environment.
+# Backend roles retain their authoritative shared definitions.
 include:
 - path: docker/compose/silo.yaml
   project_directory: .
@@ -19,11 +19,6 @@ include:
   project_directory: .
   env_file: docker/compose/interpolation.env
 - path:
-  - docker/compose/app.yaml
-  - docker/compose/app.production.yaml
-  project_directory: .
-  env_file: docker/compose/interpolation.env
-- path:
   - docker/compose/llm-worker.yaml
   - docker/compose/llm-worker.production.yaml
   project_directory: .
@@ -33,3 +28,30 @@ include:
   - docker/compose/export-worker.production.yaml
   project_directory: .
   env_file: docker/compose/interpolation.env
+
+# Dokploy validates domains before expanding include/extends, and rewrites this
+# file. Keep app concrete and tag-free; verify_docker_startup checks parity.
+services:
+  app:
+    image: ${SCOPE_GUARD_FRONTEND_IMAGE:-scope-guard-frontend:local}
+    build:
+      context: ./frontend
+      target: runner
+      args:
+        SOURCE_REVISION: ${SOURCE_REVISION:-unknown}
+    init: true
+    environment:
+      SCOPE_GUARD_API_ORIGIN: http://backend:8000
+    expose: ['3000']
+    restart: unless-stopped
+    labels:
+    - traefik.http.middlewares.scopecreep-no-h3.headers.customresponseheaders.Alt-Svc=
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:3000/health/live']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s

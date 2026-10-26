@@ -51,3 +51,16 @@
 - Server build/deployment outcomes are recorded separately in
   `output/dokploy-fresh-20261027/production-deployment.json`.
 - Follow-up owner: this chat for the release; user for future backup destination.
+
+## Dokploy domain compatibility follow-up
+
+- Base: main `990177e8e80884696c6f50c3e1d3b88ecf8723f2`; branch
+  `codex/dokploy-compose-services`, reviewed through a pull request.
+- The first server build stopped before Docker execution: Dokploy 0.29.14 checks
+  domain service names in the raw root file and does not expand `include` first.
+- Declare a concrete, tag-free `app` at the root so Dokploy can inject domain
+  labels and rewrite the file safely. Other roles keep their existing includes.
+- Compare the complete resolved model with the authoritative component/production
+  definitions, so the Dokploy frontend cannot silently drift from the shared one.
+- Preserve and disable obsolete Next.js file patches before rebuilding the Python
+  and React release. Keep the prior database volume untouched.
