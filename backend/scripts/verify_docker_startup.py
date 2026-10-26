@@ -10,6 +10,8 @@ import time
 from pathlib import Path
 from uuid import uuid4
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
 SERVICES = {"postgres", "migrate", "backend", "app", "llm-worker", "export-worker"}
 CLOSURES = {
@@ -139,6 +141,28 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
         )
         production = config("docker-compose.dokploy.yml")
         assert set(production["services"]) == SERVICES | {"silo", "silo-init"}
+        production_source = yaml.safe_load((ROOT / "docker-compose.dokploy.yml").read_text())
+        assert "app" in production_source.get("services", {}), (
+            "Dokploy must see app before expanding Compose definitions"
+        )
+        reference_sources = production_source["include"]
+        reference_sources.append(
+            {"path": ["docker/compose/app.yaml", "docker/compose/app.production.yaml"]}
+        )
+        for source in reference_sources:
+            paths = source["path"]
+            source["path"] = (
+                [str(ROOT / path) for path in paths]
+                if isinstance(paths, list)
+                else str(ROOT / paths)
+            )
+            source["project_directory"] = str(ROOT)
+            source["env_file"] = str(ROOT / "docker/compose/interpolation.env")
+        reference_path = Path(directory) / "production-reference.yaml"
+        reference_path.write_text(yaml.safe_dump({"include": reference_sources}), encoding="utf-8")
+        reference = config(str(reference_path))
+        for section in ("services", "volumes", "networks"):
+            assert production[section] == reference[section], section
         for service, definition in production["services"].items():
             assert not definition.get("ports")
             assert not definition.get("env_file")
