@@ -86,9 +86,12 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
 
         def compose(*args, entry="compose.yaml", check=True):
             files = ["-f", str(ROOT / entry)]
+            # Temporary reference files must retain the repository as their path base.
             return run(
                 "docker",
                 "compose",
+                "--project-directory",
+                str(ROOT),
                 "--env-file",
                 str(empty),
                 "-p",
