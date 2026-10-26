@@ -62,5 +62,7 @@
   labels and rewrite the file safely. Other roles keep their existing includes.
 - Compare the complete resolved model with the authoritative component/production
   definitions, so the Dokploy frontend cannot silently drift from the shared one.
+- Configuration parity passes on both Compose 2.24.0 and 5.6.1. The verifier sets
+  the project directory explicitly for references written outside the repository.
 - Preserve and disable obsolete Next.js file patches before rebuilding the Python
   and React release. Keep the prior database volume untouched.
