@@ -1,5 +1,8 @@
 services:
   backend:
+    depends_on:
+      silo-init:
+        condition: service_completed_successfully
     env_file: !reset []
     ports: !reset []
     environment:

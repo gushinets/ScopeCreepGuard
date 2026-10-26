@@ -1,4 +1,5 @@
 apps/api/entrypoint.sh text eol=lf
+deploy/silo/init.sh text eol=lf
 frontend/nginx/05-validate-upstream.sh text eol=lf
 ci/contracts/openapi.json text eol=lf
 frontend/src/shared/api/generated.ts text eol=lf

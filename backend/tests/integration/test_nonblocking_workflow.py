@@ -27,9 +27,8 @@ from scope_guard.services.llm.worker import LlmWorker
 pytestmark = pytest.mark.integration
 
 
-@pytest.mark.parametrize("review", ["reject", "malformed", "malformed_label", "outage", "retry"])
 @pytest.mark.parametrize("pricing_changed", [False, True])
-def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pricing_changed):
+def test_main_agreement_diagnostics_and_concurrency(disposable_url, pricing_changed):
     engine = create_engine(normalize_url(disposable_url))
     with engine.begin() as connection:
         migrate(connection, target="0005_llm_workflow")
@@ -86,43 +85,14 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
                 "changes": {"requestText": "Add Arrow and email alerts."},
             },
         )
-        calls, hold, entered = [], asyncio.Event(), asyncio.Event()
+        calls = []
         fail_agreement = False
-        retry_review = False
 
         class Adapter:
             async def request(self, request, timeout):
-                nonlocal retry_review
                 calls.append(request)
-                if request.schema_name == "semantic_review_v2":
-                    if retry_review:
-                        retry_review = False
-                        raise ConnectionError("controlled retryable diagnostic transport error")
-                    entered.set()
-                    await hold.wait()
-                    if review == "retry":
-                        return ProviderResponse(
-                            json.dumps({"decision": "accept", "violations": []}),
-                            input_tokens=100,
-                            output_tokens=25,
-                        )
-                    if review == "outage":
-                        raise RuntimeError("controlled diagnostic outage")
-                    value = {
-                        "decision": "reject",
-                        "violations": [
-                            {
-                                "field": "warm"
-                                if review == "reject"
-                                else "candidate.labels.clientEmail"
-                                if review == "malformed_label"
-                                else "candidate.text",
-                                "rule": "scope_position",
-                                "feedback": "Preserve frozen scope.",
-                            }
-                        ],
-                    }
-                elif request.schema_name == "change_order_v1" and fail_agreement:
+                assert request.schema_name != "semantic_review_v2"
+                if request.schema_name == "change_order_v1" and fail_agreement:
                     raise RuntimeError("controlled agreement outage")
                 else:
                     value = output(request.schema_name, "en", "en")
@@ -154,15 +124,14 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
         assert (await operations.admit(owner, draft_id, "check", command))[
             "operationId"
         ] == pending["operationId"]
-        # Slow diagnostics are owned by a separate job after main success/History commit.
-        job = asyncio.create_task(worker.process_one(lane="diagnostic"))
-        await asyncio.wait_for(entered.wait(), 20)
+        # Local diagnostics run after publication and make no provider requests.
+        calls_before_diagnostics = len(calls)
+        assert await worker.process_one(lane="diagnostic")
         assert (await operations.status(owner, UUID(pending["operationId"])))[
             "status"
         ] == "succeeded"
         assert (await workflow.draft(owner, draft_id))["draftDocument"]["reply"]["text"]
-        hold.set()
-        await job
+        assert len(calls) == calls_before_diagnostics
         assert (await operations.status(owner, UUID(pending["operationId"])))[
             "status"
         ] == "succeeded"
@@ -224,34 +193,9 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
         assert provenance["effectiveEndDate"] == order["endDate"]
         assert draft["analysisRun"]["projectSnapshot"]["name"] == "Monitor"
         assert draft["analysisRun"]["resultSnapshot"]["estimate"]["additionalCost"] == "240.00"
-        if review == "retry":
-            retry_review = True
-            reviews_before = sum(c.schema_name == "semantic_review_v2" for c in calls)
-            assert await worker.process_one(lane="diagnostic")
-            assert sum(c.schema_name == "semantic_review_v2" for c in calls) == (
-                reviews_before + (3 if pricing_changed else 2)
-            )
-            async with database.new_uow() as work:
-                diagnostic = (
-                    await work.session.execute(
-                        text(
-                            "SELECT id FROM llm_operations WHERE kind='diagnostic' "
-                            "AND frozen_input->>'parentId'=:parent"
-                        ),
-                        {"parent": agreement["operationId"]},
-                    )
-                ).scalar_one()
-            records = await store.steps(diagnostic)
-            observations = [
-                o
-                for s in records
-                if s["accepted_result"]
-                for o in s["accepted_result"].get("observations", [])
-            ]
-            assert any(
-                o["rule"] == "semantic_review" and o["outcome"] == "pass" for o in observations
-            )
-            assert not any(o["outcome"] == "diagnostic_error" for o in observations)
+        calls_before_diagnostics = len(calls)
+        assert await worker.process_one(lane="diagnostic")
+        assert len(calls) == calls_before_diagnostics
         count = len(calls)
         reopened, _ = await admit("agreement", draft)
         assert (await operations.status(owner, UUID(reopened["operationId"])))[
@@ -285,7 +229,7 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
         )
         draft = await workflow.draft(owner, draft_id)
         assert draft["analysisIsStale"] is False
-        if review == "reject" and not pricing_changed:
+        if not pricing_changed:
             # Durable free/paid edits change presentation without clearing source,
             # revising the original analysis/History, or dispatching generation.
             histories_before = deepcopy(await workflow.histories(owner, UUID(project["id"])))
@@ -437,15 +381,8 @@ def test_main_agreement_diagnostics_and_concurrency(disposable_url, review, pric
             )
             observations = [item for row in diagnostic_rows if row for item in row["observations"]]
             assert any(o["outcome"] == "finding" for o in observations)
-            if review == "retry":
-                assert any(
-                    o["rule"] == "semantic_review" and o["outcome"] == "pass" for o in observations
-                )
-                assert not any(o["outcome"] == "diagnostic_error" for o in observations)
-            elif review == "reject":
-                assert any(o["rule"] == "scope_position" for o in observations)
-            else:
-                assert any(o["outcome"] == "diagnostic_error" for o in observations)
+            assert all(o["rule"] != "semantic_review" for o in observations)
+            assert not any(o["outcome"] == "diagnostic_error" for o in observations)
             assert all("candidate.text" not in json.dumps(o) for o in observations)
             assert (
                 await work.session.scalar(

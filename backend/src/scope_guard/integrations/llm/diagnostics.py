@@ -16,7 +16,6 @@ from scope_guard.domain.llm.reply_similarity import (
     previous_reply,
 )
 from scope_guard.domain.llm.runtime import PROMPT_VERSION, Binding, GatewayFailure, digest
-from scope_guard.integrations.llm.semantic_review import SemanticReviewer
 
 
 class Observation(BaseModel):
@@ -192,45 +191,6 @@ async def execute_diagnostics(runner, operation):
             facts,
             novelty=(source.get("feedback") or {}).get("novelty"),
         )
-        if stage != "analysis":
-            try:
-                decision = await SemanticReviewer(runner.gateway, store).review(
-                    binding, stage, facts, candidate, 1
-                )
-                if decision.decision == "accept":
-                    observations.append(
-                        Observation(
-                            operation_id=binding.operation_id,
-                            stage_id=binding.step_id,
-                            stage=stage,
-                            field="*",
-                            rule="semantic_review",
-                            outcome="pass",
-                        )
-                    )
-                else:
-                    observations.extend(
-                        Observation(
-                            operation_id=binding.operation_id,
-                            stage_id=binding.step_id,
-                            stage=stage,
-                            field=v.field,
-                            rule=v.rule,
-                            outcome="uncertain" if decision.decision == "uncertain" else "finding",
-                        )
-                        for v in decision.violations
-                    )
-            except Exception:
-                observations.append(
-                    Observation(
-                        operation_id=binding.operation_id,
-                        stage_id=binding.step_id,
-                        stage=stage,
-                        field="*",
-                        rule="semantic_review",
-                        outcome="diagnostic_error",
-                    )
-                )
         await store.accept(
             binding, {"observations": [o.model_dump(mode="json") for o in observations]}
         )

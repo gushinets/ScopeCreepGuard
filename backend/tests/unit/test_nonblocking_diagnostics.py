@@ -2,6 +2,8 @@
 
 import asyncio
 import json
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -11,10 +13,53 @@ from test_llm_review_corrections import RecordingStore, run
 from scope_guard.domain.analysis.normalization import parse_snapshot
 from scope_guard.domain.analysis.serialization import analysis_to_wire
 from scope_guard.domain.drafts.workflow import analysis_matches
-from scope_guard.domain.llm.runtime import Binding, GatewayFailure
-from scope_guard.integrations.llm.diagnostics import local_observations
+from scope_guard.domain.llm.runtime import PROMPT_VERSION, Binding, GatewayFailure
+from scope_guard.integrations.llm.diagnostics import execute_diagnostics, local_observations
 from scope_guard.integrations.llm.gateway import ProviderGateway
 from scope_guard.integrations.llm.stages import StructuredStageRunner
+
+
+def test_background_diagnostics_keep_local_findings_without_provider_calls(monkeypatch):
+    operation_id, source_id, record_id, owner_id, parent_id = (uuid4() for _ in range(5))
+    candidate = order()
+    candidate["note"] = "This change order is a draft and is not legal advice."
+    store = SimpleNamespace(
+        get=AsyncMock(return_value={"id": parent_id, "kind": "agreement", "frozen_input": facts()}),
+        steps=AsyncMock(
+            side_effect=[
+                [{"id": source_id, "stage_key": "change_order", "accepted_result": candidate}],
+                [
+                    {
+                        "id": record_id,
+                        "stage_key": "change_order_diagnostic",
+                        "status": "pending",
+                        "prompt_version": PROMPT_VERSION,
+                    }
+                ],
+            ]
+        ),
+        freeze_stage=AsyncMock(),
+        accept=AsyncMock(),
+        finish_diagnostics=AsyncMock(),
+    )
+    review = AsyncMock(side_effect=AssertionError("Background diagnostics must stay local"))
+    monkeypatch.setattr(
+        "scope_guard.integrations.llm.semantic_review.SemanticReviewer.review", review
+    )
+    operation = {
+        "id": operation_id,
+        "owner_id": owner_id,
+        "epoch": 1,
+        "deadline_at": None,
+        "policy": {"model": "controlled"},
+        "frozen_input": {"contract": "diagnostics-v1", "parentId": str(parent_id)},
+    }
+    asyncio.run(execute_diagnostics(SimpleNamespace(store=store, gateway=None), operation))
+    observations = store.accept.await_args.args[1]["observations"]
+    assert any(o["field"] == "note" and o["outcome"] == "finding" for o in observations)
+    assert all(o["rule"] != "semantic_review" for o in observations)
+    review.assert_not_awaited()
+    store.finish_diagnostics.assert_awaited_once_with(operation)
 
 
 @pytest.mark.parametrize(

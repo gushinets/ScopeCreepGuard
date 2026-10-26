@@ -134,19 +134,30 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             POSTGRES_PASSWORD="synthetic",
             DATABASE_URL="postgres://scopeguard:synthetic@postgres/scope_creep_guard",
             SCOPE_GUARD_ALLOWED_ORIGINS='["https://synthetic.example.test"]',
+            SCOPE_GUARD_SILO_ROOT_USER="synthetic-admin",
+            SCOPE_GUARD_SILO_ROOT_PASSWORD="synthetic-admin-secret",
         )
         production = config("docker-compose.dokploy.yml")
-        assert set(production["services"]) == SERVICES
+        assert set(production["services"]) == SERVICES | {"silo", "silo-init"}
         for service, definition in production["services"].items():
             assert not definition.get("ports")
             assert not definition.get("env_file")
-            assert definition.get("depends_on") == full["services"][service].get("depends_on")
+            if service in SERVICES:
+                expected_dependencies = dict(full["services"][service].get("depends_on", {}))
+                if service in {"backend", "export-worker"}:
+                    expected_dependencies["silo-init"] = {
+                        "condition": "service_completed_successfully",
+                        "required": True,
+                    }
+                assert definition.get("depends_on", {}) == expected_dependencies
         for key in (
             "POSTGRES_DB",
             "POSTGRES_USER",
             "POSTGRES_PASSWORD",
             "DATABASE_URL",
             "SCOPE_GUARD_ALLOWED_ORIGINS",
+            "SCOPE_GUARD_SILO_ROOT_USER",
+            "SCOPE_GUARD_SILO_ROOT_PASSWORD",
         ):
             environment.pop(key)
         saved_secret = environment.pop("AUTH_SECRET")

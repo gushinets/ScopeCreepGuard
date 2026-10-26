@@ -29,8 +29,8 @@ from scope_guard.services.llm.worker import LlmWorker
 pytestmark = pytest.mark.integration
 
 
-@pytest.mark.parametrize("review", ["accept", "reject", "failure", "cancel"])
-def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, review):
+@pytest.mark.parametrize("shutdown", ["finish", "cancel"])
+def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, tmp_path, shutdown):
     engine = create_engine(normalize_url(disposable_url))
     with engine.begin() as connection:
         migrate(connection, target="0005_llm_workflow")
@@ -98,47 +98,21 @@ def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, 
         signals, instances = {}, []
 
         class Adapter:
-            active = 0
-            maximum = 0
             closed = False
 
             async def request(self, request, timeout):
                 calls.append(request.schema_name)
-                if request.schema_name == "semantic_review_v2":
-                    self.active += 1
-                    self.maximum = max(self.maximum, self.active)
-                    try:
-                        events.append("diagnostic blocked")
-                        diagnostic_entered.set()
-                        await release.wait()
-                        if review == "failure":
-                            raise RuntimeError("controlled diagnostic failure")
-                        value = {"decision": "accept", "violations": []}
-                        if review == "reject":
-                            value = {
-                                "decision": "reject",
-                                "violations": [
-                                    {
-                                        "field": "warm",
-                                        "rule": "scope_position",
-                                        "feedback": "Frozen scope",
-                                    }
-                                ],
-                            }
-                    finally:
-                        self.active -= 1
-                else:
-                    if request.schema_name == "reply_v1":
-                        events.append("user provider entered")
-                        user_entered.set()
-                    value = output(request.schema_name, "en", "en")
-                    if request.schema_name == "reply_v1":
-                        # This lane test needs one accepted reformulation; novelty
-                        # retry/exhaustion behavior has its own controlled fixtures.
-                        value["text"] = (
-                            "Please authorize a separate proposal for these additions "
-                            "before we proceed."
-                        )
+                assert request.schema_name != "semantic_review_v2"
+                if request.schema_name == "reply_v1":
+                    events.append("user provider entered")
+                    user_entered.set()
+                value = output(request.schema_name, "en", "en")
+                if request.schema_name == "reply_v1":
+                    # Novelty retry/exhaustion has separate controlled fixtures.
+                    value["text"] = (
+                        "Please authorize a separate proposal for these additions "
+                        "before we proceed."
+                    )
                 return ProviderResponse(json.dumps(value), input_tokens=100, output_tokens=25)
 
             async def close(self):
@@ -159,6 +133,10 @@ def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, 
 
             async def execute(self, operation):
                 try:
+                    if operation["kind"] == "diagnostic":
+                        events.append("diagnostic blocked")
+                        diagnostic_entered.set()
+                        await release.wait()
                     await super().execute(operation)
                 finally:
                     await published.put(operation)
@@ -170,6 +148,7 @@ def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, 
         )
         composition = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(composition)
+        monkeypatch.setattr(composition, "Path", lambda value: tmp_path / Path(value).name)
         monkeypatch.setattr(
             composition,
             "Settings",
@@ -203,6 +182,10 @@ def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, 
         )
         running = asyncio.create_task(composition.main())
         try:
+            first = await asyncio.wait_for(published.get(), 30)
+            assert first["kind"] == "check"
+            main_status = await operations.status(owner, UUID(main["operationId"]))
+            assert main_status["status"] == "succeeded", main_status
             await asyncio.wait_for(diagnostic_entered.wait(), 30)
             assert (await operations.status(owner, UUID(main["operationId"])))[
                 "status"
@@ -238,10 +221,10 @@ def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, 
             )
             diagnostic = await store.get(owner, operation["id"])
             assert diagnostic["kind"] == "regenerate"
-            if review == "cancel":
+            if shutdown == "cancel":
                 instances[0].stopping.set()
                 await asyncio.wait_for(running, 10)
-                assert adapter.active == 0 and adapter.closed
+                assert adapter.closed
                 async with database.new_uow() as work:
                     unknown = (
                         (
@@ -252,20 +235,17 @@ def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, 
                         .mappings()
                         .all()
                     )
-                assert len(unknown) == 1
-                assert unknown[0]["error"]["code"] == "providerOutcomeUnknown"
-                assert unknown[0]["reserved_cost"] > 0
-                old_review_calls = calls.count("semantic_review_v2")
+                assert not unknown
+                old_calls = len(calls)
                 release.set()
-                # Reclaim expired/abandoned diagnostics. Attempted review is never
-                # dispatched again; the new regeneration review is allowed once.
+                # Reclaim abandoned local diagnostics without touching the provider.
                 recovery = LlmWorker(
                     factory, store, StructuredStageRunner(ProviderGateway(store, adapter), store)
                 )
                 assert await recovery.process_one(lane="diagnostic")
-                assert calls.count("semantic_review_v2") == old_review_calls
                 assert await recovery.process_one(lane="diagnostic")
                 assert not await recovery.process_one(lane="diagnostic")
+                assert len(calls) == old_calls
             else:
                 events.append("diagnostic released")
                 release.set()
@@ -282,7 +262,7 @@ def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, 
                 "result"
             ] == main_snapshot
             assert (await workflow.draft(owner, draft_id))["draftDocument"] == saved
-            assert adapter.maximum == 1 and adapter.active == 0 and adapter.closed
+            assert adapter.closed
             async with database.new_uow() as work:
                 records = (
                     (
@@ -298,7 +278,7 @@ def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, 
                     .all()
                 )
             assert all(row["status"] != "in_flight" for row in records)
-            assert any(row["kind"] == "diagnostic" and row["reserved_cost"] > 0 for row in records)
+            assert all(row["kind"] != "diagnostic" for row in records)
             assert (
                 calls.count("analysis_v1")
                 == calls.count("replies_v1")
@@ -309,7 +289,7 @@ def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, 
                 "LANE_EVIDENCE "
                 + json.dumps(
                     {
-                        "review": review,
+                        "shutdown": shutdown,
                         "events": events,
                         "calls": calls,
                         "accounting": [

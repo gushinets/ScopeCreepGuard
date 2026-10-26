@@ -79,6 +79,34 @@ def test_cleanup_failure_preserves_original_startup_exit_code(monkeypatch, capsy
     assert "Failed to stop application services" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("storage_failure", [False, True])
+def test_production_storage_gate_precedes_migration_and_application_start(
+    monkeypatch, storage_failure
+):
+    location = Path(__file__).resolve().parents[3] / "scripts/stack.py"
+    spec = importlib.util.spec_from_file_location("stack_production", location)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    commands = []
+
+    def docker(command, **kwargs):
+        commands.append(command)
+        if storage_failure and "--exit-code-from" in command and command[-1] == "silo-init":
+            raise subprocess.CalledProcessError(8, command)
+
+    monkeypatch.setattr(module.subprocess, "run", docker)
+    monkeypatch.setattr("sys.argv", ["stack.py", "update", "--production", "--project", "scg-test"])
+    assert module.main() == (8 if storage_failure else 0)
+    storage = next(i for i, c in enumerate(commands) if c[-1] == "silo-init")
+    if storage_failure:
+        assert not any(c[-1] == "migrate" for c in commands)
+        assert "stop" in commands[-1]
+    else:
+        migration = next(i for i, c in enumerate(commands) if c[-1] == "migrate")
+        applications = next(i for i, c in enumerate(commands) if "--wait" in c and "backend" in c)
+        assert storage < migration < applications
+
+
 @pytest.mark.parametrize("component", ["llm_worker", "export_worker"])
 def test_worker_logs_do_not_validate_unrelated_full_stack_settings(monkeypatch, component):
     location = Path(__file__).resolve().parents[3] / "scripts/stack.py"

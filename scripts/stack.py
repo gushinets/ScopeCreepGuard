@@ -57,6 +57,18 @@ def main():
             maintenance_started = True
             compose("stop", *APPLICATION_SERVICES)
             compose("up", "-d", "--no-build", "--wait", "postgres")
+            if args.production:
+                compose("up", "-d", "--no-build", "--wait", "silo")
+                compose(
+                    "up",
+                    "--no-deps",
+                    "--no-build",
+                    "--force-recreate",
+                    "--abort-on-container-exit",
+                    "--exit-code-from",
+                    "silo-init",
+                    "silo-init",
+                )
             compose(
                 "up",
                 "--no-deps",

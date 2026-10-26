@@ -1,0 +1,37 @@
+x-silo-image: &silo-image pgsty/silo:RELEASE.2026-10-18T00-00-00Z@sha256:2636fc4155d9a7e41ff58cdb65ddd13ba9304e67184e13c25bc5cb34016269d7
+
+services:
+  silo:
+    image: *silo-image
+    command: [server, /data, --console-address, ':9001']
+    environment:
+      MINIO_ROOT_USER: ${SCOPE_GUARD_SILO_ROOT_USER:?Silo administrator is required}
+      MINIO_ROOT_PASSWORD: ${SCOPE_GUARD_SILO_ROOT_PASSWORD:?Silo administrator secret is required}
+    volumes:
+    - scope_creep_guard_exports:/data
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:9000/minio/health/ready]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  silo-init:
+    image: *silo-image
+    entrypoint: [/bin/sh, /scripts/init-silo.sh]
+    environment:
+      MINIO_ROOT_USER: ${SCOPE_GUARD_SILO_ROOT_USER:?Silo administrator is required}
+      MINIO_ROOT_PASSWORD: ${SCOPE_GUARD_SILO_ROOT_PASSWORD:?Silo administrator secret is required}
+      SCOPE_GUARD_EXPORT_BUCKET: ${SCOPE_GUARD_EXPORT_BUCKET:?Private export bucket required}
+      SCOPE_GUARD_EXPORT_ACCESS_KEY: ${SCOPE_GUARD_EXPORT_ACCESS_KEY:?Export access key required}
+      SCOPE_GUARD_EXPORT_SECRET_KEY: ${SCOPE_GUARD_EXPORT_SECRET_KEY:?Export secret key required}
+    volumes:
+    - ./deploy/silo/init.sh:/scripts/init-silo.sh:ro
+    depends_on:
+      silo:
+        condition: service_healthy
+    restart: 'no'
+
+volumes:
+  scope_creep_guard_exports:
+    name: ${COMPOSE_PROJECT_NAME}_scope_creep_guard_exports

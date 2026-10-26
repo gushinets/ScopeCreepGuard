@@ -351,6 +351,27 @@ PostgreSQL и данные сохраняются. Ошибка подготов
 Настройте домен на службу `app`, порт 3000. Локальные порты не публикуются,
 локальные env-файлы контейнеров исключены, production принудительно включён.
 
+Production-файл также запускает закреплённый образ PGSTY Silo и одноразовый
+`silo-init`. Задайте отдельные `SCOPE_GUARD_SILO_ROOT_USER` и
+`SCOPE_GUARD_SILO_ROOT_PASSWORD`, имя бакета и прикладные
+`SCOPE_GUARD_EXPORT_ACCESS_KEY` / `SCOPE_GUARD_EXPORT_SECRET_KEY`.
+Используйте `SCOPE_GUARD_EXPORT_ENDPOINT=http://silo:9000` и добавьте `silo` в
+`NO_PROXY`. Инициализатор закрывает анонимный доступ и выдаёт приложению права
+только на экспортные объекты выбранного бакета. Порты Silo и его консоли наружу
+не публикуются; файлы сохраняются в томе `${COMPOSE_PROJECT_NAME}_scope_creep_guard_exports`.
+API и обработчик экспорта ждут успешного завершения `silo-init`.
+При прямом обновлении после остановки приложений и запуска PostgreSQL добавьте
+`up -d --no-build --wait silo`, затем
+`up --no-deps --no-build --force-recreate --abort-on-container-exit --exit-code-from silo-init silo-init`
+перед мигратором. Оболочка `scripts/stack.py update --production` выполняет эти
+шаги автоматически.
+
+Для согласованной чистой установки вместо обновления задайте новое уникальное
+`SCOPE_GUARD_POSTGRES_VOLUME` и `SCOPE_GUARD_POSTGRES_VOLUME_EXTERNAL=false`.
+Это создаёт пустую базу, не копируя и не удаляя старый том; пользователи
+регистрируются заново. Платный фоновый LLM-аудит отключён, локальная диагностика
+по-прежнему выполняется после публикации результата.
+
 Перед эксплуатацией оператор проверяет `docker compose version` на хосте
 (нужна 2.24+) и выполняет `config --quiet` с production-файлом. Новый стек
 использует тот же migration gate. Для обновления работающего стека отключите
