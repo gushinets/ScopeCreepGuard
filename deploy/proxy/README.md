@@ -1,7 +1,7 @@
 # Deployment routing
 
 Expose the frontend app on port 3000 through the deployment reverse proxy.
-Next.js forwards existing /api paths once to internal http://backend:8000;
+Nginx serves the static React frontend and forwards /api paths to internal http://backend:8000;
 FastAPI remains internal unless a deployment deliberately adds a compatible
 reverse-proxy route. Keep same-origin cookies, allowed origins and shared auth
 secret unchanged. Development also publishes backend port 8000.
