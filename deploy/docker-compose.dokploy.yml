@@ -3,32 +3,26 @@ name: ${COMPOSE_PROJECT_NAME:-scopecreepguard}
 include:
 - path: compose/silo.yaml
   project_directory: ..
-  env_file: compose/interpolation.env
 - path:
   - compose/postgres.yaml
   - compose/postgres.production.yaml
   project_directory: ..
-  env_file: compose/interpolation.env
 - path:
   - compose/migrate.yaml
   - compose/migrate.production.yaml
   project_directory: ..
-  env_file: compose/interpolation.env
 - path:
   - compose/backend.yaml
   - compose/backend.production.yaml
   project_directory: ..
-  env_file: compose/interpolation.env
 - path:
   - compose/llm-worker.yaml
   - compose/llm-worker.production.yaml
   project_directory: ..
-  env_file: compose/interpolation.env
 - path:
   - compose/export-worker.yaml
   - compose/export-worker.production.yaml
   project_directory: ..
-  env_file: compose/interpolation.env
 
 # Dokploy validates domains before expanding include/extends, and rewrites this
 # file. Keep app concrete and tag-free; verify_docker_startup checks parity.
