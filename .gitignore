@@ -10,6 +10,8 @@ __v0_jsx-dev-runtime.ts
 .env
 .env.*
 !.env.example
+# Non-secret Compose bootstrap; application env files remain ignored.
+!/deploy/.env
 
 # Dependencies and build output
 node_modules/

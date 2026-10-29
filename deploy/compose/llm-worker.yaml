@@ -1,6 +1,6 @@
 # Authoritative service definition; included with repository project_directory.
 services:
-  export-worker:
+  llm-worker:
     image: ${SCOPE_GUARD_WORKER_IMAGE:-scope-guard-worker:local}
     build:
       context: .
@@ -19,15 +19,16 @@ services:
     - path: ${SCOPE_GUARD_BACKEND_ENV_FILE:-backend/.env}
       required: false
     extends:
-      file: docker/compose/runtime.yaml
+      file: deploy/compose/runtime.yaml
       service: runtime
     environment:
-      SCOPE_GUARD_WORKER_ROLE: exports
-      SCOPE_GUARD_EXPORT_BUCKET: ${SCOPE_GUARD_EXPORT_BUCKET:?Private export bucket required}
-      SCOPE_GUARD_EXPORT_ENDPOINT: ${SCOPE_GUARD_EXPORT_ENDPOINT:-}
-      SCOPE_GUARD_EXPORT_REGION: ${SCOPE_GUARD_EXPORT_REGION:-us-east-1}
-      SCOPE_GUARD_EXPORT_ACCESS_KEY: ${SCOPE_GUARD_EXPORT_ACCESS_KEY:-}
-      SCOPE_GUARD_EXPORT_SECRET_KEY: ${SCOPE_GUARD_EXPORT_SECRET_KEY:-}
+      SCOPE_GUARD_WORKER_ROLE: llm
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY required; use a synthetic key only for isolated no-job checks}
+      SCOPE_GUARD_OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY required}
+      SCOPE_GUARD_OPENAI_MODEL: ${SCOPE_GUARD_OPENAI_MODEL:?Explicit provider model required}
+      SCOPE_GUARD_LLM_INPUT_RATE_BOUND: ${SCOPE_GUARD_LLM_INPUT_RATE_BOUND:?Input USD per token bound required}
+      SCOPE_GUARD_LLM_OUTPUT_RATE_BOUND: ${SCOPE_GUARD_LLM_OUTPUT_RATE_BOUND:?Output USD per token bound required}
+      SCOPE_GUARD_LLM_MAX_COST: ${SCOPE_GUARD_LLM_MAX_COST:-1.00}
     depends_on:
       postgres:
         condition: service_healthy

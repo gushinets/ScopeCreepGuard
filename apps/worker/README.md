@@ -5,10 +5,10 @@ before polling; neither runs Alembic. Compose migration success is their startup
 gate, with no dependency on the API. The worker healthcheck requires a live polling
 loop and a recent database-backed readiness heartbeat.
 
-Use `compose.llm-worker.yaml` or `compose.export-worker.yaml` with the same explicit
-project name as `compose.yaml`. See the root README for direct commands, shared
+Use `deploy/compose.llm-worker.yaml` or `deploy/compose.export-worker.yaml` with the same explicit
+project name as `deploy/compose.yaml`. See the root README for direct commands, shared
 configuration and the maintenance update procedure. Full application verification
-requires both workers, API, frontend, PostgreSQL and test object storage.
+requires both workers, API, frontend, PostgreSQL, Mailpit and private test object storage.
 
 The LLM role (`SCOPE_GUARD_WORKER_ROLE=llm`) uses workflow flags, shared database,
 provider key/model and conservative token-price bounds. Starting it does not submit

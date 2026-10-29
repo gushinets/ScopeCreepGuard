@@ -1,7 +1,7 @@
 # Convenience only: direct Docker Compose commands are documented in README.
 param(
     [Parameter(Position=0)][ValidateSet('up','update','logs','status','down')][string]$Action='up',
-    [Parameter(Position=1)][ValidateSet('front','back','postgres','llm_worker','export_worker')][string]$Component,
+    [Parameter(Position=1)][ValidateSet('front','back','postgres','llm_worker','export_worker','mailpit')][string]$Component,
     [string]$Project,
     [string]$EnvFile,
     [switch]$Production,

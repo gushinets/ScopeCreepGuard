@@ -10,6 +10,7 @@ COMPONENTS = {
     "front": "frontend",
     "back": "backend",
     "postgres": "postgres",
+    "mailpit": "mailpit",
     "llm_worker": "llm-worker",
     "export_worker": "export-worker",
 }
@@ -17,6 +18,7 @@ SERVICES = {
     "front": "app",
     "back": "backend",
     "postgres": "postgres",
+    "mailpit": "mailpit",
     "llm_worker": "llm-worker",
     "export_worker": "export-worker",
 }
@@ -39,11 +41,12 @@ def main():
     filename = "docker-compose.dokploy.yml" if args.production else "compose.yaml"
     if args.component:
         filename = f"compose.{COMPONENTS[args.component]}.yaml"
-    base = ["docker", "compose", "-f", str(ROOT / filename)]
+    base = ["docker", "compose", "-f", str(ROOT / "deploy" / filename)]
     if args.project:
         base += ["-p", args.project]
-    if args.env_file:
-        base += ["--env-file", str(Path(args.env_file).resolve())]
+    env_file = Path(args.env_file).resolve() if args.env_file else ROOT / ".env"
+    if args.env_file or env_file.exists():
+        base += ["--env-file", str(env_file)]
 
     def compose(*command):
         subprocess.run([*base, *command], cwd=ROOT, check=True)

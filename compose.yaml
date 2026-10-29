@@ -1,4 +1,24 @@
+name: ${COMPOSE_PROJECT_NAME:-scopecreepguard}
 # Explicit composition; include interpolation inherits the selected root environment.
 include:
-- path: compose.services.yaml
-  env_file: docker/compose/interpolation.env
+- path: deploy/compose/postgres.yaml
+  project_directory: .
+  env_file: deploy/compose/interpolation.env
+- path: deploy/compose/migrate.yaml
+  project_directory: .
+  env_file: deploy/compose/interpolation.env
+- path: deploy/compose/backend.yaml
+  project_directory: .
+  env_file: deploy/compose/interpolation.env
+- path: deploy/compose/app.yaml
+  project_directory: .
+  env_file: deploy/compose/interpolation.env
+- path: deploy/compose/llm-worker.yaml
+  project_directory: .
+  env_file: deploy/compose/interpolation.env
+- path: deploy/compose/export-worker.yaml
+  project_directory: .
+  env_file: deploy/compose/interpolation.env
+- path: deploy/compose/mailpit.yaml
+  project_directory: .
+  env_file: deploy/compose/interpolation.env

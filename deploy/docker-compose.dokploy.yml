@@ -1,33 +1,34 @@
+name: ${COMPOSE_PROJECT_NAME:-scopecreepguard}
 # Backend roles retain their authoritative shared definitions.
 include:
-- path: docker/compose/silo.yaml
-  project_directory: .
-  env_file: docker/compose/interpolation.env
+- path: compose/silo.yaml
+  project_directory: ..
+  env_file: compose/interpolation.env
 - path:
-  - docker/compose/postgres.yaml
-  - docker/compose/postgres.production.yaml
-  project_directory: .
-  env_file: docker/compose/interpolation.env
+  - compose/postgres.yaml
+  - compose/postgres.production.yaml
+  project_directory: ..
+  env_file: compose/interpolation.env
 - path:
-  - docker/compose/migrate.yaml
-  - docker/compose/migrate.production.yaml
-  project_directory: .
-  env_file: docker/compose/interpolation.env
+  - compose/migrate.yaml
+  - compose/migrate.production.yaml
+  project_directory: ..
+  env_file: compose/interpolation.env
 - path:
-  - docker/compose/backend.yaml
-  - docker/compose/backend.production.yaml
-  project_directory: .
-  env_file: docker/compose/interpolation.env
+  - compose/backend.yaml
+  - compose/backend.production.yaml
+  project_directory: ..
+  env_file: compose/interpolation.env
 - path:
-  - docker/compose/llm-worker.yaml
-  - docker/compose/llm-worker.production.yaml
-  project_directory: .
-  env_file: docker/compose/interpolation.env
+  - compose/llm-worker.yaml
+  - compose/llm-worker.production.yaml
+  project_directory: ..
+  env_file: compose/interpolation.env
 - path:
-  - docker/compose/export-worker.yaml
-  - docker/compose/export-worker.production.yaml
-  project_directory: .
-  env_file: docker/compose/interpolation.env
+  - compose/export-worker.yaml
+  - compose/export-worker.production.yaml
+  project_directory: ..
+  env_file: compose/interpolation.env
 
 # Dokploy validates domains before expanding include/extends, and rewrites this
 # file. Keep app concrete and tag-free; verify_docker_startup checks parity.
@@ -35,7 +36,7 @@ services:
   app:
     image: ${SCOPE_GUARD_FRONTEND_IMAGE:-scope-guard-frontend:local}
     build:
-      context: ./frontend
+      context: ../frontend
       target: runner
       args:
         SOURCE_REVISION: ${SOURCE_REVISION:-unknown}
