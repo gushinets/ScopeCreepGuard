@@ -269,3 +269,10 @@ def legacy_llm_result(request, owner, style, value):
         },
     }
     return {"result": result}
+
+
+def email_service(request: Request):
+    from scope_guard.integrations.email.smtp import SMTPSender
+    from scope_guard.services.email.service import EmailService
+
+    return EmailService(SMTPSender(request.app.state.settings))

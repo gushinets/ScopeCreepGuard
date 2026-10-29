@@ -70,3 +70,13 @@ class Settings(BaseSettings):
     database_url: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("SCOPE_GUARD_DATABASE_URL", "DATABASE_URL")
     )
+
+    smtp_host: str = "mailpit"
+    smtp_port: int = Field(default=1025, ge=1, le=65535)
+    smtp_sender_address: str = "no-reply-scopecreepguard@mail.com"
+    smtp_sender_name: str | None = "ScopeCreepGuard"
+    smtp_transport: Literal["none", "starttls", "tls"] = "none"
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_timeout: float = Field(default=10, gt=0, le=120, allow_inf_nan=False)
+    smtp_deadline: float = Field(default=30, gt=0, le=300, allow_inf_nan=False)

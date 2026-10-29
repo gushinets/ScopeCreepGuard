@@ -61,3 +61,7 @@ def llm_operations_service(request: Request):
 
 def legacy_llm_result(request, owner, style, value):
     return bootstrap.legacy_llm_result(request, owner, style, value)
+
+
+def email_service(request: Request):
+    return bootstrap.email_service(request)
