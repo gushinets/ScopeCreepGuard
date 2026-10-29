@@ -17,7 +17,7 @@ services:
     - path: ${SCOPE_GUARD_BACKEND_ENV_FILE:-backend/.env}
       required: false
     extends:
-      file: docker/compose/runtime.yaml
+      file: deploy/compose/runtime.yaml
       service: runtime
     ports:
     - ${BACKEND_PORT:-8000}:8000

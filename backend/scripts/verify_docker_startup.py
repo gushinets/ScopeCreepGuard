@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import time
@@ -13,7 +14,8 @@ from uuid import uuid4
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-SERVICES = {"postgres", "migrate", "backend", "app", "llm-worker", "export-worker"}
+APPLICATION_STACK = {"postgres", "migrate", "backend", "app", "llm-worker", "export-worker"}
+SERVICES = APPLICATION_STACK | {"mailpit"}
 CLOSURES = {
     "postgres": {"postgres"},
     "backend": {"postgres", "migrate", "backend"},
@@ -45,6 +47,7 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
         SCOPE_GUARD_API_IMAGE=api_image,
         SCOPE_GUARD_FRONTEND_IMAGE=frontend_image,
         SCOPE_GUARD_WORKER_IMAGE=worker_image,
+        MAILPIT_UI_PORT="0",
         POSTGRES_PORT="0",
         BACKEND_PORT="0",
         FRONTEND_PORT="0",
@@ -85,13 +88,13 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
         )
 
         def compose(*args, entry="compose.yaml", check=True):
-            files = ["-f", str(ROOT / entry)]
+            files = ["-f", str(ROOT / "deploy" / entry)]
             # Temporary reference files must retain the repository as their path base.
             return run(
                 "docker",
                 "compose",
                 "--project-directory",
-                str(ROOT),
+                str(ROOT if Path(entry) == ROOT / "compose.yaml" else ROOT / "deploy"),
                 "--env-file",
                 str(empty),
                 "-p",
@@ -113,6 +116,139 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
 
         full = config("compose.yaml")
         assert set(full["services"]) == SERVICES
+        assert Path(full["services"]["backend"]["build"]["context"]) == ROOT
+        assert Path(full["services"]["app"]["build"]["context"]) == ROOT / "frontend"
+        assert full["services"]["mailpit"]["ports"][0]["host_ip"] == "127.0.0.1"
+        assert {port["target"] for port in full["services"]["mailpit"]["ports"]} == {8025}
+        assert full["volumes"]["scope_creep_guard_mailpit"]["name"] == (
+            project + "_scope_creep_guard_mailpit"
+        )
+        assert not any(
+            "mailpit" in full["services"][service].get("depends_on", {})
+            for service in ("backend", "llm-worker", "export-worker")
+        )
+        for working_directory, filename in (
+            (ROOT, "deploy/compose.yaml"),
+            (ROOT / "deploy", "compose.yaml"),
+        ):
+            command = [
+                "docker",
+                "compose",
+                "--env-file",
+                str(empty),
+                "-p",
+                project,
+                "-f",
+                filename,
+                "config",
+                "--format",
+                "json",
+            ]
+            result = subprocess.run(
+                command,
+                cwd=working_directory,
+                env=environment,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            assert json.loads(result.stdout) == full
+        for alias in (str(ROOT / "compose.yaml"), "compose.services.yaml", "docker-compose.yml"):
+            assert config(alias) == full
+
+        # Prove bare root invocation loads .env, without touching developer secrets.
+        fixture = Path(directory) / "automatic-env"
+        fixture.mkdir()
+        shutil.copy2(ROOT / "compose.yaml", fixture / "compose.yaml")
+        (fixture / "deploy/compose").mkdir(parents=True)
+        bootstrap = ROOT / "deploy/.env"
+        assert bootstrap.read_text().splitlines()[-1] == "COMPOSE_FILE=../compose.yaml"
+        shutil.copy2(bootstrap, fixture / "deploy/.env")
+        for source in (ROOT / "deploy").iterdir():
+            if source.is_file() and source.suffix in {".yaml", ".yml"}:
+                shutil.copy2(source, fixture / "deploy" / source.name)
+        for source in (ROOT / "deploy/compose").iterdir():
+            if source.suffix == ".yaml" or source.name == "interpolation.env":
+                shutil.copy2(source, fixture / "deploy/compose" / source.name)
+        fixture_values = {
+            key: value
+            for key, value in environment.items()
+            if key.startswith("SCOPE_GUARD_")
+            or key
+            in {
+                "AUTH_SECRET",
+                "OPENAI_API_KEY",
+                "MAILPIT_UI_PORT",
+                "POSTGRES_PORT",
+                "BACKEND_PORT",
+                "FRONTEND_PORT",
+            }
+        }
+        fixture_values["COMPOSE_PROJECT_NAME"] = project
+        (fixture / ".env").write_text(
+            "\n".join(key + "=" + json.dumps(value) for key, value in fixture_values.items())
+            + "\n",
+            encoding="utf-8",
+        )
+        automatic_environment = {
+            key: value
+            for key, value in environment.items()
+            if key not in fixture_values and key != "COMPOSE_DISABLE_ENV_FILE"
+        }
+        executable = (
+            [str(Path(compose_binary).resolve())] if compose_binary else ["docker", "compose"]
+        )
+        automatic = subprocess.run(
+            [*executable, "config", "--format", "json"],
+            cwd=fixture,
+            env=automatic_environment,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        explicit = subprocess.run(
+            [
+                *executable,
+                "--env-file",
+                ".env",
+                "-f",
+                "deploy/compose.yaml",
+                "config",
+                "--format",
+                "json",
+            ],
+            cwd=fixture,
+            env=automatic_environment,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        automatic_config = json.loads(automatic.stdout)
+        assert automatic_config == json.loads(explicit.stdout)
+        from_deploy = subprocess.run(
+            [*executable, "config", "--format", "json"],
+            cwd=fixture / "deploy",
+            env=automatic_environment,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert from_deploy.returncode == 0, from_deploy.stderr
+        assert json.loads(from_deploy.stdout) == automatic_config
+        assert automatic_config["name"] == project
+        assert (
+            automatic_config["services"]["backend"]["environment"]["AUTH_SECRET"]
+            == (fixture_values["AUTH_SECRET"])
+        )
+        assert automatic_config["volumes"]["scope_creep_guard_postgres"]["name"] == (
+            project + "_scope_creep_guard_postgres"
+        )
+        results.append(
+            "bare root/deploy invocation: automatic .env, project identity and canonical parity"
+        )
+        mailpit = config("compose.mailpit.yaml")
+        assert set(mailpit["services"]) == {"mailpit"}
+        assert mailpit["services"]["mailpit"] == full["services"]["mailpit"]
         assert full["volumes"]["scope_creep_guard_postgres"]["name"] == (
             project + "_scope_creep_guard_postgres"
         )
@@ -121,7 +257,9 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             assert set(selected["services"]) == expected
             for service in expected:
                 assert selected["services"][service] == full["services"][service]
-            assert selected["volumes"] == full["volumes"]
+            assert all(
+                full["volumes"][key] == value for key, value in selected.get("volumes", {}).items()
+            )
             assert selected["networks"] == full["networks"]
         for service in ("backend", "llm-worker", "export-worker"):
             assert (
@@ -143,24 +281,22 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             SCOPE_GUARD_SILO_ROOT_PASSWORD="synthetic-admin-secret",
         )
         production = config("docker-compose.dokploy.yml")
-        assert set(production["services"]) == SERVICES | {"silo", "silo-init"}
-        production_source = yaml.safe_load((ROOT / "docker-compose.dokploy.yml").read_text())
+        assert set(production["services"]) == APPLICATION_STACK | {"silo", "silo-init"}
+        production_source = yaml.safe_load((ROOT / "deploy/docker-compose.dokploy.yml").read_text())
         assert "app" in production_source.get("services", {}), (
             "Dokploy must see app before expanding Compose definitions"
         )
         reference_sources = production_source["include"]
-        reference_sources.append(
-            {"path": ["docker/compose/app.yaml", "docker/compose/app.production.yaml"]}
-        )
+        reference_sources.append({"path": ["compose/app.yaml", "compose/app.production.yaml"]})
         for source in reference_sources:
             paths = source["path"]
             source["path"] = (
-                [str(ROOT / path) for path in paths]
+                [str(ROOT / "deploy" / path) for path in paths]
                 if isinstance(paths, list)
-                else str(ROOT / paths)
+                else str(ROOT / "deploy" / paths)
             )
             source["project_directory"] = str(ROOT)
-            source["env_file"] = str(ROOT / "docker/compose/interpolation.env")
+            source["env_file"] = str(ROOT / "deploy/compose/interpolation.env")
         reference_path = Path(directory) / "production-reference.yaml"
         reference_path.write_text(yaml.safe_dump({"include": reference_sources}), encoding="utf-8")
         reference = config(str(reference_path))
@@ -191,7 +327,9 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
         assert compose("config", "--quiet", check=False).returncode != 0
         assert compose("config", "--quiet", entry="compose.postgres.yaml").returncode == 0
         environment["AUTH_SECRET"] = saved_secret
-        results.append("configuration: full/component equality, production, missing settings")
+        results.append(
+            "configuration: root/deploy parity, entry points, paths, isolation, migration gates"
+        )
         unrelated = {
             "llm-worker": (
                 "AUTH_SECRET",
@@ -344,6 +482,15 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             assert "migration_complete" in logs()
             # Migration may have been rerun as a no-op by later component commands.
             assert "migration_start" in logs()
+            run(
+                os.sys.executable,
+                str(ROOT / "scripts/verify_mailpit.py"),
+                "--project",
+                project,
+                "--client-image",
+                api_image,
+            )
+            compose("stop", "mailpit")
             for worker in ("llm-worker", "export-worker"):
                 assert "worker_ready" in logs(worker)
             results.append(
@@ -699,7 +846,7 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             failed = compose("up", "-d", "--no-build", "--wait", check=False)
             assert failed.returncode != 0
             running = set(compose("ps", "--services", "--status", "running").stdout.split())
-            assert running == {"postgres"}
+            assert running <= {"postgres", "mailpit"} and "postgres" in running
             assert "migration_failed" in logs()
             assert "scopeguard_dev_password" not in logs()
             results.append("existing volume preserved; migration failure blocks fresh dependents")
@@ -718,7 +865,7 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             )
             if owned.returncode == 0:
                 assert owned.stdout.strip() == project
-            compose("down", "--volumes", "--remove-orphans", check=False)
+            compose("down", "--remove-orphans", check=False)
             found = run(
                 "docker",
                 "inspect",
@@ -729,7 +876,7 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             )
             if found.returncode == 0:
                 assert found.stdout.strip() == token
-                run("docker", "rm", "-f", "-v", storage)
+                run("docker", "rm", "-f", storage)
             network = run(
                 "docker",
                 "network",

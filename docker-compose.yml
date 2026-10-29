@@ -1,4 +1,0 @@
-# Explicit composition; include interpolation inherits the selected root environment.
-include:
-- path: compose.yaml
-  env_file: docker/compose/interpolation.env

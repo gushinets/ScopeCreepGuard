@@ -1,0 +1,124 @@
+{
+  "project": "scg-any778-8afc4f750ace496abdea108eef6b77c4",
+  "revision": "120917720f606705b46d38c124b99b86c350b544",
+  "full_stack_exit": 1,
+  "application_stack_wait_exit": 0,
+  "mailpit_state": {
+    "Status": "restarting",
+    "Running": true,
+    "Paused": false,
+    "Restarting": true,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 139,
+    "Error": "",
+    "StartedAt": "2026-10-29T15:36:28.617933657Z",
+    "FinishedAt": "2026-10-29T15:36:28.863503632Z",
+    "Health": {
+      "Status": "unhealthy",
+      "FailingStreak": 0,
+      "Log": []
+    }
+  },
+  "mailpit_port_bindings": {
+    "8025/tcp": [
+      {
+        "HostIp": "127.0.0.1",
+        "HostPort": "0"
+      }
+    ]
+  },
+  "smtp_exit": 1,
+  "volumes_retained": true,
+  "services": [
+    {
+      "Service": "app",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Publishers": [
+        {
+          "URL": "0.0.0.0",
+          "TargetPort": 3000,
+          "PublishedPort": 32773,
+          "Protocol": "tcp"
+        },
+        {
+          "URL": "::",
+          "TargetPort": 3000,
+          "PublishedPort": 32773,
+          "Protocol": "tcp"
+        }
+      ]
+    },
+    {
+      "Service": "backend",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Publishers": [
+        {
+          "URL": "0.0.0.0",
+          "TargetPort": 8000,
+          "PublishedPort": 32772,
+          "Protocol": "tcp"
+        },
+        {
+          "URL": "::",
+          "TargetPort": 8000,
+          "PublishedPort": 32772,
+          "Protocol": "tcp"
+        }
+      ]
+    },
+    {
+      "Service": "export-worker",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Publishers": []
+    },
+    {
+      "Service": "llm-worker",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Publishers": []
+    },
+    {
+      "Service": "mailpit",
+      "State": "restarting",
+      "Health": "",
+      "ExitCode": 0,
+      "Publishers": []
+    },
+    {
+      "Service": "migrate",
+      "State": "exited",
+      "Health": "",
+      "ExitCode": 0,
+      "Publishers": []
+    },
+    {
+      "Service": "postgres",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Publishers": [
+        {
+          "URL": "0.0.0.0",
+          "TargetPort": 5432,
+          "PublishedPort": 32771,
+          "Protocol": "tcp"
+        },
+        {
+          "URL": "::",
+          "TargetPort": 5432,
+          "PublishedPort": 32771,
+          "Protocol": "tcp"
+        }
+      ]
+    }
+  ]
+}

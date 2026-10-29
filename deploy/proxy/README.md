@@ -6,8 +6,12 @@ FastAPI remains internal unless a deployment deliberately adds a compatible
 reverse-proxy route. Keep same-origin cookies, allowed origins and shared auth
 secret unchanged. Development also publishes backend port 8000.
 
-PostgreSQL health gates the API entrypoint; guarded locked Alembic completes
-before API starts; backend readiness gates frontend. Only API containers migrate.
+Use `deploy/docker-compose.dokploy.yml` as the platform Compose Path, preserving
+the existing project name and environment. The local canonical entry point is
+`deploy/compose.yaml` (pass the root `.env` explicitly). PostgreSQL health gates
+the one-shot `migrate` service; guarded locked Alembic must complete successfully
+before API or workers start. API/workers never migrate at startup; backend
+readiness gates frontend. Keep local Mailpit outside public proxy routes.
 Production uses one API worker/replica for the existing in-process generation
 limiter. Publish matching image pairs; rollback images without downgrading schema
 or enabling retired Drizzle migration tooling.

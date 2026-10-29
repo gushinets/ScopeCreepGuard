@@ -1,0 +1,173 @@
+{
+  "project": "scg-any778-bc7622e8f3cc4da8a56c0604939b68b0",
+  "revision": "120917720f606705b46d38c124b99b86c350b544",
+  "full_stack_exit": 0,
+  "application_stack_wait_exit": 0,
+  "mailpit_state": {
+    "Status": "running",
+    "Running": true,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 2273,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-29T17:00:28.647908715Z",
+    "FinishedAt": "0001-01-01T00:00:00Z",
+    "Health": {
+      "Status": "healthy",
+      "FailingStreak": 0,
+      "Log": [
+        {
+          "Start": "2026-10-29T17:00:34.975496773Z",
+          "End": "2026-10-29T17:00:35.047034733Z",
+          "ExitCode": 0,
+          "Output": ""
+        },
+        {
+          "Start": "2026-10-29T17:00:40.047781055Z",
+          "End": "2026-10-29T17:00:40.103550287Z",
+          "ExitCode": 0,
+          "Output": ""
+        },
+        {
+          "Start": "2026-10-29T17:00:45.104215731Z",
+          "End": "2026-10-29T17:00:45.164568855Z",
+          "ExitCode": 0,
+          "Output": ""
+        },
+        {
+          "Start": "2026-10-29T17:00:50.163816064Z",
+          "End": "2026-10-29T17:00:50.228071528Z",
+          "ExitCode": 0,
+          "Output": ""
+        },
+        {
+          "Start": "2026-10-29T17:00:55.229791591Z",
+          "End": "2026-10-29T17:00:55.293134613Z",
+          "ExitCode": 0,
+          "Output": ""
+        }
+      ]
+    }
+  },
+  "mailpit_port_bindings": {
+    "8025/tcp": [
+      {
+        "HostIp": "127.0.0.1",
+        "HostPort": "0"
+      }
+    ]
+  },
+  "smtp_exit": 0,
+  "volumes_retained": true,
+  "services": [
+    {
+      "Service": "app",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Publishers": [
+        {
+          "URL": "0.0.0.0",
+          "TargetPort": 3000,
+          "PublishedPort": 32770,
+          "Protocol": "tcp"
+        },
+        {
+          "URL": "::",
+          "TargetPort": 3000,
+          "PublishedPort": 32770,
+          "Protocol": "tcp"
+        }
+      ]
+    },
+    {
+      "Service": "backend",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Publishers": [
+        {
+          "URL": "0.0.0.0",
+          "TargetPort": 8000,
+          "PublishedPort": 32769,
+          "Protocol": "tcp"
+        },
+        {
+          "URL": "::",
+          "TargetPort": 8000,
+          "PublishedPort": 32769,
+          "Protocol": "tcp"
+        }
+      ]
+    },
+    {
+      "Service": "export-worker",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Publishers": []
+    },
+    {
+      "Service": "llm-worker",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Publishers": []
+    },
+    {
+      "Service": "mailpit",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Publishers": [
+        {
+          "URL": "127.0.0.1",
+          "TargetPort": 8025,
+          "PublishedPort": 32774,
+          "Protocol": "tcp"
+        }
+      ]
+    },
+    {
+      "Service": "migrate",
+      "State": "exited",
+      "Health": "",
+      "ExitCode": 0,
+      "Publishers": []
+    },
+    {
+      "Service": "postgres",
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0,
+      "Publishers": [
+        {
+          "URL": "0.0.0.0",
+          "TargetPort": 5432,
+          "PublishedPort": 32768,
+          "Protocol": "tcp"
+        },
+        {
+          "URL": "::",
+          "TargetPort": 5432,
+          "PublishedPort": 32768,
+          "Protocol": "tcp"
+        }
+      ]
+    }
+  ],
+  "smtp_verification": {
+    "project": "scg-any778-bc7622e8f3cc4da8a56c0604939b68b0",
+    "smtp_and_restart": {
+      "id": "6CeShaOTHbYpPJnIC7epAB",
+      "subject": "ANY-778-0374dbacc3784ac3ad7f33e7100c3b5a",
+      "content_verified": true
+    },
+    "loopback_ui_only": true,
+    "no_relay": true,
+    "image_id": "sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498"
+  }
+}

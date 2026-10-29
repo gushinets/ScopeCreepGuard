@@ -149,13 +149,14 @@ docs/               Описание продукта, интерфейса, а�
 ## Запуск через Docker
 
 Нужны Docker Engine с Linux-контейнерами и **Docker Compose 2.24+** в режиме
-Compose (не Swarm). Каталог `compose.services.yaml` собирает единственные определения служб из
-`docker/compose/`; общие серверные настройки находятся в `runtime.yaml`.
+Compose (не Swarm). Файл `deploy/compose.yaml` собирает единственные определения служб из
+`deploy/compose/`; общие серверные настройки находятся в `runtime.yaml`.
 [Механизм include](https://docs.docker.com/compose/how-tos/multiple-compose-files/include/)
 позволяет выбирать службы без копирования определений. `extends` используется
 только для общих настроек среды: Compose 2.24 не поддерживает наследование
 служб с зависимостями. Файлы запуска находятся
-в корне, поэтому контексты сборки, пути и имя проекта совпадают.
+в существующем каталоге `deploy/`; include явно сохраняет корень репозитория
+как базу контекстов сборки и локальных env-файлов.
 
 ### Настройка
 
@@ -181,7 +182,7 @@ Compose (не Swarm). Каталог `compose.services.yaml` собирает е
 
 При подстановке Compose окружение оболочки имеет приоритет над явным `--env-file`
 или корневым `.env`. Вложенные include-модели получают эту среду и пустой
-`docker/compose/interpolation.env`, чтобы повторно не загрузить другой `.env`.
+`deploy/compose/interpolation.env`, чтобы повторно не загрузить другой `.env`.
 Локальные серверные контейнеры дополнительно читают `.env`,
 `.env.local`, `backend/.env` в этом порядке; явный блок `environment` службы
 имеет приоритет над этими файлами. Обязательные подстановки берутся из окружения
@@ -195,22 +196,22 @@ Compose, а не из `env_file` службы. Для воспроизводим
 для существующей установки подставьте её прежнее имя во всех командах.
 
 ```sh
-docker compose -p scopecreepguard -f compose.yaml config --quiet
-docker compose -p scopecreepguard -f compose.yaml up --build -d --wait
+docker compose config --quiet
+docker compose up -d --build
 ```
 
 Откройте [интерфейс](http://localhost:3000). API доступен на порту 8000.
-Полный стек включает PostgreSQL, мигратор, API, интерфейс и оба обработчика.
+Полный стек включает PostgreSQL, мигратор, API, интерфейс, оба обработчика и Mailpit.
 Объектное хранилище предоставляется отдельно. Запуск сам по себе не отправляет
 платные задачи ИИ.
 
 | Команда | Запускаемые службы |
 | --- | --- |
-| `docker compose -p scopecreepguard -f compose.postgres.yaml up -d --wait` | PostgreSQL |
-| `docker compose -p scopecreepguard -f compose.backend.yaml up --build -d --wait` | PostgreSQL → migrate → backend |
-| `docker compose -p scopecreepguard -f compose.frontend.yaml up --build -d --wait` | PostgreSQL → migrate → backend → app |
-| `docker compose -p scopecreepguard -f compose.llm-worker.yaml up --build -d --wait` | PostgreSQL → migrate → llm-worker |
-| `docker compose -p scopecreepguard -f compose.export-worker.yaml up --build -d --wait` | PostgreSQL → migrate → export-worker |
+| `docker compose --env-file .env -p scopecreepguard -f deploy/compose.postgres.yaml up -d --wait` | PostgreSQL |
+| `docker compose --env-file .env -p scopecreepguard -f deploy/compose.backend.yaml up --build -d --wait` | PostgreSQL → migrate → backend |
+| `docker compose --env-file .env -p scopecreepguard -f deploy/compose.frontend.yaml up --build -d --wait` | PostgreSQL → migrate → backend → app |
+| `docker compose --env-file .env -p scopecreepguard -f deploy/compose.llm-worker.yaml up --build -d --wait` | PostgreSQL → migrate → llm-worker |
+| `docker compose --env-file .env -p scopecreepguard -f deploy/compose.export-worker.yaml up --build -d --wait` | PostgreSQL → migrate → export-worker |
 
 Компоненты используют те же имена служб, сеть и том, что полный стек с тем же
 `-p`. Предупреждение об оставшихся службах при выборе компонента ожидаемо;
@@ -220,14 +221,15 @@ API требует полный набор настроек. Обработчи�
 провайдера/ценовых границ; обработчику экспорта — база и настройки хранилища.
 Обработчикам не нужны `AUTH_SECRET` и настройки другой роли.
 
-Всегда выбирайте файл явно: это исключает автоматический `compose.override.yaml`.
-`docker-compose.yml` оставлен как совместимый вход полного стека. Прежние
-`compose.workflow.yaml` и `compose.llm.yaml` удалены: их комбинации больше не нужны.
+Для обычного запуска из корня файл выбирать не нужно. Не добавляйте
+недокументированные `compose.override.yaml` к поддерживаемой конфигурации.
+`deploy/docker-compose.yml` оставлен как совместимый вход полного стека. Прежние
+`deploy/compose.workflow.yaml` и `deploy/compose.llm.yaml` удалены: их комбинации больше не нужны.
 
 ```sh
-docker compose -p scopecreepguard -f compose.yaml ps --all
-docker compose -p scopecreepguard -f compose.yaml logs --follow migrate backend app llm-worker export-worker
-docker compose -p scopecreepguard -f compose.yaml down
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml ps --all
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml logs --follow migrate backend app llm-worker export-worker
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml down
 ```
 
 `down` сохраняет том. Не используйте `down -v` или очистку томов для установки
@@ -235,6 +237,69 @@ docker compose -p scopecreepguard -f compose.yaml down
 `up front`, `up back`, `up postgres`, `up llm_worker`, `up export_worker`,
 `logs back`, `status`, `down` и `update`; параметр `-Project` задаёт прежнее имя.
 Эта удобная оболочка требует Python 3 и не нужна для прямых команд Compose.
+
+### Mailpit и единая точка запуска (ANY-778)
+
+Из корня репозитория — `.env` загружается автоматически:
+
+```powershell
+docker compose up -d --build
+```
+
+Из существующего каталога `deploy/`:
+
+```powershell
+docker compose up -d --build
+```
+
+Корневой `compose.yaml` и `deploy/compose.yaml` подключают одни и те же
+определения служб из `deploy/compose/`; проверка конфигурации контролирует их
+равенство. Корневой `.env` загружается автоматически из обоих каталогов.
+Служебный `deploy/.env` содержит только `COMPOSE_FILE=../compose.yaml`: он
+перенаправляет короткую команду на корневой вход, после чего Compose читает
+корневой `.env`. Не записывайте в `deploy/.env` секреты или настройки приложения.
+Для явного выбора компонентного файла (`-f`) и тестового окружения используйте
+`--env-file` при необходимости; параметры командной строки имеют приоритет.
+
+Обе команды используют имя `scopecreepguard` по умолчанию — прежнее имя при
+запуске из этого репозитория. `-p` имеет приоритет, затем `COMPOSE_PROJECT_NAME`
+из окружения / явного env-файла. Для существующей установки всегда сохраняйте
+её фактическое имя и проверяйте mount PostgreSQL перед запуском. Перемещение
+файлов не переносит данные. Для тестов используйте `-p scg-test-UNIQUE`,
+синтетический env-файл, отдельные образы и порты `0`, включая `MAILPIT_UI_PORT=0`.
+Не удаляйте существующие тома.
+
+Только Mailpit, без настроек приложения:
+
+```powershell
+docker compose -f deploy/compose.mailpit.yaml up -d
+```
+
+Компоненты `deploy/compose.{postgres,backend,frontend,llm-worker,export-worker}.yaml`
+сохраняют ограниченный состав служб. `deploy/compose.mailpit.yaml` запускает
+только Mailpit. `deploy/compose.services.yaml` и `deploy/docker-compose.yml` —
+совместимые ссылки на полный стек; канонический файл — `deploy/compose.yaml`.
+Определения служб находятся в `deploy/compose/`, а существующие `deploy/proxy/`
+и `deploy/silo/` сохранены. Оболочки `scripts/stack.py` / `scripts/dev.ps1`
+используют эти файлы и корневой `.env` по умолчанию; доступен компонент `mailpit`.
+
+Mailpit закреплён на официальном `axllent/mailpit:v1.32.0` с проверенным
+manifest digest `sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498`.
+Локальный UI: http://localhost:8025; `MAILPIT_UI_PORT` меняет только порт на
+`127.0.0.1`. SMTP доступен контейнерам в общей сети как `mailpit:1025`, без
+аутентификации и TLS; SMTP не опубликован на хост. API не зависит от готовности
+Mailpit. Именованный том `<project>_scope_creep_guard_mailpit` хранит SQLite
+`/data/mailpit.db`; лимит — 500 писем и 7 дней. Проверка готовности — `/mailpit readyz`.
+SMTP relay / forwarding не настроены. Не публикуйте UI через внешний прокси.
+Production-файл Dokploy намеренно не включает локальный Mailpit.
+
+`no-reply-scopecreepguard@mail.com` — только отправитель технической локальной
+проверки. Mailpit перехватывает письма, не доставляет их во внешние ящики.
+Отправка писем приложением, подтверждение адреса и восстановление пароля сюда
+не входят. Проверка инфраструктуры: `python scripts/verify_mailpit.py` (нужен Docker;
+отдельный env-файл для Mailpit-only проверки не требуется).
+Результаты сканирования, диагностика и устранение повреждения локального образа
+Mailpit, а также успешные проверки SMTP и полного стека записаны в [отчёте ANY-778](docs/architecture/2026-10-29-any-778-deployment-verification.md).
 
 ### Миграции и диагностика
 
@@ -303,14 +368,14 @@ Compose 2.24 не поддерживает все варианты такого 
 Зафиксируйте также локальные изменения и ID образов. Затем:
 
 ```sh
-docker compose -p scopecreepguard -f compose.yaml config --quiet
-docker compose -p scopecreepguard -f compose.yaml build
-docker compose -p scopecreepguard -f compose.yaml stop app backend llm-worker export-worker
-docker compose -p scopecreepguard -f compose.yaml up -d --no-build --wait postgres
-docker compose -p scopecreepguard -f compose.yaml up --no-deps --no-build --force-recreate --abort-on-container-exit --exit-code-from migrate migrate
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml config --quiet
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml build
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml stop app backend llm-worker export-worker
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml up -d --no-build --wait postgres
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml up --no-deps --no-build --force-recreate --abort-on-container-exit --exit-code-from migrate migrate
 # Выполняйте следующие команды ТОЛЬКО если миграция завершилась с кодом 0:
-docker compose -p scopecreepguard -f compose.yaml up -d --no-deps --no-build --force-recreate --wait backend llm-worker export-worker
-docker compose -p scopecreepguard -f compose.yaml up -d --no-deps --no-build --force-recreate --wait app
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml up -d --no-deps --no-build --force-recreate --wait backend llm-worker export-worker
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml up -d --no-deps --no-build --force-recreate --wait app
 ```
 
 В POSIX-скрипте используйте `set -e` либо соединение этапов через `&&`.
@@ -318,7 +383,7 @@ docker compose -p scopecreepguard -f compose.yaml up -d --no-deps --no-build --f
 все приложения перед исправлением и повтором:
 
 ```sh
-docker compose -p scopecreepguard -f compose.yaml stop app backend llm-worker export-worker
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml stop app backend llm-worker export-worker
 ```
 
 `up --wait` работает в detached-режиме: ошибка готовности одной службы сама по себе
@@ -344,15 +409,16 @@ PostgreSQL и данные сохраняются. Ошибка подготов
 
 ### Dokploy / production
 
-Используйте `docker-compose.dokploy.yml` в режиме Docker Compose с Git-источником,
+В Dokploy измените Compose Path с `docker-compose.dokploy.yml` на
+`deploy/docker-compose.dokploy.yml` и сохраните прежнее имя проекта. Используйте этот файл в режиме Docker Compose с Git-источником,
 сохраняющим файлы общего каталога. Укажите в Dokploy `POSTGRES_DB`, `POSTGRES_USER`,
 `POSTGRES_PASSWORD`, соответствующий `DATABASE_URL`, `AUTH_SECRET`, ключ/модель/
 ценовые границы, закрытый бакет и JSON `SCOPE_GUARD_ALLOWED_ORIGINS` с HTTPS-адресом.
 Настройте домен на службу `app`, порт 3000. Локальные порты не публикуются,
 локальные env-файлы контейнеров исключены, production принудительно включён.
-Служба `app` объявлена прямо в корневом файле: Dokploy проверяет домены до
+Служба `app` объявлена прямо в файле запуска: Dokploy проверяет домены до
 раскрытия `include`. Проверка конфигурации сравнивает её и весь production-стек
-с общими определениями, включая `docker/compose/app.production.yaml`.
+с общими определениями, включая `deploy/compose/app.production.yaml`.
 
 Production-файл также запускает закреплённый образ PGSTY Silo и одноразовый
 `silo-init`. Задайте отдельные `SCOPE_GUARD_SILO_ROOT_USER` и

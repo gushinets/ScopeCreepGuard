@@ -1,5 +1,0 @@
-# Explicit composition; include interpolation inherits the selected root environment.
-include:
-- path: docker/compose/postgres.yaml
-  project_directory: .
-  env_file: docker/compose/interpolation.env

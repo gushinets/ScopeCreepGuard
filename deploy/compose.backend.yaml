@@ -1,0 +1,12 @@
+name: ${COMPOSE_PROJECT_NAME:-scopecreepguard}
+# Explicit composition; include interpolation inherits the selected root environment.
+include:
+- path: compose/postgres.yaml
+  project_directory: ..
+  env_file: compose/interpolation.env
+- path: compose/migrate.yaml
+  project_directory: ..
+  env_file: compose/interpolation.env
+- path: compose/backend.yaml
+  project_directory: ..
+  env_file: compose/interpolation.env
