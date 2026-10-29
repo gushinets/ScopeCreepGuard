@@ -6,7 +6,7 @@ on:
       - main
       - "codex/**"
   pull_request:
-    branches: [main]
+    branches: [main, "codex/any-758-email-verification-password-reset"]
 
 permissions:
   contents: read
@@ -20,10 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: refs/pull/${{ github.event.number }}/head
           fetch-depth: 0
-      - name: Verify branch is rebased on main
-        run: ci/scripts/require-rebase.sh main
+      - name: Verify PR head synchronization with its base
+        env:
+          PR_BASE_REF: ${{ github.base_ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: ci/scripts/require-rebase.sh "$PR_BASE_REF" "$PR_HEAD_SHA"
 
   frontend:
     runs-on: ubuntu-latest
@@ -76,4 +78,5 @@ jobs:
       - name: Validate exact component, full-stack and deployment configurations
         run: |
           uv sync --locked --all-packages --all-groups --python 3.12
+          uv run --no-sync python -m unittest discover -s ci/tests -v
           uv run python backend/scripts/verify_docker_startup.py --config-only
