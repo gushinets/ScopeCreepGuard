@@ -3,10 +3,7 @@ name: ${COMPOSE_PROJECT_NAME:-scopecreepguard}
 include:
 - path: compose/postgres.yaml
   project_directory: ..
-  env_file: compose/interpolation.env
 - path: compose/migrate.yaml
   project_directory: ..
-  env_file: compose/interpolation.env
 - path: compose/llm-worker.yaml
   project_directory: ..
-  env_file: compose/interpolation.env
