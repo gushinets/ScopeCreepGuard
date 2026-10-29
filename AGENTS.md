@@ -16,7 +16,8 @@ changes before starting work.
 ## Docker startup and verification
 
 - From root, `docker compose up -d --build` uses root `compose.yaml` with shared
-  service definitions under `deploy/compose/`. Bare invocation from deploy works
+  service definitions under `deploy/compose/`. Bare invocation from deploy on
+  current Compose works
   through its non-secret `.env` bootstrap (`COMPOSE_FILE=../compose.yaml`). Component entry points are
   `deploy/compose.{postgres,backend,frontend,llm-worker,export-worker,mailpit}.yaml`. Do not invent feature-overlay combinations.
 - Full end-to-end verification requires PostgreSQL, migrate, backend, app, both
@@ -33,7 +34,9 @@ changes before starting work.
 
 - Compose definitions live in `deploy/compose/`; preserve existing `deploy/proxy/`
   and `deploy/silo/`. Bare root and deploy invocations automatically load
-  root `.env`. Keep `deploy/.env` a tracked, non-secret COMPOSE_FILE bootstrap;
+  root `.env` on current Compose. Compose 2.24.0 needs `--env-file ../.env`
+  when starting from deploy (root startup remains automatic). Keep `deploy/.env`
+  a tracked, non-secret COMPOSE_FILE bootstrap;
   application secrets belong only in root/role env files. Explicit component
   invocations may use `--env-file ../.env` from deploy. Helpers select root `.env`
   explicitly. Do not duplicate service definitions across the root/deploy includes.
@@ -45,3 +48,12 @@ changes before starting work.
   Keep the official version/digest pinned. Do not expose SMTP or enable relay.
   Mailpit readiness must not gate API/workers. Local SMTP success does not prove
   delivery to external inboxes.
+
+- Keep include paths and role runtime settings compatible with Compose 2.24.0 and
+  current Compose; do not restore relative include env_file sentinels or cross-file
+  runtime extends. Configuration tests use copied, synthetic deployment fixtures
+  so optional include dotenv loading cannot read developer secrets.
+- PRs target main or `codex/any-758-email-verification-password-reset`. Validation
+  uses the proposed merged state. The branch policy checks the actual PR head
+  against its actual base; integration-targeted tasks may merge base updates,
+  while main-targeted PRs retain the no-merge-commits policy.

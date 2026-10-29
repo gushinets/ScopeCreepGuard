@@ -18,10 +18,12 @@ services:
       required: false
     - path: ${SCOPE_GUARD_BACKEND_ENV_FILE:-backend/.env}
       required: false
-    extends:
-      file: deploy/compose/runtime.yaml
-      service: runtime
     environment:
+      SCOPE_GUARD_DATABASE_URL: ${SCOPE_GUARD_DATABASE_URL:-postgres://scopeguard:scopeguard_dev_password@postgres:5432/scope_creep_guard}
+      SCOPE_GUARD_PRODUCTION: ${SCOPE_GUARD_PRODUCTION:-false}
+      SCOPE_GUARD_LOG_LEVEL: ${SCOPE_GUARD_LOG_LEVEL:-INFO}
+      SCOPE_GUARD_WORKFLOW_V2: 'true'
+      SCOPE_GUARD_LLM_WORKFLOW: 'true'
       SCOPE_GUARD_WORKER_ROLE: llm
       OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY required; use a synthetic key only for isolated no-job checks}
       SCOPE_GUARD_OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY required}
