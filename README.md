@@ -529,3 +529,66 @@ CI использует синтетический ключ без отправ�
 
 В описаниях продукта и интерфейса есть исторические предложения. Текущее поведение
 определяется исходным кодом приложения и результатами проверок соответствующих версий.
+
+## Backend email (ANY-779)
+
+`EmailService` prepares confirmation and password recovery messages in Russian or
+English, with text/HTML alternatives and a 24-hour validity statement. Callers
+supply the recipient, action URL and explicit `ru` or `en` locale. Unsupported
+locales fail. The service neither creates tokens nor changes accounts.
+
+Future auth services can obtain `email_service(request)` through the existing API
+wiring, then await `send_confirmation(recipient, action_url, locale)` or
+`send_password_recovery(...)`. `prepare(kind, recipient, action_url, locale)` and
+`send(message)` allow keeping the same Message-ID for correlation. That identifier
+provides no exactly-once guarantee. Callers must construct trusted-origin action
+URLs and enforce the actual 24-hour token expiry in later auth work.
+
+Settings use the `SCOPE_GUARD_` prefix:
+
+| Setting suffix | Default | Meaning |
+| --- | --- | --- |
+| SMTP_HOST | mailpit | SMTP server |
+| SMTP_PORT | 1025 | Port, 1–65535 |
+| SMTP_SENDER_ADDRESS | no-reply-scopecreepguard@mail.com | Local test identity |
+| SMTP_SENDER_NAME | ScopeCreepGuard | Optional display name |
+| SMTP_TRANSPORT | none | Explicit `none`, required `starttls`, or implicit `tls` |
+| SMTP_USERNAME / SMTP_PASSWORD | absent | Optional pair, supplied via backend env files |
+| SMTP_TIMEOUT | 10 | Per-operation seconds, >0 and ≤120 |
+| SMTP_DEADLINE | 30 | Overall seconds, >0 and ≤300 |
+
+Credentials are checked on use, so unused email does not require SMTP credentials
+or connectivity at startup. Certificate verification stays enabled. Mailpit uses
+explicit plaintext SMTP internally and remains local capture only; its UI is at
+[localhost:8025](http://localhost:8025). No SMTP host port, relay or readiness
+dependency is added. Real local secrets must not be committed.
+
+Success means SMTP acceptance, not confirmed inbox delivery or a read receipt.
+`EmailError.category` is `invalid` (configuration/message), `temporary`
+(connection/4xx), `authentication`, `rejected` (permanent SMTP rejection), or
+`ambiguous` (timeout/disconnection, possibly already accepted). There are no
+automatic retries. Future auth tasks own user-visible resend behavior.
+Logs contain only correlation ID, kind, locale, duration and safe outcome category.
+No protocol debugging is enabled. Provider response text is never exposed.
+
+The adapter uses [aiosmtplib's documented SMTP API](https://aiosmtplib.readthedocs.io/en/stable/reference.html),
+with explicit TLS flags, native awaits and immediate transport close after the
+transaction to avoid an unbounded QUIT exchange.
+
+Verification from repository root (the project name must be unique for every run):
+
+```powershell
+uv run --package scope-guard pytest backend/tests/unit/test_email.py -q
+uv run --package scope-guard ruff check backend/src/scope_guard/services/email backend/src/scope_guard/integrations/email backend/tests/unit/test_email.py backend/tests/integration/email_mailpit_check.py
+uv run --package scope-guard mypy backend/src/scope_guard apps/api/src/scope_guard_api
+$env:MAILPIT_UI_PORT='18079'
+docker compose -p any779-smtp-20261029 -f deploy/compose.mailpit.yaml up -d
+docker build -f apps/api/Dockerfile --target checks --label org.opencontainers.image.revision=9da7aa54d5b4961d664b6c4ef591cee7cbe7f6d9 -t any779-email-checks:20261029 .
+docker run --rm --network any779-smtp-20261029_default --mount "type=bind,source=$((Get-Location).Path)/backend/tests/integration/email_mailpit_check.py,target=/check.py,readonly" any779-email-checks:20261029 python /check.py
+docker image inspect any779-email-checks:20261029 --format '{{.Id}} {{json .Config.Labels}}'
+docker compose -p any779-smtp-20261029 -f deploy/compose.mailpit.yaml stop
+```
+
+This bounded check sends four trusted synthetic messages, reads them through the
+Mailpit API and checks both templates/locales. It does not establish full-stack
+E2E readiness. Keep disposable volumes unless removal is explicitly authorized.
