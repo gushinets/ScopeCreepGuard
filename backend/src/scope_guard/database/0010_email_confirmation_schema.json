@@ -1,0 +1,5802 @@
+{
+  "tables": {
+    "activity_events": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "actor_type",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "actor_user_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "analysis_run_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "change_order_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "deduplication_key",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "document_export_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "draft_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "draft_revision_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "event_type",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "event_version",
+          "type": "integer",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "history_entry_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operation_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "payload",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "payload_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "product_session_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "profile_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "recorded_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "activity_event_contract",
+          "type": "c",
+          "definition": "CHECK ((((event_version IS NULL) AND (profile_id IS NULL) AND (product_session_id IS NULL) AND (source IS NULL) AND (deduplication_key IS NULL) AND (occurred_at IS NULL) AND (recorded_at IS NULL) AND (project_id IS NOT NULL)) OR ((event_version IS NOT NULL) AND (event_version = 2) AND (profile_id IS NOT NULL) AND (source IS NOT NULL) AND ((length(btrim(source)) >= 1) AND (length(btrim(source)) <= 100)) AND (deduplication_key IS NOT NULL) AND ((length(btrim(deduplication_key)) >= 1) AND (length(btrim(deduplication_key)) <= 250)) AND (occurred_at IS NOT NULL) AND (recorded_at IS NOT NULL) AND (recorded_at >= occurred_at) AND (actor_type = ANY (ARRAY['user'::text, 'system'::text])) AND ((actor_type = 'system'::text) OR (actor_user_id IS NOT NULL)) AND (payload_version > 0) AND (jsonb_typeof(payload) = 'object'::text) AND ((project_id IS NOT NULL) OR ((draft_id IS NULL) AND (draft_revision_id IS NULL) AND (analysis_run_id IS NULL) AND (history_entry_id IS NULL) AND (change_order_id IS NULL) AND (document_export_id IS NULL))))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_analysis_run_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (analysis_run_id, project_id) REFERENCES analysis_runs(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_change_order_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (change_order_id, project_id) REFERENCES change_orders(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_document_export_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (document_export_id, project_id) REFERENCES document_exports(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_draft_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (draft_id, project_id) REFERENCES drafts(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_draft_revision_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (draft_revision_id, project_id) REFERENCES draft_revisions(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_history_entry_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (history_entry_id, project_id) REFERENCES history_entries(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_profile_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_project_id_actor_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id, actor_user_id) REFERENCES projects(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_events_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_profile_actor_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (profile_id, actor_user_id) REFERENCES profiles(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_profile_project_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id, profile_id) REFERENCES projects(id, profile_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_profile_session_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (product_session_id, profile_id) REFERENCES product_sessions(id, profile_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "activity_source_dedup_unique",
+          "type": "u",
+          "definition": "UNIQUE (source, deduplication_key)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "activity_events_actor_user_id_idx",
+          "definition": "CREATE INDEX activity_events_actor_user_id_idx ON public.activity_events USING btree (actor_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_analysis_run_id_idx",
+          "definition": "CREATE INDEX activity_events_analysis_run_id_idx ON public.activity_events USING btree (analysis_run_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_change_order_id_idx",
+          "definition": "CREATE INDEX activity_events_change_order_id_idx ON public.activity_events USING btree (change_order_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_document_export_id_idx",
+          "definition": "CREATE INDEX activity_events_document_export_id_idx ON public.activity_events USING btree (document_export_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_draft_id_idx",
+          "definition": "CREATE INDEX activity_events_draft_id_idx ON public.activity_events USING btree (draft_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_draft_revision_id_idx",
+          "definition": "CREATE INDEX activity_events_draft_revision_id_idx ON public.activity_events USING btree (draft_revision_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_history_entry_id_idx",
+          "definition": "CREATE INDEX activity_events_history_entry_id_idx ON public.activity_events USING btree (history_entry_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_events_pkey",
+          "definition": "CREATE UNIQUE INDEX activity_events_pkey ON public.activity_events USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_legacy_operation",
+          "definition": "CREATE UNIQUE INDEX activity_legacy_operation ON public.activity_events USING btree (project_id, operation_id, event_type) WHERE (event_version IS NULL)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_profile_occurred",
+          "definition": "CREATE INDEX activity_profile_occurred ON public.activity_events USING btree (profile_id, occurred_at)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_project_date",
+          "definition": "CREATE INDEX activity_project_date ON public.activity_events USING btree (project_id, created_at DESC)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "activity_source_dedup_unique",
+          "definition": "CREATE UNIQUE INDEX activity_source_dedup_unique ON public.activity_events USING btree (source, deduplication_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_events",
+          "definition": "CREATE TRIGGER immutable_events BEFORE DELETE OR UPDATE ON public.activity_events FOR EACH ROW EXECUTE FUNCTION workflow_immutable()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "analysis_runs": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "error_code",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "input_schema_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "interface_locale",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "model",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_snapshot",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "prompt_version",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_language",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_text",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "requested_by_user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "requested_document_language",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "result_schema_version",
+          "type": "integer",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "result_snapshot",
+          "type": "jsonb",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_draft_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_draft_revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "analysis_runs_check",
+          "type": "c",
+          "definition": "CHECK (((status <> 'succeeded'::text) OR ((result_snapshot IS NOT NULL) AND (result_schema_version IS NOT NULL) AND (finished_at IS NOT NULL))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_id_project_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_id_requested_by_user_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, requested_by_user_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_project_id_idempotency_key_key",
+          "type": "u",
+          "definition": "UNIQUE (project_id, idempotency_key)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_project_id_requested_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id, requested_by_user_id) REFERENCES projects(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_source_draft_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (source_draft_id, project_id) REFERENCES drafts(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_source_draft_id_source_draft_revision_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (source_draft_id, source_draft_revision) REFERENCES draft_revisions(draft_id, revision) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_source_draft_revision_check",
+          "type": "c",
+          "definition": "CHECK ((source_draft_revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "analysis_runs_status_check",
+          "type": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'succeeded'::text, 'failed'::text, 'cancelled'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "analysis_runs_id_project_id_key",
+          "definition": "CREATE UNIQUE INDEX analysis_runs_id_project_id_key ON public.analysis_runs USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_id_requested_by_user_id_key",
+          "definition": "CREATE UNIQUE INDEX analysis_runs_id_requested_by_user_id_key ON public.analysis_runs USING btree (id, requested_by_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_pkey",
+          "definition": "CREATE UNIQUE INDEX analysis_runs_pkey ON public.analysis_runs USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_processing",
+          "definition": "CREATE INDEX analysis_runs_processing ON public.analysis_runs USING btree (status, started_at)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_project_id_idempotency_key_key",
+          "definition": "CREATE UNIQUE INDEX analysis_runs_project_id_idempotency_key_key ON public.analysis_runs USING btree (project_id, idempotency_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_project_id_idx",
+          "definition": "CREATE INDEX analysis_runs_project_id_idx ON public.analysis_runs USING btree (project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_requested_by_user_id_idx",
+          "definition": "CREATE INDEX analysis_runs_requested_by_user_id_idx ON public.analysis_runs USING btree (requested_by_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "analysis_runs_source_draft_id_idx",
+          "definition": "CREATE INDEX analysis_runs_source_draft_id_idx ON public.analysis_runs USING btree (source_draft_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_analysis",
+          "definition": "CREATE TRIGGER immutable_analysis BEFORE DELETE OR UPDATE ON public.analysis_runs FOR EACH ROW EXECUTE FUNCTION workflow_analysis_guard()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "auth_tokens": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "purpose",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "token_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "auth_tokens_lifetime_check",
+          "type": "c",
+          "definition": "CHECK ((expires_at = (created_at + '24:00:00'::interval)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "auth_tokens_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "auth_tokens_purpose_check",
+          "type": "c",
+          "definition": "CHECK ((purpose = ANY (ARRAY['verify_email'::text, 'reset_password'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "auth_tokens_state_check",
+          "type": "c",
+          "definition": "CHECK (((used_at IS NULL) OR (revoked_at IS NULL)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "auth_tokens_token_hash_check",
+          "type": "c",
+          "definition": "CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "auth_tokens_token_hash_key",
+          "type": "u",
+          "definition": "UNIQUE (token_hash)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "auth_tokens_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES users(id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "auth_tokens_outstanding_idx",
+          "definition": "CREATE INDEX auth_tokens_outstanding_idx ON public.auth_tokens USING btree (user_id, purpose) WHERE ((used_at IS NULL) AND (revoked_at IS NULL))",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "auth_tokens_pkey",
+          "definition": "CREATE UNIQUE INDEX auth_tokens_pkey ON public.auth_tokens USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "auth_tokens_token_hash_key",
+          "definition": "CREATE UNIQUE INDEX auth_tokens_token_hash_key ON public.auth_tokens USING btree (token_hash)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "change_orders": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "content_snapshot",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "finalized_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "finalized_by_user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "history_entry_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reference",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "schema_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "voided_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "change_orders_check",
+          "type": "c",
+          "definition": "CHECK (((status = 'voided'::text) = (voided_at IS NOT NULL)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_history_entry_id_idempotency_key_key",
+          "type": "u",
+          "definition": "UNIQUE (history_entry_id, idempotency_key)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_history_entry_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (history_entry_id, project_id) REFERENCES history_entries(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_id_project_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_project_id_finalized_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id, finalized_by_user_id) REFERENCES projects(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_reference_key",
+          "type": "u",
+          "definition": "UNIQUE (reference)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_revision_check",
+          "type": "c",
+          "definition": "CHECK ((revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "change_orders_status_check",
+          "type": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['finalized'::text, 'voided'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "change_orders_active",
+          "definition": "CREATE UNIQUE INDEX change_orders_active ON public.change_orders USING btree (history_entry_id) WHERE (status = 'finalized'::text)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_finalized_by_user_id_idx",
+          "definition": "CREATE INDEX change_orders_finalized_by_user_id_idx ON public.change_orders USING btree (finalized_by_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_history_entry_id_idempotency_key_key",
+          "definition": "CREATE UNIQUE INDEX change_orders_history_entry_id_idempotency_key_key ON public.change_orders USING btree (history_entry_id, idempotency_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_history_entry_id_idx",
+          "definition": "CREATE INDEX change_orders_history_entry_id_idx ON public.change_orders USING btree (history_entry_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_id_project_id_key",
+          "definition": "CREATE UNIQUE INDEX change_orders_id_project_id_key ON public.change_orders USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_pkey",
+          "definition": "CREATE UNIQUE INDEX change_orders_pkey ON public.change_orders USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_project_id_idx",
+          "definition": "CREATE INDEX change_orders_project_id_idx ON public.change_orders USING btree (project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "change_orders_reference_key",
+          "definition": "CREATE UNIQUE INDEX change_orders_reference_key ON public.change_orders USING btree (reference)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_agreement",
+          "definition": "CREATE TRIGGER immutable_agreement BEFORE DELETE OR UPDATE ON public.change_orders FOR EACH ROW EXECUTE FUNCTION workflow_agreement_guard()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "document_exports": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "attempt_count",
+          "type": "integer",
+          "not_null": true,
+          "default": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "change_order_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "checksum",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "error_code",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "format",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "language",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "mime_type",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "object_key",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "renderer_version",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "requested_by_user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "size_bytes",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "template_version",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "document_exports_attempt_count_check",
+          "type": "c",
+          "definition": "CHECK ((attempt_count >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_change_order_id_idempotency_key_key",
+          "type": "u",
+          "definition": "UNIQUE (change_order_id, idempotency_key)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_change_order_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (change_order_id, project_id) REFERENCES change_orders(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_check",
+          "type": "c",
+          "definition": "CHECK (((status <> 'ready'::text) OR ((object_key IS NOT NULL) AND (checksum IS NOT NULL) AND (mime_type IS NOT NULL) AND (size_bytes IS NOT NULL) AND (finished_at IS NOT NULL))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_format_check",
+          "type": "c",
+          "definition": "CHECK ((format = 'pdf'::text))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_id_project_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_object_key_key",
+          "type": "u",
+          "definition": "UNIQUE (object_key)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_project_id_requested_by_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id, requested_by_user_id) REFERENCES projects(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_size_bytes_check",
+          "type": "c",
+          "definition": "CHECK ((size_bytes >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "document_exports_status_check",
+          "type": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'processing'::text, 'ready'::text, 'failed'::text, 'expired'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "document_exports_change_order_id_idempotency_key_key",
+          "definition": "CREATE UNIQUE INDEX document_exports_change_order_id_idempotency_key_key ON public.document_exports USING btree (change_order_id, idempotency_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_change_order_id_idx",
+          "definition": "CREATE INDEX document_exports_change_order_id_idx ON public.document_exports USING btree (change_order_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_id_project_id_key",
+          "definition": "CREATE UNIQUE INDEX document_exports_id_project_id_key ON public.document_exports USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_object_key_key",
+          "definition": "CREATE UNIQUE INDEX document_exports_object_key_key ON public.document_exports USING btree (object_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_pending",
+          "definition": "CREATE INDEX document_exports_pending ON public.document_exports USING btree (status, lease_expires_at, created_at) WHERE (status = ANY (ARRAY['pending'::text, 'processing'::text, 'failed'::text]))",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_pkey",
+          "definition": "CREATE UNIQUE INDEX document_exports_pkey ON public.document_exports USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_project_id_idx",
+          "definition": "CREATE INDEX document_exports_project_id_idx ON public.document_exports USING btree (project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "document_exports_requested_by_user_id_idx",
+          "definition": "CREATE INDEX document_exports_requested_by_user_id_idx ON public.document_exports USING btree (requested_by_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_ready_export",
+          "definition": "CREATE TRIGGER immutable_ready_export BEFORE DELETE OR UPDATE ON public.document_exports FOR EACH ROW EXECUTE FUNCTION workflow_export_guard()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "draft_revisions": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "actor_type",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "actor_user_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "draft_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operation_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "schema_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "state_snapshot",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "draft_revisions_actor_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_draft_id_operation_id_key",
+          "type": "u",
+          "definition": "UNIQUE (draft_id, operation_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_draft_id_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (draft_id, project_id) REFERENCES drafts(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_draft_id_revision_key",
+          "type": "u",
+          "definition": "UNIQUE (draft_id, revision)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_id_project_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "draft_revisions_revision_check",
+          "type": "c",
+          "definition": "CHECK ((revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "draft_revisions_actor_user_id_idx",
+          "definition": "CREATE INDEX draft_revisions_actor_user_id_idx ON public.draft_revisions USING btree (actor_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "draft_revisions_draft_id_operation_id_key",
+          "definition": "CREATE UNIQUE INDEX draft_revisions_draft_id_operation_id_key ON public.draft_revisions USING btree (draft_id, operation_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "draft_revisions_draft_id_revision_key",
+          "definition": "CREATE UNIQUE INDEX draft_revisions_draft_id_revision_key ON public.draft_revisions USING btree (draft_id, revision)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "draft_revisions_id_project_id_key",
+          "definition": "CREATE UNIQUE INDEX draft_revisions_id_project_id_key ON public.draft_revisions USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "draft_revisions_pkey",
+          "definition": "CREATE UNIQUE INDEX draft_revisions_pkey ON public.draft_revisions USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "draft_revisions_project_id_idx",
+          "definition": "CREATE INDEX draft_revisions_project_id_idx ON public.draft_revisions USING btree (project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_revisions",
+          "definition": "CREATE TRIGGER immutable_revisions BEFORE DELETE OR UPDATE ON public.draft_revisions FOR EACH ROW EXECUTE FUNCTION workflow_immutable()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "drafts": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "analysis_is_stale",
+          "type": "boolean",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "draft_document",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "last_analysis_run_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_text",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "drafts_analysis_project_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (last_analysis_run_id, project_id) REFERENCES analysis_runs(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_id_project_unique",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_one_per_project",
+          "type": "u",
+          "definition": "UNIQUE (project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_positive_revision",
+          "type": "c",
+          "definition": "CHECK ((revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "drafts_project_id_projects_id_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "drafts_id_project_unique",
+          "definition": "CREATE UNIQUE INDEX drafts_id_project_unique ON public.drafts USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "drafts_one_per_project",
+          "definition": "CREATE UNIQUE INDEX drafts_one_per_project ON public.drafts USING btree (project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "drafts_pkey",
+          "definition": "CREATE UNIQUE INDEX drafts_pkey ON public.drafts USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "drafts_project_created_at_idx",
+          "definition": "CREATE INDEX drafts_project_created_at_idx ON public.drafts USING btree (project_id, created_at)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "email_confirmation_attempts": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": "'unknown'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "email_confirmation_attempts_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "email_confirmation_attempts_source_hash_check",
+          "type": "c",
+          "definition": "CHECK ((source_hash ~ '^[0-9a-f]{64}$'::text))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "email_confirmation_attempts_status_check",
+          "type": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['unknown'::text, 'accepted'::text, 'failed'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "email_confirmation_attempts_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES users(id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "email_confirmation_account_idx",
+          "definition": "CREATE INDEX email_confirmation_account_idx ON public.email_confirmation_attempts USING btree (user_id, created_at)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "email_confirmation_attempts_pkey",
+          "definition": "CREATE UNIQUE INDEX email_confirmation_attempts_pkey ON public.email_confirmation_attempts USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "email_confirmation_source_idx",
+          "definition": "CREATE INDEX email_confirmation_source_idx ON public.email_confirmation_attempts USING btree (source_hash, created_at)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "evaluation_cases": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "accuracy",
+          "type": "evaluation_accuracy",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ai_reasoning",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ai_verdict",
+          "type": "verdict",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "analysis_run_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "history_entry_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "human_verdict",
+          "type": "verdict",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "industry",
+          "type": "industry",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "scope",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "evaluation_analysis_owner_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (analysis_run_id, user_id) REFERENCES analysis_runs(id, requested_by_user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "evaluation_cases_accuracy_human_verdict",
+          "type": "c",
+          "definition": "CHECK ((((accuracy = 'debatable'::evaluation_accuracy) AND (human_verdict IS NULL)) OR ((accuracy = 'correct'::evaluation_accuracy) AND (human_verdict IS NOT NULL) AND (human_verdict = ai_verdict)) OR ((accuracy = 'wrong'::evaluation_accuracy) AND (human_verdict IS NOT NULL) AND (human_verdict <> ai_verdict))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "evaluation_cases_history_entry_id_history_entries_id_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (history_entry_id) REFERENCES history_entries(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "evaluation_cases_history_entry_id_unique",
+          "type": "u",
+          "definition": "UNIQUE (history_entry_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "evaluation_cases_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "evaluation_cases_user_id_users_id_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "evaluation_cases_history_entry_id_unique",
+          "definition": "CREATE UNIQUE INDEX evaluation_cases_history_entry_id_unique ON public.evaluation_cases USING btree (history_entry_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "evaluation_cases_pkey",
+          "definition": "CREATE UNIQUE INDEX evaluation_cases_pkey ON public.evaluation_cases USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "evaluations_analysis_user",
+          "definition": "CREATE UNIQUE INDEX evaluations_analysis_user ON public.evaluation_cases USING btree (analysis_run_id, user_id) WHERE (analysis_run_id IS NOT NULL)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "history_entries": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "analysis_run_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "check_snapshot",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "saved_by_user_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "schema_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_draft_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_draft_revision",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_kind",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "summary",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "verdict",
+          "type": "verdict",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "history_analysis_project_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (analysis_run_id, project_id) REFERENCES analysis_runs(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_entries_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_entries_project_id_projects_id_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_id_project_unique",
+          "type": "u",
+          "definition": "UNIQUE (id, project_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_provenance",
+          "type": "c",
+          "definition": "CHECK (((source_kind = 'legacy_unverified'::text) OR ((source_kind = 'explicit'::text) AND (source_draft_id IS NOT NULL) AND (source_draft_revision IS NOT NULL) AND (source_draft_revision > 0) AND (analysis_run_id IS NOT NULL) AND (saved_by_user_id IS NOT NULL) AND (completed_at IS NOT NULL) AND (idempotency_key IS NOT NULL) AND (request_hash IS NOT NULL))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_saving_owner_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id, saved_by_user_id) REFERENCES projects(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_source_project_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (source_draft_id, project_id) REFERENCES drafts(id, project_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "history_source_revision_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (source_draft_id, source_draft_revision) REFERENCES draft_revisions(draft_id, revision) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "history_entries_analysis_run_id_idx",
+          "definition": "CREATE INDEX history_entries_analysis_run_id_idx ON public.history_entries USING btree (analysis_run_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_entries_pkey",
+          "definition": "CREATE UNIQUE INDEX history_entries_pkey ON public.history_entries USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_entries_saved_by_user_id_idx",
+          "definition": "CREATE INDEX history_entries_saved_by_user_id_idx ON public.history_entries USING btree (saved_by_user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_entries_source_draft_id_idx",
+          "definition": "CREATE INDEX history_entries_source_draft_id_idx ON public.history_entries USING btree (source_draft_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_id_project_unique",
+          "definition": "CREATE UNIQUE INDEX history_id_project_unique ON public.history_entries USING btree (id, project_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_operation",
+          "definition": "CREATE UNIQUE INDEX history_operation ON public.history_entries USING btree (project_id, idempotency_key) WHERE (idempotency_key IS NOT NULL)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "history_project_listing",
+          "definition": "CREATE INDEX history_project_listing ON public.history_entries USING btree (project_id, date DESC, id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_history",
+          "definition": "CREATE TRIGGER immutable_history BEFORE DELETE OR UPDATE ON public.history_entries FOR EACH ROW EXECUTE FUNCTION workflow_immutable()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "llm_operations": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "analysis_run_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "command_key",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "deadline_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "draft_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "epoch",
+          "type": "bigint",
+          "not_null": true,
+          "default": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "error",
+          "type": "jsonb",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "frozen_input",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "input_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "owner_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "physical_calls",
+          "type": "integer",
+          "not_null": true,
+          "default": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "policy",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reserved",
+          "type": "numeric(20,10)",
+          "not_null": true,
+          "default": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "result",
+          "type": "jsonb",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "spent",
+          "type": "numeric(20,10)",
+          "not_null": true,
+          "default": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": "'queued'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "worker_id",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "llm_operations_analysis_run_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (analysis_run_id) REFERENCES analysis_runs(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_check",
+          "type": "c",
+          "definition": "CHECK (((status <> 'succeeded'::text) OR ((result IS NOT NULL) AND (finished_at IS NOT NULL))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_draft_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (draft_id) REFERENCES drafts(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_kind_check",
+          "type": "c",
+          "definition": "CHECK ((kind = ANY (ARRAY['check'::text, 'regenerate'::text, 'translate'::text, 'estimate'::text, 'agreement'::text, 'diagnostic'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_owner_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_owner_id_project_id_command_key_key",
+          "type": "u",
+          "definition": "UNIQUE (owner_id, project_id, command_key)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_physical_calls_check",
+          "type": "c",
+          "definition": "CHECK ((physical_calls >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_project_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_reserved_check",
+          "type": "c",
+          "definition": "CHECK ((reserved >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_source_revision_check",
+          "type": "c",
+          "definition": "CHECK ((source_revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_spent_check",
+          "type": "c",
+          "definition": "CHECK ((spent >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_operations_status_check",
+          "type": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "llm_operations_owner_id_project_id_command_key_key",
+          "definition": "CREATE UNIQUE INDEX llm_operations_owner_id_project_id_command_key_key ON public.llm_operations USING btree (owner_id, project_id, command_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "llm_operations_pkey",
+          "definition": "CREATE UNIQUE INDEX llm_operations_pkey ON public.llm_operations USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "llm_operations_queue",
+          "definition": "CREATE INDEX llm_operations_queue ON public.llm_operations USING btree (status, lease_expires_at, created_at)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "llm_steps": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "accepted_result",
+          "type": "jsonb",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "candidate",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "feedback",
+          "type": "jsonb",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "input_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operation_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "prepared_request",
+          "type": "jsonb",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "prompt_version",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "schema_version",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "semantic_attempt",
+          "type": "integer",
+          "not_null": true,
+          "default": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "stage_key",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": "'pending'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "transport_attempt",
+          "type": "integer",
+          "not_null": true,
+          "default": "0",
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "llm_steps_check",
+          "type": "c",
+          "definition": "CHECK (((status <> 'accepted'::text) OR (accepted_result IS NOT NULL)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_steps_operation_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (operation_id) REFERENCES llm_operations(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_steps_operation_id_stage_key_key",
+          "type": "u",
+          "definition": "UNIQUE (operation_id, stage_key)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_steps_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_steps_semantic_attempt_check",
+          "type": "c",
+          "definition": "CHECK (((semantic_attempt >= 0) AND (semantic_attempt <= 3)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_steps_status_check",
+          "type": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'accepted'::text, 'failed'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "llm_steps_transport_attempt_check",
+          "type": "c",
+          "definition": "CHECK (((transport_attempt >= 0) AND (transport_attempt <= 2)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "llm_steps_operation_id_stage_key_key",
+          "definition": "CREATE UNIQUE INDEX llm_steps_operation_id_stage_key_key ON public.llm_steps USING btree (operation_id, stage_key)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "llm_steps_pkey",
+          "definition": "CREATE UNIQUE INDEX llm_steps_pkey ON public.llm_steps USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "marketing_metrics": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "activated_profiles",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "activation_eligible_profiles",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "activation_rate_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ai_calls",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ai_cost_unknown_calls",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ai_estimated_cost_usd",
+          "type": "numeric(20,10)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ai_retries",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ai_usage_unknown_calls",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "analysis_adoption_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "analysis_users",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "cached_tokens",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "calculated_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "change_order_adoption_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "change_order_users",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "change_orders_created",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "change_orders_voided",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "check_cancelled",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "check_duration_median_ms",
+          "type": "numeric(20,3)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "check_duration_p95_ms",
+          "type": "numeric(20,3)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "check_duration_sample_size",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "check_failed",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "check_started",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "check_succeeded",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "check_success_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "data_through",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "dau",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "definition_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "estimate_cancelled",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "estimate_duration_median_ms",
+          "type": "numeric(20,3)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "estimate_duration_p95_ms",
+          "type": "numeric(20,3)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "estimate_duration_sample_size",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "estimate_failed",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "estimate_started",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "estimate_succeeded",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "estimate_success_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "input_tokens",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "is_partial",
+          "type": "boolean",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "mau",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "new_profiles",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operation_duration_median_ms",
+          "type": "numeric(20,3)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operation_duration_p95_ms",
+          "type": "numeric(20,3)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operation_duration_sample_size",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operation_success_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operations_cancelled",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operations_failed",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operations_succeeded",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "output_tokens",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "pql_profiles",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "quality_notes",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reasoning_tokens",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "regeneration_adoption_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "regeneration_cancelled",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "regeneration_duration_median_ms",
+          "type": "numeric(20,3)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "regeneration_duration_p95_ms",
+          "type": "numeric(20,3)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "regeneration_duration_sample_size",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "regeneration_failed",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "regeneration_started",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "regeneration_succeeded",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "regeneration_success_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "regeneration_users",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "registered_profiles",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "report_date",
+          "type": "date",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "retention_d30_base",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "retention_d30_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "retention_d30_returned",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "retention_d7_base",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "retention_d7_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "retention_d7_returned",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "stickiness_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "time_to_value_median_seconds",
+          "type": "numeric(20,3)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "translation_adoption_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "translation_cancelled",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "translation_duration_median_ms",
+          "type": "numeric(20,3)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "translation_duration_p95_ms",
+          "type": "numeric(20,3)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "translation_duration_sample_size",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "translation_failed",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "translation_started",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "translation_succeeded",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "translation_success_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "translation_users",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ttv_sample_size",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "validation_accepted",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "validation_rejected",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "validation_rejection_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "verdict_correct",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "verdict_debatable",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "verdict_evaluated_checks",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "verdict_feedback_percent",
+          "type": "numeric(9,4)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "verdict_wrong",
+          "type": "bigint",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "marketing_metrics_activated_profiles_check",
+          "type": "c",
+          "definition": "CHECK ((activated_profiles >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_activation_eligible_profiles_check",
+          "type": "c",
+          "definition": "CHECK ((activation_eligible_profiles >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_activation_rate_percent_check",
+          "type": "c",
+          "definition": "CHECK (((activation_rate_percent >= (0)::numeric) AND (activation_rate_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_ai_calls_check",
+          "type": "c",
+          "definition": "CHECK ((ai_calls >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_ai_cost_unknown_calls_check",
+          "type": "c",
+          "definition": "CHECK ((ai_cost_unknown_calls >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_ai_estimated_cost_usd_check",
+          "type": "c",
+          "definition": "CHECK ((ai_estimated_cost_usd >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_ai_retries_check",
+          "type": "c",
+          "definition": "CHECK ((ai_retries >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_ai_usage_unknown_calls_check",
+          "type": "c",
+          "definition": "CHECK ((ai_usage_unknown_calls >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_analysis_adoption_percent_check",
+          "type": "c",
+          "definition": "CHECK (((analysis_adoption_percent >= (0)::numeric) AND (analysis_adoption_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_analysis_users_check",
+          "type": "c",
+          "definition": "CHECK ((analysis_users >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_cached_tokens_check",
+          "type": "c",
+          "definition": "CHECK ((cached_tokens >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_change_order_adoption_percent_check",
+          "type": "c",
+          "definition": "CHECK (((change_order_adoption_percent >= (0)::numeric) AND (change_order_adoption_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_change_order_users_check",
+          "type": "c",
+          "definition": "CHECK ((change_order_users >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_change_orders_created_check",
+          "type": "c",
+          "definition": "CHECK ((change_orders_created >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_change_orders_voided_check",
+          "type": "c",
+          "definition": "CHECK ((change_orders_voided >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_check",
+          "type": "c",
+          "definition": "CHECK ((data_through <= calculated_at))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_check_cancelled_check",
+          "type": "c",
+          "definition": "CHECK ((check_cancelled >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_check_duration_median_ms_check",
+          "type": "c",
+          "definition": "CHECK ((check_duration_median_ms >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_check_duration_p95_ms_check",
+          "type": "c",
+          "definition": "CHECK ((check_duration_p95_ms >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_check_duration_sample_size_check",
+          "type": "c",
+          "definition": "CHECK ((check_duration_sample_size >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_check_failed_check",
+          "type": "c",
+          "definition": "CHECK ((check_failed >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_check_started_check",
+          "type": "c",
+          "definition": "CHECK ((check_started >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_check_succeeded_check",
+          "type": "c",
+          "definition": "CHECK ((check_succeeded >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_check_success_percent_check",
+          "type": "c",
+          "definition": "CHECK (((check_success_percent >= (0)::numeric) AND (check_success_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_dau_check",
+          "type": "c",
+          "definition": "CHECK ((dau >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_definition_version_check",
+          "type": "c",
+          "definition": "CHECK ((definition_version > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_estimate_cancelled_check",
+          "type": "c",
+          "definition": "CHECK ((estimate_cancelled >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_estimate_duration_median_ms_check",
+          "type": "c",
+          "definition": "CHECK ((estimate_duration_median_ms >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_estimate_duration_p95_ms_check",
+          "type": "c",
+          "definition": "CHECK ((estimate_duration_p95_ms >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_estimate_duration_sample_size_check",
+          "type": "c",
+          "definition": "CHECK ((estimate_duration_sample_size >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_estimate_failed_check",
+          "type": "c",
+          "definition": "CHECK ((estimate_failed >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_estimate_started_check",
+          "type": "c",
+          "definition": "CHECK ((estimate_started >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_estimate_succeeded_check",
+          "type": "c",
+          "definition": "CHECK ((estimate_succeeded >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_estimate_success_percent_check",
+          "type": "c",
+          "definition": "CHECK (((estimate_success_percent >= (0)::numeric) AND (estimate_success_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_input_tokens_check",
+          "type": "c",
+          "definition": "CHECK ((input_tokens >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_mau_check",
+          "type": "c",
+          "definition": "CHECK ((mau >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_new_profiles_check",
+          "type": "c",
+          "definition": "CHECK ((new_profiles >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_operation_duration_median_ms_check",
+          "type": "c",
+          "definition": "CHECK ((operation_duration_median_ms >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_operation_duration_p95_ms_check",
+          "type": "c",
+          "definition": "CHECK ((operation_duration_p95_ms >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_operation_duration_sample_size_check",
+          "type": "c",
+          "definition": "CHECK ((operation_duration_sample_size >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_operation_success_percent_check",
+          "type": "c",
+          "definition": "CHECK (((operation_success_percent >= (0)::numeric) AND (operation_success_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_operations_cancelled_check",
+          "type": "c",
+          "definition": "CHECK ((operations_cancelled >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_operations_failed_check",
+          "type": "c",
+          "definition": "CHECK ((operations_failed >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_operations_succeeded_check",
+          "type": "c",
+          "definition": "CHECK ((operations_succeeded >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_output_tokens_check",
+          "type": "c",
+          "definition": "CHECK ((output_tokens >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (report_date)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_pql_profiles_check",
+          "type": "c",
+          "definition": "CHECK ((pql_profiles >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_quality_notes_check",
+          "type": "c",
+          "definition": "CHECK ((jsonb_typeof(quality_notes) = 'array'::text))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_reasoning_tokens_check",
+          "type": "c",
+          "definition": "CHECK ((reasoning_tokens >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_regeneration_adoption_percent_check",
+          "type": "c",
+          "definition": "CHECK (((regeneration_adoption_percent >= (0)::numeric) AND (regeneration_adoption_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_regeneration_cancelled_check",
+          "type": "c",
+          "definition": "CHECK ((regeneration_cancelled >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_regeneration_duration_median_ms_check",
+          "type": "c",
+          "definition": "CHECK ((regeneration_duration_median_ms >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_regeneration_duration_p95_ms_check",
+          "type": "c",
+          "definition": "CHECK ((regeneration_duration_p95_ms >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_regeneration_duration_sample_size_check",
+          "type": "c",
+          "definition": "CHECK ((regeneration_duration_sample_size >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_regeneration_failed_check",
+          "type": "c",
+          "definition": "CHECK ((regeneration_failed >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_regeneration_started_check",
+          "type": "c",
+          "definition": "CHECK ((regeneration_started >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_regeneration_succeeded_check",
+          "type": "c",
+          "definition": "CHECK ((regeneration_succeeded >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_regeneration_success_percent_check",
+          "type": "c",
+          "definition": "CHECK (((regeneration_success_percent >= (0)::numeric) AND (regeneration_success_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_regeneration_users_check",
+          "type": "c",
+          "definition": "CHECK ((regeneration_users >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_registered_profiles_check",
+          "type": "c",
+          "definition": "CHECK ((registered_profiles >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_retention_d30_base_check",
+          "type": "c",
+          "definition": "CHECK ((retention_d30_base >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_retention_d30_percent_check",
+          "type": "c",
+          "definition": "CHECK (((retention_d30_percent >= (0)::numeric) AND (retention_d30_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_retention_d30_returned_check",
+          "type": "c",
+          "definition": "CHECK ((retention_d30_returned >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_retention_d7_base_check",
+          "type": "c",
+          "definition": "CHECK ((retention_d7_base >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_retention_d7_percent_check",
+          "type": "c",
+          "definition": "CHECK (((retention_d7_percent >= (0)::numeric) AND (retention_d7_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_retention_d7_returned_check",
+          "type": "c",
+          "definition": "CHECK ((retention_d7_returned >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_stickiness_percent_check",
+          "type": "c",
+          "definition": "CHECK (((stickiness_percent >= (0)::numeric) AND (stickiness_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_time_to_value_median_seconds_check",
+          "type": "c",
+          "definition": "CHECK ((time_to_value_median_seconds >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_translation_adoption_percent_check",
+          "type": "c",
+          "definition": "CHECK (((translation_adoption_percent >= (0)::numeric) AND (translation_adoption_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_translation_cancelled_check",
+          "type": "c",
+          "definition": "CHECK ((translation_cancelled >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_translation_duration_median_ms_check",
+          "type": "c",
+          "definition": "CHECK ((translation_duration_median_ms >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_translation_duration_p95_ms_check",
+          "type": "c",
+          "definition": "CHECK ((translation_duration_p95_ms >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_translation_duration_sample_size_check",
+          "type": "c",
+          "definition": "CHECK ((translation_duration_sample_size >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_translation_failed_check",
+          "type": "c",
+          "definition": "CHECK ((translation_failed >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_translation_started_check",
+          "type": "c",
+          "definition": "CHECK ((translation_started >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_translation_succeeded_check",
+          "type": "c",
+          "definition": "CHECK ((translation_succeeded >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_translation_success_percent_check",
+          "type": "c",
+          "definition": "CHECK (((translation_success_percent >= (0)::numeric) AND (translation_success_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_translation_users_check",
+          "type": "c",
+          "definition": "CHECK ((translation_users >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_ttv_sample_size_check",
+          "type": "c",
+          "definition": "CHECK ((ttv_sample_size >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_validation_accepted_check",
+          "type": "c",
+          "definition": "CHECK ((validation_accepted >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_validation_rejected_check",
+          "type": "c",
+          "definition": "CHECK ((validation_rejected >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_validation_rejection_percent_check",
+          "type": "c",
+          "definition": "CHECK (((validation_rejection_percent >= (0)::numeric) AND (validation_rejection_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_verdict_correct_check",
+          "type": "c",
+          "definition": "CHECK ((verdict_correct >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_verdict_debatable_check",
+          "type": "c",
+          "definition": "CHECK ((verdict_debatable >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_verdict_evaluated_checks_check",
+          "type": "c",
+          "definition": "CHECK ((verdict_evaluated_checks >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_verdict_feedback_percent_check",
+          "type": "c",
+          "definition": "CHECK (((verdict_feedback_percent >= (0)::numeric) AND (verdict_feedback_percent <= (100)::numeric)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "marketing_metrics_verdict_wrong_check",
+          "type": "c",
+          "definition": "CHECK ((verdict_wrong >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "marketing_metrics_pkey",
+          "definition": "CREATE UNIQUE INDEX marketing_metrics_pkey ON public.marketing_metrics USING btree (report_date)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "product_sessions": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "browser_key_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "last_activity_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "profile_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "rule_version",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "product_sessions_browser_key_hash_check",
+          "type": "c",
+          "definition": "CHECK ((browser_key_hash ~ '^[0-9a-f]{64}$'::text))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "product_sessions_check",
+          "type": "c",
+          "definition": "CHECK ((last_activity_at >= started_at))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "product_sessions_check1",
+          "type": "c",
+          "definition": "CHECK (((ended_at IS NULL) OR (ended_at >= last_activity_at)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "product_sessions_id_profile_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, profile_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "product_sessions_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "product_sessions_profile_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "product_sessions_rule_version_check",
+          "type": "c",
+          "definition": "CHECK ((rule_version > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "product_sessions_id_profile_id_key",
+          "definition": "CREATE UNIQUE INDEX product_sessions_id_profile_id_key ON public.product_sessions USING btree (id, profile_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "product_sessions_one_open_browser",
+          "definition": "CREATE UNIQUE INDEX product_sessions_one_open_browser ON public.product_sessions USING btree (profile_id, browser_key_hash) WHERE (ended_at IS NULL)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "product_sessions_pkey",
+          "definition": "CREATE UNIQUE INDEX product_sessions_pkey ON public.product_sessions USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "product_sessions_profile_started",
+          "definition": "CREATE INDEX product_sessions_profile_started ON public.product_sessions USING btree (profile_id, started_at)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "profile_preferences": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "default_currency",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "locale",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "preferred_tone",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "profile_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": "1",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "timezone",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "profile_preferences_default_currency_check",
+          "type": "c",
+          "definition": "CHECK ((default_currency = ANY (ARRAY['RUB'::text, 'USD'::text, 'EUR'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_preferences_locale_check",
+          "type": "c",
+          "definition": "CHECK ((locale = ANY (ARRAY['ru'::text, 'en'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_preferences_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (profile_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_preferences_preferred_tone_check",
+          "type": "c",
+          "definition": "CHECK ((preferred_tone = ANY (ARRAY['warm'::text, 'neutral'::text, 'firm'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_preferences_profile_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_preferences_revision_check",
+          "type": "c",
+          "definition": "CHECK ((revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_preferences_timezone_check",
+          "type": "c",
+          "definition": "CHECK (((length(timezone) >= 1) AND (length(timezone) <= 100)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "profile_preferences_pkey",
+          "definition": "CREATE UNIQUE INDEX profile_preferences_pkey ON public.profile_preferences USING btree (profile_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "profile_preferences_timezone",
+          "definition": "CREATE TRIGGER profile_preferences_timezone BEFORE INSERT OR UPDATE ON public.profile_preferences FOR EACH ROW EXECUTE FUNCTION profile_preferences_timezone_guard()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "profile_revisions": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "actor_user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operation_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "profile_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "snapshot",
+          "type": "jsonb",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "profile_revisions_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_revisions_profile_id_actor_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (profile_id, actor_user_id) REFERENCES profiles(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_revisions_profile_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_revisions_profile_id_operation_id_key",
+          "type": "u",
+          "definition": "UNIQUE (profile_id, operation_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_revisions_profile_id_revision_key",
+          "type": "u",
+          "definition": "UNIQUE (profile_id, revision)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_revisions_revision_check",
+          "type": "c",
+          "definition": "CHECK ((revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profile_revisions_snapshot_check",
+          "type": "c",
+          "definition": "CHECK ((jsonb_typeof(snapshot) = 'object'::text))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "profile_revisions_pkey",
+          "definition": "CREATE UNIQUE INDEX profile_revisions_pkey ON public.profile_revisions USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "profile_revisions_profile_id_operation_id_key",
+          "definition": "CREATE UNIQUE INDEX profile_revisions_profile_id_operation_id_key ON public.profile_revisions USING btree (profile_id, operation_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "profile_revisions_profile_id_revision_key",
+          "definition": "CREATE UNIQUE INDEX profile_revisions_profile_id_revision_key ON public.profile_revisions USING btree (profile_id, revision)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": [
+        {
+          "name": "immutable_profile_revisions",
+          "definition": "CREATE TRIGGER immutable_profile_revisions BEFORE DELETE OR UPDATE ON public.profile_revisions FOR EACH ROW EXECUTE FUNCTION workflow_immutable()",
+          "enabled": "O"
+        }
+      ]
+    },
+    "profiles": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "analytics_excluded",
+          "type": "boolean",
+          "not_null": true,
+          "default": "false",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "business_name",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "display_name",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "onboarding_status",
+          "type": "text",
+          "not_null": true,
+          "default": "'not_started'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "onboarding_step",
+          "type": "integer",
+          "not_null": true,
+          "default": "0",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "profession",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "provider_name",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "not_null": true,
+          "default": "1",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": "'active'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "profiles_check",
+          "type": "c",
+          "definition": "CHECK ((updated_at >= created_at))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profiles_id_user_id_key",
+          "type": "u",
+          "definition": "UNIQUE (id, user_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profiles_onboarding_check",
+          "type": "c",
+          "definition": "CHECK ((((onboarding_status = 'not_started'::text) AND (onboarding_step = 0)) OR ((onboarding_status = 'in_progress'::text) AND ((onboarding_step >= 1) AND (onboarding_step <= 3))) OR ((onboarding_status = 'completed'::text) AND (onboarding_step = 4)) OR ((onboarding_status = 'skipped'::text) AND ((onboarding_step >= 0) AND (onboarding_step <= 3)))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profiles_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profiles_revision_check",
+          "type": "c",
+          "definition": "CHECK ((revision > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profiles_status_check",
+          "type": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profiles_user_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "profiles_user_id_key",
+          "type": "u",
+          "definition": "UNIQUE (user_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "profiles_id_user_id_key",
+          "definition": "CREATE UNIQUE INDEX profiles_id_user_id_key ON public.profiles USING btree (id, user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "profiles_pkey",
+          "definition": "CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "profiles_user_id_key",
+          "definition": "CREATE UNIQUE INDEX profiles_user_id_key ON public.profiles USING btree (user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "projects": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "client",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "client_email",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "creation_key",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "creation_request_hash",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "currency",
+          "type": "currency",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "fixed_price",
+          "type": "numeric(14,2)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "hourly_rate",
+          "type": "numeric(14,2)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "industry",
+          "type": "industry",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "last_checked",
+          "type": "date",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "pricing_model",
+          "type": "pricing_model",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "profile_id",
+          "type": "uuid",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "scope",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "projects_commercial_terms_consistent",
+          "type": "c",
+          "definition": "CHECK ((((start_date IS NULL) AND (pricing_model IS NULL) AND (currency IS NULL) AND (hourly_rate IS NULL) AND (fixed_price IS NULL)) OR ((start_date IS NOT NULL) AND (currency IS NOT NULL) AND (((pricing_model = 'hourly'::pricing_model) AND (hourly_rate > (0)::numeric) AND (fixed_price IS NULL)) OR ((pricing_model = 'fixed'::pricing_model) AND (fixed_price > (0)::numeric) AND (hourly_rate IS NULL))))))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "projects_id_owner_unique",
+          "type": "u",
+          "definition": "UNIQUE (id, user_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "projects_id_profile_unique",
+          "type": "u",
+          "definition": "UNIQUE (id, profile_id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "projects_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "projects_profile_owner_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (profile_id, user_id) REFERENCES profiles(id, user_id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "projects_user_id_users_id_fk",
+          "type": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "projects_id_owner_unique",
+          "definition": "CREATE UNIQUE INDEX projects_id_owner_unique ON public.projects USING btree (id, user_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "projects_id_profile_unique",
+          "definition": "CREATE UNIQUE INDEX projects_id_profile_unique ON public.projects USING btree (id, profile_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "projects_owner_creation_key",
+          "definition": "CREATE UNIQUE INDEX projects_owner_creation_key ON public.projects USING btree (user_id, creation_key) WHERE (creation_key IS NOT NULL)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "projects_owner_listing",
+          "definition": "CREATE INDEX projects_owner_listing ON public.projects USING btree (user_id, archived_at, created_at DESC)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "projects_pkey",
+          "definition": "CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "projects_profile",
+          "definition": "CREATE INDEX projects_profile ON public.projects USING btree (profile_id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "provider_calls": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "actual_model",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "actual_provider",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "cached_tokens",
+          "type": "integer",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "cost_currency",
+          "type": "text",
+          "not_null": true,
+          "default": "'USD'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "cost_status",
+          "type": "text",
+          "not_null": true,
+          "default": "'unknown'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "epoch",
+          "type": "bigint",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "error",
+          "type": "jsonb",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "estimated_cost",
+          "type": "numeric(20,10)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "input_tokens",
+          "type": "integer",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "latency_ms",
+          "type": "integer",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "operation_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "output_status",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "output_tokens",
+          "type": "integer",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "physical_index",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "provider_request_id",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reasoning_effort",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reasoning_tokens",
+          "type": "integer",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reported_cost",
+          "type": "numeric(20,10)",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "request_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "requested_model",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reserved_cost",
+          "type": "numeric(20,10)",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "response_id",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "semantic_attempt",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "step_id",
+          "type": "uuid",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "transport_attempt",
+          "type": "integer",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "usage_status",
+          "type": "text",
+          "not_null": true,
+          "default": "'unknown'::text",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "validation_status",
+          "type": "text",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "provider_calls_cached_tokens_check",
+          "type": "c",
+          "definition": "CHECK ((cached_tokens >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_estimated_cost_check",
+          "type": "c",
+          "definition": "CHECK ((estimated_cost >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_input_tokens_check",
+          "type": "c",
+          "definition": "CHECK ((input_tokens >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_operation_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (operation_id) REFERENCES llm_operations(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_operation_id_physical_index_key",
+          "type": "u",
+          "definition": "UNIQUE (operation_id, physical_index)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_output_tokens_check",
+          "type": "c",
+          "definition": "CHECK ((output_tokens >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_physical_index_check",
+          "type": "c",
+          "definition": "CHECK ((physical_index > 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_reasoning_tokens_check",
+          "type": "c",
+          "definition": "CHECK ((reasoning_tokens >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_reported_cost_check",
+          "type": "c",
+          "definition": "CHECK ((reported_cost >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_reserved_cost_check",
+          "type": "c",
+          "definition": "CHECK ((reserved_cost >= (0)::numeric))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_semantic_attempt_check",
+          "type": "c",
+          "definition": "CHECK (((semantic_attempt >= 1) AND (semantic_attempt <= 3)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_status_check",
+          "type": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['in_flight'::text, 'completed'::text, 'failed'::text, 'unknown'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_step_id_fkey",
+          "type": "f",
+          "definition": "FOREIGN KEY (step_id) REFERENCES llm_steps(id) ON DELETE RESTRICT",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_step_id_semantic_attempt_transport_attempt_key",
+          "type": "u",
+          "definition": "UNIQUE (step_id, semantic_attempt, transport_attempt)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_transport_attempt_check",
+          "type": "c",
+          "definition": "CHECK (((transport_attempt >= 1) AND (transport_attempt <= 2)))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "provider_calls_validation_status_check",
+          "type": "c",
+          "definition": "CHECK ((validation_status = ANY (ARRAY['accepted'::text, 'rejected'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "provider_calls_operation_id_physical_index_key",
+          "definition": "CREATE UNIQUE INDEX provider_calls_operation_id_physical_index_key ON public.provider_calls USING btree (operation_id, physical_index)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "provider_calls_pkey",
+          "definition": "CREATE UNIQUE INDEX provider_calls_pkey ON public.provider_calls USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "provider_calls_step_id_semantic_attempt_transport_attempt_key",
+          "definition": "CREATE UNIQUE INDEX provider_calls_step_id_semantic_attempt_transport_attempt_key ON public.provider_calls USING btree (step_id, semantic_attempt, transport_attempt)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    },
+    "users": {
+      "kind": "r",
+      "rls": false,
+      "force_rls": false,
+      "columns": [
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "default": "now()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "email_verification_required",
+          "type": "boolean",
+          "not_null": true,
+          "default": "true",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "email_verified_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "id",
+          "type": "uuid",
+          "not_null": true,
+          "default": "gen_random_uuid()",
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "password_hash",
+          "type": "text",
+          "not_null": true,
+          "default": null,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "session_version",
+          "type": "integer",
+          "not_null": true,
+          "default": "0",
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "users_email_unique",
+          "type": "u",
+          "definition": "UNIQUE (email)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "users_pkey",
+          "type": "p",
+          "definition": "PRIMARY KEY (id)",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        },
+        {
+          "name": "users_session_version_check",
+          "type": "c",
+          "definition": "CHECK ((session_version >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "deferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "users_email_unique",
+          "definition": "CREATE UNIQUE INDEX users_email_unique ON public.users USING btree (email)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        },
+        {
+          "name": "users_pkey",
+          "definition": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)",
+          "valid": true,
+          "ready": true,
+          "nulls_not_distinct": false
+        }
+      ],
+      "triggers": []
+    }
+  },
+  "enums": {
+    "currency": [
+      "RUB",
+      "USD",
+      "EUR"
+    ],
+    "evaluation_accuracy": [
+      "correct",
+      "wrong",
+      "debatable"
+    ],
+    "industry": [
+      "Development",
+      "Design",
+      "Marketing"
+    ],
+    "pricing_model": [
+      "hourly",
+      "fixed"
+    ],
+    "verdict": [
+      "in_scope",
+      "borderline",
+      "out_of_scope"
+    ]
+  },
+  "functions": [
+    {
+      "name": "profile_preferences_timezone_guard",
+      "source": "\n    BEGIN\n      IF NEW.timezone IS NOT NULL AND NOT EXISTS(\n        SELECT 1 FROM pg_catalog.pg_timezone_names WHERE name=NEW.timezone\n      ) THEN RAISE EXCEPTION 'invalid profile timezone' USING ERRCODE='23514'; END IF;\n      RETURN NEW;\n    END "
+    },
+    {
+      "name": "workflow_agreement_guard",
+      "source": "\n    BEGIN\n     IF TG_OP='DELETE' THEN RAISE EXCEPTION 'immutable agreement'; END IF;\n     IF (to_jsonb(NEW)-ARRAY['status','revision','voided_at','updated_at']) IS DISTINCT FROM\n(to_jsonb(OLD)-ARRAY['status','revision','voided_at','updated_at']) OR\n        OLD.status<>'finalized' OR NEW.status<>'voided' OR NEW.revision<>OLD.revision+1\n     THEN RAISE EXCEPTION 'immutable agreement or invalid transition' USING ERRCODE='23514'; END\n IF;\n     RETURN NEW;\n    END "
+    },
+    {
+      "name": "workflow_analysis_guard",
+      "source": "\n    BEGIN\n     IF TG_OP='DELETE' THEN RAISE EXCEPTION 'immutable analysis'; END IF;\n     IF\n(to_jsonb(NEW)-ARRAY['status','started_at','finished_at','result_snapshot','result_schema_version','request_language','error_code'])\n IS DISTINCT FROM\n\n(to_jsonb(OLD)-ARRAY['status','started_at','finished_at','result_snapshot','result_schema_version','request_language','error_code'])\n OR\n        OLD.status IN ('succeeded','failed','cancelled') OR NOT\n        ((OLD.status='pending' AND NEW.status='running') OR (OLD.status='running' AND NEW.status\n IN ('succeeded','failed','cancelled')))\n     THEN RAISE EXCEPTION 'immutable analysis or invalid transition' USING ERRCODE='23514'; END\nIF;\n     RETURN NEW;\n    END "
+    },
+    {
+      "name": "workflow_export_guard",
+      "source": "\n    BEGIN\n     IF TG_OP='DELETE' THEN RAISE EXCEPTION 'immutable export'; END IF;\n     IF OLD.status IN ('ready','expired') AND NOT (OLD.status='ready' AND NEW.status='expired'\nAND (to_jsonb(NEW)-'status')=(to_jsonb(OLD)-'status'))\n     THEN RAISE EXCEPTION 'immutable ready export' USING ERRCODE='23514'; END IF;\n     RETURN NEW;\n    END "
+    },
+    {
+      "name": "workflow_immutable",
+      "source": "\n    BEGIN RAISE EXCEPTION 'immutable workflow record' USING ERRCODE='23514'; END "
+    }
+  ]
+}

@@ -57,6 +57,18 @@ def test_collection_filters_pages_exports_and_ownership(disposable_url, monkeypa
                     },
                 )
                 assert result.status_code == 201, result.text
+                from uuid import UUID
+
+                from scope_guard.database.repositories.users import AuthUnitOfWork
+                from scope_guard.integrations.auth.passwords import Passwords
+                from scope_guard.services.auth.tokens import AuthTokenService
+
+                confirmation = AuthTokenService(
+                    lambda: AuthUnitOfWork(app.state.database.new_uow()), Passwords()
+                )
+                owner_id = UUID(result.json()["user"]["id"])
+                link = await confirmation.issue_pending_confirmation(owner_id)
+                await confirmation.confirm_email(owner_id, link.raw)
                 cookies.append(result.headers["set-cookie"].split(";")[0])
 
             async def call(path, *, method="GET", body=None, owner=0):

@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, useLocation } from 'react-router'
 import { AuthForm } from '@/features/auth'
+import { VerifyEmail, ConfirmEmail } from '@/features/auth/email-confirmation'
 import { ProtectedWorkspace, PublicAuthLayout } from './layout'
 import { CheckPage, ProjectsPage, NewProjectPage, EditProjectPage, HistoryPage, DraftsPage } from '@/pages/screens'
 import { adoptHistoryState } from '@/shared/config/navigation'
@@ -7,6 +8,8 @@ import { adoptHistoryState } from '@/shared/config/navigation'
 function CheckAlias() { const location = useLocation(); return <Navigate to={`/${location.search}${location.hash}`} replace /> }
 function NotFound() { return <main className="p-10"><h1>404</h1><a href="/">Scope Creep Guard</a></main> }
 export const routes = [
+  { path: '/verify-email', element: <VerifyEmail /> },
+  { path: '/confirm-email', element: <ConfirmEmail /> },
   { element: <PublicAuthLayout />, children: [{ path: '/login', element: <AuthForm mode="login" /> }, { path: '/register', element: <AuthForm mode="register" /> }] },
   { element: <ProtectedWorkspace />, children: [
     { path: '/', element: <CheckPage /> }, { path: '/check', element: <CheckAlias /> },

@@ -17,15 +17,19 @@ export function ProtectedWorkspace() {
   const location = useLocation()
   const t = useTranslations()
   if (loading) return <main className="p-10" role="status">{t('workspace.loadingTitle')}</main>
-  if (error && !user) return <main className="p-10"><p role="alert">{t(error)}</p><button onClick={() => { void refresh().catch(() => {}) }}>{t('drafts.retry')}</button></main>
+  if (error && (!user || user.workspaceAccess === 'email_confirmation_required')) return <main className="p-10"><p role="alert">{t(error)}</p><button onClick={() => { void refresh().catch(() => {}) }}>{t('drafts.retry')}</button></main>
   if (!user) return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search + location.hash)}`} replace />
+  if (user.workspaceAccess === 'email_confirmation_required') return <Navigate to={`/verify-email?returnTo=${encodeURIComponent(publicDestination(location.pathname + location.search + location.hash))}`} replace />
   return <OnboardingProvider key={user.id}><WorkspaceProvider key={user.id}><WorkspaceLayout /></WorkspaceProvider></OnboardingProvider>
 }
 
 export function PublicAuthLayout() {
-  const { user, loading } = useSession()
+  const { user, loading, error, refresh } = useSession()
+  const t = useTranslations()
   const location = useLocation()
   if (loading) return null
+  if (error) return <main className="auth-shell"><p role="alert">{t(error)}</p><button onClick={() => { void refresh().catch(() => {}) }}>{t('drafts.retry')}</button></main>
+  if (user?.workspaceAccess === 'email_confirmation_required') return <Navigate to={`/verify-email?returnTo=${encodeURIComponent(publicDestination(new URLSearchParams(location.search).get('returnTo')))}`} replace />
   if (user) return <Navigate to={publicDestination(new URLSearchParams(location.search).get('returnTo'))} replace />
   return <Outlet />
 }

@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import AliasChoices, Field, SecretStr, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -70,6 +70,30 @@ class Settings(BaseSettings):
     database_url: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("SCOPE_GUARD_DATABASE_URL", "DATABASE_URL")
     )
+
+    public_app_url: str | None = None
+
+    @model_validator(mode="after")
+    def validate_public_app_url(self):
+        if self.public_app_url is None:
+            return self
+        url = urlsplit(self.public_app_url)
+        _ = url.port  # Reject malformed and out-of-range ports at configuration time.
+        local = url.hostname in {"localhost", "127.0.0.1", "::1"}
+        if (
+            url.scheme not in {"http", "https"}
+            or not url.hostname
+            or url.username is not None
+            or url.password is not None
+            or url.path not in {"", "/"}
+            or url.query
+            or url.fragment
+            or any(ord(c) < 33 for c in self.public_app_url)
+            or (url.scheme == "http" and (self.production or not local))
+        ):
+            raise ValueError("invalid_public_app_url")
+        self.public_app_url = self.public_app_url.rstrip("/")
+        return self
 
     smtp_host: str = "mailpit"
     smtp_port: int = Field(default=1025, ge=1, le=65535)

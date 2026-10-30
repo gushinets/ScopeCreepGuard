@@ -22,6 +22,7 @@ class AuthWork(Protocol):
 
 
 class AuthTokenRepository(Protocol):
+    async def confirmation_pending(self, user_id: UUID) -> bool: ...
     async def lock_user(self, user_id: UUID) -> None: ...
     async def valid(
         self, user_id: UUID, purpose: Purpose, digest: str, now: datetime

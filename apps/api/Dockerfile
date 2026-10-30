@@ -36,4 +36,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=24h --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3)"
 ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
-CMD ["uvicorn", "scope_guard_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "scope_guard_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers"]

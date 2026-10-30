@@ -45,6 +45,18 @@ class AuthTokenService:
             await work.commit()
         return IssuedAuthToken(raw, expires)
 
+    async def issue_pending_confirmation(self, user_id: UUID) -> IssuedAuthToken:
+        raw = secrets.token_urlsafe(32)
+        async with self.work() as work:
+            await work.tokens.lock_user(user_id)
+            if not await work.tokens.confirmation_pending(user_id):
+                raise InvalidAuthToken()
+            now = self.clock()
+            expires = now + timedelta(hours=24)
+            await work.tokens.insert(user_id, "verify_email", digest(raw), now, expires)
+            await work.commit()
+        return IssuedAuthToken(raw, expires)
+
     async def inspect(self, user_id: UUID, purpose: Purpose, raw: str) -> bool:
         check_purpose(purpose)
         async with self.work() as work:
