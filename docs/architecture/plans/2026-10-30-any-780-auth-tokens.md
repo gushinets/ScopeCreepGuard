@@ -263,3 +263,56 @@ pytest historical_auth fixture does not apply to those subprocess/image entrypoi
 Those acceptance-script failures are not resolved by this backend test correction.
 Do not claim all PR checks green; they need a deliberate historical/current-schema
 separation without introducing a production missing-column fallback.
+
+
+## PR #50 complete gateway/container CI investigation
+
+At head 2fcf9d0 backend, rebase and compose-minimum checks succeeded. Frontend
+and containers still failed baseline registration. The previous section's unresolved
+acceptance failures are addressed by the changes below. Runtime auth remains strict.
+
+- The test-only HTTP entrypoint now supports explicit SCG_HISTORICAL_AUTH=1;
+  historical ANY-640 gateway runners select it together with baseline migration.
+  The flag is read only in tests/http_auth_app.py, never in production settings.
+- The historical container document journey explicitly loads a mounted, read-only
+  test ASGI factory with the baseline adapter. All original 11 PDF/extraction
+  checks remain. The fixture is not included in the production image.
+- Before that historical journey, the container runner prepares a separate current
+  head database and launches the image's ordinary production entrypoint. It proves
+  new-account defaults, successful registration, duplicate-password rejection,
+  database session-version revocation on me/projects, and login with the original
+  password. No historical adapter or SCG flag is passed to that process.
+- Optional --source-tree allows local reuse of an existing image's dependencies
+  with explicit read-only Python source mounts. CI omits the flag and checks its
+  fresh image. Output reports sourceOverlay to prevent confusing the two modes.
+
+Local verification used the existing Python environment, cached PostgreSQL image,
+existing frontend dependencies and existing application images; no image builds or
+new environments/worktrees. pnpm through root corepack selected incompatible v11;
+used the existing Vite executable directly instead, with no lockfile changes.
+
+Commands from frontend: node node_modules/vite/bin/vite.js build (passed).
+From backend, PYTHONPATH=src;../apps/api/src and the existing Python executable:
+
+```powershell
+python scripts/verify_any640_auth_gateway.py
+python scripts/verify_any640_generation_gateway.py
+python scripts/verify_any640_drafts_gateway.py
+python scripts/verify_any641_runtime.py
+python scripts/verify_any641_runtime.py --containers --backend-image scg-any780-api:verification --frontend-image scope-guard-frontend:local --source-tree
+```
+
+All five commands exited 0. Auth/project gateway assertions passed in all three
+variants, retired generation used the deterministic fixture with no paid calls,
+and host/container document journeys both passed 11 checks. Container current
+production auth assertions passed separately before the historical journey.
+
+Existing backend image ID: sha256:2b5883d10eaa07fde4f9d66a38c8863fe7b7bf5c75380c3fa8ce4c4d13a6ae78; revision label 2c920e1.
+Existing frontend image ID: sha256:d05d75dbe59ddb441d231a83d32de9940314f3741f62c7b1badc1c41c59de607; revision label 1209177.
+The local run includes uncommitted Python source changes over 2fcf9d0 and reports
+sourceOverlay=true; it does not claim these old image layers contain the new source.
+Only owned temporary harness resources were cleaned; no existing databases reset,
+no volumes removed, no prune. No full-stack E2E or external-email claim.
+
+Ruff check backend apps/api passed; Ruff format --check passed 396 Python files.
+The updated PR must also pass fresh remote checks before claiming all CI green.

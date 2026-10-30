@@ -33,7 +33,7 @@ def docker(*args):
 
 
 @contextmanager
-def image_service(image, network, name, environment, port):
+def image_service(image, network, name, environment, port, *, historical=False, source_tree=False):
     token = uuid4().hex
     args = [
         "run",
@@ -50,7 +50,35 @@ def image_service(image, network, name, environment, port):
     ]
     for key, value in environment.items():
         args += ["-e", key + "=" + value]
-    identifier = docker(*args, image)
+    if source_tree:
+        # Explicit local verification mode: reuse an existing image's dependencies.
+        # CI omits this and tests the freshly built image without a source overlay.
+        for source, target in (
+            (ROOT / "backend/src", "/app/verification-backend"),
+            (ROOT / "apps/api/src", "/app/verification-api"),
+        ):
+            args += ["--mount", f"type=bind,src={source},dst={target},readonly"]
+        args += ["-e", "PYTHONPATH=/app/verification-backend:/app/verification-api"]
+    command = []
+    if historical:
+        args += [
+            "--mount",
+            "type=bind,src="
+            + str(ROOT / "backend/tests/integration")
+            + ",dst=/app/historical-fixture,readonly",
+        ]
+        command = [
+            "uvicorn",
+            "historical_http_app:create_historical_app",
+            "--factory",
+            "--app-dir",
+            "/app/historical-fixture",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            str(port),
+        ]
+    identifier = docker(*args, image, *command)
     try:
         published = docker("port", identifier, f"{port}/tcp").rsplit(":", 1)[1]
         yield "http://127.0.0.1:" + published
@@ -226,6 +254,43 @@ def journey(client, origin):
     return checks
 
 
+def current_auth_journey(origin, database_url):
+    """Actual production auth on head, independently of the historical adapter."""
+    import psycopg
+
+    body = {"email": "current@any641.test", "password": "original-password"}
+    with httpx.Client(base_url=origin, trust_env=False, timeout=45) as client:
+        wait_ready(client, origin, "/health/live")
+        registered = client.post("/api/auth/register", json=body)
+        assert registered.status_code == 201, registered.text
+        cookie = registered.cookies["scg_session"]
+        duplicate = client.post(
+            "/api/auth/register", json={**body, "password": "replacement-password"}
+        )
+        assert duplicate.status_code == 409 and "set-cookie" not in duplicate.headers
+        assert client.get("/api/auth/me").status_code == 200
+        with psycopg.connect(database_url) as db:
+            row = db.execute(
+                "SELECT session_version,email_verified_at,email_verification_required FROM users"
+            ).fetchone()
+            assert row == (0, None, True)
+            db.execute("UPDATE users SET session_version=session_version+1")
+        for path in ("/api/auth/me", "/api/projects"):
+            assert client.get(path, headers={"cookie": "scg_session=" + cookie}).status_code == 401
+        assert (
+            client.post(
+                "/api/auth/login", json={**body, "password": "replacement-password"}
+            ).status_code
+            == 401
+        )
+        assert client.post("/api/auth/login", json=body).status_code == 200
+        assert client.get("/api/auth/me").status_code == 200
+    print(
+        "Current production-image auth: registration, duplicate rejection "
+        "and session revocation passed"
+    )
+
+
 def main():
     from verify_any640 import prepare_alembic
 
@@ -233,6 +298,11 @@ def main():
     parser.add_argument("--containers", action="store_true")
     parser.add_argument("--backend-image", default="scg-any641-backend-check")
     parser.add_argument("--frontend-image", default="scg-any641-frontend-check")
+    parser.add_argument(
+        "--source-tree",
+        action="store_true",
+        help="Local only: mount current Python source into an existing image",
+    )
     arguments = parser.parse_args()
     with DisposablePostgres() as postgres, postgres.database() as url, ExitStack() as stack:
         prepare_alembic(url)
@@ -244,6 +314,7 @@ def main():
         }
         env.update(
             SCG_AUTH_REALTIME="1",
+            SCG_HISTORICAL_AUTH="1",
             SCOPE_GUARD_DATABASE_URL=url,
             SCOPE_GUARD_AUTH_SECRET=SECRET,
             AUTH_SECRET=SECRET,
@@ -259,6 +330,28 @@ def main():
             env["SCOPE_GUARD_DATABASE_URL"] = urlunsplit(
                 parsed._replace(netloc=f"{parsed.username}:{parsed.password}@{postgres.name}:5432")
             )
+            # The historical journey below intentionally retains schema 0001.
+            # First verify the unmodified production entrypoint on current head.
+            with postgres.database() as current_url:
+                prepare_alembic(current_url, target="head")
+                current_parsed = urlsplit(current_url)
+                current_env = {
+                    key: value for key, value in env.items() if key.startswith("SCOPE_GUARD_")
+                }
+                current_env["SCOPE_GUARD_DATABASE_URL"] = urlunsplit(
+                    current_parsed._replace(
+                        netloc=f"{current_parsed.username}:{current_parsed.password}@{postgres.name}:5432"
+                    )
+                )
+                with image_service(
+                    arguments.backend_image,
+                    network,
+                    "scg-current-auth-" + uuid4().hex,
+                    current_env,
+                    8000,
+                    source_tree=arguments.source_tree,
+                ) as current:
+                    current_auth_journey(current, current_url)
             backend_name = "scg-any641-backend-" + uuid4().hex
             backend = stack.enter_context(
                 image_service(
@@ -267,6 +360,8 @@ def main():
                     backend_name,
                     {key: value for key, value in env.items() if key.startswith("SCOPE_GUARD_")},
                     8000,
+                    historical=True,
+                    source_tree=arguments.source_tree,
                 )
             )
             origin = stack.enter_context(
@@ -294,6 +389,9 @@ def main():
                     "mode": "containers" if arguments.containers else "production-gateway",
                     "checks": result,
                     "disposableOnly": True,
+                    "historicalSchema": "0001_existing_drizzle_schema",
+                    "currentProductionAuth": arguments.containers,
+                    "sourceOverlay": arguments.source_tree,
                 }
             )
         )
