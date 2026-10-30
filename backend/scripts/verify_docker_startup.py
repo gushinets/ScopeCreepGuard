@@ -540,7 +540,7 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
                 == mounts
             )
             head = sql("SELECT version_num FROM alembic_version")
-            assert head == "0008_contextual_onboarding"
+            assert head == "0009_auth_tokens"
             assert "migration_complete" in logs()
             # Migration may have been rerun as a no-op by later component commands.
             assert "migration_start" in logs()
@@ -670,7 +670,7 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             assert sum("migration_noop" in item for item in contender_logs) == 1
             assert sum("migration_revision_applied" in item for item in contender_logs) == 1
             assert sum("source=0007_nonblocking_llm" in item for item in contender_logs) == 1
-            assert sum("source=0008_contextual_onboarding" in item for item in contender_logs) == 1
+            assert sum(f"source={head}" in item for item in contender_logs) == 1
             results.append("bounded timeout; concurrent migration processes serialize and recheck")
 
             # Terminate an actual migration after DDL, using a temporary Alembic hook.

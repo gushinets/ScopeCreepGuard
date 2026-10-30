@@ -316,3 +316,21 @@ no volumes removed, no prune. No full-stack E2E or external-email claim.
 
 Ruff check backend apps/api passed; Ruff format --check passed 396 Python files.
 The updated PR must also pass fresh remote checks before claiming all CI green.
+
+
+### Full Compose smoke revision expectations
+
+On 2b434c1, both frontend CI runs passed, including all gateway variants. The
+containers job passed image-level auth/documents/proxy checks, then reached full
+Compose smoke and exposed a hard-coded head assertion in verify_docker_startup.py:543
+expecting 0008_contextual_onboarding. Its later concurrent-migrator assertion also
+expected the second process to start from 0008. Updated the explicit head to
+0009_auth_tokens and made the serialized second-process assertion use that checked
+head. Historical seed target 0007 and all concurrency/noop/data-preservation checks
+remain unchanged. A search of backend/scripts and ci found no other 0008 assertions.
+
+Local verification (no new image builds): verify_docker_startup.py --config-only
+passed root/deploy parity, dependency closures, isolation and gate configuration on
+Compose 5.6.0. test_release_migration.py plus test_stack_update.py: 13 passed in
+16.18s. Ruff lint/format and diff checks passed. Full image/full-stack execution
+is delegated to the fresh remote CI run; no local full-stack readiness claim.
