@@ -51,7 +51,10 @@ def sql_type(name):
 
 
 _manifest = json.loads(
-    Path(__file__).parents[1].joinpath("0009_auth_tokens_schema.json").read_text(encoding="utf-8")
+    Path(__file__)
+    .parents[1]
+    .joinpath("0010_email_confirmation_schema.json")
+    .read_text(encoding="utf-8")
 )
 for _name, _table in _manifest["tables"].items():
     _primary_key = {"profile_preferences": "profile_id", "marketing_metrics": "report_date"}.get(

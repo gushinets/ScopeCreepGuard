@@ -12,7 +12,7 @@ def profile_service(request: Request):
 
 
 async def current_owner(request: Request) -> dict[str, str]:
-    return await auth_service(request).me(request.cookies.get("scg_session"))
+    return await bootstrap.current_owner(request)
 
 
 def project_service(request: Request):

@@ -277,9 +277,16 @@ PROFILE_TABLES = TABLES + (
 )
 
 
-def inspect_profile_schema(connection: Connection, *, auth_tokens=False) -> dict:
+def inspect_profile_schema(
+    connection: Connection, *, auth_tokens=False, email_confirmation=False
+) -> dict:
     """Whole managed catalog, including all behavior and immutable guard definitions."""
-    actual = inspect_schema(connection, PROFILE_TABLES + (("auth_tokens",) if auth_tokens else ()))
+    actual = inspect_schema(
+        connection,
+        PROFILE_TABLES
+        + (("auth_tokens",) if auth_tokens else ())
+        + (("email_confirmation_attempts",) if email_confirmation else ()),
+    )
     actual["functions"] = [
         dict(row)
         for row in connection.exec_driver_sql(
@@ -292,13 +299,20 @@ def inspect_profile_schema(connection: Connection, *, auth_tokens=False) -> dict
 
 
 def verify_profile_schema(
-    connection: Connection, *, nonblocking=False, onboarding=False, auth_tokens=False
+    connection: Connection,
+    *,
+    nonblocking=False,
+    onboarding=False,
+    auth_tokens=False,
+    email_confirmation=False,
 ) -> None:
     verify_managed_schema(connection)
     expected = json.loads(
         Path(__file__)
         .with_name(
-            "0009_auth_tokens_schema.json"
+            "0010_email_confirmation_schema.json"
+            if email_confirmation
+            else "0009_auth_tokens_schema.json"
             if auth_tokens
             else "0008_contextual_onboarding_schema.json"
             if onboarding
@@ -314,7 +328,10 @@ def verify_profile_schema(
                     "'translate'::text, 'estimate'::text, 'agreement'::text, 'diagnostic'::text])))"
                 )
     differences = compare_schema(
-        inspect_profile_schema(connection, auth_tokens=auth_tokens), expected
+        inspect_profile_schema(
+            connection, auth_tokens=auth_tokens, email_confirmation=email_confirmation
+        ),
+        expected,
     )
     objects = set(
         connection.exec_driver_sql(
@@ -328,6 +345,7 @@ def verify_profile_schema(
             objects
             - set(PROFILE_TABLES)
             - ({"auth_tokens"} if auth_tokens else set())
+            - ({"email_confirmation_attempts"} if email_confirmation else set())
             - {"alembic_version"}
         )
     )
@@ -340,7 +358,9 @@ def verify_llm_schema(connection: Connection) -> None:
     revisions = (
         connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalars().all()
     )
-    if revisions == ["0009_auth_tokens"]:
+    if revisions == ["0010_email_confirmation"]:
+        verify_email_confirmation_schema(connection)
+    elif revisions == ["0009_auth_tokens"]:
         verify_auth_tokens_schema(connection)
     elif revisions == ["0008_contextual_onboarding"]:
         verify_onboarding_schema(connection)
@@ -354,7 +374,9 @@ def verify_llm_schema(connection: Connection) -> None:
 
 def verify_nonblocking_schema(connection):
     revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one()
-    if revision == "0009_auth_tokens":
+    if revision == "0010_email_confirmation":
+        verify_email_confirmation_schema(connection)
+    elif revision == "0009_auth_tokens":
         verify_auth_tokens_schema(connection)
     elif revision == "0008_contextual_onboarding":
         verify_onboarding_schema(connection)
@@ -393,3 +415,10 @@ def verify_revision_schema(connection: Connection, *, revision: str | None, head
         verify_current_head(connection)
     else:
         verify_managed_schema(connection)
+
+
+def verify_email_confirmation_schema(connection):
+    verify_profile_schema(connection, auth_tokens=True, email_confirmation=True)
+
+
+REVISION_VALIDATORS["0010_email_confirmation"] = verify_email_confirmation_schema

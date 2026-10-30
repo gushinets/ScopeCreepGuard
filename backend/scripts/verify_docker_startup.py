@@ -540,7 +540,7 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
                 == mounts
             )
             head = sql("SELECT version_num FROM alembic_version")
-            assert head == "0009_auth_tokens"
+            assert head == "0010_email_confirmation"
             assert "migration_complete" in logs()
             # Migration may have been rerun as a no-op by later component commands.
             assert "migration_start" in logs()

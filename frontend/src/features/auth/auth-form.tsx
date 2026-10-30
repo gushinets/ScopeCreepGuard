@@ -2,7 +2,7 @@ import { Brand } from '@/shared/ui/brand'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useSession } from './session'
 import { publicDestination } from '@/shared/config/navigation'
-import { useTranslations } from 'use-intl'
+import { useLocale, useTranslations } from 'use-intl'
 import { useState } from 'react'
 import { LockKeyhole, Mail } from 'lucide-react'
 import { LanguageSwitcher } from '@/shared/i18n/language-switcher'
@@ -48,6 +48,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [params] = useSearchParams()
   const { authenticated } = useSession()
   const t = useTranslations()
+  const locale = useLocale()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<ErrorCode | ''>('')
@@ -82,7 +83,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, locale }),
       })
     } catch (error) {
       console.error(
@@ -103,7 +104,8 @@ export function AuthForm({ mode }: AuthFormProps) {
       return
     }
 
-    authenticated((await response.json()).user)
+    const result = await response.json()
+    authenticated(result.user, result.emailConfirmation)
     void navigate(publicDestination(params.get('returnTo')), { replace: true })
   }
 

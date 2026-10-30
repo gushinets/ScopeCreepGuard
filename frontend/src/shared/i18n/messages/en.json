@@ -38,7 +38,28 @@
     "signingIn": "Signing in...",
     "alreadyHaveAccount": "Already have an account?",
     "dontHaveAccount": "Don't have an account?",
-    "createOne": "Create one"
+    "createOne": "Create one",
+    "verifyTitle": "Confirm your email",
+    "verifyDescription": "Confirm your email address before opening your workspace.",
+    "mail_accepted": "Your confirmation email was accepted for sending. Check your inbox and spam folder.",
+    "mail_failed": "Your account is saved, but the email could not be sent. You can request another email.",
+    "mail_unknown": "Your account is saved. We cannot confirm whether the last email was sent. Check your inbox or request another email.",
+    "mail_not_attempted": "Your account is saved. Request a confirmation email to continue.",
+    "sendingEmail": "Sending…",
+    "resendEmail": "Send confirmation email",
+    "resendCountdown": "You can request another email in {seconds} seconds.",
+    "checkConfirmation": "I have confirmed my email",
+    "signOutAndSignIn": "Sign out and use another account",
+    "confirmTitle": "Confirm your email address",
+    "confirmDescription": "Use the button below to confirm the address associated with this link.",
+    "confirmEmail": "Confirm email",
+    "confirming": "Confirming…",
+    "confirmedTitle": "Email confirmed",
+    "confirmedDescription": "The email address associated with this link has been confirmed.",
+    "continueWorkspace": "Continue to workspace",
+    "confirmedSignIn": "Sign in to the confirmed account to continue. Your current browser identity has not been changed.",
+    "newLinkHelp": "If this link has expired or was already used, sign in to request a new one.",
+    "requestNewLink": "Sign in and request a new email"
   },
   "projects": {
     "title": "Projects",
@@ -363,7 +384,10 @@
     "exportIntegrityFailed": "The operation could not be completed. Review the current state and retry.",
     "documentLanguageMismatch": "The operation could not be completed. Review the current state and retry.",
     "endDateInvalid": "The operation could not be completed. Review the current state and retry.",
-    "clientLanguageInvalid": "The operation could not be completed. Review the current state and retry."
+    "clientLanguageInvalid": "The operation could not be completed. Review the current state and retry.",
+    "emailVerificationRequired": "Confirm your email to access the workspace.",
+    "emailConfirmationInvalid": "This confirmation link is invalid or no longer available. Request a new email.",
+    "emailResendLimited": "Too many requests. Wait before requesting another email."
   },
   "drafts": {
     "title": "My drafts",

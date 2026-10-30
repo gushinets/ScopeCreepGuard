@@ -24,8 +24,18 @@ class OkResponse(WireModel):
     ok: Literal[True]
 
 
+class EmailConfirmationState(WireModel):
+    status: Literal["accepted", "failed", "unknown", "not_attempted"]
+    retry_after: int
+
+
+class EmailConfirmationResponse(WireModel):
+    email_confirmation: EmailConfirmationState
+
+
 class AuthResponse(WireModel):
     user: UserResponse
+    email_confirmation: EmailConfirmationState | None = None
 
 
 class ProjectEnvelope(WireModel):

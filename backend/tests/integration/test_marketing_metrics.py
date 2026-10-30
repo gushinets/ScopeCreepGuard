@@ -207,6 +207,18 @@ def test_t2_failure_keeps_authenticated_api_result_and_rollback_is_atomic(
                     json={"email": "metrics@example.test", "password": "synthetic-password"},
                 )
                 assert response.status_code == 201, response.text
+                from uuid import UUID
+
+                from scope_guard.database.repositories.users import AuthUnitOfWork
+                from scope_guard.integrations.auth.passwords import Passwords
+                from scope_guard.services.auth.tokens import AuthTokenService
+
+                confirmation = AuthTokenService(
+                    lambda: AuthUnitOfWork(app.state.database.new_uow()), Passwords()
+                )
+                owner_id = UUID(response.json()["user"]["id"])
+                link = await confirmation.issue_pending_confirmation(owner_id)
+                await confirmation.confirm_email(owner_id, link.raw)
                 assert (await client.get("/api/v2/profile")).status_code == 200
                 async with app.state.database.new_uow() as work:
                     await Users(work.session).insert("rollback@example.test", "synthetic")

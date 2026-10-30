@@ -38,6 +38,10 @@ def test_python_response_wrappers_round_trip_every_frozen_json_operation():
         observed.add(key)
         if "body" in operation:
             body = materialize(operation["body"])
+            if key in {"POST /api/auth/register", "POST /api/auth/login", "GET /api/auth/me"}:
+                # Frozen accounts predate confirmation enforcement. Keep that
+                # corpus immutable and explicitly model the additive access field.
+                body = {**body, "user": {**body["user"], "workspaceAccess": "allowed"}}
             assert RESPONSE_MODELS[key].model_validate(body).to_wire() == body, key
     assert observed == set(RESPONSE_MODELS)
     assert len(observed) == 21

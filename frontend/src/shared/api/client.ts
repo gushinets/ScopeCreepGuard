@@ -33,6 +33,7 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
         }
       }
     } catch { /* Gateway responses can be HTML or empty. */ }
+    if (response.status === 403 && code === ERROR_CODES.emailVerificationRequired && !path.startsWith('/api/auth/') && typeof window !== 'undefined') window.dispatchEvent(new Event('scg:email-verification-required'))
     throw new ApiClientError(code, response.status, terminal, fields, response.headers)
   }
   return response

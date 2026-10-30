@@ -13,7 +13,7 @@ export function adoptHistoryState() {
 export function publicDestination(value: string | null | undefined): string {
   if (!value || !value.startsWith('/') || value.startsWith('//') || /[\\\r\n]/.test(value)) return '/'
   const url = new URL(value, 'https://same-origin.test')
-  if (url.origin !== 'https://same-origin.test' || ['/login', '/register'].includes(url.pathname)) return '/'
+  if (url.origin !== 'https://same-origin.test' || !(/^\/(?:projects(?:\/new|\/[^/]+\/edit)?|history|drafts|check)?$/.test(url.pathname)) || /(?:token|userId|password)=/i.test(url.search + url.hash)) return '/'
   return `${url.pathname}${url.search}${url.hash}`
 }
 
