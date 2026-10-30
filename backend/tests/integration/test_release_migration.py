@@ -40,6 +40,20 @@ def test_previous_release_upgrade_preserves_rows_and_refuses_downgrade(disposabl
             migrate(connection, target="head")
             assert current_revision(connection) == current_head(connection)
             for table, expected in before.items():
+                if table == "users":
+                    # 0009 adds explicit legacy defaults without changing old fields.
+                    # Compare the whole row: unexpected additions or data changes fail.
+                    expected = [
+                        (
+                            {
+                                **row,
+                                "session_version": 0,
+                                "email_verified_at": None,
+                                "email_verification_required": False,
+                            },
+                        )
+                        for (row,) in expected
+                    ]
                 assert (
                     connection.exec_driver_sql(f"SELECT to_jsonb(t) FROM {table} t").all()
                     == expected
