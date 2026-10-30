@@ -101,6 +101,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend */
+        post: operations["resend_api_auth_email_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/email/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm */
+        post: operations["confirm_api_auth_email_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects": {
         parameters: {
             query?: never;
@@ -1195,6 +1229,7 @@ export interface components {
         /** AuthResponse */
         AuthResponse: {
             user: components["schemas"]["UserResponse"];
+            emailConfirmation?: components["schemas"]["EmailConfirmationState"] | null;
         };
         /** ChangeOrderLabels */
         ChangeOrderLabels: {
@@ -1423,11 +1458,25 @@ export interface components {
             /** Drafts */
             drafts: components["schemas"]["DraftListItem"][];
         };
+        /** EmailConfirmationResponse */
+        EmailConfirmationResponse: {
+            emailConfirmation: components["schemas"]["EmailConfirmationState"];
+        };
+        /** EmailConfirmationState */
+        EmailConfirmationState: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "accepted" | "failed" | "unknown" | "not_attempted";
+            /** Retryafter */
+            retryAfter: number;
+        };
         /**
          * ErrorCode
          * @enum {string}
          */
-        ErrorCode: "errors.providerBudgetUnavailable" | "errors.operationBudgetExceeded" | "errors.operationDeadlineExceeded" | "errors.semanticAttemptsExhausted" | "errors.transportAttemptsExhausted" | "errors.providerOutcomeUnknown" | "errors.providerTransportFailed" | "errors.providerOutputIncomplete" | "errors.operationLeaseLost" | "errors.workflowVersionUnavailable" | "errors.providerModelMismatch" | "errors.attemptSequenceInvalid" | "errors.requestBodyInvalid" | "errors.requestFailed" | "errors.authRequired" | "errors.emailRequired" | "errors.passwordRequired" | "errors.invalidEmail" | "errors.passwordTooShort" | "errors.duplicateEmail" | "errors.invalidCredentials" | "errors.projectNotFound" | "errors.projectNameRequired" | "errors.scopeRequired" | "errors.industryInvalid" | "errors.clientInvalid" | "errors.startDateInvalid" | "errors.pricingModelInvalid" | "errors.currencyInvalid" | "errors.hourlyRateInvalid" | "errors.fixedPriceInvalid" | "errors.historyDateInvalid" | "errors.requestRequired" | "errors.verdictInvalid" | "errors.summaryRequired" | "errors.localeInvalid" | "errors.clientLanguageUnsupported" | "errors.analysisUnavailable" | "errors.analysisFailed" | "errors.analysisInvalid" | "errors.analysisInputTooLarge" | "errors.analysisRateLimited" | "errors.draftProofInvalid" | "errors.draftNotFound" | "errors.draftSaveFailed" | "errors.draftLoadFailed" | "errors.evaluationReasoningRequired" | "errors.evaluationLabelInvalid" | "errors.evaluationHistoryNotFound" | "errors.pdfDocumentMissing" | "errors.pdfDocumentInvalid" | "errors.pdfLanguageUnsupported" | "errors.pdfGlyphUnsupported" | "errors.pdfLabelsMissing" | "errors.pdfExportFailed" | "errors.pdfExportTimeout" | "errors.pdfInputTooLarge" | "errors.pdfResourceLimit" | "errors.scopeFileTooLarge" | "errors.scopeFileUnsupported" | "errors.scopeFileEmpty" | "errors.scopeFileEncoding" | "errors.scopePdfInvalid" | "errors.scopePdfEncrypted" | "errors.scopePdfNoText" | "errors.scopePdfTooManyPages" | "errors.scopeTextTooLarge" | "errors.scopeResourceLimit" | "errors.scopeExtractTimeout" | "errors.scopeExtractFailed" | "errors.technicalBusy";
+        ErrorCode: "errors.emailVerificationRequired" | "errors.emailConfirmationInvalid" | "errors.emailResendLimited" | "errors.providerBudgetUnavailable" | "errors.operationBudgetExceeded" | "errors.operationDeadlineExceeded" | "errors.semanticAttemptsExhausted" | "errors.transportAttemptsExhausted" | "errors.providerOutcomeUnknown" | "errors.providerTransportFailed" | "errors.providerOutputIncomplete" | "errors.operationLeaseLost" | "errors.workflowVersionUnavailable" | "errors.providerModelMismatch" | "errors.attemptSequenceInvalid" | "errors.requestBodyInvalid" | "errors.requestFailed" | "errors.authRequired" | "errors.emailRequired" | "errors.passwordRequired" | "errors.invalidEmail" | "errors.passwordTooShort" | "errors.duplicateEmail" | "errors.invalidCredentials" | "errors.projectNotFound" | "errors.projectNameRequired" | "errors.scopeRequired" | "errors.industryInvalid" | "errors.clientInvalid" | "errors.startDateInvalid" | "errors.pricingModelInvalid" | "errors.currencyInvalid" | "errors.hourlyRateInvalid" | "errors.fixedPriceInvalid" | "errors.historyDateInvalid" | "errors.requestRequired" | "errors.verdictInvalid" | "errors.summaryRequired" | "errors.localeInvalid" | "errors.clientLanguageUnsupported" | "errors.analysisUnavailable" | "errors.analysisFailed" | "errors.analysisInvalid" | "errors.analysisInputTooLarge" | "errors.analysisRateLimited" | "errors.draftProofInvalid" | "errors.draftNotFound" | "errors.draftSaveFailed" | "errors.draftLoadFailed" | "errors.evaluationReasoningRequired" | "errors.evaluationLabelInvalid" | "errors.evaluationHistoryNotFound" | "errors.pdfDocumentMissing" | "errors.pdfDocumentInvalid" | "errors.pdfLanguageUnsupported" | "errors.pdfGlyphUnsupported" | "errors.pdfLabelsMissing" | "errors.pdfExportFailed" | "errors.pdfExportTimeout" | "errors.pdfInputTooLarge" | "errors.pdfResourceLimit" | "errors.scopeFileTooLarge" | "errors.scopeFileUnsupported" | "errors.scopeFileEmpty" | "errors.scopeFileEncoding" | "errors.scopePdfInvalid" | "errors.scopePdfEncrypted" | "errors.scopePdfNoText" | "errors.scopePdfTooManyPages" | "errors.scopeTextTooLarge" | "errors.scopeResourceLimit" | "errors.scopeExtractTimeout" | "errors.scopeExtractFailed" | "errors.technicalBusy";
         /** ErrorResponse */
         ErrorResponse: {
             error: components["schemas"]["ErrorCode"];
@@ -2092,6 +2141,11 @@ export interface components {
             id: string;
             /** Email */
             email: string;
+            /**
+             * Workspaceaccess
+             * @enum {string}
+             */
+            workspaceAccess: "allowed" | "email_confirmation_required";
         };
         /** ValidationError */
         ValidationError: {
@@ -2436,6 +2490,8 @@ export interface operations {
                 "application/json": {
                     email: string;
                     password: string;
+                    /** @enum {string} */
+                    locale?: "ru" | "en";
                 };
             };
         };
@@ -2508,6 +2564,8 @@ export interface operations {
                 "application/json": {
                     email: string;
                     password: string;
+                    /** @enum {string} */
+                    locale?: "ru" | "en";
                 };
             };
         };
@@ -2649,6 +2707,160 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resend_api_auth_email_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    locale?: "ru" | "en";
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailConfirmationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unexpected request failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirm_api_auth_email_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    userId: string;
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
                 };
             };
             /** @description Bad Request */

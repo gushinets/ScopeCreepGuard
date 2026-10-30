@@ -23,7 +23,18 @@ class Users:
             .mappings()
             .one_or_none()
         )
-        return User(row.id, row.email, row.password_hash, row.session_version) if row else None
+        return (
+            User(
+                row.id,
+                row.email,
+                row.password_hash,
+                row.session_version,
+                row.email_verified_at,
+                row.email_verification_required,
+            )
+            if row
+            else None
+        )
 
     async def by_id(self, identifier: UUID) -> User | None:
         row = (
@@ -31,7 +42,18 @@ class Users:
             .mappings()
             .one_or_none()
         )
-        return User(row.id, row.email, row.password_hash, row.session_version) if row else None
+        return (
+            User(
+                row.id,
+                row.email,
+                row.password_hash,
+                row.session_version,
+                row.email_verified_at,
+                row.email_verification_required,
+            )
+            if row
+            else None
+        )
 
     async def insert(self, email: str, password_hash: str) -> User:
         try:
@@ -56,7 +78,14 @@ class Users:
 
         if await profiles_supported(self.session):
             await Profiles(self.session).create(row.id)
-        return User(row.id, row.email, row.password_hash, row.session_version)
+        return User(
+            row.id,
+            row.email,
+            row.password_hash,
+            row.session_version,
+            row.email_verified_at,
+            row.email_verification_required,
+        )
 
 
 class AuthUnitOfWork:

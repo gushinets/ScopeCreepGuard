@@ -39,9 +39,13 @@ def profile_service(request: Request):
 
 
 async def current_owner(request: Request) -> dict[str, str]:
+    from scope_guard.domain.auth.validation import AuthError
     from scope_guard.integrations.auth.sessions import SESSION_COOKIE_NAME
 
-    return await auth_service(request).me(request.cookies.get(SESSION_COOKIE_NAME))
+    owner = await auth_service(request).me(request.cookies.get(SESSION_COOKIE_NAME))
+    if owner.get("workspaceAccess") == "email_confirmation_required":
+        raise AuthError("errors.emailVerificationRequired", 403)
+    return owner
 
 
 def project_service(request: Request) -> ProjectService:
@@ -276,3 +280,18 @@ def email_service(request: Request):
     from scope_guard.services.email.service import EmailService
 
     return EmailService(SMTPSender(request.app.state.settings))
+
+
+def confirmation_service(request: Request):
+    from scope_guard.database.repositories.email_confirmation import ConfirmationAttempts
+    from scope_guard.services.auth.confirmation import ConfirmationService
+    from scope_guard.services.auth.tokens import AuthTokenService
+
+    database = request.app.state.database
+    return ConfirmationService(
+        ConfirmationAttempts(database.new_uow),
+        AuthTokenService(lambda: AuthUnitOfWork(database.new_uow()), Passwords()),
+        email_service(request),
+        request.app.state.settings.public_app_url
+        or ("" if request.app.state.settings.production else "http://localhost:3000"),
+    )

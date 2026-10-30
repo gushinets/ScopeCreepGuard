@@ -156,7 +156,20 @@ def test_authenticated_profile_api_and_browser_sessions(disposable_url):
             ) as client:
                 assert (await client.get("/api/v2/profile")).status_code == 401
                 body = {"email": "api@example.test", "password": "synthetic-password"}
-                assert (await client.post("/api/auth/register", json=body)).status_code == 201
+                registered = await client.post("/api/auth/register", json=body)
+                assert registered.status_code == 201
+                from uuid import UUID
+
+                from scope_guard.database.repositories.users import AuthUnitOfWork
+                from scope_guard.integrations.auth.passwords import Passwords
+                from scope_guard.services.auth.tokens import AuthTokenService
+
+                confirmation = AuthTokenService(
+                    lambda: AuthUnitOfWork(app.state.database.new_uow()), Passwords()
+                )
+                owner_id = UUID(registered.json()["user"]["id"])
+                link = await confirmation.issue_pending_confirmation(owner_id)
+                await confirmation.confirm_email(owner_id, link.raw)
                 assert "scg_browser" in client.cookies
                 # Upgrade: concurrent tabs share an existing authentication cookie,
                 # but no product-browser cookie has yet reached either tab.

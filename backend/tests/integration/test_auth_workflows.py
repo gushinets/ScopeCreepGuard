@@ -76,8 +76,8 @@ def test_register_race_login_me_logout_deleted_user(disposable_url):
                     assert await Passwords().verify(winner_password, row.password_hash)
                     assert not await Passwords().verify(loser_password, row.password_hash)
                 login = await c.post("/api/auth/login", json=body)
-                assert login.status_code == 200 and login.json() == success.json()
-                assert (await c.get("/api/auth/me")).json() == success.json()
+                assert login.status_code == 200 and login.json()["user"] == success.json()["user"]
+                assert (await c.get("/api/auth/me")).json()["user"] == success.json()["user"]
                 token = login.cookies["scg_session"]
                 for invalid in ("malformed", token[:-8] + "tampered"):
                     bad = await c.get("/api/auth/me", headers={"cookie": "scg_session=" + invalid})

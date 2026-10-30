@@ -11,6 +11,9 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
 class ErrorCode(StrEnum):
+    email_verification_required = "errors.emailVerificationRequired"
+    email_confirmation_invalid = "errors.emailConfirmationInvalid"
+    email_resend_limited = "errors.emailResendLimited"
     provider_budget_unavailable = "errors.providerBudgetUnavailable"
     operation_budget_exceeded = "errors.operationBudgetExceeded"
     operation_deadline_exceeded = "errors.operationDeadlineExceeded"

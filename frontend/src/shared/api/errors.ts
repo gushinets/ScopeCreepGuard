@@ -1,4 +1,7 @@
 export const ERROR_CODES = {
+  emailVerificationRequired: 'errors.emailVerificationRequired',
+  emailConfirmationInvalid: 'errors.emailConfirmationInvalid',
+  emailResendLimited: 'errors.emailResendLimited',
   providerBudgetUnavailable: 'errors.providerBudgetUnavailable',
   operationBudgetExceeded: 'errors.operationBudgetExceeded',
   operationDeadlineExceeded: 'errors.operationDeadlineExceeded',

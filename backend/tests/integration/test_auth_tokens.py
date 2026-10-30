@@ -208,7 +208,10 @@ def test_repeat_registration_never_takes_over(disposable_url, verified):
             assert after["email_verification_required"] is True
             assert await passwords.verify("password-A", after["password_hash"])
             assert not await passwords.verify("password-B", after["password_hash"])
-        assert await service.me(session) == original
+        assert await service.me(session) == {
+            **original,
+            "workspaceAccess": "allowed" if verified else "email_confirmation_required",
+        }
         async with sessions.begin() as db:
             await db.execute(text("UPDATE users SET session_version=1"))
         with pytest.raises(AuthError):
@@ -378,6 +381,12 @@ def test_revocation_on_protected_routes(disposable_url):
                     json={"email": "routes@b.test", "password": "original-password"},
                 )
                 assert registered.status_code == 201
+                confirmer = AuthTokenService(
+                    lambda: AuthUnitOfWork(app.state.database.new_uow()), Passwords()
+                )
+                registered_owner = __import__("uuid").UUID(registered.json()["user"]["id"])
+                confirmation = await confirmer.issue(registered_owner, "verify_email")
+                await confirmer.confirm_email(registered_owner, confirmation.raw)
                 session = registered.cookies["scg_session"]
                 header, payload, _ = session.split(".")
                 claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))

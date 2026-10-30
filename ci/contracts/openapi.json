@@ -94,6 +94,13 @@
                   },
                   "password": {
                     "type": "string"
+                  },
+                  "locale": {
+                    "type": "string",
+                    "enum": [
+                      "ru",
+                      "en"
+                    ]
                   }
                 },
                 "type": "object",
@@ -187,6 +194,13 @@
                   },
                   "password": {
                     "type": "string"
+                  },
+                  "locale": {
+                    "type": "string",
+                    "enum": [
+                      "ru",
+                      "en"
+                    ]
                   }
                 },
                 "type": "object",
@@ -348,6 +362,203 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/email/resend": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Resend",
+        "operationId": "resend_api_auth_email_resend_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "locale": {
+                    "type": "string",
+                    "enum": [
+                      "ru",
+                      "en"
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailConfirmationResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected request failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/email/confirm": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Confirm",
+        "operationId": "confirm_api_auth_email_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "token": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "minLength": 20,
+                    "writeOnly": true
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "userId",
+                  "token"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
                 }
               }
             }
@@ -9260,6 +9471,16 @@
         "properties": {
           "user": {
             "$ref": "#/components/schemas/UserResponse"
+          },
+          "emailConfirmation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmailConfirmationState"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -9877,9 +10098,48 @@
         ],
         "title": "DraftsResponse"
       },
+      "EmailConfirmationResponse": {
+        "properties": {
+          "emailConfirmation": {
+            "$ref": "#/components/schemas/EmailConfirmationState"
+          }
+        },
+        "type": "object",
+        "required": [
+          "emailConfirmation"
+        ],
+        "title": "EmailConfirmationResponse"
+      },
+      "EmailConfirmationState": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "failed",
+              "unknown",
+              "not_attempted"
+            ],
+            "title": "Status"
+          },
+          "retryAfter": {
+            "type": "integer",
+            "title": "Retryafter"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "retryAfter"
+        ],
+        "title": "EmailConfirmationState"
+      },
       "ErrorCode": {
         "type": "string",
         "enum": [
+          "errors.emailVerificationRequired",
+          "errors.emailConfirmationInvalid",
+          "errors.emailResendLimited",
           "errors.providerBudgetUnavailable",
           "errors.operationBudgetExceeded",
           "errors.operationDeadlineExceeded",
@@ -11822,12 +12082,21 @@
           "email": {
             "type": "string",
             "title": "Email"
+          },
+          "workspaceAccess": {
+            "type": "string",
+            "enum": [
+              "allowed",
+              "email_confirmation_required"
+            ],
+            "title": "Workspaceaccess"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "email"
+          "email",
+          "workspaceAccess"
         ],
         "title": "UserResponse"
       },

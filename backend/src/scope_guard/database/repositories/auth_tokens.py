@@ -20,6 +20,17 @@ class AuthTokens:
         if user is None:
             raise InvalidAuthToken()
 
+    async def confirmation_pending(self, user_id: UUID) -> bool:
+        return bool(
+            await self.session.scalar(
+                text(
+                    "SELECT email_verified_at IS NULL AND email_verification_required "
+                    "FROM users WHERE id=:id"
+                ),
+                {"id": user_id},
+            )
+        )
+
     async def valid(self, user_id: UUID, purpose: Purpose, digest: str, now: datetime):
         return await self.session.scalar(
             text("""
