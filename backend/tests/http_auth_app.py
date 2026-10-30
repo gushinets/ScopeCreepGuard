@@ -10,6 +10,12 @@ from scope_guard_api.main import create_app
 
 from scope_guard.core.config import Settings
 
+if os.environ.get("SCG_HISTORICAL_AUTH") == "1":
+    from integration.historical_auth import HistoricalAuthUnitOfWork
+    from scope_guard_api import bootstrap
+
+    bootstrap.AuthUnitOfWork = HistoricalAuthUnitOfWork
+
 app = create_app(
     Settings(_env_file=None),
     clock=time.time if os.environ.get("SCG_AUTH_REALTIME") == "1" else lambda: 1791622800,

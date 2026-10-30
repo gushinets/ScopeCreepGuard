@@ -25,6 +25,7 @@ def main(generation=False, drafts=False):
             SCOPE_GUARD_PRODUCTION="true",
             OPENAI_API_KEY="",
             SCG_AUTH_REALTIME="1",
+            SCG_HISTORICAL_AUTH="1",
         )
         with socket.socket() as listener:
             listener.bind(("127.0.0.1", 0))
