@@ -236,3 +236,30 @@ statements above describe the verification stages before that authorization.
 Remote base was fetched again and remained 2c920e1; the proposed merged source
 therefore matches the source verified during the historical regression correction.
 No image rebuild or environment setup is part of publication.
+
+
+## PR #50 backend CI correction
+
+The supplied Linux CI log at head d4fd66d reported 1007 passed and one failure:
+test_previous_release_upgrade_preserves_rows_and_refuses_downgrade. Reproduced
+locally before editing: 1 failed, 1 passed in test_release_migration.py. The test
+compared whole user JSON against the pre-0009 shape, so the three intended new
+legacy fields caused the mismatch despite preservation of every existing value.
+
+Updated only the expected user snapshot with session_version=0,
+email_verified_at=None and email_verification_required=False. Full-row equality
+remains strict; projects/drafts/history comparisons and downgrade/noop checks
+remain unchanged. No migration or production code changes.
+
+From backend with the existing Python environment and PYTHONPATH=src;../apps/api/src:
+python -m pytest tests/integration/test_release_migration.py tests/integration/test_auth_tokens.py tests/integration/test_auth_workflows.py --require-integration -q --tb=short
+Result: 9 passed in 63.73s. Ruff check backend apps/api passed; Ruff format --check
+backend apps/api passed (395 files); git diff --check passed. No image builds.
+
+The original PR head also has separate frontend and containers failures:
+verify_any640_auth_gateway.py:92 and verify_any641_runtime.py:132 fail registration.
+Both scripts prepare the historical baseline but invoke current auth; the existing
+pytest historical_auth fixture does not apply to those subprocess/image entrypoints.
+Those acceptance-script failures are not resolved by this backend test correction.
+Do not claim all PR checks green; they need a deliberate historical/current-schema
+separation without introducing a production missing-column fallback.
