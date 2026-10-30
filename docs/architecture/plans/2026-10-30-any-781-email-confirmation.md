@@ -39,7 +39,7 @@ and unrelated ANY-778 diagnosis report.
   no-referrer and no third-party resources; clear fragment after success.
 - [x] Verify backend/HTTP/concurrency/migration and React behavior, duplicate
   registration takeover regressions, revocation and historical schema safeguards.
-  Perform real browser EmailService Р В Р вЂ Р Р†Р вЂљР’В Р Р†Р вЂљРІвЂћСћ aiosmtplib Р В Р вЂ Р Р†Р вЂљР’В Р Р†Р вЂљРІвЂћСћ Mailpit journey on actual
+  Perform real browser EmailService -> aiosmtplib -> Mailpit journey on actual
   disposable PostgreSQL with documented Compose entries and private test storage.
   Check RU/EN, keyboard/status labels and mobile layout. Run lint/format/types,
   contract generation checks and diff checks. Record actual results and gaps.
@@ -83,11 +83,11 @@ Verification recorded so far:
   to respect the resource boundary. Its result belongs in backend-scoped.xml.
 - Actual browser: EN pending registration recovered through resend after detecting
   an old API image lacked aiosmtplib. Fresh scoped API build fixed that prerequisite.
-  Resend accepted through EmailService Р Р†РІР‚В РІР‚в„ў aiosmtplib 5.1.3 Р Р†РІР‚В РІР‚в„ў Mailpit; pending refresh
+  Resend accepted through EmailService -> aiosmtplib 5.1.3 -> Mailpit; pending refresh
   retained identity. Opening GET left email_verified_at NULL and used token count
   zero. Explicit keyboard button POST confirmed, cleared fragment and opened
   workspace; the original tab's refresh also opened workspace.
-- Actual RU mobile (390Р вЂњРІР‚вЂќ844): registration sent the RU template immediately;
+- Actual RU mobile (390 x 844): registration sent the RU template immediately;
   pending status/cooldown/layout were checked. After logout, explicit confirmation
   succeeded and offered sign-in without authenticating the browser.
 - API and proxy logs were checked against the captured raw tokens: no matches.
@@ -132,7 +132,7 @@ editing frozen fixtures.
 Final rerun: `python -m pytest tests/unit/test_http_contracts.py
  tests/integration/test_marketing_metrics.py::test_t2_failure_keeps_authenticated_api_result_and_rollback_is_atomic
  tests/integration/test_profile_activity_runtime.py::test_authenticated_profile_api_and_browser_sessions
- -q -p no:cacheprovider --tb=short` РІР‚вЂќ 22 passed in 21.48 seconds.
+ -q -p no:cacheprovider --tb=short` - 22 passed in 21.48 seconds.
 All three failures passed this rerun; no single all-green broad run is claimed.
 The excluded files contain two entrypoint signal cases and one S3 image/restart
 case. CI/release acceptance owns these remaining image-building checks.
