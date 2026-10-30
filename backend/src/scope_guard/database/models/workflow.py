@@ -1,4 +1,4 @@
-"""Supported Core column mappings for the exact 0008 catalog; never runtime DDL.
+"""Supported Core column mappings for the exact 0009 catalog; never runtime DDL.
 
 The frozen, migration-tested catalog is the column source of truth. Database
 constraints/triggers remain Alembic-owned and verified independently at startup.
@@ -51,10 +51,7 @@ def sql_type(name):
 
 
 _manifest = json.loads(
-    Path(__file__)
-    .parents[1]
-    .joinpath("0008_contextual_onboarding_schema.json")
-    .read_text(encoding="utf-8")
+    Path(__file__).parents[1].joinpath("0009_auth_tokens_schema.json").read_text(encoding="utf-8")
 )
 for _name, _table in _manifest["tables"].items():
     _primary_key = {"profile_preferences": "profile_id", "marketing_metrics": "report_date"}.get(

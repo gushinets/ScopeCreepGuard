@@ -12,7 +12,7 @@ from sqlalchemy import text
 from scope_guard.core.config import Settings
 from scope_guard.domain.analysis.normalization import parse_analysis, parse_materials
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("historical_auth")]
 FIXTURE = json.loads(
     (Path(__file__).parents[3] / "contracts/compatibility/any-640/generation.json").read_text(
         encoding="utf-8"

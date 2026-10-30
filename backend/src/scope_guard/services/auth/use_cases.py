@@ -30,8 +30,9 @@ class AuthService:
         hashed = await self.passwords.hash(password)
         try:
             async with factory() as work:
-                user = (await work.users.insert(email, hashed)).public()
-                token = sessions.issue(user)
+                record = await work.users.insert(email, hashed)
+                user = record.public()
+                token = sessions.issue({**user, "session_version": record.session_version})
                 await work.commit()
                 return user, token
         except DuplicateEmail:
@@ -45,7 +46,7 @@ class AuthService:
         if user is None or not await self.passwords.verify(password, user.password_hash):
             raise AuthError("errors.invalidCredentials", 401)
         public = user.public()
-        return public, sessions.issue(public)
+        return public, sessions.issue({**public, "session_version": user.session_version})
 
     async def me(self, token: str | None) -> dict[str, str]:
         if not token:
@@ -55,11 +56,11 @@ class AuthService:
         if claims is None:
             raise AuthError("errors.authRequired", 401)
         try:
-            identifier = UUID(claims["id"])
+            identifier = UUID(str(claims["id"]))
         except ValueError:
             raise AuthError("errors.authRequired", 401) from None
         async with factory() as work:
             user = await work.users.by_id(identifier)
-        if user is None:
+        if user is None or user.session_version != claims.get("session_version", 0):
             raise AuthError("errors.authRequired", 401)
         return user.public()

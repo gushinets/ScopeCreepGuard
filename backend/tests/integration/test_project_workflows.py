@@ -14,7 +14,7 @@ from scope_guard.core.config import Settings
 from scope_guard.database.repositories.projects import ProjectUnitOfWork
 from scope_guard.services.projects.use_cases import ProjectService
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("historical_auth")]
 CARD = {
     "name": " Website ",
     "clientName": " Owner ",
