@@ -17,6 +17,8 @@ def test_mapped_rows_round_trip_decimals_json_and_server_defaults(disposable_url
         UserRow,
     )
 
+    # Frozen baseline mappings must not acquire columns from later revisions.
+    assert set(UserRow.__table__.columns.keys()) == {"id", "email", "password_hash", "created_at"}
     prepare_alembic(disposable_url)
     engine = create_engine(disposable_url.replace("postgresql://", "postgresql+psycopg://"))
     try:

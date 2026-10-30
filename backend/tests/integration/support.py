@@ -113,14 +113,14 @@ def replay_drizzle(url):
             )
 
 
-def prepare_alembic(url):
+def prepare_alembic(url, *, target="0001_existing_drizzle_schema"):
     """Initialize an owned disposable database through the active migration authority."""
     from scope_guard.database.migrations import migrate
 
     engine = create_engine(url.replace("postgresql://", "postgresql+psycopg://"))
     try:
         with engine.begin() as connection:
-            migrate(connection)
+            migrate(connection, target=target)
     finally:
         engine.dispose()
 

@@ -481,6 +481,7 @@ def test_legacy_multiple_drafts_preserve_ids_and_missing_provenance(disposable_u
     engine.dispose()
 
 
+@pytest.mark.usefixtures("historical_auth")
 def test_saved_fixture_http_workflow_and_restart_safe_export(disposable_url, monkeypatch):
     import asyncio
     import json

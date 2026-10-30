@@ -16,7 +16,7 @@ from scope_guard.domain.analysis.domain import DraftProofBinding, DraftProofClai
 from scope_guard.domain.analysis.normalization import parse_snapshot
 from scope_guard.integrations.auth.draft_proofs import DraftProofs
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("historical_auth")]
 FIXTURE = json.loads((Path(__file__).parents[1] / "fixtures/contracts.json").read_text())
 CARD = {
     "name": "Website",

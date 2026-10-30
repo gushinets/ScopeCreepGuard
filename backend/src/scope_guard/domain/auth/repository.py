@@ -1,8 +1,10 @@
+from datetime import datetime
 from typing import Protocol, Self
 from uuid import UUID
 
 from scope_guard.domain.auth.domain import DuplicateEmail as DuplicateEmail
 from scope_guard.domain.auth.domain import User as User
+from scope_guard.domain.auth.tokens import Purpose
 
 
 class UserRepository(Protocol):
@@ -14,6 +16,33 @@ class UserRepository(Protocol):
 class AuthWork(Protocol):
     @property
     def users(self) -> UserRepository: ...
+    async def __aenter__(self) -> Self: ...
+    async def __aexit__(self, exc_type, exc, traceback) -> None: ...
+    async def commit(self) -> None: ...
+
+
+class AuthTokenRepository(Protocol):
+    async def lock_user(self, user_id: UUID) -> None: ...
+    async def valid(
+        self, user_id: UUID, purpose: Purpose, digest: str, now: datetime
+    ) -> UUID | None: ...
+    async def insert(
+        self, user_id: UUID, purpose: Purpose, digest: str, now: datetime, expires: datetime
+    ) -> None: ...
+    async def revoke(self, user_id: UUID, purpose: Purpose, now: datetime) -> None: ...
+    async def apply(
+        self,
+        user_id: UUID,
+        purpose: Purpose,
+        token_id: UUID,
+        now: datetime,
+        password_hash: str | None = None,
+    ) -> None: ...
+
+
+class AuthTokenWork(Protocol):
+    @property
+    def tokens(self) -> AuthTokenRepository: ...
     async def __aenter__(self) -> Self: ...
     async def __aexit__(self, exc_type, exc, traceback) -> None: ...
     async def commit(self) -> None: ...
