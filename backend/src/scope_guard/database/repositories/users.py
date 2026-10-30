@@ -1,13 +1,16 @@
 from typing import Self
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import insert, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from scope_guard.database.models import UserRow
+from scope_guard.database.models.workflow import WORKFLOW_METADATA
+from scope_guard.database.repositories.auth_tokens import AuthTokens
 from scope_guard.database.unit_of_work import SqlAlchemyUnitOfWork
 from scope_guard.domain.auth.repository import DuplicateEmail, User
+
+users = WORKFLOW_METADATA.tables["users"]
 
 
 class Users:
@@ -15,18 +18,34 @@ class Users:
         self.session = session
 
     async def by_email(self, email: str) -> User | None:
-        row = await self.session.scalar(select(UserRow).where(UserRow.email == email))
-        return User(row.id, row.email, row.password_hash) if row else None
+        row = (
+            (await self.session.execute(select(users).where(users.c.email == email)))
+            .mappings()
+            .one_or_none()
+        )
+        return User(row.id, row.email, row.password_hash, row.session_version) if row else None
 
     async def by_id(self, identifier: UUID) -> User | None:
-        row = await self.session.get(UserRow, identifier)
-        return User(row.id, row.email, row.password_hash) if row else None
+        row = (
+            (await self.session.execute(select(users).where(users.c.id == identifier)))
+            .mappings()
+            .one_or_none()
+        )
+        return User(row.id, row.email, row.password_hash, row.session_version) if row else None
 
     async def insert(self, email: str, password_hash: str) -> User:
-        row = UserRow(email=email, password_hash=password_hash)
-        self.session.add(row)
         try:
-            await self.session.flush()
+            row = (
+                (
+                    await self.session.execute(
+                        insert(users)
+                        .values(email=email, password_hash=password_hash)
+                        .returning(users)
+                    )
+                )
+                .mappings()
+                .one()
+            )
         except IntegrityError as error:
             diagnostic = getattr(error.orig, "diag", None)
             if getattr(diagnostic, "constraint_name", None) == "users_email_unique":
@@ -37,17 +56,19 @@ class Users:
 
         if await profiles_supported(self.session):
             await Profiles(self.session).create(row.id)
-        return User(row.id, row.email, row.password_hash)
+        return User(row.id, row.email, row.password_hash, row.session_version)
 
 
 class AuthUnitOfWork:
     def __init__(self, work: SqlAlchemyUnitOfWork):
         self.work = work
         self.users: Users
+        self.tokens: AuthTokens
 
     async def __aenter__(self) -> Self:
         await self.work.__aenter__()
         self.users = Users(self.work.session)
+        self.tokens = AuthTokens(self.work.session)
         return self
 
     async def commit(self) -> None:

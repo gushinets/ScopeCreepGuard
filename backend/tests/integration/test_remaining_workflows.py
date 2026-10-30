@@ -9,7 +9,7 @@ from sqlalchemy import text
 
 from scope_guard.core.config import Settings
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("historical_auth")]
 SECRET = "slice-f-secret-at-least-32-characters"
 CARD = {
     "name": "Website",

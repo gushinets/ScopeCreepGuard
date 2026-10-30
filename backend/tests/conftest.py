@@ -34,3 +34,12 @@ def postgres_server():
 def disposable_url(postgres_server):
     with postgres_server.database() as url:
         yield url
+
+
+@pytest.fixture
+def historical_auth(monkeypatch):
+    """Opt-in only: keep pre-0009 workflows on their historical auth repository."""
+    from integration.historical_auth import HistoricalAuthUnitOfWork
+    from scope_guard_api import bootstrap
+
+    monkeypatch.setattr(bootstrap, "AuthUnitOfWork", HistoricalAuthUnitOfWork)

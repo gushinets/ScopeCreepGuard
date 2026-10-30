@@ -19,9 +19,10 @@ def test_bidirectional_jose_session_and_bcryptjs_hashes():
     codec = Sessions(
         "any640-synthetic-contract-secret-at-least-32-characters", lambda: fixture["now"]
     )
-    assert codec.verify(fixture["token"]) == fixture["user"]
+    assert codec.verify(fixture["token"]) == {**fixture["user"], "session_version": 0}
     token = codec.issue(fixture["user"])
-    assert token == fixture["token"]
+    assert codec.verify(token) == {**fixture["user"], "session_version": 0}
+    assert token != fixture["token"]  # New signed generation claim changes wire bytes.
 
     async def passwords():
         adapter = Passwords()

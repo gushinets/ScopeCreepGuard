@@ -27,10 +27,11 @@ class Sessions:
         self.key = secret.encode("utf-8")
         self.clock = clock
 
-    def issue(self, user: dict[str, str]) -> str:
+    def issue(self, user: dict[str, str | int]) -> str:
         now = int(self.clock())
         payload = {
             "email": user["email"],
+            "session_version": user.get("session_version", 0),
             "sub": user["id"],
             "iat": now,
             "exp": now + SESSION_MAX_AGE_SECONDS,
@@ -46,7 +47,7 @@ class Sessions:
             + encode(hmac.digest(self.key, signing_input.encode(), hashlib.sha256))
         )
 
-    def verify(self, token: str) -> dict[str, str] | None:
+    def verify(self, token: str) -> dict[str, str | int] | None:
         try:
             header, payload, signature = token.split(".")
             protected = json.loads(decode(header))
@@ -70,6 +71,9 @@ class Sessions:
                 type(claims["nbf"]) not in (int, float) or not claims["nbf"] <= self.clock()
             ):
                 return None
-            return {"id": claims["sub"], "email": claims["email"]}
+            version = claims.get("session_version", 0)
+            if type(version) is not int or version < 0:
+                return None
+            return {"id": claims["sub"], "email": claims["email"], "session_version": version}
         except (ValueError, TypeError, UnicodeError, KeyError, OverflowError):
             return None

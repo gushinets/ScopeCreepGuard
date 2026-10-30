@@ -8,6 +8,8 @@ class User:
     email: str
     password_hash: str = field(repr=False)
 
+    session_version: int = 0
+
     def public(self) -> dict[str, str]:
         return {"id": str(self.id), "email": self.email}
 

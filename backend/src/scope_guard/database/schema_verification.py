@@ -277,9 +277,9 @@ PROFILE_TABLES = TABLES + (
 )
 
 
-def inspect_profile_schema(connection: Connection) -> dict:
+def inspect_profile_schema(connection: Connection, *, auth_tokens=False) -> dict:
     """Whole managed catalog, including all behavior and immutable guard definitions."""
-    actual = inspect_schema(connection, PROFILE_TABLES)
+    actual = inspect_schema(connection, PROFILE_TABLES + (("auth_tokens",) if auth_tokens else ()))
     actual["functions"] = [
         dict(row)
         for row in connection.exec_driver_sql(
@@ -291,12 +291,16 @@ def inspect_profile_schema(connection: Connection) -> dict:
     return actual
 
 
-def verify_profile_schema(connection: Connection, *, nonblocking=False, onboarding=False) -> None:
+def verify_profile_schema(
+    connection: Connection, *, nonblocking=False, onboarding=False, auth_tokens=False
+) -> None:
     verify_managed_schema(connection)
     expected = json.loads(
         Path(__file__)
         .with_name(
-            "0008_contextual_onboarding_schema.json"
+            "0009_auth_tokens_schema.json"
+            if auth_tokens
+            else "0008_contextual_onboarding_schema.json"
             if onboarding
             else "0006_profile_metrics_schema.json"
         )
@@ -309,7 +313,9 @@ def verify_profile_schema(connection: Connection, *, nonblocking=False, onboardi
                     "CHECK ((kind = ANY (ARRAY['check'::text, 'regenerate'::text, "
                     "'translate'::text, 'estimate'::text, 'agreement'::text, 'diagnostic'::text])))"
                 )
-    differences = compare_schema(inspect_profile_schema(connection), expected)
+    differences = compare_schema(
+        inspect_profile_schema(connection, auth_tokens=auth_tokens), expected
+    )
     objects = set(
         connection.exec_driver_sql(
             "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
@@ -318,7 +324,12 @@ def verify_profile_schema(connection: Connection, *, nonblocking=False, onboardi
     )
     differences.extend(
         SchemaDifference("schema.unexpected_public_object." + name)
-        for name in sorted(objects - set(PROFILE_TABLES) - {"alembic_version"})
+        for name in sorted(
+            objects
+            - set(PROFILE_TABLES)
+            - ({"auth_tokens"} if auth_tokens else set())
+            - {"alembic_version"}
+        )
     )
     if differences:
         raise SchemaCompatibilityError(differences)
@@ -329,7 +340,9 @@ def verify_llm_schema(connection: Connection) -> None:
     revisions = (
         connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalars().all()
     )
-    if revisions == ["0008_contextual_onboarding"]:
+    if revisions == ["0009_auth_tokens"]:
+        verify_auth_tokens_schema(connection)
+    elif revisions == ["0008_contextual_onboarding"]:
         verify_onboarding_schema(connection)
     elif revisions == ["0007_nonblocking_llm"]:
         verify_nonblocking_schema(connection)
@@ -341,10 +354,19 @@ def verify_llm_schema(connection: Connection) -> None:
 
 def verify_nonblocking_schema(connection):
     revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one()
-    if revision == "0008_contextual_onboarding":
+    if revision == "0009_auth_tokens":
+        verify_auth_tokens_schema(connection)
+    elif revision == "0008_contextual_onboarding":
         verify_onboarding_schema(connection)
     else:
         verify_profile_schema(connection, nonblocking=True)
+
+
+def verify_auth_tokens_schema(connection):
+    verify_profile_schema(connection, auth_tokens=True)
+
+
+REVISION_VALIDATORS["0009_auth_tokens"] = verify_auth_tokens_schema
 
 
 def verify_onboarding_schema(connection):
