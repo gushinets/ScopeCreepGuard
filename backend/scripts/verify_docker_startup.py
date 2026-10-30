@@ -5,10 +5,12 @@ import importlib.util
 import json
 import os
 import shutil
+import socket
 import subprocess
 import tempfile
 import time
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
 
 import yaml
@@ -23,6 +25,56 @@ CLOSURES = {
     "llm-worker": {"postgres", "migrate", "llm-worker"},
     "export-worker": {"postgres", "migrate", "export-worker"},
 }
+
+
+def wait_for_confirmation(
+    mailpit,
+    recipient,
+    public_origin,
+    owner_id,
+    *,
+    timeout=15,
+    clock=time.monotonic,
+    sleep=time.sleep,
+):
+    """Test-only bounded capture polling; never print the returned raw token."""
+    deadline = clock() + timeout
+    while clock() < deadline:
+        response = mailpit.get("/api/v1/messages", timeout=min(2, deadline - clock()))
+        response.raise_for_status()
+        for item in response.json()["messages"]:
+            if not any(address["Address"] == recipient for address in item["To"]):
+                continue
+            remaining = deadline - clock()
+            if remaining <= 0:
+                break
+            response = mailpit.get("/api/v1/message/" + item["ID"], timeout=min(2, remaining))
+            response.raise_for_status()
+            try:
+                links = [
+                    line.strip()
+                    for line in response.json()["Text"].splitlines()
+                    if line.strip().startswith(("http://", "https://"))
+                ]
+                if len(links) != 1:
+                    raise ValueError
+                url = urlsplit(links[0])
+                fields = parse_qs(url.fragment, strict_parsing=True)
+                if (
+                    f"{url.scheme}://{url.netloc}" != public_origin
+                    or url.path != "/confirm-email"
+                    or url.query
+                    or set(fields) != {"userId", "token"}
+                    or fields["userId"] != [owner_id]
+                    or len(fields["token"]) != 1
+                    or not 20 <= len(fields["token"][0]) <= 128
+                ):
+                    raise ValueError
+                return {"userId": owner_id, "token": fields["token"][0]}
+            except (KeyError, TypeError, ValueError):
+                raise AssertionError("Invalid confirmation email link") from None
+        sleep(min(0.2, max(0, deadline - clock())))
+    raise AssertionError("Confirmation email did not arrive before the polling deadline")
 
 
 def copy_deployment_fixture(source, destination):
@@ -56,6 +108,12 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
     executable = [str(Path(compose_binary).resolve())] if compose_binary else ["docker", "compose"]
     token = uuid4().hex
     project = "scg-startup-test-" + token
+    # Choose the browser-reachable origin before starting the API so email links
+    # use configured public state rather than Host/forwarded headers.
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        frontend_port = listener.getsockname()[1]
+    public_origin = f"http://127.0.0.1:{frontend_port}"
     environment = {
         key: value
         for key, value in os.environ.items()
@@ -78,7 +136,9 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
         MAILPIT_UI_PORT="0",
         POSTGRES_PORT="0",
         BACKEND_PORT="0",
-        FRONTEND_PORT="0",
+        FRONTEND_PORT=f"127.0.0.1:{frontend_port}",
+        SCOPE_GUARD_PUBLIC_APP_URL=public_origin,
+        SCOPE_GUARD_ALLOWED_ORIGINS=json.dumps([public_origin]),
         COMPOSE_DISABLE_ENV_FILE="1",
         HTTP_PROXY="",
         HTTPS_PROXY="",
@@ -340,6 +400,7 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             POSTGRES_PASSWORD="synthetic",
             DATABASE_URL="postgres://scopeguard:synthetic@postgres/scope_creep_guard",
             SCOPE_GUARD_ALLOWED_ORIGINS='["https://synthetic.example.test"]',
+            SCOPE_GUARD_PUBLIC_APP_URL="https://synthetic.example.test",
             SCOPE_GUARD_SILO_ROOT_USER="synthetic-admin",
             SCOPE_GUARD_SILO_ROOT_PASSWORD="synthetic-admin-secret",
         )
@@ -385,6 +446,8 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             "SCOPE_GUARD_SILO_ROOT_PASSWORD",
         ):
             environment.pop(key)
+        environment["SCOPE_GUARD_ALLOWED_ORIGINS"] = json.dumps([public_origin])
+        environment["SCOPE_GUARD_PUBLIC_APP_URL"] = public_origin
         saved_secret = environment.pop("AUTH_SECRET")
         assert compose("config", "--quiet", check=False).returncode != 0
         assert compose("config", "--quiet", entry="compose.postgres.yaml").returncode == 0
@@ -552,7 +615,6 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
                 "--client-image",
                 api_image,
             )
-            compose("stop", "mailpit")
             for worker in ("llm-worker", "export-worker"):
                 assert "worker_ready" in logs(worker)
             results.append(
@@ -562,14 +624,39 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             import httpx
 
             port = compose("port", "app", "3000").stdout.strip().rsplit(":", 1)[1]
+            assert int(port) == frontend_port
             with httpx.Client(base_url="http://127.0.0.1:" + port, trust_env=False) as client:
-                assert (
-                    client.post(
-                        "/api/auth/register",
-                        json={"email": "startup@example.test", "password": "12345678"},
-                    ).status_code
-                    == 201
+                registered = client.post(
+                    "/api/auth/register",
+                    json={"email": "startup@example.test", "password": "12345678", "locale": "en"},
                 )
+                assert registered.status_code == 201
+                user = registered.json()["user"]
+                assert user["workspaceAccess"] == "email_confirmation_required"
+                assert registered.json()["emailConfirmation"]["status"] == "accepted"
+                pending = client.get("/api/v2/profile/onboarding")
+                assert pending.status_code == 403
+                assert pending.json() == {"error": "errors.emailVerificationRequired"}
+                mail_port = compose("port", "mailpit", "8025").stdout.strip().rsplit(":", 1)[1]
+                with httpx.Client(
+                    base_url="http://127.0.0.1:" + mail_port, trust_env=False
+                ) as mail:
+                    confirmation = wait_for_confirmation(
+                        mail, user["email"], public_origin, user["id"]
+                    )
+                assert client.get("/confirm-email").status_code == 200
+                assert client.get("/api/auth/me").json()["user"]["workspaceAccess"] == (
+                    "email_confirmation_required"
+                )
+                with httpx.Client(base_url=public_origin, trust_env=False) as another_browser:
+                    confirmed = another_browser.post("/api/auth/email/confirm", json=confirmation)
+                    assert confirmed.status_code == 200
+                    assert "scg_session=" not in confirmed.headers.get("set-cookie", "")
+                    assert another_browser.get("/api/auth/me").status_code == 401
+                assert client.get("/api/auth/me").json()["user"]["workspaceAccess"] == "allowed"
+                # Prove the same link was not consumed by GET, and is single-use after POST.
+                assert client.post("/api/auth/email/confirm", json=confirmation).status_code == 400
+                compose("stop", "mailpit")
                 assert client.get("/api/v2/profile/onboarding").status_code == 200
                 response = client.post(
                     "/api/v2/projects",
@@ -604,7 +691,10 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
                     client.get("/api/v2/drafts/" + draft["id"]).json()["draft"]["requestText"]
                     == "Confirmed Docker save"
                 )
-            results.append("registration and onboarding through frontend proxy")
+            results.append(
+                "pending registration, captured confirmation POST "
+                "and onboarding through frontend proxy"
+            )
             results.append("project and draft confirmed save/read through frontend proxy")
             assert "migration_noop" in wait_exit(migrate_run())
             results.append("already-current successful no-op")

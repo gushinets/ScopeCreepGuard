@@ -39,7 +39,7 @@ and unrelated ANY-778 diagnosis report.
   no-referrer and no third-party resources; clear fragment after success.
 - [x] Verify backend/HTTP/concurrency/migration and React behavior, duplicate
   registration takeover regressions, revocation and historical schema safeguards.
-  Perform real browser EmailService Р Р†РІР‚В РІР‚в„ў aiosmtplib Р Р†РІР‚В РІР‚в„ў Mailpit journey on actual
+  Perform real browser EmailService Р В Р вЂ Р Р†Р вЂљР’В Р Р†Р вЂљРІвЂћСћ aiosmtplib Р В Р вЂ Р Р†Р вЂљР’В Р Р†Р вЂљРІвЂћСћ Mailpit journey on actual
   disposable PostgreSQL with documented Compose entries and private test storage.
   Check RU/EN, keyboard/status labels and mobile layout. Run lint/format/types,
   contract generation checks and diff checks. Record actual results and gaps.
@@ -83,11 +83,11 @@ Verification recorded so far:
   to respect the resource boundary. Its result belongs in backend-scoped.xml.
 - Actual browser: EN pending registration recovered through resend after detecting
   an old API image lacked aiosmtplib. Fresh scoped API build fixed that prerequisite.
-  Resend accepted through EmailService РІвЂ вЂ™ aiosmtplib 5.1.3 РІвЂ вЂ™ Mailpit; pending refresh
+  Resend accepted through EmailService Р Р†РІР‚В РІР‚в„ў aiosmtplib 5.1.3 Р Р†РІР‚В РІР‚в„ў Mailpit; pending refresh
   retained identity. Opening GET left email_verified_at NULL and used token count
   zero. Explicit keyboard button POST confirmed, cleared fragment and opened
   workspace; the original tab's refresh also opened workspace.
-- Actual RU mobile (390Р“вЂ”844): registration sent the RU template immediately;
+- Actual RU mobile (390Р вЂњРІР‚вЂќ844): registration sent the RU template immediately;
   pending status/cooldown/layout were checked. After logout, explicit confirmation
   succeeded and offered sign-in without authenticating the browser.
 - API and proxy logs were checked against the captured raw tokens: no matches.
@@ -132,7 +132,7 @@ editing frozen fixtures.
 Final rerun: `python -m pytest tests/unit/test_http_contracts.py
  tests/integration/test_marketing_metrics.py::test_t2_failure_keeps_authenticated_api_result_and_rollback_is_atomic
  tests/integration/test_profile_activity_runtime.py::test_authenticated_profile_api_and_browser_sessions
- -q -p no:cacheprovider --tb=short` вЂ” 22 passed in 21.48 seconds.
+ -q -p no:cacheprovider --tb=short` РІР‚вЂќ 22 passed in 21.48 seconds.
 All three failures passed this rerun; no single all-green broad run is claimed.
 The excluded files contain two entrypoint signal cases and one S3 image/restart
 case. CI/release acceptance owns these remaining image-building checks.
@@ -149,3 +149,33 @@ verification; volumes, databases, images, prior stash and unrelated report remai
 
 Publication authorized separately by the user on 2026-10-31: commit and push ANY-781,
 then open a PR targeting the integration branch. No merge is authorized.
+
+
+### CI smoke follow-up (2026-10-31)
+
+The original PR run 41139271541 passed backend, frontend, rebase and minimum
+Compose checks. Its container smoke failed because it stopped Mailpit before
+registration and expected onboarding access for a pending account.
+
+The smoke now selects an available loopback frontend port before startup and
+configures the trusted public URL/allowed origin consistently. Production config
+fixtures use their own HTTPS origin. Registration asserts pending access and 403;
+test-only Mailpit API capture is polled every 0.2 seconds with a 15-second deadline
+and bounded HTTP timeouts. The captured link must have the expected origin, owner
+and fragment token. GET does not consume it. A separate cookie-free client posts
+confirmation and stays anonymous; the original session refreshes to allowed and
+replay fails. Only then is Mailpit stopped, before existing onboarding/project/
+draft checks. No fixed delivery sleep or automatic SMTP resend was added.
+
+Regression evidence: 5 new polling/security tests first failed before the helper
+existed, then passed. Combined polling/startup/fixture-isolation checks: 17 passed
+in 5.86 seconds. Ruff lint/format, diff checks and config-only Compose 5.6.0 passed.
+Using the previously owned scg-any781-8f1699bea9 stack with cached images verified
+registration 201, pending 403, captured mail, non-consuming GET, public confirmation
+200, anonymous /me 401, original-session access, replay 400 and onboarding/project/
+draft access with Mailpit stopped. No images were built for this fix. Test data
+and volumes remain; the stack and private Silo were stopped afterward.
+
+This is focused local verification. The complete smoke lifecycle is left to the
+fresh CI run after this correction is pushed. Evidence: ignored
+output/any781/smoke-confirmation-fix.json and smoke-config-fix.log.
