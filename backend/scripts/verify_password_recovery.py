@@ -52,9 +52,7 @@ def compose(state, *args):
         "deploy/compose.mailpit.yaml",
         *args,
     ]
-    result = subprocess.run(
-        command, cwd=ROOT, env=environment, text=True, capture_output=True
-    )
+    result = subprocess.run(command, cwd=ROOT, env=environment, text=True, capture_output=True)
     if result.returncode:
         # Only this harness's generated synthetic environment is loaded.
         raise RuntimeError("Synthetic Compose failed:\n" + result.stdout + result.stderr)
