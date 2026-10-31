@@ -36,6 +36,7 @@ services:
     environment:
       SCOPE_GUARD_DATABASE_URL: ${SCOPE_GUARD_DATABASE_URL:-postgres://scopeguard:scopeguard_dev_password@postgres:5432/scope_creep_guard}
       SCOPE_GUARD_PRODUCTION: ${SCOPE_GUARD_PRODUCTION:-false}
+      SCOPE_GUARD_TRUSTED_PROXY_HOSTS: ${SCOPE_GUARD_TRUSTED_PROXY_HOSTS:-["app"]}
       SCOPE_GUARD_LOG_LEVEL: ${SCOPE_GUARD_LOG_LEVEL:-INFO}
       SCOPE_GUARD_WORKFLOW_V2: 'true'
       SCOPE_GUARD_LLM_WORKFLOW: 'true'

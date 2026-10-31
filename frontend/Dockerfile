@@ -17,5 +17,6 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY nginx/api-proxy.conf /etc/nginx/api-proxy.conf
 COPY --chmod=755 nginx/05-validate-upstream.sh /docker-entrypoint.d/05-validate-upstream.sh
+COPY --chmod=755 nginx/06-client-source.sh /docker-entrypoint.d/06-client-source.sh
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s CMD wget -q -O /dev/null http://127.0.0.1:3000/health/live || exit 1

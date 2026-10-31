@@ -140,10 +140,19 @@ def test_capacity_cleanup_and_counter_cardinality(disposable_url):
         try:
             async with sessions.begin() as db:
                 await db.execute(
+                    text("""INSERT INTO email_jobs(purpose,recipient,locale,state)
+                    SELECT 'password_recovery','history@example.test','en','accepted'
+                    FROM generate_series(1,10000)""")
+                )
+            await queue.request("fresh@example.test", "en", "fresh")
+            async with sessions.begin() as db:
+                await db.execute(text("DELETE FROM email_jobs WHERE state='pending'"))
+                await db.execute(
                     text("""INSERT INTO email_jobs(purpose,recipient,locale)
                     SELECT 'password_recovery','missing@example.test','en'
                     FROM generate_series(1,9999)""")
                 )
+                await db.execute(text("UPDATE email_jobs SET state='leased' WHERE state='pending'"))
             results = await asyncio.gather(
                 queue.request("a@example.test", "en", "a"),
                 queue.request("b@example.test", "en", "b"),
@@ -151,7 +160,12 @@ def test_capacity_cleanup_and_counter_cardinality(disposable_url):
             )
             assert sum(isinstance(result, RecoveryUnavailable) for result in results) == 1
             async with sessions.begin() as db:
-                assert await db.scalar(text("SELECT count(*) FROM email_jobs")) == 10000
+                assert (
+                    await db.scalar(
+                        text("SELECT count(*) FROM email_jobs WHERE state IN ('pending','leased')")
+                    )
+                    == 10000
+                )
                 await db.execute(
                     text(
                         "UPDATE email_jobs SET state='accepted',"
@@ -168,8 +182,69 @@ def test_capacity_cleanup_and_counter_cardinality(disposable_url):
                 await queue.request("c@example.test", "en", "c")
             await queue.cleanup()
             async with sessions() as db:
-                assert await db.scalar(text("SELECT count(*) FROM email_jobs")) == 9500
+                assert await db.scalar(text("SELECT count(*) FROM email_jobs")) == 19500
                 assert await db.scalar(text("SELECT count(*) FROM recovery_limits")) == 49500
+        finally:
+            await engine.dispose()
+
+    asyncio.run(run())
+
+
+def test_notification_backlog_concurrent_resets_keep_atomic_budget(disposable_url):
+    prepare_alembic(disposable_url, target="head")
+
+    async def run():
+        from scope_guard.database.repositories.password_recovery import RecoveryUnavailable
+        from scope_guard.database.repositories.users import AuthUnitOfWork
+        from scope_guard.integrations.auth.passwords import Passwords
+        from scope_guard.services.auth.tokens import AuthTokenService
+
+        engine = create_async_engine(
+            disposable_url.replace("postgresql://", "postgresql+psycopg://")
+        )
+        sessions = async_sessionmaker(engine)
+        service = AuthTokenService(
+            lambda: AuthUnitOfWork(SqlAlchemyUnitOfWork(sessions)), Passwords()
+        )
+        owners = [uuid4(), uuid4()]
+        try:
+            async with sessions.begin() as db:
+                for owner in owners:
+                    await db.execute(
+                        text("INSERT INTO users(id,email,password_hash) VALUES (:id,:email,'old')"),
+                        {"id": owner, "email": f"{owner}@example.test"},
+                    )
+                await db.execute(
+                    text("""INSERT INTO email_jobs(purpose,recipient,locale,state)
+                    SELECT 'password_changed','history@example.test','en',
+                    CASE WHEN n%2=0 THEN 'leased' ELSE 'pending' END
+                    FROM generate_series(1,999) AS n""")
+                )
+            tokens = [await service.issue(owner, "reset_password") for owner in owners]
+            results = await asyncio.gather(
+                *(
+                    service.reset_password(owner, token.raw, "new-password")
+                    for owner, token in zip(owners, tokens, strict=True)
+                ),
+                return_exceptions=True,
+            )
+            assert sum(isinstance(result, RecoveryUnavailable) for result in results) == 1
+            async with sessions() as db:
+                assert await db.scalar(text("SELECT count(*) FROM email_jobs")) == 1000
+                assert await db.scalar(text("SELECT sum(session_version) FROM users")) == 1
+                assert (
+                    await db.scalar(
+                        text(
+                            "SELECT count(*) FROM users WHERE password_hash='old' "
+                            "AND password_changed_at IS NULL"
+                        )
+                    )
+                    == 1
+                )
+            for owner, token, result in zip(owners, tokens, results, strict=True):
+                assert bool(
+                    await service.inspect(owner, "reset_password", token.raw)
+                ) == isinstance(result, RecoveryUnavailable)
         finally:
             await engine.dispose()
 
@@ -553,6 +628,12 @@ def test_worker_delivery_reset_notification_and_obsolete_job(disposable_url, not
             link = next(line for line in messages[0].text.splitlines() if line.startswith("http"))
             fragment = parse_qs(urlsplit(link).fragment)
             raw = fragment["token"][0]
+            async with sessions.begin() as db:
+                await db.execute(
+                    text("""INSERT INTO email_jobs(purpose,recipient,locale,state)
+                    SELECT 'password_changed','owner@example.test','en','accepted'
+                    FROM generate_series(1,1000)""")
+                )
             # Queue a pre-reset job that must not mint a post-reset link.
             async with sessions.begin() as db:
                 await db.execute(

@@ -17,7 +17,9 @@ async def capacity(db, purpose):
     await db.execute(text("SELECT pg_advisory_xact_lock(782001)"))
     maximum = 10000 if purpose == "password_recovery" else 1000
     count = await db.scalar(
-        text("SELECT count(*) FROM email_jobs WHERE purpose=:p"), {"p": purpose}
+        text("""SELECT count(*) FROM email_jobs WHERE purpose=:p
+        AND state IN ('pending','leased')"""),
+        {"p": purpose},
     )
     if count >= maximum:
         raise RecoveryUnavailable()
@@ -166,7 +168,8 @@ class RecoveryQueue:
             await work.session.execute(
                 text("""DELETE FROM email_jobs WHERE id IN
               (SELECT id FROM email_jobs WHERE state IN ('accepted','failed','cancelled')
-               AND updated_at<clock_timestamp()-interval '7 days' LIMIT 500)""")
+               AND updated_at<clock_timestamp()-interval '7 days'
+               ORDER BY updated_at LIMIT 500)""")
             )
             await work.session.execute(
                 text("""DELETE FROM recovery_limits WHERE id IN
