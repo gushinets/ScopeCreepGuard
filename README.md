@@ -621,6 +621,8 @@ and post-migration restarts; `scripts/stack.py update` does this automatically.
 SMTP uses existing settings; production Compose also forwards optional
 `SCOPE_GUARD_SMTP_USERNAME`/`SCOPE_GUARD_SMTP_PASSWORD` from the selected environment.
 Mailpit readiness is not a dependency.
+The email-worker healthcheck observes its live loop and PostgreSQL heartbeat;
+SMTP availability is excluded. This also supports `up --wait` on Compose 2.24.
 
 Default admission limits: address cooldown 60s and 3/hour, source 10/minute and
 60/hour, global 100/minute and 1000/hour. Reset attempts: source 30/15 minutes,
