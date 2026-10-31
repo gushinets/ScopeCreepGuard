@@ -223,3 +223,22 @@ must be provisioned/monitored for the documented retention envelope. Mailpit pro
 local acceptance only. These results establish the password-recovery contour,
 not full application-wide readiness. Existing PR remains integration-targeted;
 no aggregate PR or Linear status changes are part of this follow-up.
+
+## PR #52 CI review correction — 2026-10-31
+
+User explicitly requests the standard full-stack smoke in addition to recovery
+verification, superseding the earlier branch-specific CI exclusion. Plan: remove
+ANY-782 conditions from the standard smoke and backend pytest selection; run the
+recovery journey as an additional unconditional step using the same built images.
+Do not run llm-worker/full stack locally. CI's existing isolated standard harness
+starts the normal topology with synthetic settings and no paid/provider jobs.
+Validate workflow structure and existing CI configuration tests, push the existing
+branch, and inspect fresh CI without weakening any failing checks. Earlier green
+recovery-only CI is historical evidence, not proof of restored full-stack checks.
+
+Local validation at `a44c70a` plus these three-file changes: CI policy/configuration
+suite `python -m unittest discover -s ci/tests -v`: **14 passed** (46.070s).
+Parsed-workflow assertions confirm standard smoke precedes the additional recovery
+smoke, neither has a branch condition, and backend uses unfiltered
+`pytest --require-integration`. `git diff --check`: pass. Runtime suites are left
+to the restored isolated CI; no local full-stack/llm-worker run was made.
