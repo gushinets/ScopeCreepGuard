@@ -23,6 +23,10 @@ include:
   - compose/export-worker.yaml
   - compose/export-worker.production.yaml
   project_directory: ..
+- path:
+  - compose/email-worker.yaml
+  - compose/email-worker.production.yaml
+  project_directory: ..
 
 # Dokploy validates domains before expanding include/extends, and rewrites this
 # file. Keep app concrete and tag-free; verify_docker_startup checks parity.

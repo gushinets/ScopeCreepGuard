@@ -1,4 +1,6 @@
 export const ERROR_CODES = {
+  passwordRecoveryInvalid: 'errors.passwordRecoveryInvalid',
+  passwordRecoveryLimited: 'errors.passwordRecoveryLimited',
   emailVerificationRequired: 'errors.emailVerificationRequired',
   emailConfirmationInvalid: 'errors.emailConfirmationInvalid',
   emailResendLimited: 'errors.emailResendLimited',

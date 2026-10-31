@@ -53,7 +53,7 @@ def sql_type(name):
 _manifest = json.loads(
     Path(__file__)
     .parents[1]
-    .joinpath("0010_email_confirmation_schema.json")
+    .joinpath("0011_password_recovery_schema.json")
     .read_text(encoding="utf-8")
 )
 for _name, _table in _manifest["tables"].items():

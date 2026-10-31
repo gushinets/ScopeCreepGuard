@@ -25,6 +25,14 @@ application endpoints or external delivery. Disposable named volumes are retaine
 removal requires explicit authorization. Container/network cleanup is restricted to the generated test project and labelled
 storage fixture. No paid provider jobs are submitted.
 
+ANY-782 push/PR runs select `smoke-password-recovery.sh` instead of the full stack
+smoke, preserving that task's explicit exclusion of llm-worker. The recovery
+smoke reuses freshly built CI image tags and the frontend/email-worker/Mailpit
+component entrypoints, with owned PostgreSQL and private synthetic storage. It
+checks RU/EN request → Mailpit → non-consuming GET → reset → ordinary login and
+notification. Other branches retain the full-stack smoke. This bounded run does
+not claim application-wide readiness.
+
 Backend integration tests create their own PostgreSQL containers/databases.
 `check-frontend.sh` runs the React suite, module boundaries, contract freshness,
 types and build. The compatibility `verify_react_compose.py` delegates to the same

@@ -1,0 +1,40 @@
+# Authoritative email-only process; shares the API image and PostgreSQL.
+services:
+  email-worker:
+    image: ${SCOPE_GUARD_API_IMAGE:-scope-guard-api:local}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runner
+      args:
+        SOURCE_REVISION: ${SOURCE_REVISION:-unknown}
+    entrypoint: [python, -m, scope_guard.email_worker]
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 40s
+    env_file:
+    - path: ${SCOPE_GUARD_LOCAL_ENV_FILE:-.env}
+      required: false
+    - path: ${SCOPE_GUARD_LOCAL_OVERRIDE_ENV_FILE:-.env.local}
+      required: false
+    - path: ${SCOPE_GUARD_BACKEND_ENV_FILE:-backend/.env}
+      required: false
+    environment:
+      SCOPE_GUARD_DATABASE_URL: ${SCOPE_GUARD_DATABASE_URL:-postgres://scopeguard:scopeguard_dev_password@postgres:5432/scope_creep_guard}
+      SCOPE_GUARD_PRODUCTION: ${SCOPE_GUARD_PRODUCTION:-false}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET must be set}
+      SCOPE_GUARD_PUBLIC_APP_URL: ${SCOPE_GUARD_PUBLIC_APP_URL:-http://localhost:3000}
+      SCOPE_GUARD_SMTP_HOST: ${SCOPE_GUARD_SMTP_HOST:-mailpit}
+      SCOPE_GUARD_SMTP_PORT: ${SCOPE_GUARD_SMTP_PORT:-1025}
+      SCOPE_GUARD_SMTP_SENDER_ADDRESS: ${SCOPE_GUARD_SMTP_SENDER_ADDRESS:-no-reply-scopecreepguard@mail.com}
+      SCOPE_GUARD_SMTP_SENDER_NAME: ${SCOPE_GUARD_SMTP_SENDER_NAME:-ScopeCreepGuard}
+      SCOPE_GUARD_SMTP_TRANSPORT: ${SCOPE_GUARD_SMTP_TRANSPORT:-none}
+      SCOPE_GUARD_SMTP_TIMEOUT: ${SCOPE_GUARD_SMTP_TIMEOUT:-10}
+      SCOPE_GUARD_SMTP_DEADLINE: ${SCOPE_GUARD_SMTP_DEADLINE:-30}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      disable: true

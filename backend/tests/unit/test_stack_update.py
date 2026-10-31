@@ -15,7 +15,7 @@ def test_update_failure_never_starts_new_applications(monkeypatch, failure_stage
     spec = importlib.util.spec_from_file_location("stack_update", location)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    applications = {"app", "backend", "llm-worker", "export-worker"}
+    applications = {"app", "backend", "llm-worker", "export-worker", "email-worker"}
     state = {"running": set(applications), "prepared": False}
     exit_codes = {
         "prepare": 7,
@@ -41,7 +41,7 @@ def test_update_failure_never_starts_new_applications(monkeypatch, failure_stage
                 raise subprocess.CalledProcessError(9, command)
         elif "up" in command and "backend" in command:
             # Detached Compose can leave successful peers running on a failed wait.
-            state["running"].update({"backend", "llm-worker", "export-worker"})
+            state["running"].update({"backend", "llm-worker", "export-worker", "email-worker"})
             if failure_stage in {"backend", "worker"}:
                 raise subprocess.CalledProcessError(exit_codes[failure_stage], command)
         elif "up" in command and "app" in command:
@@ -107,7 +107,7 @@ def test_production_storage_gate_precedes_migration_and_application_start(
         assert storage < migration < applications
 
 
-@pytest.mark.parametrize("component", ["llm_worker", "export_worker"])
+@pytest.mark.parametrize("component", ["llm_worker", "export_worker", "email_worker"])
 def test_worker_logs_do_not_validate_unrelated_full_stack_settings(monkeypatch, component):
     location = Path(__file__).resolve().parents[3] / "scripts/stack.py"
     spec = importlib.util.spec_from_file_location("stack_role_logs", location)

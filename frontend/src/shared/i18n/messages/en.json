@@ -59,7 +59,23 @@
     "continueWorkspace": "Continue to workspace",
     "confirmedSignIn": "Sign in to the confirmed account to continue. Your current browser identity has not been changed.",
     "newLinkHelp": "If this link has expired or was already used, sign in to request a new one.",
-    "requestNewLink": "Sign in and request a new email"
+    "requestNewLink": "Sign in and request a new email",
+    "forgotPassword": "Forgot password?",
+    "resetPassword": "Choose a new password",
+    "recoveryDescription": "Enter your account email address.",
+    "resetDescription": "Set a new password for the account associated with this link.",
+    "recoveryRequested": "Check your email",
+    "recoveryNeutral": "If an account exists for this address, a recovery email will be sent.",
+    "passwordChanged": "Password changed",
+    "passwordChangedDescription": "Sign in with your new password. Your previous sessions and recovery links have been revoked.",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordMismatch": "Passwords do not match.",
+    "changePassword": "Change password",
+    "sendRecovery": "Send recovery email",
+    "recoverySubmitting": "Submitting…",
+    "requestRecoveryAgain": "Request another recovery link",
+    "recoverySessionNotice": "You are signed in as {email}. This link applies only to its original account. Sign out explicitly to sign in again."
   },
   "projects": {
     "title": "Projects",
@@ -387,7 +403,9 @@
     "clientLanguageInvalid": "The operation could not be completed. Review the current state and retry.",
     "emailVerificationRequired": "Confirm your email to access the workspace.",
     "emailConfirmationInvalid": "This confirmation link is invalid or no longer available. Request a new email.",
-    "emailResendLimited": "Too many requests. Wait before requesting another email."
+    "emailResendLimited": "Too many requests. Wait before requesting another email.",
+    "passwordRecoveryInvalid": "This recovery link is invalid or expired. Request another link.",
+    "passwordRecoveryLimited": "Too many attempts. Please try again later."
   },
   "drafts": {
     "title": "My drafts",

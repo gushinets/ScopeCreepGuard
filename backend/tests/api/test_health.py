@@ -46,6 +46,8 @@ def test_openapi_describes_the_liveness_response():
         "/api/auth/me",
         "/api/auth/email/resend",
         "/api/auth/email/confirm",
+        "/api/auth/password/request",
+        "/api/auth/password/reset",
         "/api/projects",
         "/api/projects/{project_id}",
         "/api/projects/{project_id}/history",

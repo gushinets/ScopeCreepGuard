@@ -15,3 +15,5 @@ include:
   project_directory: ..
 - path: compose/mailpit.yaml
   project_directory: ..
+- path: compose/email-worker.yaml
+  project_directory: ..
