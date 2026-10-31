@@ -59,11 +59,9 @@ jobs:
       - name: Compose configuration and image-level runtime checks
         run: ci/scripts/check-containers.sh
       - name: Full disposable Compose stack smoke test
-        if: github.head_ref != 'codex/any-782-password-recovery' && github.ref != 'refs/heads/codex/any-782-password-recovery'
         run: ci/scripts/smoke-compose.sh
-      # ANY-782 deliberately excludes llm-worker from its verification contour.
+      # Additional recovery checks reuse the freshly built images.
       - name: Password recovery Compose journey without llm-worker
-        if: github.head_ref == 'codex/any-782-password-recovery' || github.ref == 'refs/heads/codex/any-782-password-recovery'
         run: ci/scripts/smoke-password-recovery.sh
 
   compose-minimum:
