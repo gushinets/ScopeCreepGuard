@@ -54,3 +54,39 @@ Owner: implementing agent completes remaining checkboxes, scoped commits, push a
 - Early local command failures were resolved: use the root workspace .venv (backend/.venv lacks current dependencies), run migration tests from backend, choose a new writable --basetemp under output/any782 to avoid an inaccessible pre-existing system pytest temp directory, and use unique API/integration test basenames.
 
 Final pre-commit combined run: `../.venv/Scripts/python.exe -m pytest tests/unit tests/api tests/architecture tests/integration/test_password_recovery.py tests/integration/test_recovery_limits.py tests/integration/test_auth_tokens.py tests/integration/test_email_confirmation.py tests/integration/test_release_migration.py tests/integration/test_schema_compatibility.py tests/integration/test_migration_lock.py -q -p no:cacheprovider --basetemp=<owned output directory>` from backend: **958 passed in 164.05s**. Full frontend `vitest run`: **409 passed / 55 files**. Full backend suite is additionally running.
+
+
+## Revision-labelled runtime evidence (2026-10-31)
+
+Tested implementation: `dcf46494229c3d70d4b8d832b0d05227c3b83849`. The only subsequent source change is the proxy verification script's expected security headers and recovery-route coverage; production application/image sources are unchanged. Documentation/evidence updates are separate.
+
+Fresh Docker builds (no mounted source, normal cached dependency layers permitted):
+
+| Image | Docker image ID | OCI revision label |
+|---|---|---|
+| scope-guard-api:any782 (API, migrate, email-worker) | sha256:05a58d78360d1b08441ee99887e3456ddf6a5d98936257295cef3235e60e76ac | dcf46494229c3d70d4b8d832b0d05227c3b83849 |
+| scope-guard-frontend:any782 | sha256:2987e147e9fa288e960aa71bf37749ce9f6a838512772e5eced40e895dc89c22 | dcf46494229c3d70d4b8d832b0d05227c3b83849 |
+
+Commands/results:
+
+- `docker build -f apps/api/Dockerfile --target runner --build-arg SOURCE_REVISION=dcf46494229c3d70d4b8d832b0d05227c3b83849 -t scope-guard-api:any782 .`: passed.
+- Equivalent frontend runner build with the same revision label: passed.
+- `python backend/scripts/verify_password_recovery.py start`: new isolated project `scg-any782-64d337452b`; PostgreSQL, migrate (exit 0), API, frontend, email-worker, Mailpit; separate private MinIO fixture. No export-worker/llm-worker. Earlier contour stopped and its database/volumes retained.
+- `python backend/scripts/verify_password_recovery.py check`: passed on these images. RU/EN Mailpit journey, private bucket/no public policy, session/password revocation, ordinary login and notification, no raw tested tokens/passwords in API/proxy/worker logs.
+- `python scripts/verify_react_proxy.py --image scope-guard-frontend:any782` from backend: 22 passed against the real Nginx image, including `/forgot-password`, `/reset-password`, no-store and no-referrer.
+- Initial PR CI container job failed only because this proxy check still expected no-cache; the behavior change is intentional for recovery security. The updated check was reproduced red then passed locally. This does not count as a green CI claim.
+- API/client contract checks, frontend lint/boundaries, Ruff and mypy passed. Current/minimum Compose configuration and 14 CI-policy tests passed.
+- Actual PR #52 inspected after creation: head `codex/any-782-password-recovery`, base `codex/any-758-email-verification-password-reset` at `1a6d02da2270c31fe9208680f7e8cc2dacc69b38`. It is Draft and unmerged. PR #46 was inspected and remains Draft/unmerged. No Linear changes.
+
+Final 2000-request calibration on revision-labelled images (500/group/phase), randomized order, durable unique-address admissions; synthetic windows expired outside measured requests:
+
+- worker-stopped, known: n=500, p50=36.042ms, p95=49.064ms, p99=61.056ms.
+- worker-stopped, unknown: n=500, p50=35.451ms, p95=47.989ms, p99=59.250ms.
+- worker-stopped median difference bootstrap 95% interval: [-0.049, 1.262]ms.
+- worker-running, known: n=500, p50=51.392ms, p95=66.982ms, p99=83.552ms.
+- worker-running, unknown: n=500, p50=51.178ms, p95=66.711ms, p99=80.979ms.
+- worker-running median difference bootstrap 95% interval: [-1.408, 1.328]ms.
+
+No median/p95 threshold exceeded. These measurements cover this local contour and are not a proof of timing indistinguishability on every deployment. External SMTP inbox delivery remains untested. Actual browser navigation/forms/RU-EN/refresh/keyboard/error rendering was observed; explicit reset submission and already-authenticated-other-account behavior have React and HTTP/Mailpit coverage, not a computer-use password-entry claim.
+
+Complete password-recovery journey is verified within this bounded contour; application-wide readiness is not claimed. Full generic backend pytest and GitHub CI are tracked separately until completion; do not infer their success from the focused 958-test run. Local evidence/state/logs remain under ignored output/any782; no existing volume was reset or removed, no resources pruned. The original ANY-778 untracked report and stash remain preserved.

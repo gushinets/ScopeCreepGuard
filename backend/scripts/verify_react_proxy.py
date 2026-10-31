@@ -143,6 +143,8 @@ def main():
                 for path in [
                     "/",
                     "/login",
+                    "/forgot-password",
+                    "/reset-password",
                     "/projects/new",
                     "/projects/id/edit?draft=old",
                     "/history",
@@ -150,7 +152,8 @@ def main():
                 ]:
                     response = client.get(path)
                     assert response.status_code == 200 and '<div id="root">' in response.text
-                    assert response.headers["cache-control"] == "no-cache"
+                    assert response.headers["cache-control"] == "no-store"
+                    assert response.headers["referrer-policy"] == "no-referrer"
                     checks += 1
                 assert client.get("/assets/missing.js").status_code == 404
                 checks += 1
