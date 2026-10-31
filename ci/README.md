@@ -25,6 +25,9 @@ application endpoints or external delivery. Disposable named volumes are retaine
 removal requires explicit authorization. Container/network cleanup is restricted to the generated test project and labelled
 storage fixture. No paid provider jobs are submitted.
 
+ANY-782 backend checks run unit/API/architecture plus auth, recovery, migration
+and Compose-configuration integration tests, excluding the production
+LLM-worker execution-lane integration tests. Other branches retain full pytest.
 ANY-782 push/PR runs select `smoke-password-recovery.sh` instead of the full stack
 smoke, preserving that task's explicit exclusion of llm-worker. The recovery
 smoke reuses freshly built CI image tags and the frontend/email-worker/Mailpit
