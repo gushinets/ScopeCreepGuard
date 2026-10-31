@@ -52,9 +52,13 @@ def compose(state, *args):
         "deploy/compose.mailpit.yaml",
         *args,
     ]
-    return subprocess.run(
-        command, cwd=ROOT, env=environment, text=True, capture_output=True, check=True
-    ).stdout
+    result = subprocess.run(
+        command, cwd=ROOT, env=environment, text=True, capture_output=True
+    )
+    if result.returncode:
+        # Only this harness's generated synthetic environment is loaded.
+        raise RuntimeError("Synthetic Compose failed:\n" + result.stdout + result.stderr)
+    return result.stdout
 
 
 def start():
@@ -235,7 +239,7 @@ except ClientError as error:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("start", "check", "stop"))
+    parser.add_argument("action", choices=("start", "check", "diagnose", "stop"))
     args = parser.parse_args()
     if args.action == "start":
         start()
@@ -243,6 +247,9 @@ if __name__ == "__main__":
         state = json.loads(STATE.read_text())
         if args.action == "check":
             check(state)
+        elif args.action == "diagnose":
+            print(compose(state, "ps", "--all"))
+            print(compose(state, "logs", "--no-color", "--tail", "100"))
         else:
             print(compose(state, "stop"))
             subprocess.run(
