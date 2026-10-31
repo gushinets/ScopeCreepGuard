@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from pathlib import Path
 
 from sqlalchemy import text
 
@@ -17,7 +18,35 @@ from scope_guard.services.email.recovery_worker import RecoveryWorker
 from scope_guard.services.email.service import EmailService
 
 
+async def serve(worker, database):
+    """Health reports a live email loop and database, never SMTP availability."""
+    marker = Path("/tmp/scope-guard-email-ready")
+    marker.unlink(missing_ok=True)
+
+    async def heartbeat():
+        while True:
+            async with database.engine.connect() as connection:
+                await connection.execute(text("SELECT 1"))
+            marker.touch()
+            await asyncio.sleep(10)
+
+    try:
+        async with asyncio.TaskGroup() as tasks:
+            probe = tasks.create_task(heartbeat())
+
+            async def run():
+                try:
+                    await worker.run()
+                finally:
+                    probe.cancel()
+
+            tasks.create_task(run())
+    finally:
+        marker.unlink(missing_ok=True)
+
+
 async def main():
+    Path("/tmp/scope-guard-email-ready").unlink(missing_ok=True)
     settings = Settings()
     database = create_database(settings)
     if database is None or not settings.auth_secret or not settings.public_app_url:
@@ -32,9 +61,12 @@ async def main():
             await connection.run_sync(verify_password_recovery_schema)
         queue = RecoveryQueue(database.new_uow, settings.auth_secret.get_secret_value())
         tokens = AuthTokenService(lambda: AuthUnitOfWork(database.new_uow()), Passwords())
-        await RecoveryWorker(
-            queue, tokens, EmailService(SMTPSender(settings)), settings.public_app_url
-        ).run()
+        await serve(
+            RecoveryWorker(
+                queue, tokens, EmailService(SMTPSender(settings)), settings.public_app_url
+            ),
+            database,
+        )
     finally:
         await database.engine.dispose()
 
