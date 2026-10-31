@@ -414,6 +414,10 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             SCOPE_GUARD_SILO_ROOT_PASSWORD="synthetic-admin-secret",
         )
         production = config("docker-compose.dokploy.yml")
+        assert json.loads(
+            production["services"]["backend"]["environment"]["SCOPE_GUARD_TRUSTED_PROXY_HOSTS"]
+        ) == ["app"]
+        assert production["services"]["app"]["environment"]["SCOPE_GUARD_EDGE_PROXY_CIDRS"] == ""
         assert set(production["services"]) == APPLICATION_STACK | {"silo", "silo-init"}
         production_source = yaml.safe_load((root / "deploy/docker-compose.dokploy.yml").read_text())
         assert "app" in production_source.get("services", {}), (

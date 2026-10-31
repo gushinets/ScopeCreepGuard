@@ -113,3 +113,113 @@ Tested source revision: `2c3b1e02aee6081261c220839f8ffde4f579b6d0`; no local app
 - Real restart evidence on the preceding source revision: durable pending jobs survived email-worker stop/restart, only a known account received mail, and request alone preserved password/session. Actual authenticated-browser navigation/refresh retained the original signed-in account on public recovery screens. New heartbeat lifecycle reviewed independently; no concrete regression found.
 - Both local owned Compose contours were stopped after evidence capture. Their databases/volumes, the separate private test-storage data, and ignored output evidence are retained. No Docker prune, existing volume reset, main merge or Linear modification occurred.
 - Final PR remains #52 against the agreed integration branch. CI must be read on its latest proposed merge; prior failures and generic-suite runs are not substituted for that result.
+
+## PR #52 availability/security follow-up — 2026-10-31
+
+Preflight: branch/head `codex/any-782-password-recovery` / `206dd7d`, remote identical;
+actual PR base `codex/any-758-email-verification-password-reset` / `1a6d02d` is
+already an ancestor. Preserve the existing stash and untracked Mailpit diagnosis.
+The unrelated full-stack review suggestion conflicts with the explicit prohibition
+on running llm-worker; retain the bounded recovery verification and state its scope.
+
+Fix plan (before implementation):
+1. Add failing behavioral regressions for retained terminal rows, active-budget
+   concurrency/rollback and trusted client-source resolution.
+2. Restrict capacity counts to pending/leased under the existing transaction
+   advisory lock. Keep separate budgets and notification enqueue in the reset UoW.
+   Reuse the existing partial active index (at most 11,000 active rows); no schema
+   change is needed. Order indexed terminal cleanup, 500 rows per pass, seven-day
+   retention. Admission rate ceilings bound historical creation independently of
+   backlog: recovery <=1,000/hour and successful resets <=300/minute, approximately
+   3.2 million terminal rows per seven days at the theoretical maximum. Cleanup
+   runs before each delivery/idle iteration; 500 per pass exceeds maximum admitted
+   throughput even with the 30-second SMTP deadline. Worker outages stop terminal
+   creation and bound unfinished rows; restart resumes expiry cleanup. Operators
+   must monitor storage/worker health and provision for this retention envelope.
+3. Share an async source resolver between confirmation/recovery. Trust only peer
+   IPs obtained from explicitly configured proxy service names/IP literals, with
+   bounded DNS resolution; Compose configures the internal `app` service name so
+   container replacement does not require stable Docker addresses. Default direct
+   API configuration trusts no proxy. Ignore forwarded values from other peers;
+   missing/malformed single-address data falls back to the actual peer. Never log
+   resolved addresses. Uvicorn retains disabled proxy-header rewriting.
+4. Nginx overwrites X-Scope-Guard-Client-IP with $remote_addr. Its optional real-IP
+   configuration trusts only explicit upstream proxy CIDRs; default trusts none.
+   Production path is browser -> Dokploy/Traefik -> app Nginx -> internal backend.
+   Operators must configure the actual isolated Traefik network CIDRs and ensure
+   the edge overwrites forwarding data. No wildcard trust or new backend exposure.
+5. Verify focused PostgreSQL concurrency/capacity/rollback/retention and shared
+   resolver cases; exercise actual Nginx -> backend, RU/EN Mailpit/auth journey,
+   origin/cookies/confirmation, lint/types and current/minimum Compose config.
+   Record fresh revision/image/mount/service evidence separately below, then commit,
+   push this branch, update existing PR #52 and inspect its actual refs and new CI.
+
+### Fresh verification for the two findings (not earlier PR evidence)
+
+Tested source: HEAD `206dd7d0f9e6d6d95c4a965e4c4ced3a7215730d` plus this
+follow-up's local changes: active-only capacity/ordered retention cleanup; shared
+proxy resolver/config; Nginx header/real-IP setup; Docker/Compose/env/docs and
+behavioral regressions. Migration head remains `0011_password_recovery` unchanged.
+
+- Red reproduction: `pytest tests/integration/test_password_recovery.py -k
+  capacity_cleanup` failed at admission after 10,000 retained accepted jobs.
+  Resolver tests initially failed for the absent resolver. Subsequent focused
+  run: 19 passed; expanded run below includes the additional concurrency test.
+- Workspace Python `.venv/Scripts/python.exe`, from backend: `-m pytest tests/unit
+  tests/api tests/architecture tests/integration/test_password_recovery.py
+  tests/integration/test_recovery_limits.py tests/integration/test_auth_tokens.py
+  tests/integration/test_email_confirmation.py tests/integration/test_release_migration.py
+  tests/integration/test_schema_compatibility.py tests/integration/test_migration_lock.py
+  tests/integration/test_compose_startup.py -q -p no:cacheprovider
+  --basetemp=D:/Devpy/ScopeCreepGuard/output/fix52-regressions --require-integration`:
+  **971 passed**, 195.94s. Owned disposable PostgreSQL only. Includes 10,000 retained
+  terminal recovery jobs, 1,000 retained accepted notifications followed by real
+  reset/delivery, mixed pending/leased budgets, concurrent recovery admissions and
+  competing resets at notification capacity, intact losing token/password/session,
+  trigger-induced enqueue rollback and bounded 500-row cleanup. Also existing
+  auth/token/takeover/confirmation, source/global limits, migration/schema gates.
+- `ruff check backend apps/api`, `ruff format --check backend apps/api`: pass.
+  Mypy both default and `--platform win32`: pass (248 files).
+  `scripts/export_openapi.py --check ../ci/contracts/openapi.json`: pass, no API
+  contract change. Frontend `node scripts/api-types.mjs --check`, TypeScript,
+  ESLint and dependency boundaries: pass. `node node_modules/vitest/vitest.mjs run`:
+  **409 tests / 55 files passed**. No new manual browser session claimed here.
+- `scripts/verify_docker_startup.py --config-only`, current Compose **5.6.0** and
+  checksum-verified **2.24.0** via `--compose-binary`: pass, including production
+  parity/internal proxy settings, component closures and migration gating. Config
+  inspection includes llm-worker definitions but never starts/uses that process.
+- Fresh builds using existing contexts/tags, `SOURCE_REVISION=
+  206dd7d0f9e6d6d95c4a965e4c4ced3a7215730d-fix52-dirty`; these labels explicitly
+  identify modified source, not a clean old revision. API/email-worker image:
+  `sha256:85dd707a799d3b373ae8e89e0424a08a2d6c0e8460ac7f8d89b7ff57843f98f3`.
+  Final frontend image:
+  `sha256:d19a03aca5edfba75408516c15daedd888dc4b29a0601030bb7fe6e60a2576d6`.
+  Both freshly built, **zero source mounts**. Initial frontend image `c6634185...`
+  was superseded by the final stricter zero-prefix validation image; the complete
+  contour was repeated after app recreation on the final image.
+- `scripts/verify_react_proxy.py --image scope-guard-frontend:any782`: **23 real-image
+  checks passed**, including spoofed headers discarded, explicit trusted edge
+  real-IP recursion, cookies/Origin, route/error/cache behavior.
+- Existing component conventions with generated synthetic settings, project
+  **scg-any782-91ea6b67b5**: PostgreSQL, one-shot migrate, backend, app, email-worker,
+  pinned Mailpit and existing private S3 test fixture. No llm-worker, LLM requests,
+  full-stack startup, database reset, volume removal or pruning. The local wrapper
+  only redirects the existing harness's output/state to a fresh owned directory.
+  `verify_password_recovery.check` and `check_client_sources` passed on final
+  images: RU/EN Mailpit recovery, non-consuming GET, reset, old session/password
+  rejection, ordinary new-password login and notification. Actual backend and
+  email-worker containers each made 11 requests through Nginx with forged changing
+  headers: each independently received ten 202s then 429. A direct backend client
+  likewise could not spoof its source. App recreation additionally exercised DNS
+  refresh. All owned services/storage stopped afterwards; volumes retained.
+- Independent code review found only the new shell script's Windows line-ending
+  hazard; fixed with `.gitattributes` LF enforcement. Final lint/format checks pass.
+
+Deployment requirement: configure `SCOPE_GUARD_EDGE_PROXY_CIDRS` for the actual
+isolated operator-controlled Traefik network before public rollout; otherwise its
+users safely share the edge quota. Backend DNS proxy names are an explicit trust
+boundary; never share/alias the app identity with untrusted containers. Storage
+must be provisioned/monitored for the documented retention envelope. Mailpit proves
+local acceptance only. These results establish the password-recovery contour,
+not full application-wide readiness. Existing PR remains integration-targeted;
+no aggregate PR or Linear status changes are part of this follow-up.

@@ -626,14 +626,15 @@ SMTP availability is excluded. This also supports `up --wait` on Compose 2.24.
 
 Default admission limits: address cooldown 60s and 3/hour, source 10/minute and
 60/hour, global 100/minute and 1000/hour. Reset attempts: source 30/15 minutes,
-global 300/minute. Unknown addresses count too. The immediate network peer is the
-source; forwarded-IP headers are ignored. Clients behind a common proxy/NAT share
-the source limit. Do not enable Uvicorn proxy headers without a separate reviewed
-trusted-proxy design. PostgreSQL windows and HMAC keys are bounded to 50,000
+global 300/minute. Unknown addresses count too. Compose trusts only the immediate
+peer resolved from the internal `app` service (see [proxy configuration](deploy/proxy/README.md));
+Nginx overwrites the dedicated client-address header. Direct API access ignores
+forwarding headers unless its peer is explicitly configured as trusted. Uvicorn
+proxy rewriting stays disabled. PostgreSQL windows and HMAC keys are bounded to 50,000
 records; no arbitrary new keys are inserted after global rejection.
 
-Queue caps are 10,000 recovery jobs and a separate 1,000 notification jobs,
-including completed rows pending cleanup. At notification capacity, reset returns
+Backlog caps are 10,000 recovery jobs and a separate 1,000 notification jobs,
+counting only pending/leased jobs, never retained terminal rows. At notification capacity, reset returns
 `503` and rolls back. Claims use `SKIP LOCKED`, a 120s lease and ownership fencing.
 SMTP has a 30s worker deadline and no open transaction. Temporary/ambiguous
 failures have at most five attempts, with 1/5/15/60 minute delays plus 0–10s jitter.
@@ -645,7 +646,15 @@ Recovery jobs expire 24h after admission; issued tokens have the existing 24h TT
 Pre-reset jobs cannot mint post-reset links. An already prepared email can arrive
 late with an invalid token. Cleanup runs in batches of 500: terminal jobs after
 seven days, obsolete limit windows after 24h, expired reset tokens after seven
-days. Worker outage cannot exceed queue/key caps, but can cause `429`/`503` once
+days. Historical storage is bounded by retention and independent admission rates:
+at the theoretical global maximum, allow roughly 3.2 million terminal rows for
+seven days, plus active backlog and cleanup lag. The partial active index bounds
+capacity scans to 11,000 unfinished jobs. The terminal timestamp index supports
+oldest-first cleanup of 500 per iteration, exceeding admitted throughput even at
+the 30s SMTP deadline. Monitor worker health, cleanup lag and database disk space.
+Stopped workers create no terminal rows and resume cleanup on restart. No published
+migration is changed or new migration required.
+Worker outage cannot exceed active backlog/key caps, but can cause `429`/`503` once
 capacity is exhausted. Notification delivery failure never reverses a committed
 password change. Monitor safe `email_job_result`/infrastructure events and failed
 jobs; no body, token, password or SMTP credentials are logged.

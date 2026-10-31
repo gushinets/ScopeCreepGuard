@@ -18,6 +18,19 @@ class Settings(BaseSettings):
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     allowed_origins: tuple[str, ...] = ()
+    trusted_proxy_hosts: tuple[str, ...] = ()
+
+    @field_validator("trusted_proxy_hosts")
+    @classmethod
+    def validate_proxy_hosts(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        import re
+
+        if len(values) > 8 or any(
+            not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.:-]{0,252}", value) for value in values
+        ):
+            raise ValueError("invalid_trusted_proxy_hosts")
+        return values
+
     auth_secret: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("SCOPE_GUARD_AUTH_SECRET", "AUTH_SECRET")
     )

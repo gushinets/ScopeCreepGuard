@@ -16,7 +16,7 @@ from verify_any641_runtime import docker
 
 
 @contextmanager
-def static_image(image, upstream):
+def static_image(image, upstream, edge=""):
     token = uuid4().hex
     identifier = docker(
         "run",
@@ -26,6 +26,8 @@ def static_image(image, upstream):
         "scope-guard.disposable=" + token,
         "-e",
         "SCOPE_GUARD_API_ORIGIN=" + upstream,
+        "-e",
+        "SCOPE_GUARD_EDGE_PROXY_CIDRS=" + edge,
         *([] if os.name == "nt" else ["--add-host", "host.docker.internal:host-gateway"]),
         "-p",
         "127.0.0.1::3000",
@@ -177,9 +179,14 @@ def main():
                             "Idempotency-Key": "same-key",
                             "Authorization": "ignored",
                             "X-Forwarded-Host": "evil.test",
+                            "X-Forwarded-For": "203.0.113.99",
+                            "X-Scope-Guard-Client-IP": "198.51.100.99",
                         },
                     )
                     sent_method, sent_path, headers, body = calls[-1]
+                    real_peer = headers["X-Scope-Guard-Client-IP"]
+                    assert real_peer not in ("203.0.113.99", "198.51.100.99")
+                    assert "X-Forwarded-For" not in headers
                     assert (sent_method, sent_path, body) == (
                         method,
                         path,
@@ -241,6 +248,22 @@ def main():
                 downstream.shutdown(socket.SHUT_RDWR)
                 downstream.close()
                 assert cancelled.wait(5), "Client cancellation did not close the upstream request"
+                checks += 1
+        # The host acts as an explicitly trusted edge for this separate instance.
+        # Nginx must choose the last untrusted hop, never the caller's first entry.
+        with static_image(
+            args.image, "http://host.docker.internal:" + str(server.server_port), edge=real_peer
+        ) as (origin, _):
+            with httpx.Client(base_url=origin, trust_env=False) as client:
+                client.get(
+                    "/api/edge",
+                    headers={
+                        "X-Forwarded-For": "203.0.113.99, 198.51.100.7",
+                        "X-Scope-Guard-Client-IP": "192.0.2.99",
+                    },
+                )
+                assert calls[-1][2]["X-Scope-Guard-Client-IP"] == "198.51.100.7"
+                assert "X-Forwarded-For" not in calls[-1][2]
                 checks += 1
     finally:
         server.shutdown()
