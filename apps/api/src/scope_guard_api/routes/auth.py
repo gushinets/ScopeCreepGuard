@@ -11,6 +11,7 @@ from scope_guard.services.auth.use_cases import AuthError, AuthService
 from starlette.responses import JSONResponse
 
 from scope_guard_api import bootstrap
+from scope_guard_api.client_source import client_source
 from scope_guard_api.contracts import (
     AuthResponse,
     EmailConfirmationResponse,
@@ -78,7 +79,7 @@ async def register(request: Request, service: AuthDependency):
     if user.get("workspaceAccess") == "email_confirmation_required":
         try:
             state = await bootstrap.confirmation_service(request).send(
-                user, language, source(request)
+                user, language, await source(request)
             )
         except ResendLimited as error:
             state = {"status": "not_attempted", "retryAfter": error.retry_after}
@@ -139,10 +140,8 @@ def locale(body: dict) -> str:
     return value
 
 
-def source(request: Request) -> str:
-    # Uvicorn proxy header handling is disabled by deployment; only the direct
-    # peer is trusted. Shared proxy/NAT sources intentionally share this limit.
-    address = request.client.host if request.client else "unknown"
+async def source(request: Request) -> str:
+    address = await client_source(request)
     secret = request.app.state.settings.auth_secret
     key = secret.get_secret_value() if secret else ""
     return hmac.new(
@@ -155,7 +154,7 @@ async def identity_response(request: Request, user: dict) -> dict:
     if user.get("workspaceAccess") == "email_confirmation_required":
         response["emailConfirmation"] = await bootstrap.confirmation_service(
             request
-        ).attempts.status(UUID(user["id"]), source(request))
+        ).attempts.status(UUID(user["id"]), await source(request))
     return response
 
 
@@ -183,7 +182,9 @@ async def resend(request: Request, service: AuthDependency):
     user = await service.me(request.cookies.get(SESSION_COOKIE_NAME))
     language = locale(await read_json_object(request))
     try:
-        state = await bootstrap.confirmation_service(request).send(user, language, source(request))
+        state = await bootstrap.confirmation_service(request).send(
+            user, language, await source(request)
+        )
     except ResendLimited as error:
         return JSONResponse(
             {"error": error.code},

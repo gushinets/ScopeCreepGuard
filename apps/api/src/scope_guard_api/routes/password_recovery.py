@@ -11,6 +11,7 @@ from scope_guard.domain.auth.tokens import InvalidAuthToken
 from scope_guard.domain.auth.validation import AuthError, credentials
 from starlette.responses import JSONResponse
 
+from scope_guard_api.client_source import client_source
 from scope_guard_api.contracts import ErrorResponse, OkResponse
 from scope_guard_api.dependencies import recovery_service
 from scope_guard_api.routes.auth import locale
@@ -32,11 +33,6 @@ async def body(request):
     if not isinstance(value, dict):
         raise AuthError("errors.requestBodyInvalid", 400)
     return value
-
-
-def source(request):
-    # Deployment disables proxy headers; shared proxies intentionally share limits.
-    return request.client.host if request.client else "unknown"
 
 
 def failure(error):
@@ -93,7 +89,7 @@ async def request_recovery(request: Request):
     try:
         if not request.app.state.settings.public_app_url:
             raise RecoveryUnavailable()
-        await recovery_service(request).request(email, language, source(request))
+        await recovery_service(request).request(email, language, await client_source(request))
     except (RecoveryLimited, RecoveryUnavailable, TimeoutError) as error:
         return failure(error)
     return JSONResponse({"ok": True}, 202, headers=HEADERS)
@@ -115,7 +111,7 @@ async def request_recovery(request: Request):
 )
 async def reset_password(request: Request):
     try:
-        await recovery_service(request).reset_limit(source(request))
+        await recovery_service(request).reset_limit(await client_source(request))
         value = await body(request)
         language = locale(value)
         try:

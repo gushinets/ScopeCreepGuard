@@ -208,6 +208,47 @@ def check(state):
     )
 
 
+def check_client_sources(state):
+    """Actual Nginx -> Uvicorn -> PostgreSQL, using distinct existing containers."""
+    program = """
+import json, urllib.request, urllib.error, uuid
+statuses=[]
+for i in range(11):
+ request=urllib.request.Request(ORIGIN+'/api/auth/password/request',
+  data=json.dumps({'email':str(uuid.uuid4())+'@example.test'}).encode(),
+  headers={'Content-Type':'application/json',
+   'X-Scope-Guard-Client-IP':'198.51.100.'+str(i+1),
+   'X-Forwarded-For':'203.0.113.'+str(i+1)})
+ try:
+  with urllib.request.urlopen(request, timeout=10) as response:
+   statuses.append(response.status)
+ except urllib.error.HTTPError as error:
+  statuses.append(error.code)
+assert statuses == [202]*10+[429], statuses
+print('PASS independent source quota and forged-header rejection')
+"""
+    # Both calls use app Nginx, but have distinct real network peers. The second
+    # must retain its complete quota after the first has exhausted its own.
+    for service in ("backend", "email-worker"):
+        print(
+            compose(
+                state, "exec", "-T", service, "python", "-c", "ORIGIN='http://app:3000'\n" + program
+            ).strip()
+        )
+    # Direct backend access remains usable and cannot trust caller forwarding.
+    print(
+        compose(
+            state,
+            "exec",
+            "-T",
+            "backend",
+            "python",
+            "-c",
+            "ORIGIN='http://127.0.0.1:8000'\n" + program,
+        ).strip()
+    )
+
+
 def private_storage(state):
     compose(
         state,
@@ -245,6 +286,7 @@ if __name__ == "__main__":
         state = json.loads(STATE.read_text())
         if args.action == "check":
             check(state)
+            check_client_sources(state)
         elif args.action == "diagnose":
             print(compose(state, "ps", "--all"))
             print(compose(state, "logs", "--no-color", "--tail", "100"))

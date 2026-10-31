@@ -41,6 +41,7 @@ services:
     init: true
     environment:
       SCOPE_GUARD_API_ORIGIN: http://backend:8000
+      SCOPE_GUARD_EDGE_PROXY_CIDRS: ${SCOPE_GUARD_EDGE_PROXY_CIDRS:-}
     expose: ['3000']
     restart: unless-stopped
     labels:

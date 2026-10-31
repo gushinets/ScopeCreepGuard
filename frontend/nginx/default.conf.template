@@ -4,6 +4,7 @@ server {
     root /usr/share/nginx/html;
     index index.html;
     server_tokens off;
+    include /tmp/scope-guard-real-ip.conf;
 
     location = /health/live {
         access_log off;
