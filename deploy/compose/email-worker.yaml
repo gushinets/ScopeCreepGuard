@@ -37,4 +37,12 @@ services:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      disable: true
+      test:
+      - CMD
+      - python
+      - -c
+      - from pathlib import Path; import time; assert time.time()-Path('/tmp/scope-guard-email-ready').stat().st_mtime < 60
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 30s
