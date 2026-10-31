@@ -98,3 +98,18 @@ Verification boundary correction: the optional generic full pytest collection in
 Compose runtime compatibility correction: the Linux CI startup failure was reproduced with the already checksum-verified Compose 2.24 binary. All services were running, migrate exited 0, but `up --wait` rejected email-worker with `has no healthcheck configured`. Current Compose 5.6 tolerated the disabled check. Added the established worker-style database/liveness heartbeat and a 60-second marker check, independent of SMTP readiness. Lifecycle tests cover success, worker failure and database failure; all seven health/architecture checks passed after the change. Captured synthetic startup stderr/logs are retained by the harness for future failures. Minimum/current configuration checks passed; real minimum-version runtime verification follows on freshly rebuilt images.
 
 GitHub run 41151178106 at proposed merge ff82db46d9a653353d947aac874f1f2f6cb26da2 passed backend: **959 tests**, Ruff, format (424 files), both mypy platforms and API/PDF checks. Frontend, branch-base and minimum Compose checks also passed. Container failure above was diagnosed rather than ignored. No application schema or migration gate was bypassed.
+
+
+## Final heartbeat-compatible verification
+
+Tested source revision: `2c3b1e02aee6081261c220839f8ffde4f579b6d0`; no local application changes. Subsequent commits only record evidence.
+
+- Fresh API/email-worker image: `sha256:ba3391a1d6c1a2ceb02703a4710c2e27980765be3cf7e7dd4148978bc8201756`.
+- Fresh frontend image: `sha256:05ab61439f233c51058c3e2bce426fc00f1ec96e27979b49e7b12781e09f4ed6`.
+- Both OCI revision labels equal `2c3b1e02aee6081261c220839f8ffde4f579b6d0`. Actual running backend/app/email-worker IDs and labels were inspected, with empty mount lists (no source overlay).
+- Actual Compose **2.24.0 runtime**, not just config: reused the owned synthetic project `scg-any782-02b735dd29`, `up -d --no-build --wait` succeeded after the health fix. PostgreSQL, backend, app, email-worker and Mailpit healthy; migrate exited 0. No schema reset or adoption bypass.
+- Full RU/EN `check` passed on that minimum-version contour: HTTP request → Mailpit → non-consuming GET → reset → revoked old session/password → ordinary new-password login → notification, private synthetic bucket and secret-free tested logs. These application sources are the final sources; the earlier full timing/restart calibration remains applicable to unchanged admission/delivery transactions (heartbeat adds only a SELECT 1 every 10 seconds).
+- Final local bounded suite (all unit/API/architecture plus auth/recovery/migration/schema/Compose config): **962 passed in 179.57s**. Ruff and mypy passed after the heartbeat change. Frontend application sources unchanged from the 409-test/build verification.
+- Real restart evidence on the preceding source revision: durable pending jobs survived email-worker stop/restart, only a known account received mail, and request alone preserved password/session. Actual authenticated-browser navigation/refresh retained the original signed-in account on public recovery screens. New heartbeat lifecycle reviewed independently; no concrete regression found.
+- Both local owned Compose contours were stopped after evidence capture. Their databases/volumes, the separate private test-storage data, and ignored output evidence are retained. No Docker prune, existing volume reset, main merge or Linear modification occurred.
+- Final PR remains #52 against the agreed integration branch. CI must be read on its latest proposed merge; prior failures and generic-suite runs are not substituted for that result.
