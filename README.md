@@ -228,7 +228,7 @@ API требует полный набор настроек. Обработчи�
 
 ```sh
 docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml ps --all
-docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml logs --follow migrate backend app llm-worker export-worker
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml logs --follow migrate backend app llm-worker export-worker email-worker
 docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml down
 ```
 
@@ -316,7 +316,7 @@ Mailpit, а также успешные проверки SMTP и полного 
 ### Миграции и диагностика
 
 ```text
-PostgreSQL healthy → migrate successful → backend / llm-worker / export-worker
+PostgreSQL healthy → migrate successful → backend / llm-worker / export-worker / email-worker
 backend healthy → app
 ```
 
@@ -382,11 +382,11 @@ Compose 2.24 не поддерживает все варианты такого 
 ```sh
 docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml config --quiet
 docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml build
-docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml stop app backend llm-worker export-worker
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml stop app backend llm-worker export-worker email-worker
 docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml up -d --no-build --wait postgres
 docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml up --no-deps --no-build --force-recreate --abort-on-container-exit --exit-code-from migrate migrate
 # Выполняйте следующие команды ТОЛЬКО если миграция завершилась с кодом 0:
-docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml up -d --no-deps --no-build --force-recreate --wait backend llm-worker export-worker
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml up -d --no-deps --no-build --force-recreate --wait backend llm-worker export-worker email-worker
 docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml up -d --no-deps --no-build --force-recreate --wait app
 ```
 
@@ -395,7 +395,7 @@ docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml up -d -
 все приложения перед исправлением и повтором:
 
 ```sh
-docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml stop app backend llm-worker export-worker
+docker compose --env-file .env -p scopecreepguard -f deploy/compose.yaml stop app backend llm-worker export-worker email-worker
 ```
 
 `up --wait` работает в detached-режиме: ошибка готовности одной службы сама по себе
@@ -567,7 +567,9 @@ Success means SMTP acceptance, not confirmed inbox delivery or a read receipt.
 `EmailError.category` is `invalid` (configuration/message), `temporary`
 (connection/4xx), `authentication`, `rejected` (permanent SMTP rejection), or
 `ambiguous` (timeout/disconnection, possibly already accepted). There are no
-automatic retries. Future auth tasks own user-visible resend behavior.
+automatic retries inside the adapter. Password recovery uses the bounded
+PostgreSQL email-worker retry policy described below; confirmation stays on its
+existing delivery path.
 Logs contain only correlation ID, kind, locale, duration and safe outcome category.
 No protocol debugging is enabled. Provider response text is never exposed.
 
@@ -592,3 +594,81 @@ docker compose -p any779-smtp-20261029 -f deploy/compose.mailpit.yaml stop
 This bounded check sends four trusted synthetic messages, reads them through the
 Mailpit API and checks both templates/locales. It does not establish full-stack
 E2E readiness. Keep disposable volumes unless removal is explicitly authorized.
+
+### Password recovery (ANY-782)
+
+The RU/EN sign-in screen links to `/forgot-password`. The public
+`POST /api/auth/password/request` accepts `{email, locale}` and returns the same
+neutral `202 {"ok":true}` for existing/unknown addresses and address suppression.
+It commits PostgreSQL accounting and a delivery job before responding; account
+lookup and SMTP happen only in the dedicated email process. A `503` means the
+request could not be durably accepted. Source/global limits return `429` with
+`Retry-After`, independently of account existence.
+
+Email links use trusted `SCOPE_GUARD_PUBLIC_APP_URL` and a fragment token;
+production requires HTTPS. GET/preview does not consume the link. Explicit
+`POST /api/auth/password/reset` accepts `{userId, token, password, locale}`.
+Reset atomically changes the password, consumes/revokes reset tokens, revokes
+sessions and saves a password-change notification job. It does not confirm email
+or sign the user in. Projects, drafts, history and ownership remain unchanged.
+
+The email process shares the API image and database. Its authoritative definition
+is `deploy/compose/email-worker.yaml`, with component entrypoint
+`deploy/compose.email-worker.yaml`; root/deploy startup includes it. API and worker
+require migration `0011_password_recovery` through the existing one-shot gate.
+Neither changes schemas on startup. Include `email-worker` in maintenance stops
+and post-migration restarts; `scripts/stack.py update` does this automatically.
+SMTP uses existing settings; production Compose also forwards optional
+`SCOPE_GUARD_SMTP_USERNAME`/`SCOPE_GUARD_SMTP_PASSWORD` from the selected environment.
+Mailpit readiness is not a dependency.
+
+Default admission limits: address cooldown 60s and 3/hour, source 10/minute and
+60/hour, global 100/minute and 1000/hour. Reset attempts: source 30/15 minutes,
+global 300/minute. Unknown addresses count too. The immediate network peer is the
+source; forwarded-IP headers are ignored. Clients behind a common proxy/NAT share
+the source limit. Do not enable Uvicorn proxy headers without a separate reviewed
+trusted-proxy design. PostgreSQL windows and HMAC keys are bounded to 50,000
+records; no arbitrary new keys are inserted after global rejection.
+
+Queue caps are 10,000 recovery jobs and a separate 1,000 notification jobs,
+including completed rows pending cleanup. At notification capacity, reset returns
+`503` and rolls back. Claims use `SKIP LOCKED`, a 120s lease and ownership fencing.
+SMTP has a 30s worker deadline and no open transaction. Temporary/ambiguous
+failures have at most five attempts, with 1/5/15/60 minute delays plus 0–10s jitter.
+SMTP acceptance is not inbox delivery. A crash after acceptance can duplicate
+email; retries replace only that job's preceding token. Only the latest attempt's
+link remains valid. No exactly-once delivery is claimed.
+
+Recovery jobs expire 24h after admission; issued tokens have the existing 24h TTL.
+Pre-reset jobs cannot mint post-reset links. An already prepared email can arrive
+late with an invalid token. Cleanup runs in batches of 500: terminal jobs after
+seven days, obsolete limit windows after 24h, expired reset tokens after seven
+days. Worker outage cannot exceed queue/key caps, but can cause `429`/`503` once
+capacity is exhausted. Notification delivery failure never reverses a committed
+password change. Monitor safe `email_job_result`/infrastructure events and failed
+jobs; no body, token, password or SMTP credentials are logged.
+
+Focused verification, from repository root after building API/frontend images
+tagged `scope-guard-api:any782` and `scope-guard-frontend:any782`:
+
+```powershell
+.venv/Scripts/python.exe backend/scripts/verify_password_recovery.py start
+.venv/Scripts/python.exe backend/scripts/verify_password_recovery.py check
+.venv/Scripts/python.exe backend/scripts/benchmark_password_recovery.py
+.venv/Scripts/python.exe backend/scripts/verify_password_recovery.py stop
+```
+
+This harness owns a unique Compose project, synthetic environment and private
+test storage. It combines the frontend, email-worker and Mailpit component
+entrypoints; it never starts `llm-worker`, makes LLM calls or removes volumes.
+State/evidence live under ignored `output/any782`. Keep the ownership record for
+later cleanup; `start` refuses to overwrite it. Timing calibration expires only
+this contour's synthetic limit windows between batches, outside measured HTTP
+requests. It is not a production administration tool. The result proves the
+password-recovery journey, not application-wide readiness or external delivery.
+
+Security rationale follows [OWASP Forgot Password guidance](https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html)
+and the email-code lifetime and notification guidance in
+[NIST account recovery](https://pages.nist.gov/800-63-4/sp800-63b/events/#account-recovery).
+The queue is this application's architectural choice. Full NIST conformance is
+not claimed; email-only recovery cannot protect a compromised mailbox.

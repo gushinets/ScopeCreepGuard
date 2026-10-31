@@ -278,14 +278,15 @@ PROFILE_TABLES = TABLES + (
 
 
 def inspect_profile_schema(
-    connection: Connection, *, auth_tokens=False, email_confirmation=False
+    connection: Connection, *, auth_tokens=False, email_confirmation=False, password_recovery=False
 ) -> dict:
     """Whole managed catalog, including all behavior and immutable guard definitions."""
     actual = inspect_schema(
         connection,
         PROFILE_TABLES
         + (("auth_tokens",) if auth_tokens else ())
-        + (("email_confirmation_attempts",) if email_confirmation else ()),
+        + (("email_confirmation_attempts",) if email_confirmation else ())
+        + (("email_jobs", "recovery_limits") if password_recovery else ()),
     )
     actual["functions"] = [
         dict(row)
@@ -305,12 +306,15 @@ def verify_profile_schema(
     onboarding=False,
     auth_tokens=False,
     email_confirmation=False,
+    password_recovery=False,
 ) -> None:
     verify_managed_schema(connection)
     expected = json.loads(
         Path(__file__)
         .with_name(
-            "0010_email_confirmation_schema.json"
+            "0011_password_recovery_schema.json"
+            if password_recovery
+            else "0010_email_confirmation_schema.json"
             if email_confirmation
             else "0009_auth_tokens_schema.json"
             if auth_tokens
@@ -329,7 +333,10 @@ def verify_profile_schema(
                 )
     differences = compare_schema(
         inspect_profile_schema(
-            connection, auth_tokens=auth_tokens, email_confirmation=email_confirmation
+            connection,
+            auth_tokens=auth_tokens,
+            email_confirmation=email_confirmation,
+            password_recovery=password_recovery,
         ),
         expected,
     )
@@ -346,6 +353,7 @@ def verify_profile_schema(
             - set(PROFILE_TABLES)
             - ({"auth_tokens"} if auth_tokens else set())
             - ({"email_confirmation_attempts"} if email_confirmation else set())
+            - ({"email_jobs", "recovery_limits"} if password_recovery else set())
             - {"alembic_version"}
         )
     )
@@ -358,7 +366,9 @@ def verify_llm_schema(connection: Connection) -> None:
     revisions = (
         connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalars().all()
     )
-    if revisions == ["0010_email_confirmation"]:
+    if revisions == ["0011_password_recovery"]:
+        verify_password_recovery_schema(connection)
+    elif revisions == ["0010_email_confirmation"]:
         verify_email_confirmation_schema(connection)
     elif revisions == ["0009_auth_tokens"]:
         verify_auth_tokens_schema(connection)
@@ -374,7 +384,9 @@ def verify_llm_schema(connection: Connection) -> None:
 
 def verify_nonblocking_schema(connection):
     revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one()
-    if revision == "0010_email_confirmation":
+    if revision == "0011_password_recovery":
+        verify_password_recovery_schema(connection)
+    elif revision == "0010_email_confirmation":
         verify_email_confirmation_schema(connection)
     elif revision == "0009_auth_tokens":
         verify_auth_tokens_schema(connection)
@@ -422,3 +434,12 @@ def verify_email_confirmation_schema(connection):
 
 
 REVISION_VALIDATORS["0010_email_confirmation"] = verify_email_confirmation_schema
+
+
+def verify_password_recovery_schema(connection):
+    verify_profile_schema(
+        connection, auth_tokens=True, email_confirmation=True, password_recovery=True
+    )
+
+
+REVISION_VALIDATORS["0011_password_recovery"] = verify_password_recovery_schema

@@ -45,6 +45,15 @@ class AuthTokenService:
             await work.commit()
         return IssuedAuthToken(raw, expires)
 
+    async def issue_in_work(self, work: AuthTokenWork, user_id: UUID, purpose: Purpose):
+        """Caller owns the user lock and the single commit (queue preparation)."""
+        check_purpose(purpose)
+        raw = secrets.token_urlsafe(32)
+        now = self.clock()
+        expires = now + timedelta(hours=24)
+        await work.tokens.insert(user_id, purpose, digest(raw), now, expires)
+        return IssuedAuthToken(raw, expires)
+
     async def issue_pending_confirmation(self, user_id: UUID) -> IssuedAuthToken:
         raw = secrets.token_urlsafe(32)
         async with self.work() as work:
@@ -72,7 +81,9 @@ class AuthTokenService:
     async def confirm_email(self, user_id: UUID, raw: str) -> None:
         await self._apply(user_id, "verify_email", raw)
 
-    async def reset_password(self, user_id: UUID, raw: str, password: str) -> None:
+    async def reset_password(
+        self, user_id: UUID, raw: str, password: str, locale: str = "en"
+    ) -> None:
         from scope_guard.domain.auth.validation import credentials
 
         # Reuse the current password policy without needing the real user's email.
@@ -80,9 +91,9 @@ class AuthTokenService:
         if not await self.inspect(user_id, "reset_password", raw):
             raise InvalidAuthToken()
         hashed = await self.passwords.hash(password)
-        await self._apply(user_id, "reset_password", raw, hashed)
+        await self._apply(user_id, "reset_password", raw, hashed, locale)
 
-    async def _apply(self, user_id, purpose, raw, hashed=None):
+    async def _apply(self, user_id, purpose, raw, hashed=None, locale="en"):
         async with self.work() as work:
             await work.tokens.lock_user(user_id)
             now = self.clock()
@@ -90,4 +101,6 @@ class AuthTokenService:
             if token_id is None:
                 raise InvalidAuthToken()
             await work.tokens.apply(user_id, purpose, token_id, now, hashed)
+            if purpose == "reset_password":
+                await work.tokens.password_changed(user_id, locale)
             await work.commit()

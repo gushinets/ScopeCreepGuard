@@ -1,0 +1,8 @@
+name: ${COMPOSE_PROJECT_NAME:-scopecreepguard}
+include:
+- path: compose/postgres.yaml
+  project_directory: ..
+- path: compose/migrate.yaml
+  project_directory: ..
+- path: compose/email-worker.yaml
+  project_directory: ..

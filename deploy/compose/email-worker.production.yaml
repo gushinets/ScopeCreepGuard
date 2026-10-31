@@ -1,0 +1,9 @@
+services:
+  email-worker:
+    env_file: !reset []
+    environment:
+      SCOPE_GUARD_DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      SCOPE_GUARD_PRODUCTION: 'true'
+      SCOPE_GUARD_SMTP_USERNAME:
+      SCOPE_GUARD_SMTP_PASSWORD:
+      SCOPE_GUARD_PUBLIC_APP_URL: ${SCOPE_GUARD_PUBLIC_APP_URL:?Public HTTPS application URL required}

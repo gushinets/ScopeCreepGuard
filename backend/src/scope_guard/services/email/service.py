@@ -108,3 +108,26 @@ class EmailService:
         message = self.prepare("password_recovery", recipient, action_url, locale)
         await self.send(message)
         return message
+
+    async def send_password_changed(self, recipient: str, locale) -> EmailMessage:
+        if locale not in ("ru", "en"):
+            raise EmailError("invalid")
+        subject = "Пароль изменён" if locale == "ru" else "Your password was changed"
+        content = (
+            "Пароль вашего аккаунта ScopeCreepGuard изменён. Если это были не вы, "
+            "восстановите пароль на странице входа и обратитесь к администратору сервиса."
+            if locale == "ru"
+            else "Your ScopeCreepGuard account password was changed. If you did not do this, "
+            "recover your password from the sign-in page and contact your service administrator."
+        )
+        message = EmailMessage(
+            recipient,
+            subject,
+            content,
+            f"<p>{escape(content)}</p>",
+            make_msgid(domain="scopecreepguard.local"),
+            "password_changed",
+            locale,
+        )
+        await self.send(message)
+        return message

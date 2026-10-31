@@ -179,6 +179,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                   : t('auth.signIn')}
             </Button>
           </form>
+          {!isRegister && <Link to="/forgot-password" className="mt-5 inline-block text-sm underline">{t('auth.forgotPassword')}</Link>}
 
           <p className="mt-5 text-center text-sm text-muted-foreground">
             {isRegister
