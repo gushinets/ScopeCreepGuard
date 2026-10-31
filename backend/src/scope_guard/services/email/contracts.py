@@ -36,14 +36,18 @@ class EmailMessage:
     text: str
     html: str
     message_id: str
-    kind: Literal["confirmation", "password_recovery"]
+    kind: Literal["confirmation", "password_recovery", "password_changed"]
     locale: Literal["ru", "en"]
 
     def __post_init__(self):
         address(self.recipient)
         header(self.subject)
         header(self.message_id)
-        if self.kind not in ("confirmation", "password_recovery") or self.locale not in (
+        if self.kind not in (
+            "confirmation",
+            "password_recovery",
+            "password_changed",
+        ) or self.locale not in (
             "ru",
             "en",
         ):

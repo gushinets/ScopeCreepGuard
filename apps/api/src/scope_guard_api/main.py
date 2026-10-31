@@ -25,6 +25,7 @@ from scope_guard_api.routes.evaluations import router as evaluations_router
 from scope_guard_api.routes.generation import router as generation_router
 from scope_guard_api.routes.health import router as health_router
 from scope_guard_api.routes.locale import router as locale_router
+from scope_guard_api.routes.password_recovery import router as recovery_router
 from scope_guard_api.routes.profiles import router as profiles_router
 from scope_guard_api.routes.projects import router as projects_router
 from scope_guard_api.routes.technical import router as technical_router
@@ -56,6 +57,7 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     )
     application.include_router(health_router)
     application.include_router(auth_router)
+    application.include_router(recovery_router)
     application.include_router(projects_router)
     application.include_router(generation_router)
     application.include_router(technical_router)

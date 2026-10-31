@@ -15,3 +15,5 @@ include:
   project_directory: .
 - path: deploy/compose/mailpit.yaml
   project_directory: .
+- path: deploy/compose/email-worker.yaml
+  project_directory: .

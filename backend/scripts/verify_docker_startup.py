@@ -16,7 +16,15 @@ from uuid import uuid4
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-APPLICATION_STACK = {"postgres", "migrate", "backend", "app", "llm-worker", "export-worker"}
+APPLICATION_STACK = {
+    "postgres",
+    "migrate",
+    "backend",
+    "app",
+    "llm-worker",
+    "export-worker",
+    "email-worker",
+}
 SERVICES = APPLICATION_STACK | {"mailpit"}
 CLOSURES = {
     "postgres": {"postgres"},
@@ -24,6 +32,7 @@ CLOSURES = {
     "frontend": {"postgres", "migrate", "backend", "app"},
     "llm-worker": {"postgres", "migrate", "llm-worker"},
     "export-worker": {"postgres", "migrate", "export-worker"},
+    "email-worker": {"postgres", "migrate", "email-worker"},
 }
 
 
@@ -603,7 +612,7 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
                 == mounts
             )
             head = sql("SELECT version_num FROM alembic_version")
-            assert head == "0010_email_confirmation"
+            assert head == "0011_password_recovery"
             assert "migration_complete" in logs()
             # Migration may have been rerun as a no-op by later component commands.
             assert "migration_start" in logs()

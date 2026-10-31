@@ -50,6 +50,7 @@ def test_previous_release_upgrade_preserves_rows_and_refuses_downgrade(disposabl
                                 "session_version": 0,
                                 "email_verified_at": None,
                                 "email_verification_required": False,
+                                "password_changed_at": None,
                             },
                         )
                         for (row,) in expected

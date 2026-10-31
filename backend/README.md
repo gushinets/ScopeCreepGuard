@@ -42,3 +42,21 @@ Tests own disposable PostgreSQL/Compose infrastructure. Never select an
 application database or volume for verification. For checks without Docker,
 select tests/unit, tests/api and tests/architecture. Preserve packaged fonts,
 process limits, localized output, idempotency and historical snapshot semantics.
+
+Password recovery uses `python -m scope_guard.email_worker` as an email-only
+process sharing the API image. It requires AUTH_SECRET, PUBLIC_APP_URL, SMTP and
+the same PostgreSQL settings as the API. Startup checks revision
+`0011_password_recovery` and its complete catalog; run the existing migration gate
+before starting it. Confirmation delivery stays unchanged.
+
+`RecoveryQueue` owns admission, claims, leases, completion and bounded cleanup.
+`RecoveryWorker` resolves accounts and prepares hashed tokens in short UoWs,
+then contacts SMTP outside a transaction. All account/token writers lock the user
+first; preparation subsequently locks the leased job. `AuthTokenService` owns the
+sole reset commit, including the password-change notification through its token
+repository on the same session. Do not replace that with an after-commit enqueue.
+
+Recovery integration tests use owned disposable PostgreSQL. `scripts/verify_password_recovery.py`
+and `scripts/benchmark_password_recovery.py` run the documented component contour
+with synthetic settings; see root README for limits, retries, retention,
+operational failure behavior and evidence expectations.

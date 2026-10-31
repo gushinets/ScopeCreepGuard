@@ -7,6 +7,45 @@ def auth_service(request: Request):
     return bootstrap.auth_service(request)
 
 
+def recovery_service(request: Request):
+    from scope_guard.database.repositories.password_recovery import RecoveryQueue
+    from scope_guard.domain.auth.recovery import RecoveryUnavailable
+
+    database = getattr(request.app.state, "database", None)
+    secret = request.app.state.settings.auth_secret
+    if database is None or secret is None:
+        raise RecoveryUnavailable()
+    return RecoveryBoundary(
+        RecoveryQueue(database.new_uow, secret.get_secret_value()),
+        bootstrap.confirmation_service(request).tokens,
+    )
+
+
+class RecoveryBoundary:
+    """Translate infrastructure errors at composition, without leaking provider detail."""
+
+    def __init__(self, queue, tokens):
+        self.queue, self.tokens = queue, tokens
+
+    async def _call(self, operation, *args):
+        from scope_guard.domain.auth.recovery import RecoveryUnavailable
+        from sqlalchemy.exc import SQLAlchemyError
+
+        try:
+            return await operation(*args)
+        except (SQLAlchemyError, TimeoutError):
+            raise RecoveryUnavailable() from None
+
+    async def request(self, *args):
+        return await self._call(self.queue.request, *args)
+
+    async def reset_limit(self, source):
+        return await self._call(self.queue.reset_limit, source)
+
+    async def reset_password(self, *args):
+        return await self._call(self.tokens.reset_password, *args)
+
+
 def profile_service(request: Request):
     return bootstrap.profile_service(request)
 

@@ -78,7 +78,8 @@ class AuthTokens:
             await self.session.execute(
                 text("""
                 UPDATE users SET password_hash=:password_hash,
-                session_version=session_version+1 WHERE id=:user_id
+                session_version=session_version+1,
+                password_changed_at=clock_timestamp() WHERE id=:user_id
             """),
                 {"password_hash": password_hash, "user_id": user_id},
             )
@@ -86,3 +87,15 @@ class AuthTokens:
             text("UPDATE auth_tokens SET used_at=:now WHERE id=:id"), {"now": now, "id": token_id}
         )
         await self.revoke(user_id, purpose, now)
+
+    async def password_changed(self, user_id, locale):
+        from scope_guard.database.repositories.password_recovery import capacity
+
+        await capacity(self.session, "password_changed")
+        await self.session.execute(
+            text("""
+            INSERT INTO email_jobs(purpose,recipient,user_id,locale)
+            SELECT 'password_changed',email,id,:locale FROM users WHERE id=:id
+        """),
+            {"id": user_id, "locale": locale},
+        )

@@ -11,6 +11,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
 class ErrorCode(StrEnum):
+    password_recovery_invalid = "errors.passwordRecoveryInvalid"
+    password_recovery_limited = "errors.passwordRecoveryLimited"
     email_verification_required = "errors.emailVerificationRequired"
     email_confirmation_invalid = "errors.emailConfirmationInvalid"
     email_resend_limited = "errors.emailResendLimited"

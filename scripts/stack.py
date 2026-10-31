@@ -13,6 +13,7 @@ COMPONENTS = {
     "mailpit": "mailpit",
     "llm_worker": "llm-worker",
     "export_worker": "export-worker",
+    "email_worker": "email-worker",
 }
 SERVICES = {
     "front": "app",
@@ -21,8 +22,9 @@ SERVICES = {
     "mailpit": "mailpit",
     "llm_worker": "llm-worker",
     "export_worker": "export-worker",
+    "email_worker": "email-worker",
 }
-APPLICATION_SERVICES = ("app", "backend", "llm-worker", "export-worker")
+APPLICATION_SERVICES = ("app", "backend", "llm-worker", "export-worker", "email-worker")
 
 
 def main():
@@ -92,6 +94,7 @@ def main():
                 "backend",
                 "llm-worker",
                 "export-worker",
+                "email-worker",
             )
             compose("up", "-d", "--no-deps", "--no-build", "--force-recreate", "--wait", "app")
         elif args.action == "up":
