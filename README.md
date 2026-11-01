@@ -296,7 +296,7 @@ docker compose -f deploy/compose.mailpit.yaml up -d
 используют эти файлы и корневой `.env` по умолчанию; доступен компонент `mailpit`.
 
 Mailpit закреплён на официальном `axllent/mailpit:v1.33.0` с проверенным
-manifest digest `sha256:9b3a463be15354c0f0eba91697d80e3e0d8a5623ef0e627cacc836bc17fd5231`.
+index digest `sha256:9b3a463be15354c0f0eba91697d80e3e0d8a5623ef0e627cacc836bc17fd5231`.
 Локальный UI: http://localhost:8025; `MAILPIT_UI_PORT` меняет только порт на
 `127.0.0.1`. SMTP доступен контейнерам в общей сети как `mailpit:1025`, без
 аутентификации и TLS; SMTP не опубликован на хост. API не зависит от готовности
