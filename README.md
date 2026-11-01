@@ -295,8 +295,8 @@ docker compose -f deploy/compose.mailpit.yaml up -d
 и `deploy/silo/` сохранены. Оболочки `scripts/stack.py` / `scripts/dev.ps1`
 используют эти файлы и корневой `.env` по умолчанию; доступен компонент `mailpit`.
 
-Mailpit закреплён на официальном `axllent/mailpit:v1.32.0` с проверенным
-manifest digest `sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498`.
+Mailpit закреплён на официальном `axllent/mailpit:v1.33.0` с проверенным
+manifest digest `sha256:9b3a463be15354c0f0eba91697d80e3e0d8a5623ef0e627cacc836bc17fd5231`.
 Локальный UI: http://localhost:8025; `MAILPIT_UI_PORT` меняет только порт на
 `127.0.0.1`. SMTP доступен контейнерам в общей сети как `mailpit:1025`, без
 аутентификации и TLS; SMTP не опубликован на хост. API не зависит от готовности
@@ -322,7 +322,7 @@ backend healthy → app
 
 Одноразовый `migrate` запускает существующий защищённый Alembic-инструментарий
 из образа API. Цель — единственная head-ревизия миграций в образе выпуска;
-сейчас это `0008_contextual_onboarding`. API и обработчики проверяют совместимость,
+сейчас это `0011_password_recovery`. API и обработчики проверяют совместимость,
 но не меняют схему. Обработчикам не нужен работающий API.
 
 Транзакционная advisory-блокировка PostgreSQL удерживается тем же соединением
@@ -659,10 +659,13 @@ capacity is exhausted. Notification delivery failure never reverses a committed
 password change. Monitor safe `email_job_result`/infrastructure events and failed
 jobs; no body, token, password or SMTP credentials are logged.
 
-Focused verification, from repository root after building API/frontend images
-tagged `scope-guard-api:any782` and `scope-guard-frontend:any782`:
+Focused verification, from repository root with the frozen workspace Python
+dependencies installed. Build the API, frontend and private storage fixture first:
 
 ```powershell
+docker build -f apps/api/Dockerfile --build-arg SOURCE_REVISION=$(git rev-parse HEAD) -t scope-guard-api:any782 .
+docker build --build-arg SOURCE_REVISION=$(git rev-parse HEAD) -t scope-guard-frontend:any782 frontend
+docker build -f backend/tests/integration/storage-server.Dockerfile -t scope-guard-s3-test:release20250422 .
 .venv/Scripts/python.exe backend/scripts/verify_password_recovery.py start
 .venv/Scripts/python.exe backend/scripts/verify_password_recovery.py check
 .venv/Scripts/python.exe backend/scripts/benchmark_password_recovery.py
