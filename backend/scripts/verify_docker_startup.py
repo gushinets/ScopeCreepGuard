@@ -412,8 +412,18 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
             SCOPE_GUARD_PUBLIC_APP_URL="https://synthetic.example.test",
             SCOPE_GUARD_SILO_ROOT_USER="synthetic-admin",
             SCOPE_GUARD_SILO_ROOT_PASSWORD="synthetic-admin-secret",
+            SCOPE_GUARD_SMTP_USERNAME="synthetic@example.test",
+            SCOPE_GUARD_SMTP_PASSWORD="synthetic-smtp-password",
         )
         production = config("docker-compose.dokploy.yml")
+        for service in ("backend", "email-worker"):
+            for key in ("SCOPE_GUARD_SMTP_USERNAME", "SCOPE_GUARD_SMTP_PASSWORD"):
+                assert (
+                    production["services"][service]["environment"].get(key) == environment[key]
+                ), (
+                    service,
+                    key,
+                )
         assert json.loads(
             production["services"]["backend"]["environment"]["SCOPE_GUARD_TRUSTED_PROXY_HOSTS"]
         ) == ["app"]
@@ -449,6 +459,12 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
                         "required": True,
                     }
                 assert definition.get("depends_on", {}) == expected_dependencies
+        environment.pop("SCOPE_GUARD_SMTP_USERNAME")
+        environment.pop("SCOPE_GUARD_SMTP_PASSWORD")
+        anonymous_smtp = config("docker-compose.dokploy.yml")
+        for service in ("backend", "email-worker"):
+            for key in ("SCOPE_GUARD_SMTP_USERNAME", "SCOPE_GUARD_SMTP_PASSWORD"):
+                assert not anonymous_smtp["services"][service]["environment"].get(key)
         for key in (
             "POSTGRES_DB",
             "POSTGRES_USER",
