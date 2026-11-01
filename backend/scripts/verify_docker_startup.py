@@ -464,7 +464,7 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
         anonymous_smtp = config("docker-compose.dokploy.yml")
         for service in ("backend", "email-worker"):
             for key in ("SCOPE_GUARD_SMTP_USERNAME", "SCOPE_GUARD_SMTP_PASSWORD"):
-                assert not anonymous_smtp["services"][service]["environment"].get(key)
+                assert anonymous_smtp["services"][service]["environment"].get(key) is None
         for key in (
             "POSTGRES_DB",
             "POSTGRES_USER",
