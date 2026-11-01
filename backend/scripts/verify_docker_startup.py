@@ -218,6 +218,18 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
         legacy_env_discovery = compose_version == "2.24.0"
         results.append("Compose " + compose_version)
         full = config("compose.yaml")
+        review_flag = "SCOPE_GUARD_LLM_SEMANTIC_REVIEW_ENABLED"
+        assert full["services"]["llm-worker"]["environment"][review_flag] == "false"
+        for review_enabled in ("true", "false"):
+            environment[review_flag] = review_enabled
+            for entry in ("compose.yaml", "compose.llm-worker.yaml"):
+                configured = config(entry)
+                assert (
+                    configured["services"]["llm-worker"]["environment"][review_flag]
+                    == review_enabled
+                )
+                assert "llm-worker" in configured["services"]
+        environment.pop(review_flag)
         assert set(full["services"]) == SERVICES
         assert Path(full["services"]["backend"]["build"]["context"]) == root
         assert Path(full["services"]["app"]["build"]["context"]) == root / "frontend"
@@ -424,6 +436,15 @@ def verify(*, api_image, frontend_image, worker_image, config_only=False, compos
                     service,
                     key,
                 )
+        assert production["services"]["llm-worker"]["environment"][review_flag] == "false"
+        environment[review_flag] = "true"
+        assert (
+            config("docker-compose.dokploy.yml")["services"]["llm-worker"]["environment"][
+                review_flag
+            ]
+            == "true"
+        )
+        environment.pop(review_flag)
         assert json.loads(
             production["services"]["backend"]["environment"]["SCOPE_GUARD_TRUSTED_PROXY_HOSTS"]
         ) == ["app"]

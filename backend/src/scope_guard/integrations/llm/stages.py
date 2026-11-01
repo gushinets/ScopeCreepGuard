@@ -469,8 +469,9 @@ def prompt(stage, facts):
 
 
 class StructuredStageRunner:
-    def __init__(self, gateway, store):
+    def __init__(self, gateway, store, *, semantic_review_enabled=False):
         self.gateway, self.store = gateway, store
+        self.semantic_review_enabled = semantic_review_enabled
 
     async def diagnose(self, operation):
         from scope_guard.integrations.llm.diagnostics import execute_diagnostics

@@ -69,7 +69,7 @@ structure correction; it no longer calls content validators/reviewers as output
 acceptance gates. Existing language/mixed-language, scope, novelty, commitment,
 numeric/unit/currency and schedule checks run from `diagnostics.py` after publication.
 Independent field checks prevent one finding from suppressing translation
-preservation checks on the same candidate. Semantic review remains bounded and
+preservation checks on the same candidate. Optional semantic review remains bounded and
 uses an enumerated field-path schema, the identical prompt list and server check.
 `candidate.text` and `candidate.labels.clientEmail` are invalid reviewer paths;
 they become diagnostic errors, never generator-repair instructions.
@@ -89,6 +89,42 @@ accepted decisions and received candidates are reused; a dispatched review with
 no recoverable output becomes diagnostic_error without another model dispatch.
 Lease/epoch/deadline fences still own every write. Diagnostic code never writes
 user documents, so delayed diagnostics cannot replace edits.
+
+### ANY-764: explicit opt-in (2026-11-01)
+
+Optional internal semantic review of generated output, disabled by default.
+The inspected pre-ANY-764 implementation performed local observations only, despite
+creating unused review slots. `SCOPE_GUARD_LLM_SEMANTIC_REVIEW_ENABLED=false` preserves
+that no-provider default. The existing llm-worker still owns primary generation and
+both lanes; no new service or UI acceptance gate is introduced.
+
+New diagnostic input freezes `semanticReview` opt-in, independent reviewer prompt
+`semantic-review-v1` / schema `semantic-review-v2`, and source-step IDs, output hashes
+and source versions. Primary policy and prompt versions are unchanged. Supported
+review stages are replies, reply, change_order and estimate; analysis stays local.
+Runtime false and missing historical opt-in prevent each new physical dispatch,
+including retries. Turning true does not backfill historical outputs. Accepted
+reviews and received candidates are reused; unknown dispatched output is not replayed.
+
+Existing JSON results distinguish completed_clean, completed_findings,
+skipped_disabled, skipped_budget, unavailable_version and failed, with a reason for
+unknown/provider/output errors. Unsupported stages use skipped_unsupported. Review
+step decisions retain their native decision/violations shape for recovery; outcome
+and provenance summaries live in diagnostic operation results. Local observations
+and terminal skipped/error records use fenced bookkeeping without paid-budget
+requirements. Review calls still use the gateway/ledger's existing bounded allowance.
+Actual cost overruns retain the existing failed ledger/error linkage. No migration
+or new database status is needed; existing expired jobs are not resurrected.
+
+Diagnostic creation uses a savepoint so insertion failure does not undo primary
+publication. No findings modify source output, Draft, History or user edits, and
+diagnostic completion never enqueues another review. Existing provider_calls supply
+requested/actual model, physical-call IDs, usage and costs linked to reviewer steps.
+
+Changing environment requires worker recreation, not hot reload. Build the new
+image, stop/drain all old worker binaries for the deployment, follow the documented
+maintenance/migration gate, then recreate with false initially. Old binaries cannot
+be stopped by the new flag; in-flight requests may finish and incur cost.
 
 Diagnostic jobs are excluded from user-operation outcomes in marketing metrics;
 their provider calls still contribute usage/cost accounting. Findings do not set

@@ -9,7 +9,13 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model
 from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
-from scope_guard.domain.llm.runtime import PROMPT_VERSION, GatewayFailure, digest, encode
+from scope_guard.domain.llm.runtime import (
+    REVIEW_PROMPT_VERSION,
+    REVIEW_SCHEMA_VERSION,
+    GatewayFailure,
+    digest,
+    encode,
+)
 from scope_guard.integrations.llm.prompts.workflow_v2 import stage_source
 from scope_guard.integrations.llm.pydanticai_model import GatewayResponsesModel
 
@@ -238,8 +244,8 @@ class SemanticReviewer:
         )
         if (
             not record
-            or record["prompt_version"] != PROMPT_VERSION
-            or record["schema_version"] != "stage-v1"
+            or record["prompt_version"] != REVIEW_PROMPT_VERSION
+            or record["schema_version"] != REVIEW_SCHEMA_VERSION
         ):
             raise GatewayFailure("workflowVersionUnavailable")
         review_binding = replace(

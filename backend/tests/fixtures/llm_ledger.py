@@ -2,7 +2,11 @@
 
 from uuid import uuid4
 
-from scope_guard.domain.llm.runtime import PROMPT_VERSION, GatewayFailure
+from scope_guard.domain.llm.runtime import (
+    REVIEW_PROMPT_VERSION,
+    REVIEW_SCHEMA_VERSION,
+    GatewayFailure,
+)
 
 APPROVED = {"decision": "accept", "violations": []}
 
@@ -26,8 +30,8 @@ class ReviewLedger:
                 "transport_attempt": 0,
                 "candidate": None,
                 "prepared_request": None,
-                "prompt_version": PROMPT_VERSION,
-                "schema_version": "stage-v1",
+                "prompt_version": REVIEW_PROMPT_VERSION,
+                "schema_version": REVIEW_SCHEMA_VERSION,
                 "accepted_result": None,
                 "input_hash": None,
             },

@@ -155,6 +155,7 @@ def test_production_main_keeps_user_lane_available(disposable_url, monkeypatch, 
             lambda: SimpleNamespace(
                 worker_role="llm",
                 llm_workflow=True,
+                llm_semantic_review_enabled=False,
                 workflow_v2=True,
                 openai_api_key=SecretStr("controlled"),
             ),

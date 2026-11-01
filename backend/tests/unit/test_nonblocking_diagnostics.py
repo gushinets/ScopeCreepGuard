@@ -40,6 +40,7 @@ def test_background_diagnostics_keep_local_findings_without_provider_calls(monke
         ),
         freeze_stage=AsyncMock(),
         accept=AsyncMock(),
+        diagnostic_result=AsyncMock(),
         finish_diagnostics=AsyncMock(),
     )
     review = AsyncMock(side_effect=AssertionError("Background diagnostics must stay local"))
@@ -55,11 +56,13 @@ def test_background_diagnostics_keep_local_findings_without_provider_calls(monke
         "frozen_input": {"contract": "diagnostics-v1", "parentId": str(parent_id)},
     }
     asyncio.run(execute_diagnostics(SimpleNamespace(store=store, gateway=None), operation))
-    observations = store.accept.await_args.args[1]["observations"]
+    observations = store.diagnostic_result.await_args.args[1]["observations"]
     assert any(o["field"] == "note" and o["outcome"] == "finding" for o in observations)
     assert all(o["rule"] != "semantic_review" for o in observations)
     review.assert_not_awaited()
-    store.finish_diagnostics.assert_awaited_once_with(operation)
+    assert (
+        store.finish_diagnostics.await_args.args[1]["reviews"][0]["outcome"] == "skipped_disabled"
+    )
 
 
 @pytest.mark.parametrize(
