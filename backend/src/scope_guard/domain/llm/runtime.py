@@ -6,6 +6,10 @@ from decimal import Decimal
 from uuid import UUID
 
 PROMPT_VERSION = "workflow-v12-bounded-regeneration-similarity"
+REVIEW_PROMPT_VERSION = "semantic-review-v1"
+REVIEW_SCHEMA_VERSION = "semantic-review-v2"
+LOCAL_DIAGNOSTIC_VERSION = "content-diagnostics-v1"
+REVIEW_STAGES = frozenset({"replies", "reply", "change_order", "estimate"})
 
 
 def encode(value):

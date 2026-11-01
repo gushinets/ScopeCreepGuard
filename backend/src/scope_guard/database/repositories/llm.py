@@ -1,6 +1,7 @@
 """Short independent transactions for execution, fencing, and attempt accounting."""
 
 import json
+import logging
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
@@ -11,7 +12,16 @@ from sqlalchemy.exc import DBAPIError
 
 from scope_guard.database.repositories.activity import llm_event, profiles_supported
 from scope_guard.domain.drafts.workflow import WorkflowError
-from scope_guard.domain.llm.runtime import PROMPT_VERSION, GatewayFailure, digest, encode
+from scope_guard.domain.llm.runtime import (
+    LOCAL_DIAGNOSTIC_VERSION,
+    PROMPT_VERSION,
+    REVIEW_PROMPT_VERSION,
+    REVIEW_SCHEMA_VERSION,
+    REVIEW_STAGES,
+    GatewayFailure,
+    digest,
+    encode,
+)
 
 
 async def one(work, sql, parameters=None):
@@ -20,8 +30,9 @@ async def one(work, sql, parameters=None):
 
 
 class LlmSQLStore:
-    def __init__(self, factory):
+    def __init__(self, factory, *, semantic_review_enabled=False):
         self.factory = factory
+        self.semantic_review_enabled = semantic_review_enabled
 
     @staticmethod
     def is_transient(error):
@@ -169,11 +180,28 @@ class LlmSQLStore:
     async def reserve(self, request, transport_attempt):
         async with self.factory() as work:
             operation = await self.owned(work, request.binding)
+            if operation["kind"] == "diagnostic":
+                config = operation["frozen_input"].get("semanticReview") or {}
+                if not self.semantic_review_enabled or not config.get("enabled"):
+                    raise GatewayFailure("diagnosticReviewDisabled")
+                if (
+                    config.get("promptVersion") != REVIEW_PROMPT_VERSION
+                    or config.get("schemaVersion") != REVIEW_SCHEMA_VERSION
+                ):
+                    raise GatewayFailure("workflowVersionUnavailable")
             step = await one(
                 work,
                 "SELECT * FROM llm_steps WHERE id=:step AND operation_id=:op FOR UPDATE",
                 {"step": request.binding.step_id, "op": operation["id"]},
             )
+            if operation["kind"] == "diagnostic" and (
+                not step
+                or step["prompt_version"] != REVIEW_PROMPT_VERSION
+                or step["schema_version"] != REVIEW_SCHEMA_VERSION
+                or step["stage_key"] not in {stage + "_review_1" for stage in REVIEW_STAGES}
+                or request.semantic_attempt != 1
+            ):
+                raise GatewayFailure("workflowVersionUnavailable")
             if not step or step["status"] == "accepted" or request.semantic_attempt > 3:
                 raise GatewayFailure("semanticAttemptsExhausted")
             if (request.semantic_attempt, transport_attempt) not in (
@@ -466,7 +494,22 @@ class LlmSQLStore:
             work.session.info["marketing_metrics_dirty"] = True
             await work.commit()
 
-    async def finish_diagnostics(self, operation):
+    async def diagnostic_result(self, binding, value):
+        """Fenced local bookkeeping needs no remaining provider allowance."""
+        async with self.factory() as work:
+            operation = await self.owned(work, binding)
+            if operation["kind"] != "diagnostic":
+                raise GatewayFailure("diagnosticOperationRequired")
+            await work.session.execute(
+                text(
+                    "UPDATE llm_steps SET status='accepted',accepted_result=CAST(:result AS jsonb) "
+                    "WHERE id=:step AND operation_id=:op AND status<>'accepted'"
+                ),
+                {"step": binding.step_id, "op": binding.operation_id, "result": encode(value)},
+            )
+            await work.commit()
+
+    async def finish_diagnostics(self, operation, result=None):
         async with self.factory() as work:
             await self.owned(
                 work,
@@ -474,10 +517,14 @@ class LlmSQLStore:
             )
             await work.session.execute(
                 text(
-                    "UPDATE llm_operations SET status='succeeded',result='{}'::jsonb,"
+                    "UPDATE llm_operations SET status='succeeded',result=CAST(:result AS jsonb),"
                     "finished_at=now(),lease_expires_at=NULL WHERE id=:id AND epoch=:epoch"
                 ),
-                {"id": operation["id"], "epoch": operation["epoch"]},
+                {
+                    "id": operation["id"],
+                    "epoch": operation["epoch"],
+                    "result": encode(result or {}),
+                },
             )
             await work.commit()
 
@@ -588,7 +635,7 @@ class LlmTransactionRepository:
             )
         return row
 
-    async def publish(self, operation, envelope):
+    async def publish(self, operation, envelope, *, semantic_review_enabled=False):
         await self.fence(operation)
         await self.session.execute(
             text(
@@ -601,7 +648,13 @@ class LlmTransactionRepository:
         )
         await llm_event(self.session, operation, "completed", envelope)
         if operation["kind"] != "diagnostic":
-            await self.enqueue_diagnostics(operation)
+            try:
+                async with self.session.begin_nested():
+                    await self.enqueue_diagnostics(
+                        operation, semantic_review_enabled=semantic_review_enabled
+                    )
+            except Exception:
+                logging.getLogger("scope_guard").error("llm_diagnostics_enqueue_failed")
 
     async def active_agreement(self, owner, draft):
         return await one(
@@ -620,7 +673,7 @@ class LlmTransactionRepository:
             {"id": operation["id"], "result": encode(envelope)},
         )
 
-    async def enqueue_diagnostics(self, operation):
+    async def enqueue_diagnostics(self, operation, *, semantic_review_enabled=False):
         # Same commit as user publication; replay cannot create another review job.
         parent = await one(
             self, "SELECT * FROM llm_operations WHERE id=:id", {"id": operation["id"]}
@@ -629,14 +682,14 @@ class LlmTransactionRepository:
             (
                 await self.session.execute(
                     text(
-                        "SELECT stage_key FROM llm_steps WHERE operation_id=:id AND "
+                        "SELECT * FROM llm_steps WHERE operation_id=:id AND "
                         "status='accepted' "
                         "ORDER BY stage_key"
                     ),
                     {"id": operation["id"]},
                 )
             )
-            .scalars()
+            .mappings()
             .all()
         )
         timestamp = datetime.now(UTC)
@@ -644,11 +697,29 @@ class LlmTransactionRepository:
         policy["maxCost"] = str(
             max(Decimal(0), Decimal(policy["maxCost"]) - parent["spent"] - parent["reserved"])
         )
-        review_calls = 2 * sum(stage != "analysis" for stage in stages)
+        review_calls = (
+            2 * sum(s["stage_key"] in REVIEW_STAGES for s in stages)
+            if semantic_review_enabled
+            else 0
+        )
         policy["maxCalls"] = min(
             review_calls, max(0, policy["maxCalls"] - parent["physical_calls"])
         )
         frozen = {"parentId": str(parent["id"]), "contract": "diagnostics-v1"}
+        frozen["semanticReview"] = {
+            "enabled": semantic_review_enabled,
+            "promptVersion": REVIEW_PROMPT_VERSION,
+            "schemaVersion": REVIEW_SCHEMA_VERSION,
+            "sources": {
+                s["stage_key"]: {
+                    "stepId": str(s["id"]),
+                    "outputHash": digest(s["accepted_result"]),
+                    "promptVersion": s["prompt_version"],
+                    "schemaVersion": s["schema_version"],
+                }
+                for s in stages
+            },
+        }
         command = uuid5(
             UUID("66366366-3663-4663-8663-663663663663"), str(parent["id"]) + ":diagnostics"
         )
@@ -673,7 +744,13 @@ class LlmTransactionRepository:
             await self.insert(
                 values,
                 tuple(
-                    key for stage in stages for key in (stage + "_diagnostic", stage + "_review_1")
+                    key
+                    for source in stages
+                    for key in (
+                        (source["stage_key"] + "_diagnostic", source["stage_key"] + "_review_1")
+                        if semantic_review_enabled and source["stage_key"] in REVIEW_STAGES
+                        else (source["stage_key"] + "_diagnostic",)
+                    )
                 ),
             )
 
@@ -703,13 +780,20 @@ class LlmTransactionRepository:
                     "INSERT INTO llm_steps(operation_id,stage_key, "
                     "input_hash,prompt_version,schema_version) "
                     "VALUES(:op,:stage,:hash,:prompt, "
-                    "'stage-v1')"
+                    ":schema)"
                 ),
                 {
                     "op": row["id"],
                     "stage": stage,
                     "hash": values["input_hash"],
-                    "prompt": PROMPT_VERSION,
+                    "prompt": REVIEW_PROMPT_VERSION
+                    if row["kind"] == "diagnostic" and "_review_" in stage
+                    else LOCAL_DIAGNOSTIC_VERSION
+                    if row["kind"] == "diagnostic"
+                    else PROMPT_VERSION,
+                    "schema": REVIEW_SCHEMA_VERSION
+                    if row["kind"] == "diagnostic" and "_review_" in stage
+                    else "stage-v1",
                 },
             )
         if row["kind"] not in ("check", "estimate"):

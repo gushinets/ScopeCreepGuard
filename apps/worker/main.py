@@ -62,12 +62,19 @@ async def main():
 
         if not settings.llm_workflow or not settings.workflow_v2 or not settings.openai_api_key:
             raise RuntimeError("LLM worker requires workflow flags and provider configuration")
-        store = LlmSQLStore(database.new_uow)
+        store = LlmSQLStore(
+            database.new_uow, semantic_review_enabled=settings.llm_semantic_review_enabled
+        )
         adapter = LiteLLMResponsesAdapter(settings.openai_api_key.get_secret_value())
         worker = LlmWorker(
             lambda: WorkflowUnitOfWork(database.new_uow()),
             store,
-            StructuredStageRunner(ProviderGateway(store, adapter), store),
+            StructuredStageRunner(
+                ProviderGateway(store, adapter),
+                store,
+                semantic_review_enabled=settings.llm_semantic_review_enabled,
+            ),
+            semantic_review_enabled=settings.llm_semantic_review_enabled,
         )
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):

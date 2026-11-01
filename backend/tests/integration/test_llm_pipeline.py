@@ -288,9 +288,9 @@ def test_language_matrix_corrections_accounting_and_historical_regeneration(
                 work = await super().__aenter__()
                 publish = work.llm.publish
 
-                async def rollback_publication(*args):
+                async def rollback_publication(*args, **kwargs):
                     nonlocal fault
-                    await publish(*args)
+                    await publish(*args, **kwargs)
                     if fault:
                         fault = False
                         raise OperationalError(

@@ -258,7 +258,9 @@ def test_worker_keeps_accepted_stage_and_publishes_only_after_structured_validat
         record = store.review_slot(
             Binding(operation["id"], uuid4(), 1, "controlled", "medium"), stage, 1
         )
-        record["stage_key"] = stage
+        from scope_guard.domain.llm.runtime import PROMPT_VERSION
+
+        record.update(stage_key=stage, prompt_version=PROMPT_VERSION, schema_version="stage-v1")
 
     class Adapter:
         async def request(self, request, timeout):

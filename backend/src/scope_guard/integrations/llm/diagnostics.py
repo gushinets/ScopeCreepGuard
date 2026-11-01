@@ -15,7 +15,14 @@ from scope_guard.domain.llm.reply_similarity import (
     compare_replies,
     previous_reply,
 )
-from scope_guard.domain.llm.runtime import PROMPT_VERSION, Binding, GatewayFailure, digest
+from scope_guard.domain.llm.runtime import (
+    REVIEW_PROMPT_VERSION,
+    REVIEW_SCHEMA_VERSION,
+    REVIEW_STAGES,
+    Binding,
+    GatewayFailure,
+    digest,
+)
 
 
 class Observation(BaseModel):
@@ -167,10 +174,11 @@ async def execute_diagnostics(runner, operation):
             {k: estimate[k] for k in ("estimatedHours", "additionalCost", "currency")}
         )
     records = {s["stage_key"]: s for s in await store.steps(operation["id"])}
+    reviews = []
     for source in steps:
         stage, candidate = source["stage_key"], source["accepted_result"]
         record = records.get(stage + "_diagnostic")
-        if not record or record["status"] == "accepted":
+        if not record:
             continue
         binding = Binding(
             operation["id"],
@@ -180,18 +188,111 @@ async def execute_diagnostics(runner, operation):
             "medium",
             deadline=operation["deadline_at"],
         )
-        if record["prompt_version"] != PROMPT_VERSION:
-            raise GatewayFailure("workflowVersionUnavailable")
-        await store.freeze_stage(binding, digest({"sourceStep": str(source["id"])}))
-        observations = await asyncio.to_thread(
-            local_observations,
-            binding,
-            stage,
-            candidate,
-            facts,
-            novelty=(source.get("feedback") or {}).get("novelty"),
-        )
-        await store.accept(
-            binding, {"observations": [o.model_dump(mode="json") for o in observations]}
-        )
-    await store.finish_diagnostics(operation)
+        if record["status"] != "accepted":
+            await store.freeze_stage(binding, digest({"sourceStep": str(source["id"])}))
+            observations = await asyncio.to_thread(
+                local_observations,
+                binding,
+                stage,
+                candidate,
+                facts,
+                novelty=(source.get("feedback") or {}).get("novelty"),
+            )
+            await store.diagnostic_result(
+                binding, {"observations": [o.model_dump(mode="json") for o in observations]}
+            )
+        reviews.append(await optional_review(runner, operation, binding, source, facts, records))
+    await store.finish_diagnostics(operation, {"reviews": reviews})
+
+
+async def optional_review(runner, operation, binding, source, facts, records):
+    """Observe frozen output; a review decision never becomes a generation gate."""
+    from dataclasses import replace
+
+    from scope_guard.integrations.llm.semantic_review import SemanticReviewer
+
+    stage = source["stage_key"]
+    config = operation["frozen_input"].get("semanticReview") or {}
+    provenance = {
+        "sourceOperationId": operation["frozen_input"]["parentId"],
+        "sourceStepId": str(source["id"]),
+        "stage": stage,
+        "outputHash": digest(source["accepted_result"]),
+        "sourcePromptVersion": source.get("prompt_version"),
+        "sourceSchemaVersion": source.get("schema_version"),
+        "reviewerPromptVersion": config.get("promptVersion"),
+        "reviewerSchemaVersion": config.get("schemaVersion"),
+        "requestedModel": binding.model,
+    }
+    record = records.get(stage + "_review_1")
+    if record:
+        provenance["reviewStepId"] = str(record["id"])
+        # Accepted decisions/outcomes survive disablement and process restarts.
+        if record["status"] == "accepted":
+            value = record["accepted_result"]
+            if "outcome" in value:
+                return {**provenance, **value}
+            return {**provenance, **review_outcome(value)}
+
+    result = None
+    if stage not in REVIEW_STAGES:
+        result = {"outcome": "skipped_unsupported"}
+    elif not config.get("enabled"):
+        result = {"outcome": "skipped_disabled"}
+    elif (
+        config.get("promptVersion") != REVIEW_PROMPT_VERSION
+        or config.get("schemaVersion") != REVIEW_SCHEMA_VERSION
+        or not record
+        or record["prompt_version"] != REVIEW_PROMPT_VERSION
+        or record["schema_version"] != REVIEW_SCHEMA_VERSION
+        or config.get("sources", {}).get(stage)
+        != {
+            "stepId": str(source["id"]),
+            "outputHash": provenance["outputHash"],
+            "promptVersion": source.get("prompt_version"),
+            "schemaVersion": source.get("schema_version"),
+        }
+    ):
+        result = {"outcome": "unavailable_version"}
+    elif (
+        not record.get("candidate")
+        and not record["semantic_attempt"]
+        and not runner.semantic_review_enabled
+    ):
+        result = {"outcome": "skipped_disabled"}
+
+    if result is None:
+        try:
+            decision = await SemanticReviewer(runner.gateway, runner.store).review(
+                binding, stage, facts, source["accepted_result"], 1
+            )
+            return {**provenance, **review_outcome(decision.model_dump())}
+        except Exception as error:
+            if hasattr(runner.store, "is_transient") and runner.store.is_transient(error):
+                raise
+            code = error.code if isinstance(error, GatewayFailure) else "diagnosticReviewFailed"
+            if code in {"operationLeaseLost", "operationDeadlineExceeded"}:
+                raise
+            result = {
+                "outcome": "skipped_budget"
+                if code == "operationBudgetExceeded"
+                else "skipped_disabled"
+                if code == "diagnosticReviewDisabled"
+                else "unavailable_version"
+                if code == "workflowVersionUnavailable"
+                else "failed",
+                "reason": code,
+            }
+    if record:
+        await runner.store.diagnostic_result(replace(binding, step_id=record["id"]), result)
+    return {**provenance, **result}
+
+
+def review_outcome(decision):
+    from scope_guard.integrations.llm.semantic_review import MESSAGES
+
+    return {
+        "outcome": "completed_clean" if decision["decision"] == "accept" else "completed_findings",
+        "decision": decision["decision"],
+        "findings": [{**v, "feedback": MESSAGES[v["rule"]]} for v in decision["violations"]],
+    }

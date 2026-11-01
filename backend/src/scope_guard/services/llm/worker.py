@@ -28,6 +28,7 @@ class LlmWorker:
         poll_interval=2,
         heartbeat_interval=15,
         shutdown_timeout=30,
+        semantic_review_enabled=False,
     ):
         if min(poll_interval, heartbeat_interval, shutdown_timeout) <= 0:
             raise ValueError("invalid_worker_interval")
@@ -37,6 +38,7 @@ class LlmWorker:
         self.poll_interval = poll_interval
         self.heartbeat_interval = heartbeat_interval
         self.shutdown_timeout = shutdown_timeout
+        self.semantic_review_enabled = semantic_review_enabled
 
     async def process_one(self, *, lane="user"):
         operation = await self.store.claim(self.worker_id, lane=lane)
@@ -352,7 +354,9 @@ class LlmWorker:
                 "applied": applied,
                 "historyEntryId": history["id"],
             }
-            await work.llm.publish(operation, envelope)
+            await work.llm.publish(
+                operation, envelope, semantic_review_enabled=self.semantic_review_enabled
+            )
             await work.commit()
 
     async def publish_document(self, operation, document):
@@ -410,7 +414,9 @@ class LlmWorker:
                 )
                 run = await work.workflow.run(owner, operation["analysis_run_id"])
                 envelope.update(analysisRun=run, applied=True)
-            await work.llm.publish(operation, envelope)
+            await work.llm.publish(
+                operation, envelope, semantic_review_enabled=self.semantic_review_enabled
+            )
             await work.commit()
 
     async def _run_lane(self, lane):

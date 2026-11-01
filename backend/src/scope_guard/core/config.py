@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     production: bool = False
     workflow_v2: bool = False
     llm_workflow: bool = False
+    llm_semantic_review_enabled: bool = False
     worker_role: Literal["exports", "llm"] = "exports"
     llm_max_cost: Decimal = Field(default=Decimal("1.00"), gt=0, le=100)
     llm_input_rate_bound: Decimal | None = Field(default=None, gt=0)
