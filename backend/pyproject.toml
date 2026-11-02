@@ -17,7 +17,7 @@ dependencies = [
   "reportlab>=4.4,<5",
   "sqlalchemy[asyncio]>=2.0,<2.1",
   "litellm==1.89.3",
-  "pydantic-ai-slim==2.2.0",
+  "pydantic-ai-slim==2.53.0",
   "lingua-language-detector==2.1.1",
   "aiosmtplib==5.1.3",
 ]
