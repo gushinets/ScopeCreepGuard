@@ -1,3 +1,51 @@
+# Current result: combined LiteLLM 1.103.10 / PydanticAI 2.64.0
+
+Base/head at start: 686ea1553eeea4e08b2cce191123156313e59c65;
+origin/main dab092029043d08ce93d224cd83080f2de825800 after fetch.
+Branch/check-out unchanged: codex/any-803-llm-dependency-security in authorized ANY-801 worktree.
+Untracked 1.103.10 investigation report and ignored evidence preserved.
+
+Implementation revision: 8c269d221ff96f1c21091db5bdd8bf17ade484ef. 188 focused and 841 expanded tests passed;
+both mypy targets, lint and contracts passed. Official API/worker images built and inspected.
+Full final report: [combined security/compatibility record](../2026-11-02-any-803-pydantic-security.md).
+All seven prepared-schema groups match the prior PydanticAI checkpoint; native was not loaded.
+No integration code change was needed. PR publication/current CI is the remaining delivery step.
+
+Short execution plan (user authorized inline continuation):
+1. [x] Statically assess complete wheel/source alignment, native loading/build/relevance,
+   changed transitive artifacts and a fresh full-graph OSV audit before candidate execution.
+   Stop for unexplained hooks/mismatch or insufficient evidence for native execution.
+2. [x] Pin LiteLLM 1.103.10 and regenerate uv lock only. Retain filelock>=4.2.1 and
+   Slim/Graph 2.64.0, public retry-feedback hook and installed-version tariff attribution.
+3. [x] Disposable synthetic-key/no-provider-egress regression suites: gateway, optional review,
+   tariffs, translation/regeneration/reply similarity, SQL budgets/fencing/restart/publication.
+   Run lint, both mypy targets, contract freshness; build official API/worker images.
+4. Record actual revision, hashes, provenance limits, images/labels, maintenance drain and
+   coordinated rollback; update report and PR #62, commit/push same branch. No merge/Linear writes.
+
+Correction: filelock conflict applies to rejected latest candidate 1.106.6. It does not
+require waiting for all LiteLLM upgrades: 1.103.10 is the authorized intermediate candidate.
+Security and runtime gates below remain binding; historical checkpoints follow.
+
+Security gate before execution: all 2474 wheel Python files match official v1.103.10,
+resolved source commit b3287e3972c7aeb5c8015878a9b035caadf71fb9. Loader imports the
+native extension only inside get_native_bridge; catalog default Responses is PYTHON_ONLY,
+and public dispatch returns through Python without NativeBinding.load. Maturin 1.15.0
+builds a PyO3 abi3-py310 cdylib from crates/python-bridge; its build.rs only adds macOS
+linker flags, and module init registers documented functions/classes. ELF static imports
+are standard libc/libm/libdl/pthread/libgcc/loader; exports are PyInit__native and
+PyInit_pyo3_async_runtimes. No unexplained Python startup hook or source mismatch found.
+
+Wheel/native provenance and binary reproducibility remain unverified (PyPI 404).
+This evidence justifies disposable, credential-free, egress-denied testing of our default
+Python Responses SDK path, not enabling or declaring the native transport verified.
+No native component/flag is removed, patched or overridden. Observe native module/map
+loading in tests; investigate any unexpected load before proceeding further.
+All five changed companion wheels passed PyPI SHA/RECORD, safe paths, no native/startup
+hooks; their PyPI provenance also returned 404. Full graph audit is repeated after lock.
+
+---
+
 # ANY-803: LLM dependency security implementation plan
 
 Date: 2026-11-02. Current status: PydanticAI implementation verified locally; LiteLLM upgrade remains blocked.
