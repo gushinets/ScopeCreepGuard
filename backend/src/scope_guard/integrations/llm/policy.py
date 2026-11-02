@@ -1,6 +1,7 @@
 """Freeze a known local tariff or an explicit conservative operator bound."""
 
 from decimal import Decimal
+from importlib.metadata import version
 
 import litellm
 
@@ -22,7 +23,7 @@ def policy(settings):
         "outputRate": str(Decimal(str(rate_out))) if rate_out is not None else None,
         "priceSource": "operator-conservative-bound"
         if settings.llm_input_rate_bound and settings.llm_output_rate_bound
-        else "litellm-1.89.3-local-tariff",
+        else f"litellm-{version('litellm')}-local-tariff",
         "nativeSchema": True,
         "currency": "USD",
     }
