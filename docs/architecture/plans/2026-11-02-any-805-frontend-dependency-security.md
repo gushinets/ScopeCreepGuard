@@ -61,3 +61,5 @@ Initial audit: 42 High and 6 Critical globally. Provisional installed-tree lint,
 boundaries, types, API freshness, 55 test files / 409 tests and Vite build passed
 on Node 24.19.0; installed tree differed from lockfile. Docker Linux engine was
 unavailable. Frozen Node 22 baseline and final results follow below.
+
+Group 1: PostCSS 8.5.32 resolved through existing parent ranges; pnpm also selected nanoid 3.3.20 and source-map-js 1.2.2 for its children. Retained Next's exact PostCSS 8.5.23. Shared shadcn PostCSS and Next PostCSS children incidentally receive the same safe patch resolutions. Sharp/Next and unrelated children preserved using temporary resolution constraints removed before the final generated lockfile. Frozen install, 55 files/409 tests and build passed on Node 22.23.4; CSS SHA256 A71B7FAC87ED6287D55CA562856932DA6F33E2F6DFBD6EDE26FE0FCA9A1F2BCF unchanged. No persistent override added.
