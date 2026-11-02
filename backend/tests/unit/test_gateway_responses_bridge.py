@@ -155,6 +155,7 @@ def test_native_schema_feedback_reasoning_and_transport_attempts(effort):
             assert body["reasoning"] == {"effort": effort}
             assert body["max_output_tokens"] == 4096
         assert "reply.language" in json.dumps(bodies[1]["input"], ensure_ascii=False)
+        assert "<retry_feedback>" in json.dumps(bodies[1]["input"], ensure_ascii=False)
         preceding = next(
             item["content"] for item in bodies[1]["input"] if item["role"] == "assistant"
         )
@@ -163,6 +164,8 @@ def test_native_schema_feedback_reasoning_and_transport_attempts(effort):
         assert ledger.calls[0]["response"].reported_cost is None
         assert ledger.calls[2]["response"].response_id
         assert len(ledger.candidates) == 2
+        assert "reply.language" in ledger.calls[0]["validation"]["rule"]
+        assert all("validation" not in call for call in ledger.calls[1:])
 
     asyncio.run(exercise())
 
