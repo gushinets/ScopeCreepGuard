@@ -5,6 +5,7 @@ from dataclasses import replace
 from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
+    RetryFeedbackPart,
     RetryPromptPart,
     SystemPromptPart,
     TextPart,
@@ -29,6 +30,29 @@ class GatewayResponsesModel(Model):
         self.gateway, self.binding = gateway, binding
         self.semantic = binding.semantic_start
         self.prepared_request = prepared_request
+        self.retry_feedback = []
+
+    def prepare_messages(self, messages, model_request_parameters=None):
+        # The SDK renders RetryFeedbackPart as user text before request(). Keep
+        # typed feedback for the ledger, while retaining its safe wire rendering.
+        self.retry_feedback = []
+        for message in reversed(messages):
+            if isinstance(message, ModelResponse):
+                break
+            if isinstance(message, ModelRequest):
+                self.retry_feedback.extend(
+                    part for part in message.parts if isinstance(part, RetryFeedbackPart)
+                )
+        return super().prepare_messages(messages, model_request_parameters)
+
+    async def record_feedback(self, part):
+        if isinstance(part.content, list):
+            message = "output.structure: " + "; ".join(
+                ".".join(map(str, e["loc"])) + ": " + e["type"] for e in part.content
+            )
+        else:
+            message = part.content
+        await self.gateway.validation_feedback(self.binding, message)
 
     @property
     def model_name(self):
@@ -61,18 +85,14 @@ class GatewayResponsesModel(Model):
                         )
                     elif isinstance(part, RetryPromptPart):
                         serialized.append({"role": "user", "content": part.model_response()})
-                        if isinstance(part.content, list):
-                            message = "output.structure: " + "; ".join(
-                                ".".join(map(str, e["loc"])) + ": " + e["type"]
-                                for e in part.content
-                            )
-                        else:
-                            message = part.content
-                        await self.gateway.validation_feedback(self.binding, message)
+                        await self.record_feedback(part)
             elif isinstance(message, ModelResponse):
                 for part in message.parts:
                     if isinstance(part, TextPart):
                         serialized.append({"role": "assistant", "content": part.content})
+        feedback, self.retry_feedback = self.retry_feedback, []
+        for part in feedback:
+            await self.record_feedback(part)
         self.semantic += 1
         output = parameters.output_object
         if self.binding.transport_start and self.semantic == self.binding.semantic_start + 1:
