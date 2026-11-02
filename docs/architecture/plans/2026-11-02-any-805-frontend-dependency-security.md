@@ -13,15 +13,15 @@ stash. Preserve three untracked architecture reports and private WORKLOG files.
 
 ## Ordered implementation
 
-- [ ] Establish clean frozen-install baseline with pnpm 10.34.1 and current Node 22.
-- [ ] Group 1: resolve direct/Tailwind PostCSS 8.5.6/19/23/26 to 8.5.32.
-- [ ] Group 2: resolve CSS source-map-js 1.2.1 to 1.2.2 and nanoid 3.3.11/16/18 to 3.3.20.
-- [ ] Group 3: retain jsdom 30.1.1, resolve undici 8.11.2 to 8.12.3.
-- [ ] Group 4: retain ESLint 9 and typescript-eslint; refresh brace-expansion
+- [x] Establish clean frozen-install baseline with pnpm 10.34.1 and current Node 22.
+- [x] Group 1: resolve direct/Tailwind PostCSS 8.5.6/19/23/26 to 8.5.32.
+- [x] Group 2: resolve CSS source-map-js 1.2.1 to 1.2.2 and nanoid 3.3.11/16/18 to 3.3.20.
+- [x] Group 3: retain jsdom 30.1.1, resolve undici 8.11.2 to 8.12.3.
+- [x] Group 4: retain ESLint 9 and typescript-eslint; refresh brace-expansion
   1.1.18 to 1.1.21 and 5.0.6 to 5.0.12 independently, js-yaml 4.3.1 to 4.3.2.
-- [ ] Group 5: retain React Hooks 7.1.1; resolve browserslist 4.28.1 to 4.29.5,
+- [x] Group 5: retain React Hooks 7.1.1; resolve browserslist 4.28.1 to 4.29.5,
   Hooks-specific Zod 3.25.76 to 4.6.7.
-- [ ] Group 6: re-audit paths and address only residual in-scope High/Critical.
+- [x] Group 6: re-audit paths and address only residual in-scope High/Critical.
 
 Use compatible parent ranges before overrides, generated pnpm lockfile edits only,
 and a verified coherent commit per group. Keep Tailwind 4.3.3, ESLint 9,
@@ -69,3 +69,11 @@ Group 2: refreshed remaining css-tree > source-map-js 1.2.1 to 1.2.2; Tailwind n
 Group 3: jsdom retained at 30.1.1, undici refreshed within its declared range from 8.11.2 to 8.12.3. Temporary resolution constraint removed; no permanent override. Node engine requirement aligned with existing jsdom (^22.22.2 || ^24.15.0 || >=26.0.0); tested Node 22.23.4. Frozen install and all 55 files/409 tests passed.
 
 Group 4: ESLint 9.39.5 and typescript-eslint 8.67.0 retained. Compatible brace-expansion 1.1.21/5.0.12 selected independently (2.1.7 unchanged); ESLint eslintrc > js-yaml 4.3.2. pnpm also deduplicated shadcn > cosmiconfig onto the same compatible js-yaml 4.3.2, an incidental shared fix rather than ANY-804 implementation. No permanent overrides. Frozen install, lint/boundaries, types, API freshness and 55 files/409 tests passed.
+
+Group 5: browserslist 4.29.5 selected within existing Babel/Hooks and shared shadcn ranges, including its required browser-data children. Shared Next browser-data resolutions deduplicated compatibly; Next and Sharp versions remain unchanged. Hooks 7.1.1 is the available current parent and accepts Zod 4, but the previous graph selected vulnerable Zod 3. Added only eslint-plugin-react-hooks@7.1.1>zod=4.6.7; remove when an upgraded parent naturally resolves patched Zod. The plugin already imports zod/v4 and zod-validation-error/v4; both schema error formatting and valid/invalid conditional-Hooks lint probes passed. Other Zod3 consumers preserved. Final clean frozen install, lint/boundaries, typecheck, API freshness, 55 files/409 tests and Vite build passed. HTTP contract gate: 20 passed. Existing chunk-size warning remains.
+
+Group 6: final audit 18 High / 6 Critical (baseline 42 High / 6 Critical), exclusively ANY-802/804 paths. Zero assigned High/Critical remain. fast-uri remains exclusively shadcn > MCP > AJV. Zod3 finding now reports shadcn > zod; Hooks path is patched. Auth/project gateway: 15 auth and 14 project checks passed; generation/draft gateway controlled responses, saved fixtures, PUT/reload/dedup and owner isolation passed before final Hooks tooling group. Full-stack final verification is blocked below; these bounded runs do not establish full application readiness.
+
+Final browser: controlled login, project list/new/edit, request results, draft list and agreement screens exercised. Agreement field edit and draft request autosave survived reload using controlled HTTP responses. No paid calls. Baseline/final JS and CSS hashes are identical (JS BABA82D6910440DD1510DE2D5FF40AB957EB3F8E7BDE71B32996F6B33BAEEA6B; CSS A71B7FAC87ED6287D55CA562856932DA6F33E2F6DFBD6EDE26FE0FCA9A1F2BCF). Screenshots retained locally; no product source or configuration adaptation required. Independent whole-branch review: no actionable findings.
+
+Infrastructure limits: Docker became available during verification. Official Compose frontend build passed at lint-group state, with API and worker images freshly built from this checkout; final Hooks dependency Docker rebuild failed with daemon EOF, followed by missing Docker Linux engine. Full lifecycle harness passed configuration traversal then failed at disposable PostgreSQL startup on missing engine. Fixed-source private-storage rebuild separately failed on empty Go module-cache source files; existing exact-tag fixture was inspected, no cache or volume was removed. Final Docker/full-stack success is not claimed. Heavy logs, revision labels/build arguments and image identities remain in ignored output/any-805. Initial Compose build used the default local image tag; subsequent build used task-specific tags. No unrelated running services were stopped or restarted. Final CI and refreshed Dependabot graph must be checked on the proposed merge; combined ANY-802/804 validation remains a follow-up.
