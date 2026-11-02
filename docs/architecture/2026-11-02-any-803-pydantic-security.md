@@ -1,185 +1,197 @@
-# ANY-803: PydanticAI delivery; LiteLLM upgrade blocked
+# ANY-803: combined LiteLLM and PydanticAI security update
 
-Date: 2026-11-02. ANY-803 remains incomplete. No Linear statuses/comments changed.
+Date: 2026-11-02. Implementation ready for review, subject to current PR checks.
+No merge or Linear status/comment changes. This final record supersedes the preliminary
+1.103.10 investigation and earlier Pydantic-only blocker statements; those checkpoints
+remain historical evidence, not the final runtime/security verdict.
 
-## Delivered scope and base
+## Revision and dependency changes
 
-Base: dab092029043d08ce93d224cd83080f2de825800 (fetched origin/main).
-Branch: codex/any-803-llm-dependency-security, retained authorized ANY-801 worktree.
-Final implementation commit: f1c8dfc28bcdf3be3df39bc3e4827d8f6d1cada0.
-Initial dependency/policy checkpoint: 6793788dd1f2b8537101eb04ad06a1c77b731acf.
-Primary checkout, its branch, untracked reports, private environments and unrelated services preserved.
-Plan: plans/2026-11-02-any-803-llm-dependency-security.md.
+Existing branch/check-out: codex/any-803-llm-dependency-security in the authorized ANY-801
+worktree. Main base: dab092029043d08ce93d224cd83080f2de825800.
+PydanticAI checkpoint: 686ea1553eeea4e08b2cce191123156313e59c65 (all five CI jobs passed).
+LiteLLM implementation revision: 8c269d221ff96f1c21091db5bdd8bf17ade484ef.
+Local tests began at that checkpoint plus exactly the manifest/lock delta now committed
+in 8c269d221ff96f1c21091db5bdd8bf17ade484ef; runtime application sources are unchanged in this continuation.
+Later documentation commits do not change the tested runtime tree.
 
-| Dependency | Before | After |
+| Package | Original main | Final combined graph |
 |---|---|---|
-| pydantic-ai-slim | 2.2.0 | 2.64.0 |
-| pydantic-graph | 2.2.0 | 2.64.0 |
+| litellm | 1.89.3 | 1.103.10 |
+| pydantic-ai-slim / pydantic-graph | 2.2.0 / 2.2.0 | 2.64.0 / 2.64.0 |
 | genai-prices | 0.1.11 | 0.2.1 |
-| litellm | 1.89.3 | retained |
-| filelock | 4.2.1 | retained |
+| boto3 / botocore | 1.43.112 / 1.43.112 | 1.43.123 / 1.43.123 |
+| h2 / hpack / hyperframe | absent | 4.4.1 / 4.2.0 / 6.1.0 |
+| filelock | 4.2.1 | 4.2.1 retained |
 | httpx2 / griffelib | 2.13.1 / 2.3.2 | retained |
+| openai / pydantic | 2.43.0 / 2.13.4 | retained |
 
-These are all package-version changes. Minimal Slim installation and no extras retained.
-uv 0.11.19 generated the lock; its revision field normalized 5 -> 3. No edited package metadata/hashes.
-The native bridge adapts the new SDK retry-feedback boundary (details below). Gateway, worker,
-prompts, business workflow and DB schemas remain unchanged. policy.py now derives
-local-tariff priceSource from installed LiteLLM distribution metadata. Operator rate precedence
-and per-operation frozen policy remain intact; stored operations are not repriced.
+These are all package-version changes. LiteLLM requires boto3>=1.43.117, explaining
+its mandatory update and botocore's exact floor. Its httpx[http2] requirement introduces
+the three HTTP/2 packages. No Proxy/CLI/provider/tool extras or unrelated upgrades added.
+uv 0.11.19 generated the lock; no hand-edited hashes/metadata or forced constraints.
+`uv lock --check --no-build --python 3.12` passed. Slim requires Graph exactly 2.64.0.
 
-## Security gate and audit
+The filelock<4 conflict belongs to rejected latest candidate LiteLLM 1.106.6. It does
+not require waiting for every LiteLLM update: official maintenance release 1.103.10
+has no direct filelock constraint and is listed as patched for GHSA-w4c7-34wj-hqm8.
+The requested intermediate version resolves with secure filelock and current PydanticAI.
+Malicious releases 1.82.7, 1.82.8 and 1.107.0 are excluded and were not executed.
 
-LiteLLM latest official stable remains 1.106.6, requiring filelock>=3.16.1,<4.0.
-No corrected stable release was available. Latest satisfying filelock is 3.32.7, with 13
-OSV GHSA findings; GHSA-69hj-f68j-2879 affects all <4 and is fixed in 4.2.1.
-User explicitly chose to retain LiteLLM and secure filelock, independently updating PydanticAI.
-LiteLLM 1.106.6 was not installed/executed. Malicious 1.82.7, 1.82.8, 1.107.0 excluded.
+## Artifact assessment and security verdict
 
-Fresh OSV querybatch covered all 101 registry packages including dev dependencies.
-Only retained LiteLLM matched GHSA-3cv6-jpf6-8222 and GHSA-g5ff-637f-6q2m, plus PYSEC alias.
-They concern authenticated LiteLLM proxy routing and its Vertex credentials transform endpoint.
-This application uses a custom SDK Responses bridge with operator-controlled provider arguments,
-no LiteLLM proxy endpoint/extras. Findings remain reported, not suppressed or called fixed.
-No advisory match for the updated PydanticAI/Graph/genai-prices graph at audit time.
-OSV absence is not proof of benign code or a complete supply-chain audit.
+Selected deployment wheel: litellm-1.103.10-cp310-abi3-manylinux_2_28_x86_64.whl.
+SHA-256: f639bd02ac34869080b7792732336345bc066ffb04be301093090425f6caa2bc.
+Live download hash matched; prior 3414 RECORD checks for these exact bytes were reused.
+No .pth/sitecustomize/usercustomize or unsafe archive paths. All 2474 packaged Python
+files match official tag v1.103.10, resolved commit b3287e3972c7aeb5c8015878a9b035caadf71fb9.
+This source comparison is broader than the three-file preliminary check.
 
-| Wheel | SHA-256 | Provenance result |
-|---|---|---|
-| pydantic_ai_slim-2.64.0 | 63ccfe3f66beefb0a2fb3843d471f9d5b74a432f4436ed5ceb7e0d6bb06cb1e4 | cryptographically verified |
-| pydantic_graph-2.64.0 | 5034949fd78899001b31b819e3fd9357019766d48245f788712bb3a91ccf75a2 | cryptographically verified |
-| genai_prices-0.2.1 | b438753161537f2e2a5c937887721467dd5a24297a52ae77f946f541ce22c3a0 | PyPI 404 |
-| httpx2-2.13.1 | 6dff50fabc270ee5fd25d845d0b078ed20564579744d6d962850975996d2f9a4 | PyPI 404 |
-| griffelib-2.3.2 | 8e710afededd5607f95bf3c8ccc175ee306e7084459faf27b9f9f44ef2a7a274 | PyPI 404 |
+PyPI provenance still returns 404. Neither wheel publisher signature nor native binary
+reproducibility is verified. Docker signatures are not substituted for wheel provenance.
+The bundled litellm/rust_bridge/_native.abi3.so SHA-256 is
+bb002af625edfeb47585743ab6f454cbf0d16514d7c1e29e93e574ca4c10f70c;
+installed bytes in both final runtime images match it.
 
-pypi-attestations 0.0.30 verified both exact Pydantic wheel files with repository constraint
-https://github.com/pydantic/pydantic-ai in a separate disposable trusted-tool container.
-This is cryptographic verification, not merely decoded publisher metadata, and does not prove code benignness.
-All five wheel hashes match PyPI, RECORD hashes verified, no unsafe paths/startup hooks/native libraries.
-All 12 genai-prices Python files matched official v0.2.1 source. Static review inspected transport
-and source-loader/subprocess surfaces in retained httpx2/griffelib. Their missing attestations
-remain explicit limitations; no real credentials were exposed during evaluation.
-For blocked LiteLLM, Linux wheel ec3cae6c87971657c9ae905b6d23aef456e979c8848f22bbc5096a31e1a1da4d
-has 2776 matching Python source files but an independently unverified native library and no
-PyPI provenance (404). The earlier ac74f9ff... hash belongs to macOS x86_64, not Linux.
+Native assessment: reviewed Python loader/configuration/catalog/dispatch/bindings and
+Rust build/module-registration sources. Maturin 1.15.0 builds a PyO3 abi3-py310 cdylib
+from litellm-rust/crates/python-bridge. build.rs only adds macOS linker flags. Source
+module initialization registers documented functions/classes. Static ELF dependencies
+are standard libgcc/libpthread/libm/libdl/libc/loader; exports are PyInit__native and
+PyInit_pyo3_async_runtimes. ELF .init/.init_array exist; their binary implementation and
+Rust transitive compilation are not independently reproduced or certified safe.
 
-## Compatibility evidence and containment
+get_native_bridge imports the extension lazily. The catalog's completed Responses
+path is PYTHON_ONLY, including under configuration overrides; public dispatch returns
+through Python before NativeBinding.load. This is the application's existing SDK path.
+No component is removed/patched, and no Rust-disable override or bypass was introduced.
+The 188-test matrix, expanded unit suite and usage probe observed no native import/map.
+This evidence supports isolated execution and review of this SDK upgrade; it does not
+approve enabling unrelated native/Proxy/OCR routes or assert whole-binary benignness.
 
-No candidate sync into host/primary environments. Only synthetic keys and HTTP providers;
-no real env/home/SSH/cloud mounts or Docker socket in candidate test containers.
-Host orchestrator owns disposable PostgreSQL on internal scg-any803-isolated network,
-with provider/public egress unavailable. No paid calls. Source snapshots contain tracked
-public implementation/test files only, excluding private env/WORKLOG files.
+Fresh OSV querybatch covered all 104 registry package/version pairs in the complete
+runtime/dev workspace lock: zero advisory matches. Previous LiteLLM advisories no longer
+match the selected version. No suppression/ignore list was used. Advisory absence is
+not a complete security or malware guarantee.
 
-Initial baseline comparison used tests/unit/test_gateway_responses_bridge.py,
-tests/unit/test_optional_diagnostic_review.py, tests/integration/test_llm_pipeline.py and
-tests/integration/test_optional_review_sql.py: old SDKs 42 passed, candidate plus tariff tests
-44 passed. Prepared-schema digest sets matched across six schema groups, including four
-semantic-review variants. Baseline used old SDK image plus read-only source overlay; initial
-candidate checks used fresh baked-image application code and current SDKs.
-This narrow matrix was insufficient to establish durable rejection-feedback compatibility.
+Changed companion wheel SHA/RECORD/path/startup-hook inspection passed. All are pure
+Python, with no native libraries or startup hooks. Every packaged Python file matched
+its official tag: boto3 39, botocore 76, h2 12, hpack 8, hyperframe 4. PyPI attestations
+were unavailable (404); source/hash matching is not cryptographic publisher verification.
 
-Expanded tests and first CI found the compatibility gap: PydanticAI 2.64 public
-Model.prepare_messages translates RetryFeedbackPart to safely fenced UserPromptPart before
-request(), bypassing the bridge's legacy RetryPromptPart-only ledger hook. Output correction
-still happened, but durable rejected-call feedback was lost. Initial CI c9b38f0 had 28 failures,
-including seven SQL translation scenarios; its other four CI jobs passed. No tests were weakened.
-
-Minimal fix in GatewayResponsesModel: capture typed feedback after the latest ModelResponse
-before delegating to super().prepare_messages; drain it to the existing gateway feedback hook
-before the next dispatch. SDK attribution/fences and previous rejected output remain intact.
-No private SDK APIs used; no retry ownership, strict schema, tool mode, budgets or pricing changes.
-Earlier feedback is not replayed onto a later rejection. Existing final-attempt handling remains.
-
-RED: strengthened real HTTP bridge assertions failed for medium/high effort on missing durable
-feedback. GREEN: 140 gateway/translation/regeneration/reply-similarity regressions passed.
-Expanded unit/architecture: 841 passed, one Node auth interop test deselected locally because
-Windows pnpm links cannot be loaded by Linux Node. That test remains enabled in full CI.
-Tests used a copied disposable-container filesystem after Windows bind reads intermittently
-returned EINVAL; no product change was made to address test filesystem errors. Storage test
-writes were confined to the disposable filesystem. Independent review found no actionable defects.
-
-| Contract | Preserved result exercised by tests |
+| Changed companion wheel | SHA-256 |
 |---|---|
-| Timeout | 2 gateway-owned transport attempts |
-| Wrong language then 429 | 3 physical requests; (1,1), (2,1), (2,2) |
-| Provider schema rejection | 1 physical request; no fallback/downgrade |
-| Exhausted output corrections | 3 bounded semantic attempts |
-| Native schema | strict; required fields; additionalProperties=false |
-| Correction context | rejected assistant output, feedback and SDK retry fence |
-| Durable feedback | rejection recorded against prior physical call, not transport retry |
-| Usage | missing remains unknown; IDs/token/cost interpretation retained |
-| Review false | no diagnostic provider dispatch |
-| Review true / replay | bounded dispatch; accepted replay does not redispatch |
-| PostgreSQL initial matrix | budgets, actual-cost overruns, fencing, restart, publication isolation |
+| boto3-1.43.123-py3-none-any.whl | d18d66e1e13faa0c25d0b1b8c5ce946e29fb5fc0b6456b655a93a678ff4cc313 |
+| botocore-1.43.123-py3-none-any.whl | e30580f9c1282c321529238ff8ff75066096a2adbd0a293c8ae592c21d1733a3 |
+| h2-4.4.1-py3-none-any.whl | 0e25f1462b23c9cb82d9eb02e28bc706dac2a68cb457c6a0d74d63c8a2a5d0e6 |
+| hpack-4.2.0-py3-none-any.whl | 858ac0b02280fa582b5080d68db0899c62a80375e0e5413a74970c5e518b6986 |
+| hyperframe-6.1.0-py3-none-any.whl | b03380493a519fce58ea5af42e4a42317bf9bd425596f7a0835ffce80f1a42e5 |
 
-Tariff test reproduced the hard-coded-label defect before the fix, then passed; frozen SQL
-policy/restart evidence is separate from the dictionary-copy unit assertion. Ruff check/format
-passed 433 files. Both mypy targets passed 248 source files before the feedback adaptation;
-Linux mypy also passed after it. OpenAPI, frontend API types and 14 synthetic CI config tests passed.
-Post-adaptation local Windows mypy and final 51-test SQL matrix were interrupted by Docker WSL
-failure, not reported as passing. Final matrix printed installed versions and bridge path
-/app/.venv/lib/python3.12/site-packages/scope_guard/integrations/llm/pydanticai_model.py,
-confirming no source overlay, before the interruption.
+Existing Pydantic work is preserved. Exact Slim wheel SHA-256
+63ccfe3f66beefb0a2fb3843d471f9d5b74a432f4436ed5ceb7e0d6bb06cb1e4 and Graph
+5034949fd78899001b31b819e3fd9357019766d48245f788712bb3a91ccf75a2 retain their
+previous pypi-attestations 0.0.30 cryptographic verification constrained to
+https://github.com/pydantic/pydantic-ai. genai-prices/httpx2/griffelib provenance
+limitations from that checkpoint remain; these artifacts are unchanged in this step.
 
-Complete backend suite, both current mypy targets, contracts/PDF checks, frontend, full Compose
-smoke and recovery journeys run in [PR #62 checks](https://github.com/gushinets/ScopeCreepGuard/pull/62/checks)
-on the proposed merged state. Consult that check record for current full-CI outcomes; do not
-substitute the initial 44-test pass for full verification. No disabled or weakened checks.
+## Actual verification
 
-## Fresh runtime images and local infrastructure limits
+Candidate packages were installed only in disposable Docker images using official
+apps/api/Dockerfile and its locked installs. No host/ordinary environment install.
+Trusted host orchestration creates unique, labelled test resources. Behavioral tests
+use synthetic keys and controlled HTTP providers with network none or an internal
+Docker network: no provider egress, real env, personal/cloud/SSH directories, production
+DB, Docker socket or primary checkout mount. Test fixtures and sanitized sources are
+copied into container filesystems. No paid model calls.
 
-Final API/worker builds completed from f1c8dfc and the final frozen lock. A disposable copy of
-the official apps/api/Dockerfile changed only build-time uv concurrency to one for installs,
-downloads and builds after repeated Docker Desktop interruptions. Repository Dockerfile and
-runtime settings are unchanged. Full CI uses the unchanged official Dockerfile.
+188 meaningful regressions passed on installed fresh-image packages (no application
+source overlay): gateway Responses bridge, optional diagnostic review, tariff provenance,
+translation commercial terms, reply similarity, regeneration/review corrections, SQL
+pipeline, optional-review SQL and translation-commercial SQL workflow.
+Expanded unit/architecture: 841 passed, one unrelated Node auth interoperability case
+deselected locally because host Windows pnpm links are not usable by Linux Node; that
+case remains enabled in full repository CI. Counts overlap and are not summed.
+Both suites report native module_loaded=false and mapped=false.
 
-Successful local BuildKit export records (manifest-list digests, not post-build inspect results):
+| Contract | Observed baseline vs updated result |
+|---|---|
+| Timeout | 2 gateway-owned physical transport attempts |
+| Wrong language then 429 | 3 requests: (1,1), (2,1), (2,2) |
+| Provider schema rejection | 1 request; no schema downgrade or unsupported retry |
+| Exhausted corrections | bounded 3 semantic attempts |
+| Strict output | NativeOutput, required fields, additionalProperties=false |
+| Correction context | rejected assistant output plus validator feedback/fence |
+| Rejection persistence | correct rejected physical call; transport retry not mislabelled |
+| Usage | missing remains unknown in authoritative accounting |
+| Diagnostic review off | no additional diagnostic dispatch |
+| Diagnostic review on/replay | bounded dispatch; accepted replay does not redispatch |
+| SQL | budgets, actual overruns, frozen authority, fencing, restart, publication isolation |
 
-- scg-any803-api:final: sha256:9d4ba3fd9c06cf1f546328a3c542e94a73ab786e93cf5d295d1e29eaedde56a6.
-- scg-any803-worker:final: sha256:cae2a5e3c7dd56bb55133ce6ef08ac06c6f031957a53cc3d2f5af83b54b22e49.
-- Config digests: API 87e0317eecd0e752879c3d9bfbe29b6d7f0ee3b9d5d2c6a6f845f25ff089f921;
-  worker 6204f23ec35ef6ff72d804dc019b2f3797b9abcfeaa5377b9a49f21226246eca.
-- Configured SOURCE_REVISION label: f1c8dfc28bcdf3be3df39bc3e4827d8f6d1cada0.
+A separate synthetic HTTP probe compared 1.89.3 vs 1.103.10: actual model, response ID,
+request ID, input/output/cached/reasoning tokens and unknown reported cost were exactly
+equal (37/12/8/3 tokens). LiteLLM's existing encoded response ID format was retained;
+an initial probe assumption that the SDK returns the bare provider ID was disproved by
+the old-version baseline, so no application behavior or existing test was changed.
+Prepared-schema digest sets matched all seven groups against the preceding PydanticAI
+checkpoint. The public PydanticAI prepare_messages feedback fix and installed-version
+priceSource remain unchanged. No extra LLM review/validation calls were introduced.
 
-Final post-build Docker inspect failed because Desktop/WSL became unavailable again; configured
-labels above are not represented as independently inspected metadata. Earlier images at 6793788
-were inspected successfully, but they predate the required bridge fix and are not final acceptance.
-Final checks image installed-version metadata confirmed LiteLLM 1.89.3, filelock 4.2.1 and
-Slim/Graph 2.64.0. Remaining final runtime verification is covered by official-image CI checks.
+Ruff check/format: all 433 backend/API files passed. Linux and win32 mypy: each passed
+248 source files. OpenAPI export freshness and frontend api-types check passed.
+Independent read-only review found no actionable dependency/code issue.
+Full repository CI runs on [PR #62 Checks](https://github.com/gushinets/ScopeCreepGuard/pull/62/checks)
+against the proposed merged state; current outcomes are recorded there rather than
+representing pending jobs as passes. The preceding Pydantic-only head 686ea15 had all
+five CI jobs green before this LiteLLM continuation.
 
-Docker Desktop repeatedly failed with WSL bootstrap 0xc00000fd / unexpected EOF; root cause is
-not established and not attributed to the SDK. The user restored Docker once. No engine restarts,
-volume removals, production DB resets or unrelated-service changes were performed by this task.
-Owned resources, if retained after recovery: scg-any803-isolated network; any803-pg with label
-scope-guard.disposable=any803-pydantic, most recent ID
-7bc50e8e333329c3571cab1f03ab0cc27185e61f2574945628eed9653b717d24.
-Inspect identity/labels before cleanup; do not remove any volume. Final temporary test container
-has label scope-guard.disposable=any803-final; host orchestrator owns cleanup.
+## Fresh official runtime images
 
-## Deployment, unfinished operations and rollback
+Both official API runner and export-worker targets built successfully without Dockerfile
+modifications, bounded-build substitutions or source overlays. Worker image is the shared
+image used by the llm role. Docker inspect confirmed image IDs and revision labels below;
+network-none containers verified exact installed versions and native-file hash.
 
-No DB migration introduced. Follow existing documented maintenance update and one-shot migration gate.
-Before deployment stop new enqueue and drain both user and diagnostic lanes with old images; confirm
-no unfinished operations, active leases or unknown provider outcomes. Do not delete or reinterpret them.
-If draining cannot complete, defer upgrade or retain the compatible old workers for operator resolution.
-This conservative drain remains recommended despite matching fixture schemas. API/workers do not
-mutate schema at startup. ANY-764 stays disabled by default; findings remain internal, not acceptance gates.
+- scg-any803-10310-api:verification: `sha256:8b02c6796fe978f32f54098d5117d4cfabee0a53ca5e5d61f77c7293b69a3fc2`; revision `8c269d221ff96f1c21091db5bdd8bf17ade484ef`.
 
-Deploy application code + manifest + lock + freshly built API/worker images together. Rollback restores
-all four from the previous compatible revision; package-only rollback is not sufficient for policy code.
-Existing operation prices remain frozen. Never reset existing DBs, remove existing volumes or restart
-unrelated services. Full readiness requires all documented services/private storage/Mailpit; bounded
-local SDK/SQL/image checks alone do not establish full application E2E.
+- scg-any803-10310-worker:verification: `sha256:956b43dafae8283fb273421ae544e044b8d82dcd7c7e9dd24dd342a4e535df04`; revision `8c269d221ff96f1c21091db5bdd8bf17ade484ef`.
 
-## Delivery and remaining scope
+These are component build/package checks, not a claim of full application E2E readiness.
+Full readiness additionally needs the documented complete Compose contour, PostgreSQL,
+one-shot migrate, API/app/workers, private test object storage and Mailpit, as exercised
+by the repository CI smoke checks. No migration or deployment architecture changed.
 
-One Pydantic-only PR targets main. Do not close ANY-803: LiteLLM upgrade remains blocked upstream.
-Dependabot #58 (LiteLLM 1.100.4) and #59 (Slim 2.53.0) were already closed without merge, unchanged
-by this task. This delivery supersedes #59's older Slim proposal; #58 is not implemented by it.
-No merge, force-push, PR retarget/closure, or Linear write performed.
+## Maintenance, unfinished operations and coordinated rollback
 
-Sanitized detailed evidence: primary output/any803-pydantic and output/any803-security-gate.
-Sources: https://pypi.org/pypi/litellm/1.106.6/json ; https://pypi.org/pypi/pydantic-ai-slim/2.64.0/json ;
-https://github.com/tox-dev/filelock/security/advisories/GHSA-69hj-f68j-2879 ;
-https://github.com/BerriAI/litellm/security/advisories/GHSA-3cv6-jpf6-8222 ;
-https://github.com/BerriAI/litellm/security/advisories/GHSA-g5ff-637f-6q2m .
+Prepared schemas match tested fixtures and the stored-schema equality guard remains.
+This is not proof for every possible historical payload. Keep the existing conservative
+maintenance sequence: block new enqueue and drain user AND diagnostic lanes using old
+compatible images. Confirm no unfinished operations, active leases or unknown outcomes;
+do not delete rows or silently replay incompatible schemas. If draining cannot finish,
+defer upgrade or retain old compatible workers for operator resolution.
+
+Use the documented README maintenance procedure and existing project name, e.g.
+`python scripts/stack.py update --project scopecreepguard` with the deployment's existing
+env/image arguments. Keep the one-shot migration gate; API/workers never mutate schemas
+at startup. No new DB migration is required for this change. Do not reset databases,
+remove existing volumes, prune Docker or stop unrelated services.
+
+Rollback the LiteLLM step to the complete 686ea15 bundle (manifest + lock + compatible
+PydanticAI application code + matching rebuilt/API-worker images). For a whole-PR rollback
+to main, restore its application code too: package-only PydanticAI downgrade would leave
+an incompatible retry-feedback bridge. Stored operation prices remain frozen in either
+case. No schema downgrade or operation repricing is introduced.
+
+## Delivery, limitations and evidence
+
+Same branch and PR #62 targeting main; no additional branch/worktree, force-push, merge,
+Dependabot edits or Linear writes. The untracked preliminary investigation and unrelated
+reports remain untouched/uncommitted. Ignored evidence is under output/any803-litellm-10310/.
+Native/wheel cryptographic provenance remains the explicit limitation, not an unresolved
+filelock compatibility blocker for the application's tested Python Responses path.
+The latest 1.106.6 candidate remains rejected; 1.103.10 completes the selected intermediate
+upgrade. Existing closed/unmerged Dependabot #58 (older LiteLLM 1.100.4) and #59 (older Slim
+2.53.0) are superseded by this combined PR, not merged or modified.
+
+Sources: [release metadata](https://pypi.org/pypi/litellm/1.103.10/json),
+[official source](https://github.com/BerriAI/litellm/tree/b3287e3972c7aeb5c8015878a9b035caadf71fb9),
+[patched maintenance release advisory](https://github.com/BerriAI/litellm/security/advisories/GHSA-w4c7-34wj-hqm8).
