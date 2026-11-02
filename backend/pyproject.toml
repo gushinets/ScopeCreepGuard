@@ -16,7 +16,7 @@ dependencies = [
   "pypdf>=6.21.4,<7",
   "reportlab>=4.4,<5",
   "sqlalchemy[asyncio]>=2.0,<2.1",
-  "litellm==1.89.3",
+  "litellm==1.103.10",
   "pydantic-ai-slim==2.64.0",
   "lingua-language-detector==2.1.1",
   "aiosmtplib==5.1.3",
