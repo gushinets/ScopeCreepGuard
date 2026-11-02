@@ -2,12 +2,14 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
+from pydantic import Field
 from scope_guard.domain.drafts.values import freeze_object
 from scope_guard.services.documents.models import DocumentError, DocumentSource
 from scope_guard.services.documents.ports import TechnicalError
 from scope_guard.services.documents.rendering import DocumentRendering
 from scope_guard.services.documents.use_cases import DocumentUseCases
 from scope_guard.services.drafts.use_cases import DraftError
+from scope_guard.services.projects.use_cases import ProjectError
 from scope_guard.services.scope_extraction.use_cases import ExtractionService
 from starlette.responses import Response
 
@@ -42,7 +44,11 @@ Extraction = Annotated[ExtractionService, Depends(extraction_service)]
 
 class PreviewBody(WireModel):
     project_id: UUID
-    draft_id: UUID | None = None
+    draft_id: UUID | None = Field(
+        default=None,
+        description="Historical document reference on supported legacy schemas; not a working v2 "
+        "draft ID. Unavailable or unsupported references return 404 errors.draftNotFound.",
+    )
     change_order: DraftEditableChangeOrder
 
 
@@ -111,7 +117,7 @@ async def preview_pdf(request: Request, owner: Owner, documents: Documents, rend
         raise ApiError(ErrorCode.request_body_invalid) from None
     try:
         editor = await documents.preview(UUID(owner["id"]), project, draft, freeze_object(editor))
-    except DraftError as error:
+    except (DraftError, ProjectError) as error:
         raise ApiError(ErrorCode(error.code), error.status) from None
     return await render(request, editor, draft or project, renderer)
 
