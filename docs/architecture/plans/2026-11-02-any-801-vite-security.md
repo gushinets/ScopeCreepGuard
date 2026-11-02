@@ -13,12 +13,12 @@ Sources: https://github.com/advisories/GHSA-587h-7wmj-h5pm ; https://vite.dev/gu
 
 ## Ordered implementation
 
-- [ ] Capture full pre-update audit JSON and why Vite/launch-editor; classify unrelated findings.
-- [ ] Review candidate release notes, engines and peers; exactly pin Vite in frontend/package.json and regenerate pnpm-lock.yaml, checking unrelated churn.
-- [ ] Frozen install; lint/boundaries, typecheck, tests, build, API freshness where feasible; repeat full audit and resolved graph checks.
-- [ ] Native Windows dev/preview with isolated controlled upstream and ports: page, React/alias, HMR via temporary change restored afterward, cookies/Origin, streaming, unavailable backend, env validation.
-- [ ] Fresh frontend Docker image with revision label; repository real Nginx proxy verifier and browser static smoke. Runtime remains Nginx only.
-- [ ] Record evidence, limits and remaining advisories; scoped commit/push, main PR, verify actual head/base and inspect CI. Never merge or change Linear.
+- [x] Capture full pre-update audit JSON and why Vite/launch-editor; classify unrelated findings.
+- [x] Review candidate release notes, engines and peers; exactly pin Vite in frontend/package.json and regenerate pnpm-lock.yaml, checking unrelated churn.
+- [x] Frozen install; lint/boundaries, typecheck, tests, build, API freshness where feasible; repeat full audit and resolved graph checks.
+- [x] Native Windows dev/preview with isolated controlled upstream and ports: page, React/alias, HMR via temporary change restored afterward, cookies/Origin, streaming, unavailable backend, env validation.
+- [x] Fresh frontend Docker image with revision label; repository real Nginx proxy verifier and browser static smoke. Runtime remains Nginx only.
+- [x] Record evidence, limits and remaining advisories; scoped commit/push, main PR, verify actual head/base and inspect CI. Never merge or change Linear.
 
 ## Isolation, resources and rollback
 
@@ -26,7 +26,7 @@ Evidence and temporary scripts live in ignored output/any-801. No copied env/sec
 
 ## Evidence and handoff
 
-Pending. Audit conclusions apply only to advisories known at recorded scan time; unavailable checks remain gaps.
+Audit conclusions apply only to advisories known at recorded scan time; unavailable checks remain gaps.
 
 ## Completed verification (2026-11-02)
 
@@ -74,3 +74,6 @@ Remaining ownership: ANY-802 covers analytics→Next/Sharp; ANY-804 covers shadc
 | undici | GHSA-4qv8-2p9j-2685 (moderate), GHSA-f72v-6w45-q472 (moderate), GHSA-xjj6-f33q-929c (high), GHSA-4w7w-5xrc-9h26 (high), GHSA-2m5v-pch6-74hx (high), GHSA-qrxm-fqhp-jwvm (high), GHSA-9fm3-97px-rjf6 (moderate), GHSA-55wc-3pg8-jfw6 (moderate) |
 | deepmerge | GHSA-gcqx-w48m-w2h4 (low) |
 | minimatch | GHSA-g3hv-75wg-m249 (moderate) |
+
+Delivery: implementation commit d71ac84c84b10a3ff1e63b377782c7ed75fd674e pushed; PR https://github.com/gushinets/ScopeCreepGuard/pull/61 verified with actual head codex/any-801-vite-security and base main at cfa3578e8a3b598637001932519cde1dbfca7f3a. Initial published-head CI run 41436758280 inspected: rebase and compose-minimum passed, backend/frontend/containers in progress. Final CI status is reported at handoff; pending jobs are not claimed passed. This documentation-only follow-up does not change tested frontend source. No merge or Linear mutation.
+
