@@ -61,6 +61,9 @@ def test_pdf_download_is_owned_historical_and_read_only(disposable_url, monkeypa
                 "hourlyRate": "100",
             }
             project = (await call("POST", "/api/projects", card)).json()["project"]
+            other_project = (await call("POST", "/api/projects", {**card, "name": "Other"})).json()[
+                "project"
+            ]
             claims = DraftProofClaims(
                 DraftProofBinding(users[0], project["id"], "Extra page", "en"),
                 parse_snapshot(FIXTURE["analysis"], "en"),
@@ -142,6 +145,15 @@ def test_pdf_download_is_owned_historical_and_read_only(disposable_url, monkeypa
             assert "9.995 EUR" in " ".join(
                 page.extract_text() for page in PdfReader(BytesIO(response.content)).pages
             )
+            content = " ".join(
+                page.extract_text() for page in PdfReader(BytesIO(response.content)).pages
+            )
+            assert "TODAY TERMS" not in content and "900" not in content
+            rejected = await call(
+                "POST", "/api/change-orders/pdf", {**preview, "projectId": other_project["id"]}
+            )
+            assert rejected.status_code == 404
+            assert rejected.json() == {"error": "errors.draftNotFound"}
             assert await rows() == before
             assert (
                 await call("POST", "/api/change-orders/pdf", preview, owner=1)

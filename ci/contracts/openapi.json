@@ -2500,7 +2500,8 @@
                         "type": "null"
                       }
                     ],
-                    "title": "Draftid"
+                    "title": "Draftid",
+                    "description": "Historical document reference on supported legacy schemas; not a working v2 draft ID. Unavailable or unsupported references return 404 errors.draftNotFound."
                   },
                   "changeOrder": {
                     "properties": {
@@ -2981,7 +2982,8 @@
                         "type": "null"
                       }
                     ],
-                    "title": "Draftid"
+                    "title": "Draftid",
+                    "description": "Historical document reference on supported legacy schemas; not a working v2 draft ID. Unavailable or unsupported references return 404 errors.draftNotFound."
                   },
                   "changeOrder": {
                     "properties": {

@@ -4270,7 +4270,10 @@ export interface operations {
                      * Format: uuid
                      */
                     projectId: string;
-                    /** Draftid */
+                    /**
+                     * Draftid
+                     * @description Historical document reference on supported legacy schemas; not a working v2 draft ID. Unavailable or unsupported references return 404 errors.draftNotFound.
+                     */
                     draftId?: string | null;
                     /** DraftEditableChangeOrder */
                     changeOrder: {
@@ -4495,7 +4498,10 @@ export interface operations {
                      * Format: uuid
                      */
                     projectId: string;
-                    /** Draftid */
+                    /**
+                     * Draftid
+                     * @description Historical document reference on supported legacy schemas; not a working v2 draft ID. Unavailable or unsupported references return 404 errors.draftNotFound.
+                     */
                     draftId?: string | null;
                     /** DraftEditableChangeOrder */
                     changeOrder: {

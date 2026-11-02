@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from scope_guard.database.legacy_boundary import require_legacy_schema
+from scope_guard.database.legacy_boundary import require_legacy_schema, supports_legacy_schema
 from scope_guard.database.models import HistoryEntryRow, ProjectRow
 from scope_guard.database.models.compatibility import CompatibilityDraftRow as DraftRow
 from scope_guard.database.queries.drafts import DraftQueries
@@ -57,6 +57,9 @@ class DraftRepository(DraftQueries):
         )
 
     async def load_owned(self, owner: UUID, identifier: UUID) -> StoredDraft | None:
+        # Working v2 drafts are not historical documents. Never query retired columns.
+        if not await supports_legacy_schema(self.session):
+            return None
         result = (
             await self.session.execute(self.owned(owner).where(DraftRow.id == identifier))
         ).first()
