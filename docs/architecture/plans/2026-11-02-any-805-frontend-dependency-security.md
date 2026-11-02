@@ -67,3 +67,5 @@ Group 1: PostCSS 8.5.32 resolved through existing parent ranges; pnpm also selec
 Group 2: refreshed remaining css-tree > source-map-js 1.2.1 to 1.2.2; Tailwind node and PostCSS paths were already fixed by group 1. Temporary compatible resolution constraint removed before normal pnpm lockfile generation. Frozen install, 55 files/409 tests and production build passed; CSS output unchanged. No permanent override.
 
 Group 3: jsdom retained at 30.1.1, undici refreshed within its declared range from 8.11.2 to 8.12.3. Temporary resolution constraint removed; no permanent override. Node engine requirement aligned with existing jsdom (^22.22.2 || ^24.15.0 || >=26.0.0); tested Node 22.23.4. Frozen install and all 55 files/409 tests passed.
+
+Group 4: ESLint 9.39.5 and typescript-eslint 8.67.0 retained. Compatible brace-expansion 1.1.21/5.0.12 selected independently (2.1.7 unchanged); ESLint eslintrc > js-yaml 4.3.2. pnpm also deduplicated shadcn > cosmiconfig onto the same compatible js-yaml 4.3.2, an incidental shared fix rather than ANY-804 implementation. No permanent overrides. Frozen install, lint/boundaries, types, API freshness and 55 files/409 tests passed.
