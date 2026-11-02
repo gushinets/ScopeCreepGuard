@@ -6,7 +6,8 @@ Date: 2026-11-02. ANY-803 remains incomplete. No Linear statuses/comments change
 
 Base: dab092029043d08ce93d224cd83080f2de825800 (fetched origin/main).
 Branch: codex/any-803-llm-dependency-security, retained authorized ANY-801 worktree.
-Implementation commit: 6793788dd1f2b8537101eb04ad06a1c77b731acf.
+Final implementation commit: f1c8dfc28bcdf3be3df39bc3e4827d8f6d1cada0.
+Initial dependency/policy checkpoint: 6793788dd1f2b8537101eb04ad06a1c77b731acf.
 Primary checkout, its branch, untracked reports, private environments and unrelated services preserved.
 Plan: plans/2026-11-02-any-803-llm-dependency-security.md.
 
@@ -21,7 +22,8 @@ Plan: plans/2026-11-02-any-803-llm-dependency-security.md.
 
 These are all package-version changes. Minimal Slim installation and no extras retained.
 uv 0.11.19 generated the lock; its revision field normalized 5 -> 3. No edited package metadata/hashes.
-Adapter, gateway, worker, prompts, workflow and DB schemas unchanged. policy.py now derives
+The native bridge adapts the new SDK retry-feedback boundary (details below). Gateway, worker,
+prompts, business workflow and DB schemas remain unchanged. policy.py now derives
 local-tariff priceSource from installed LiteLLM distribution metadata. Operator rate precedence
 and per-operation frozen policy remain intact; stored operations are not repriced.
 
@@ -62,57 +64,97 @@ PyPI provenance (404). The earlier ac74f9ff... hash belongs to macOS x86_64, not
 
 ## Compatibility evidence and containment
 
-Fresh candidate checks image from official Dockerfile, locked install; no host candidate sync.
-Tests used only synthetic keys and HTTP providers, no real env/home/SSH/cloud mounts or Docker socket.
-Host orchestrator created disposable PostgreSQL on internal scg-any803-isolated network;
-provider/public egress unavailable. Config/fixture mounts were read-only. No paid calls.
-Candidate matrix used installed image packages, not primary source overlay.
-Baseline schema comparison used old SDK image plus sanitized read-only application source snapshot.
+No candidate sync into host/primary environments. Only synthetic keys and HTTP providers;
+no real env/home/SSH/cloud mounts or Docker socket in candidate test containers.
+Host orchestrator owns disposable PostgreSQL on internal scg-any803-isolated network,
+with provider/public egress unavailable. No paid calls. Source snapshots contain tracked
+public implementation/test files only, excluding private env/WORKLOG files.
 
-Focused candidate command: tests/unit/test_gateway_responses_bridge.py,
-tests/unit/test_optional_diagnostic_review.py, tests/integration/test_llm_pipeline.py,
-tests/integration/test_optional_review_sql.py, plus tests/unit/test_llm_tariff_provenance.py:
-**44 passed**. Same four baseline files on old SDKs: **42 passed**.
+Initial baseline comparison used tests/unit/test_gateway_responses_bridge.py,
+tests/unit/test_optional_diagnostic_review.py, tests/integration/test_llm_pipeline.py and
+tests/integration/test_optional_review_sql.py: old SDKs 42 passed, candidate plus tariff tests
+44 passed. Prepared-schema digest sets matched across six schema groups, including four
+semantic-review variants. Baseline used old SDK image plus read-only source overlay; initial
+candidate checks used fresh baked-image application code and current SDKs.
+This narrow matrix was insufficient to establish durable rejection-feedback compatibility.
 
-| Behavior | Baseline and candidate |
+Expanded tests and first CI found the compatibility gap: PydanticAI 2.64 public
+Model.prepare_messages translates RetryFeedbackPart to safely fenced UserPromptPart before
+request(), bypassing the bridge's legacy RetryPromptPart-only ledger hook. Output correction
+still happened, but durable rejected-call feedback was lost. Initial CI c9b38f0 had 28 failures,
+including seven SQL translation scenarios; its other four CI jobs passed. No tests were weakened.
+
+Minimal fix in GatewayResponsesModel: capture typed feedback after the latest ModelResponse
+before delegating to super().prepare_messages; drain it to the existing gateway feedback hook
+before the next dispatch. SDK attribution/fences and previous rejected output remain intact.
+No private SDK APIs used; no retry ownership, strict schema, tool mode, budgets or pricing changes.
+Earlier feedback is not replayed onto a later rejection. Existing final-attempt handling remains.
+
+RED: strengthened real HTTP bridge assertions failed for medium/high effort on missing durable
+feedback. GREEN: 140 gateway/translation/regeneration/reply-similarity regressions passed.
+Expanded unit/architecture: 841 passed, one Node auth interop test deselected locally because
+Windows pnpm links cannot be loaded by Linux Node. That test remains enabled in full CI.
+Tests used a copied disposable-container filesystem after Windows bind reads intermittently
+returned EINVAL; no product change was made to address test filesystem errors. Storage test
+writes were confined to the disposable filesystem. Independent review found no actionable defects.
+
+| Contract | Preserved result exercised by tests |
 |---|---|
 | Timeout | 2 gateway-owned transport attempts |
 | Wrong language then 429 | 3 physical requests; (1,1), (2,1), (2,2) |
 | Provider schema rejection | 1 physical request; no fallback/downgrade |
 | Exhausted output corrections | 3 bounded semantic attempts |
 | Native schema | strict; required fields; additionalProperties=false |
-| Correction context | prior rejected output and validator feedback preserved |
-| Usage | absent usage remains unknown; IDs/token/cost interpretation retained |
+| Correction context | rejected assistant output, feedback and SDK retry fence |
+| Durable feedback | rejection recorded against prior physical call, not transport retry |
+| Usage | missing remains unknown; IDs/token/cost interpretation retained |
 | Review false | no diagnostic provider dispatch |
 | Review true / replay | bounded dispatch; accepted replay does not redispatch |
-| PostgreSQL | budgets, actual-cost overruns, fencing, restart, publication isolation pass |
+| PostgreSQL initial matrix | budgets, actual-cost overruns, fencing, restart, publication isolation |
 
-Prepared schema digest sets identical across baseline/candidate for all six schema-name groups
-exercised (including four semantic-review variants). This proves fixture compatibility, not all
-possible historical operations. Existing prepared-schema equality guard remains unchanged;
-incompatible unfinished requests fail workflowVersionUnavailable instead of being silently replayed.
+Tariff test reproduced the hard-coded-label defect before the fix, then passed; frozen SQL
+policy/restart evidence is separate from the dictionary-copy unit assertion. Ruff check/format
+passed 433 files. Both mypy targets passed 248 source files before the feedback adaptation;
+Linux mypy also passed after it. OpenAPI, frontend API types and 14 synthetic CI config tests passed.
+Post-adaptation local Windows mypy and final 51-test SQL matrix were interrupted by Docker WSL
+failure, not reported as passing. Final matrix printed installed versions and bridge path
+/app/.venv/lib/python3.12/site-packages/scope_guard/integrations/llm/pydanticai_model.py,
+confirming no source overlay, before the interruption.
 
-New tariff test reproduced failure before the fix; both tests pass with the fix. Frozen policy
-SQL/restart behavior is covered separately by integration tests, not inferred from dictionary copies.
-Ruff check/format passed all 433 backend/API files. Linux and win32 mypy each passed 248 source files.
-OpenAPI export freshness, frontend api-types check, and 14 synthetic CI configuration tests passed.
-Independent code review found no actionable defects. Full CI and broad-suite results are recorded below
-when observed; pending checks are not passes.
+Complete backend suite, both current mypy targets, contracts/PDF checks, frontend, full Compose
+smoke and recovery journeys run in [PR #62 checks](https://github.com/gushinets/ScopeCreepGuard/pull/62/checks)
+on the proposed merged state. Consult that check record for current full-CI outcomes; do not
+substitute the initial 44-test pass for full verification. No disabled or weakened checks.
 
-Docker Desktop initially failed with WSL bootstrap error/unexpected EOF; user restored it.
-The initial checks image SQL attempt lacked read-only migrations (24 setup failures); corrected
-harness rerun is the 44-pass result above. No SDK/business expectations were weakened.
+## Fresh runtime images and local infrastructure limits
 
-## Fresh runtime images
+Final API/worker builds completed from f1c8dfc and the final frozen lock. A disposable copy of
+the official apps/api/Dockerfile changed only build-time uv concurrency to one for installs,
+downloads and builds after repeated Docker Desktop interruptions. Repository Dockerfile and
+runtime settings are unchanged. Full CI uses the unchanged official Dockerfile.
 
-Both images built from final lock and implementation commit; inspected installed versions match
-the table above. No runtime source overlay. Revision labels below refer to implementation code;
-later documentation-only commits do not change runtime sources.
+Successful local BuildKit export records (manifest-list digests, not post-build inspect results):
 
-- scg-any803-api:verification: `sha256:516fb77538ec3db0f556477208f2b571877112578b2f2278117e181a8235f718`; revision `6793788dd1f2b8537101eb04ad06a1c77b731acf`.
+- scg-any803-api:final: sha256:9d4ba3fd9c06cf1f546328a3c542e94a73ab786e93cf5d295d1e29eaedde56a6.
+- scg-any803-worker:final: sha256:cae2a5e3c7dd56bb55133ce6ef08ac06c6f031957a53cc3d2f5af83b54b22e49.
+- Config digests: API 87e0317eecd0e752879c3d9bfbe29b6d7f0ee3b9d5d2c6a6f845f25ff089f921;
+  worker 6204f23ec35ef6ff72d804dc019b2f3797b9abcfeaa5377b9a49f21226246eca.
+- Configured SOURCE_REVISION label: f1c8dfc28bcdf3be3df39bc3e4827d8f6d1cada0.
 
-- scg-any803-worker:verification: `sha256:8243bcf5c70a5fa043b22481afc7e8bd1ec61c531b4bbb63f45f7ad0a001cfd1`; revision `6793788dd1f2b8537101eb04ad06a1c77b731acf`.
+Final post-build Docker inspect failed because Desktop/WSL became unavailable again; configured
+labels above are not represented as independently inspected metadata. Earlier images at 6793788
+were inspected successfully, but they predate the required bridge fix and are not final acceptance.
+Final checks image installed-version metadata confirmed LiteLLM 1.89.3, filelock 4.2.1 and
+Slim/Graph 2.64.0. Remaining final runtime verification is covered by official-image CI checks.
 
+Docker Desktop repeatedly failed with WSL bootstrap 0xc00000fd / unexpected EOF; root cause is
+not established and not attributed to the SDK. The user restored Docker once. No engine restarts,
+volume removals, production DB resets or unrelated-service changes were performed by this task.
+Owned resources, if retained after recovery: scg-any803-isolated network; any803-pg with label
+scope-guard.disposable=any803-pydantic, most recent ID
+7bc50e8e333329c3571cab1f03ab0cc27185e61f2574945628eed9653b717d24.
+Inspect identity/labels before cleanup; do not remove any volume. Final temporary test container
+has label scope-guard.disposable=any803-final; host orchestrator owns cleanup.
 
 ## Deployment, unfinished operations and rollback
 

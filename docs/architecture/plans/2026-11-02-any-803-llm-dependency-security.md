@@ -3,13 +3,15 @@
 Date: 2026-11-02. Current status: PydanticAI implementation verified locally; LiteLLM upgrade remains blocked.
 
 Current evidence and deployment record: [PydanticAI delivery report](../2026-11-02-any-803-pydantic-security.md).
-Implementation commit 6793788dd1f2b8537101eb04ad06a1c77b731acf. Candidate 44/44,
-baseline 42/42, identical schema digest sets, both mypy platforms, lint, OpenAPI,
-frontend API types and CI configuration tests passed. Fresh API/worker images built
-and inspected at that code revision. Broader suite/full PR CI pending inspection.
-Docker blocker below is historical: user restored Docker and all interrupted focused
-checks were rerun successfully. Earlier dated checkpoints below record the investigation,
-not the current gate. ANY-803 remains incomplete; do not close it.
+Final implementation: f1c8dfc28bcdf3be3df39bc3e4827d8f6d1cada0.
+Initial 44/42 matrix found matching schemas; broader tests exposed typed retry-feedback
+accounting incompatibility. The public prepare_messages adaptation fixes it; 140 targeted
+and 841 unit/architecture tests passed after the fix. One local Node interop test stays
+covered by unchanged full CI. Final local SQL/mypy attempts were interrupted by recurring
+Docker Desktop failures. See PR #62 Checks for final full-suite/image/merged-state evidence.
+No failing check was weakened. Runtime builds completed; final local inspect unavailable.
+Earlier checkpoints below are historical, not current gate results. ANY-803 remains
+incomplete; LiteLLM stays blocked and must not be downgraded around secure filelock.
 
 ## Original plan and historical checkpoints
 
