@@ -2,6 +2,37 @@
 
 Approved by the user on 2026-11-02. Issue: https://linear.app/paveldik/issue/ANY-805.
 
+## Combined PR integration — 2026-11-03
+
+The user explicitly requested combining PR #64 (ANY-804) and PR #65 (ANY-805)
+into one PR without changing main. PR #65 is the retained delivery vehicle.
+The original implementation below describes the independently tested ANY-805
+checkpoint; its isolation from ANY-804 is historical after this integration.
+
+ANY-804 commit 9d672e82f6a21ead30fd86539f3316830f7fef4e was applied onto
+ANY-805 checkpoint dcc8edbad528caf03d4b14613fa4715b025d87b4. Manifest/lock
+conflicts were resolved by preserving ANY-805 versions and its scoped Hooks/Zod
+override, removing shadcn and the now-unused hono override, and regenerating
+the lock with pnpm 10.34.1. No new package/version keys were added; 221 package
+records were removed relative to the ANY-805 checkpoint. The complete upstream
+CSS, license, public license notice and provenance from ANY-804 are retained.
+
+Combined checks: frozen-lockfile installation, lint/boundaries, typecheck,
+API-type freshness and production build passed. Compiled CSS and JavaScript
+hashes remain identical to the independently tested ANY-805 checkpoint.
+A fresh audit reports 5 Critical / 4 High / 11 Moderate / 1 Low; every remaining
+High/Critical path belongs to analytics/Next/Sharp in separate PR #63 (ANY-802).
+Raw audit/build/test evidence is ignored under output/any804-805-combined/.
+The combined full frontend suite passed: 55 files / 409 tests, exit 0,
+154.15 seconds, using `pnpm test --maxWorkers=1`. Restricted Windows execution
+initially failed with spawn EPERM; rerunning with process execution permitted
+passed without changing configuration or tests. Fresh PR CI must still be
+assessed on this combined state; earlier independent CI results do not establish
+the combined CI result.
+No new Docker build or real-browser session is claimed for this integration.
+Main, PR #63, existing databases/volumes and unrelated untracked reports remain
+unchanged. Original ANY-804 branch/worktree is preserved.
+
 ## Goal and checkout
 
 Remove High/Critical findings from frontend build/test paths without absorbing
