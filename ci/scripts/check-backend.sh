@@ -5,7 +5,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root/backend"
 
 uv sync --locked --all-packages --all-groups --python 3.12
-uv run pytest --require-integration
+uv run python "$root/scripts/test_backend.py" --require-integration
 uv run ruff check . ../apps/api
 uv run ruff format --check . ../apps/api
 uv run mypy src/scope_guard ../apps/api/src/scope_guard_api

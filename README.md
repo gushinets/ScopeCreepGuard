@@ -146,6 +146,27 @@ docs/               Описание продукта, интерфейса, а�
 Границы модулей описаны в [распределении ответственности](docs/architecture/ownership.md),
 фоновая обработка в [инструкции по обработчикам задач](apps/worker/README.md).
 
+## Изолированный запуск backend-тестов
+
+После `uv sync --locked --all-packages --all-groups --python 3.12` запускайте
+pytest через единый вход из корня репозитория:
+
+```powershell
+uv run --no-sync python scripts/test_backend.py tests/unit tests/api -q
+uv run --no-sync python scripts/test_backend.py --require-integration
+```
+
+Пути тестов указываются относительно `backend/`. Скрипт сам выбирает рабочий
+каталог, очищает унаследованные настройки приложения, запрещает автоматическое
+чтение `.env` библиотекой LiteLLM и выделяет собственный временный каталог.
+Корневой `.env`, базы приложения и секреты не меняются. Тесты по-прежнему
+используют явные синтетические настройки и собственные PostgreSQL-контейнеры.
+Полный набор интеграционных тестов требует работающего Docker Engine.
+
+Тестовое S3-хранилище собирается из закреплённого исходного релиза командой,
+приведённой ниже. Его Go-кэши изолированы именованными cache ID и защищены
+`sharing=locked`; удалять общие Docker/Go-кэши для этой сборки не требуется.
+
 ## Запуск через Docker
 
 Нужны Docker Engine с Linux-контейнерами и **Docker Compose 2.24+** в режиме
@@ -520,7 +541,7 @@ corepack pnpm typecheck
 corepack pnpm api:types:check
 corepack pnpm build
 # backend/
-uv run pytest --require-integration
+uv run python ../scripts/test_backend.py --require-integration
 uv run ruff check . ../apps/api ../apps/worker
 uv run ruff format --check . ../apps/api ../apps/worker
 uv run mypy src/scope_guard ../apps/api/src/scope_guard_api
@@ -601,7 +622,7 @@ transaction to avoid an unbounded QUIT exchange.
 Verification from repository root (the project name must be unique for every run):
 
 ```powershell
-uv run --package scope-guard pytest backend/tests/unit/test_email.py -q
+uv run --no-sync python scripts/test_backend.py tests/unit/test_email.py -q
 uv run --package scope-guard ruff check backend/src/scope_guard/services/email backend/src/scope_guard/integrations/email backend/tests/unit/test_email.py backend/tests/integration/email_mailpit_check.py
 uv run --package scope-guard mypy backend/src/scope_guard apps/api/src/scope_guard_api
 $env:MAILPIT_UI_PORT='18079'
